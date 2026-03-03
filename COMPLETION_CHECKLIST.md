@@ -14,7 +14,7 @@ Status: **READY FOR PRODUCTION**
 - [x] Email contains a unique verification link
 - [x] Link format: `/email/verify/token/{verification_token}`
 - [x] Email template styled and professional
-- [x] Email subject: "Verify Your Email Address - PDMU POMS"
+- [x] Email subject: "Verify Your Email Address - PDMU PDMUOMS"
 - [x] Clear instructions for user
 
 **Implementation File**: [app/Mail/VerifyEmailMailable.php](app/Mail/VerifyEmailMailable.php)

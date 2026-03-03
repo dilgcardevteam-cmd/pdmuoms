@@ -4,16 +4,433 @@ namespace App\Http\Controllers;
 
 use App\Models\FundUtilizationReport;
 use App\Models\LocallyFundedProject;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Carbon;
 
 class LocallyFundedProjectController extends Controller
 {
+    private function getProjectFormOptions(): array
+    {
+        // Cordillera Administrative Region (CAR) provinces
+        $provinces = [
+            'Abra',
+            'Apayao',
+            'Benguet',
+            'City of Baguio',
+            'Ifugao',
+            'Kalinga',
+            'Mountain Province'
+        ];
+
+        // Province to municipalities/cities mapping
+        $provinceMunicipalities = [
+            'Abra' => ['Bangued', 'Boliney', 'Bucay', 'Daguioman', 'Danglas', 'Dolores', 'La Paz', 'Lacub', 'Lagangilang', 'Lagayan', 'Langiden', 'Licuan-Baay', 'Malibcong', 'Manabo', 'Peñarrubia', 'Pidcal', 'Pilar', 'Sallapadan', 'San Isidro', 'San Juan', 'San Quintin'],
+            'Apayao' => ['Calanasan', 'Conner', 'Flora', 'Kabugao', 'Pudtol', 'Santa Marcela'],
+            'Benguet' => ['Atok', 'Baguio City', 'Bakun', 'Buguias', 'Itogon', 'Kabayan', 'Kapangan', 'Kibungan', 'La Trinidad', 'Mankayan', 'Sablan', 'Tuba', 'Tublay'],
+            'City of Baguio' => ['Baguio City'],
+            'Ifugao' => ['Aguinaldo', 'Alfonso Lista', 'Asipulo', 'Banaue', 'Hingyon', 'Hungduan', 'Kiangan', 'Lagawe', 'Mayoyao', 'Tinoc'],
+            'Kalinga' => ['Balbalan', 'Dagupagsan', 'Lubuagan', 'Mabunguran', 'Pasil', 'Pinukpuk', 'Rizal', 'Tabuk City', 'Tanudan', 'Tinglayan'],
+            'Mountain Province' => ['Amlang', 'Amtan', 'Bauko', 'Besao', 'Cervantes', 'Natonin', 'Paracelis', 'Sabangan', 'Sagada', 'Tadian']
+        ];
+
+        // Fund source and funding year options
+        $fundSources = ['SBDP', 'FALGU', 'CMGP', 'GEF', 'SAFPB'];
+        $fundingYears = [2025, 2024, 2023, 2022, 2021];
+
+        // Procurement types (mode of procurement)
+        $procurementTypes = ['admin', 'contract'];
+        $statusOptions = [
+            'Completed',
+            'On-going',
+            'Bid Evaluation/Opening',
+            'NOA Issuance',
+            'DED Preparation',
+            'Not Yet Started',
+            'ITB/AD Posted',
+            'Terminated',
+            'Cancelled',
+            'Pending',
+        ];
+
+        return compact('provinces', 'provinceMunicipalities', 'fundSources', 'fundingYears', 'procurementTypes', 'statusOptions');
+    }
+
+    private function ensureFundUtilizationReport(LocallyFundedProject $project): void
+    {
+        if (!Schema::hasTable('tbfur')) {
+            return;
+        }
+
+        $projectCode = trim((string) $project->subaybayan_project_code);
+        if ($projectCode === '') {
+            return;
+        }
+
+        $payload = [
+            'province' => $project->province,
+            'implementing_unit' => $project->implementing_unit,
+            'barangay' => $project->barangay,
+            'fund_source' => $project->fund_source,
+            'funding_year' => $project->funding_year,
+            'project_title' => $project->project_name,
+            'allocation' => $project->lgsf_allocation,
+            'contract_amount' => $project->contract_amount,
+        ];
+
+        $report = FundUtilizationReport::where('project_code', $projectCode)->first();
+        if ($report) {
+            $report->fill($payload);
+            $report->save();
+            return;
+        }
+
+        FundUtilizationReport::create(array_merge(
+            ['project_code' => $projectCode, 'project_status' => 'Ongoing'],
+            $payload
+        ));
+    }
+
+    private function logLocallyFundedActivity(
+        LocallyFundedProject $project,
+        string $action,
+        string $section,
+        string $field,
+        ?string $details = null,
+        $timestamp = null,
+        $userId = null
+    ): void {
+        if (!$project->id) {
+            return;
+        }
+
+        try {
+            $loggedAt = $timestamp instanceof \DateTimeInterface
+                ? Carbon::instance($timestamp)
+                : ($timestamp ? Carbon::parse((string) $timestamp) : now());
+        } catch (\Throwable $e) {
+            $loggedAt = now();
+        }
+
+        Log::channel('upload_timestamps')->info('Document action', [
+            'module' => 'locally_funded',
+            'project_id' => $project->id,
+            'project_code' => $project->subaybayan_project_code,
+            'action' => $action,
+            'action_label' => ucfirst($action),
+            'section' => $section,
+            'field' => $field,
+            'details' => $details,
+            'action_timestamp' => $loggedAt->format('Y-m-d H:i:s'),
+            'user_id' => $userId ?: Auth::id(),
+        ]);
+    }
+
+    private function notifyLocallyFundedUpdateRecipients(
+        LocallyFundedProject $project,
+        string $activityLabel,
+        bool $notifyProvinceDilgForLgu = false
+    ): void {
+        try {
+            if (!Schema::hasTable('tbnotifications')) {
+                return;
+            }
+
+            $actor = Auth::user();
+            if (!$actor) {
+                return;
+            }
+
+            $actorId = (int) Auth::id();
+            $actorAgency = strtoupper(trim((string) ($actor->agency ?? '')));
+            $actorName = trim((string) ($actor->fname ?? '') . ' ' . (string) ($actor->lname ?? ''));
+            if ($actorName === '') {
+                $actorName = 'A user';
+            }
+
+            $projectCode = trim((string) ($project->subaybayan_project_code ?? ''));
+            if ($projectCode === '') {
+                $projectCode = 'Project #' . $project->id;
+            }
+
+            $projectTitle = trim((string) ($project->project_name ?? ''));
+            $projectProvince = trim((string) ($project->province ?? ''));
+
+            $projectDescriptor = $projectCode;
+            if ($projectTitle !== '') {
+                $projectDescriptor .= ' (' . $projectTitle . ')';
+            }
+            if ($projectProvince !== '') {
+                $projectDescriptor .= ' - ' . $projectProvince;
+            }
+
+            $baseMessage = sprintf(
+                '%s %s for %s.',
+                $actorName,
+                trim($activityLabel),
+                $projectDescriptor
+            );
+
+            $recipientIds = collect();
+
+            $targetProvince = trim((string) ($actor->province ?? ''));
+            if ($targetProvince === '') {
+                $targetProvince = $projectProvince;
+            }
+
+            if ($notifyProvinceDilgForLgu && $actorAgency === 'LGU' && $targetProvince !== '') {
+                $provinceDilgRecipients = User::query()
+                    ->whereRaw('UPPER(TRIM(COALESCE(agency, ""))) = ?', ['DILG'])
+                    ->whereRaw('LOWER(TRIM(COALESCE(province, ""))) = ?', [strtolower($targetProvince)])
+                    ->whereRaw('LOWER(TRIM(COALESCE(province, ""))) <> ?', ['regional office'])
+                    ->where('status', 'active')
+                    ->pluck('idno');
+
+                $recipientIds = $recipientIds->merge($provinceDilgRecipients);
+            }
+
+            $regionalRecipients = User::query()
+                ->whereRaw('UPPER(TRIM(COALESCE(agency, ""))) = ?', ['DILG'])
+                ->where('status', 'active')
+                ->where(function ($query) {
+                    $query->whereRaw('LOWER(TRIM(COALESCE(province, ""))) = ?', ['regional office'])
+                        ->orWhereRaw('LOWER(TRIM(COALESCE(office, ""))) LIKE ?', ['%regional office%']);
+                })
+                ->pluck('idno');
+
+            $recipientIds = $recipientIds
+                ->merge($regionalRecipients)
+                ->filter(function ($recipientId) use ($actorId) {
+                    return (int) $recipientId !== $actorId;
+                })
+                ->unique()
+                ->values();
+
+            if ($recipientIds->isEmpty()) {
+                return;
+            }
+
+            $url = route('locally-funded-project.show', $project);
+            $now = now();
+
+            $rows = $recipientIds->map(function ($recipientId) use ($baseMessage, $url, $now) {
+                return [
+                    'user_id' => (int) $recipientId,
+                    'message' => $baseMessage,
+                    'url' => $url,
+                    'document_type' => 'locally-funded-update',
+                    'quarter' => null,
+                    'read_at' => null,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+            })->all();
+
+            DB::table('tbnotifications')->insert($rows);
+        } catch (\Throwable $error) {
+            Log::warning('Failed to create locally funded update notifications.', [
+                'project_id' => $project->id ?? null,
+                'project_code' => $project->subaybayan_project_code ?? null,
+                'activity_label' => $activityLabel,
+                'error' => $error->getMessage(),
+            ]);
+        }
+    }
+
+    private function parseLocallyFundedPersistedLog(string $line, int $projectId): ?array
+    {
+        $pattern = '/^\[([^\]]+)\]\s+[^\:]+\.\w+:\s+([^{]+)\s*(\{.*)/';
+        if (!preg_match($pattern, $line, $matches)) {
+            return null;
+        }
+
+        $loggedAt = trim($matches[1]);
+        $contextJson = $matches[3];
+        $context = json_decode($contextJson, true);
+
+        if (!is_array($context)) {
+            return null;
+        }
+
+        if (($context['module'] ?? null) !== 'locally_funded') {
+            return null;
+        }
+
+        if ((int) ($context['project_id'] ?? 0) !== $projectId) {
+            return null;
+        }
+
+        $timestampRaw = $context['action_timestamp'] ?? $loggedAt;
+        try {
+            $timestamp = Carbon::parse($timestampRaw)->setTimezone(config('app.timezone'));
+        } catch (\Throwable $e) {
+            $timestamp = Carbon::parse($loggedAt)->setTimezone(config('app.timezone'));
+        }
+
+        return [
+            'timestamp' => $timestamp,
+            'user_id' => $context['user_id'] ?? null,
+            'action' => $context['action'] ?? 'update',
+            'section' => $context['section'] ?? 'General',
+            'field' => $context['field'] ?? 'Updated',
+            'details' => $context['details'] ?? null,
+        ];
+    }
+
+    private function getPersistedLocallyFundedLogs(LocallyFundedProject $project): array
+    {
+        if (!$project->id) {
+            return [];
+        }
+
+        $logFiles = glob(storage_path('logs/upload_timestamps-*.log')) ?: [];
+        $singleLogFile = storage_path('logs/upload_timestamps.log');
+        if (is_file($singleLogFile)) {
+            $logFiles[] = $singleLogFile;
+        }
+        rsort($logFiles);
+
+        $entries = [];
+        foreach ($logFiles as $logFile) {
+            $content = @file_get_contents($logFile);
+            if (!$content) {
+                continue;
+            }
+
+            $logEntries = preg_split('/(?=\[\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}\])/', $content, -1, PREG_SPLIT_NO_EMPTY);
+            foreach ($logEntries as $logEntry) {
+                $logEntry = trim($logEntry);
+                if ($logEntry === '' || strpos($logEntry, '"module":"locally_funded"') === false) {
+                    continue;
+                }
+
+                $parsed = $this->parseLocallyFundedPersistedLog($logEntry, (int) $project->id);
+                if ($parsed) {
+                    $entries[] = $parsed;
+                }
+            }
+        }
+
+        return $entries;
+    }
+
+    private function mergeLocallyFundedActivityLogs(array $activityLogs, LocallyFundedProject $project): array
+    {
+        $persistedLogs = $this->getPersistedLocallyFundedLogs($project);
+
+        if (empty($persistedLogs)) {
+            return $activityLogs;
+        }
+
+        // Persisted logs are append-only history; keep all of them.
+        // Add current-state fallback entries only when not already in persisted history.
+        $merged = $persistedLogs;
+
+        foreach ($activityLogs as $currentLog) {
+            if (empty($currentLog['timestamp']) || !($currentLog['timestamp'] instanceof \DateTimeInterface)) {
+                continue;
+            }
+
+            $existsInPersisted = false;
+            foreach ($persistedLogs as $persistedLog) {
+                if (empty($persistedLog['timestamp']) || !($persistedLog['timestamp'] instanceof \DateTimeInterface)) {
+                    continue;
+                }
+
+                if (
+                    $currentLog['timestamp']->getTimestamp() === $persistedLog['timestamp']->getTimestamp()
+                    && (string) ($currentLog['user_id'] ?? '') === (string) ($persistedLog['user_id'] ?? '')
+                    && ($currentLog['section'] ?? '') === ($persistedLog['section'] ?? '')
+                    && ($currentLog['field'] ?? '') === ($persistedLog['field'] ?? '')
+                    && (string) ($currentLog['details'] ?? '') === (string) ($persistedLog['details'] ?? '')
+                ) {
+                    $existsInPersisted = true;
+                    break;
+                }
+            }
+
+            if (!$existsInPersisted) {
+                $merged[] = $currentLog;
+            }
+        }
+
+        return $merged;
+    }
+
+    private function formatLocallyFundedActivityValue(string $field, $value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        if (in_array($field, ['obligation', 'disbursed_amount', 'reverted_amount'], true)) {
+            return '₱ ' . number_format((float) $value, 2);
+        }
+
+        if (in_array($field, ['accomplishment_pct', 'accomplishment_pct_ro', 'slippage', 'slippage_ro', 'utilization_rate'], true)) {
+            return number_format((float) $value, 2) . '%';
+        }
+
+        return (string) $value;
+    }
+
+    private function syncMissingFundUtilizationReports(): void
+    {
+        if (!Schema::hasTable('tbfur')) {
+            return;
+        }
+
+        $now = now();
+
+        LocallyFundedProject::query()
+            ->whereNotExists(function ($query) {
+                $query->select(DB::raw(1))
+                    ->from('tbfur')
+                    ->whereColumn('tbfur.project_code', 'locally_funded_projects.subaybayan_project_code');
+            })
+            ->orderBy('id')
+            ->chunkById(200, function ($projects) use ($now) {
+                $rows = [];
+
+                foreach ($projects as $project) {
+                    $projectCode = trim((string) $project->subaybayan_project_code);
+                    if ($projectCode === '') {
+                        continue;
+                    }
+
+                    $rows[] = [
+                        'project_code' => $projectCode,
+                        'province' => $project->province,
+                        'implementing_unit' => $project->implementing_unit,
+                        'barangay' => $project->barangay,
+                        'fund_source' => $project->fund_source,
+                        'funding_year' => $project->funding_year,
+                        'project_title' => $project->project_name,
+                        'allocation' => $project->lgsf_allocation,
+                        'contract_amount' => $project->contract_amount,
+                        'project_status' => 'Ongoing',
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ];
+                }
+
+                if (!empty($rows)) {
+                    DB::table('tbfur')->insertOrIgnore($rows);
+                }
+            });
+    }
+
     /**
      * Display a listing of locally funded projects
      */
     public function index()
     {
+        $this->syncMissingFundUtilizationReports();
         $currentYear = now()->year;
         $currentMonth = now()->month;
         $user = Auth::user();
@@ -24,42 +441,503 @@ class LocallyFundedProjectController extends Controller
         $provinceLower = strtolower($province);
         $officeLower = strtolower($office);
         $regionLower = strtolower($region);
+        $officeBaseLower = trim((string) preg_replace('/,.*$/', '', $officeLower));
+        $officeComparableLower = trim((string) preg_replace('/^(municipality|city)\s+of\s+/i', '', $officeBaseLower));
+        $isRegionalOfficeUser = $agency === 'DILG'
+            && (
+                str_contains($provinceLower, 'regional office')
+                || str_contains($officeLower, 'regional office')
+            );
 
-        // Build query with role-based filtering
-        $query = LocallyFundedProject::query();
+        if (!Schema::hasTable('subay_project_profiles')) {
+            $options = $this->getProjectFormOptions();
 
-        // Filter based on user's agency, province, and office
-        if ($agency === 'LGU') {
-            // LGU users can only see projects from their specific office
-            if ($office !== '') {
-                if ($province !== '') {
-                    $query->whereRaw('LOWER(province) = ?', [$provinceLower])
-                        ->whereRaw('LOWER(office) = ?', [$officeLower]);
-                } else {
-                    $query->whereRaw('LOWER(office) = ?', [$officeLower]);
-                }
-            } elseif ($province !== '') {
-                // If no office is specified for LGU, show their province
-                $query->whereRaw('LOWER(province) = ?', [$provinceLower]);
-            }
-        } elseif ($agency === 'DILG') {
-            // DILG users filtering
-            if ($provinceLower === 'regional office') {
-                // Regional Office users can see all projects
-            } elseif ($province !== '') {
-                // DILG with specific province: show all projects in that province
-                $query->whereRaw('LOWER(province) = ?', [$provinceLower]);
-            } elseif ($region !== '') {
-                // DILG with region set (no province): show all projects in that region
-                $query->whereRaw('LOWER(region) = ?', [$regionLower]);
-            }
-            // If neither province nor region is set, show all projects (superadmin behavior)
+            return view('projects.locally-funded', array_merge(
+                $options,
+                [
+                    'projects' => collect(),
+                    'physicalStatuses' => [],
+                ]
+            ));
         }
 
-        $projects = $query->get();
+        $parsedSubayDateExpression = "
+            COALESCE(
+                IF(
+                    TRIM(COALESCE(spp_date.date, '')) REGEXP '^[0-9]+(\\.[0-9]+)?$',
+                    DATE_ADD('1899-12-30', INTERVAL FLOOR(CAST(TRIM(COALESCE(spp_date.date, '')) AS DECIMAL(12,4))) DAY),
+                    NULL
+                ),
+                STR_TO_DATE(TRIM(COALESCE(spp_date.date, '')), '%Y-%m-%d'),
+                STR_TO_DATE(TRIM(COALESCE(spp_date.date, '')), '%Y-%m-%d %H:%i:%s'),
+                STR_TO_DATE(TRIM(COALESCE(spp_date.date, '')), '%m/%d/%Y'),
+                STR_TO_DATE(TRIM(COALESCE(spp_date.date, '')), '%m/%d/%Y %H:%i'),
+                STR_TO_DATE(TRIM(COALESCE(spp_date.date, '')), '%m/%d/%Y %H:%i:%s'),
+                STR_TO_DATE(TRIM(COALESCE(spp_date.date, '')), '%m/%d/%Y %h:%i:%s %p'),
+                STR_TO_DATE(TRIM(COALESCE(spp_date.date, '')), '%m/%d/%y'),
+                STR_TO_DATE(TRIM(COALESCE(spp_date.date, '')), '%d/%m/%Y'),
+                STR_TO_DATE(TRIM(COALESCE(spp_date.date, '')), '%d-%m-%Y'),
+                STR_TO_DATE(TRIM(COALESCE(spp_date.date, '')), '%d-%b-%Y'),
+                STR_TO_DATE(TRIM(COALESCE(spp_date.date, '')), '%b %e, %Y'),
+                STR_TO_DATE(TRIM(COALESCE(spp_date.date, '')), '%M %e, %Y')
+            )
+        ";
+
+        $latestSubayUpdateByProjectQuery = DB::table('subay_project_profiles as spp_date')
+            ->selectRaw('UPPER(TRIM(spp_date.project_code)) as project_code_key')
+            ->selectRaw("MAX({$parsedSubayDateExpression}) as latest_update_date")
+            ->whereNotNull('spp_date.project_code')
+            ->whereRaw('TRIM(spp_date.project_code) <> ""')
+            ->groupBy(DB::raw('UPPER(TRIM(spp_date.project_code))'));
+
+        // Build query from SubayBAYAN data with role-based filtering
+        $query = DB::table('subay_project_profiles as spp')
+            ->leftJoinSub($latestSubayUpdateByProjectQuery, 'spp_latest_update', function ($join) {
+                $join->on(DB::raw('UPPER(TRIM(spp.project_code))'), '=', 'spp_latest_update.project_code_key');
+            })
+            ->leftJoin('locally_funded_projects as lfp', 'lfp.subaybayan_project_code', '=', 'spp.project_code')
+            ->leftJoin('locally_funded_physical_updates as lpu', function ($join) use ($currentYear, $currentMonth) {
+                $join->on('lpu.project_id', '=', 'lfp.id')
+                    ->where('lpu.year', '=', $currentYear)
+                    ->where('lpu.month', '=', $currentMonth);
+            });
+
+        $hasFinancialUpdatesTable = Schema::hasTable('locally_funded_financial_updates');
+        if ($hasFinancialUpdatesTable) {
+            $financialTotalsSubquery = DB::table('locally_funded_financial_updates as lffu')
+                ->select(
+                    'lffu.project_id',
+                    DB::raw('SUM(COALESCE(lffu.obligation, 0)) as lffu_obligation_total'),
+                    DB::raw('SUM(COALESCE(lffu.disbursed_amount, 0)) as lffu_disbursed_amount_total'),
+                    DB::raw('SUM(COALESCE(lffu.reverted_amount, 0)) as lffu_reverted_amount_total')
+                )
+                ->where('lffu.year', '=', $currentYear)
+                ->groupBy('lffu.project_id');
+
+            $query->leftJoinSub($financialTotalsSubquery, 'lffu_totals', function ($join) {
+                $join->on('lffu_totals.project_id', '=', 'lfp.id');
+            });
+        }
+
+        $subayCityComparableExpression = "TRIM(REPLACE(REPLACE(LOWER(SUBSTRING_INDEX(COALESCE(spp.city_municipality, ''), ',', 1)), 'municipality of ', ''), 'city of ', ''))";
+        $applyOfficeScopeToSubay = function ($query) use ($officeLower, $officeComparableLower, $subayCityComparableExpression) {
+            if ($officeLower === '') {
+                return;
+            }
+
+            $officeNeedle = $officeComparableLower !== '' ? $officeComparableLower : $officeLower;
+
+            $query->where(function ($subQuery) use ($officeLower, $officeNeedle, $subayCityComparableExpression) {
+                $subQuery->whereRaw('LOWER(TRIM(COALESCE(spp.city_municipality, ""))) = ?', [$officeLower])
+                    ->orWhereRaw("{$subayCityComparableExpression} = ?", [$officeNeedle]);
+            });
+        };
+
+        // Filter based on user's agency, province, and office.
+        if ($agency === 'LGU') {
+            // LGU users can only see projects from their specific office.
+            if ($office !== '') {
+                if ($province !== '') {
+                    $query->whereRaw('LOWER(TRIM(COALESCE(spp.province, ""))) = ?', [$provinceLower]);
+                    $applyOfficeScopeToSubay($query);
+                } else {
+                    $applyOfficeScopeToSubay($query);
+                }
+            } elseif ($province !== '') {
+                // If no office is specified for LGU, show their province.
+                $query->whereRaw('LOWER(TRIM(COALESCE(spp.province, ""))) = ?', [$provinceLower]);
+            }
+        } elseif ($agency === 'DILG') {
+            // DILG users filtering.
+            if ($isRegionalOfficeUser) {
+                // Regional Office users can see all projects.
+            } elseif ($province !== '') {
+                // DILG with specific province: show all projects in that province.
+                $query->whereRaw('LOWER(TRIM(COALESCE(spp.province, ""))) = ?', [$provinceLower]);
+            } elseif ($region !== '') {
+                // DILG with region set (no province): show all projects in that region.
+                $query->whereRaw('LOWER(TRIM(COALESCE(spp.region, ""))) = ?', [$regionLower]);
+            }
+            // If neither province nor region is set, show all projects (superadmin behavior).
+        }
+
+        $select = [
+            'spp.project_code',
+            'spp.project_title',
+            'spp.province',
+            'spp.city_municipality',
+            'spp.barangay',
+            'spp.funding_year',
+            'spp.program',
+            'spp.procurement_type',
+            'spp.procurement',
+            'spp.status',
+            'spp.total_accomplishment',
+            'spp.national_subsidy_original_allocation',
+            'spp.obligation as spp_obligation',
+            'spp.disbursement as spp_disbursed_amount',
+            'spp.liquidations as spp_reverted_amount',
+            'spp.updated_at as subay_updated_at',
+            'lfp.id as lfp_id',
+            'lfp.mode_of_procurement as lfp_mode_of_procurement',
+            'lfp.fund_source as lfp_fund_source',
+            'lfp.lgsf_allocation as lfp_lgsf_allocation',
+            'lfp.updated_at as lfp_updated_at',
+            'lpu.status_project_fou as lpu_status_actual',
+            'lpu.status_project_ro as lpu_status_subaybayan',
+            'lpu.accomplishment_pct_ro as lpu_accomplishment_pct_ro',
+        ];
+
+        $hasLfpObligationColumn = Schema::hasColumn('locally_funded_projects', 'obligation');
+        $hasLfpDisbursedAmountColumn = Schema::hasColumn('locally_funded_projects', 'disbursed_amount');
+        $hasLfpRevertedAmountColumn = Schema::hasColumn('locally_funded_projects', 'reverted_amount');
+        $select[] = $hasLfpObligationColumn
+            ? 'lfp.obligation as lfp_obligation'
+            : DB::raw('NULL as lfp_obligation');
+        $select[] = $hasLfpDisbursedAmountColumn
+            ? 'lfp.disbursed_amount as lfp_disbursed_amount'
+            : DB::raw('NULL as lfp_disbursed_amount');
+        $select[] = $hasLfpRevertedAmountColumn
+            ? 'lfp.reverted_amount as lfp_reverted_amount'
+            : DB::raw('NULL as lfp_reverted_amount');
+        $select[] = $hasFinancialUpdatesTable
+            ? 'lffu_totals.lffu_obligation_total'
+            : DB::raw('NULL as lffu_obligation_total');
+        $select[] = $hasFinancialUpdatesTable
+            ? 'lffu_totals.lffu_disbursed_amount_total'
+            : DB::raw('NULL as lffu_disbursed_amount_total');
+        $select[] = $hasFinancialUpdatesTable
+            ? 'lffu_totals.lffu_reverted_amount_total'
+            : DB::raw('NULL as lffu_reverted_amount_total');
+
+        $hasUtilizationRateColumn = Schema::hasColumn('locally_funded_projects', 'utilization_rate');
+        $select[] = $hasUtilizationRateColumn
+            ? 'lfp.utilization_rate as lfp_utilization_rate'
+            : DB::raw('NULL as lfp_utilization_rate');
+
+        $perPage = (int) request('per_page', 10);
+        $allowedPerPage = [10, 15, 25, 50];
+        if (!in_array($perPage, $allowedPerPage, true)) {
+            $perPage = 10;
+        }
+
+        $filters = [
+            'search' => trim((string) request('search', '')),
+            'project_code' => trim((string) request('project_code', '')),
+            'funding_year' => trim((string) request('funding_year', '')),
+            'fund_source' => trim((string) request('fund_source', '')),
+            'province' => trim((string) request('province', '')),
+            'city' => trim((string) request('city', '')),
+            'procurement' => trim((string) request('procurement', '')),
+            'status' => trim((string) request('status', '')),
+            'project_update_status' => trim((string) request('project_update_status', '')),
+        ];
+
+        if ($filters['project_code'] !== '') {
+            $projectCodeKeyword = '%' . strtolower($filters['project_code']) . '%';
+            $query->whereRaw('LOWER(spp.project_code) LIKE ?', [$projectCodeKeyword]);
+        }
+
+        if ($filters['search'] !== '') {
+            $keyword = '%' . strtolower($filters['search']) . '%';
+            $query->where(function ($subQuery) use ($keyword) {
+                $subQuery
+                    ->whereRaw('LOWER(spp.project_code) LIKE ?', [$keyword])
+                    ->orWhereRaw('LOWER(spp.project_title) LIKE ?', [$keyword])
+                    ->orWhereRaw('LOWER(spp.province) LIKE ?', [$keyword])
+                    ->orWhereRaw('LOWER(spp.city_municipality) LIKE ?', [$keyword])
+                    ->orWhereRaw('LOWER(spp.barangay) LIKE ?', [$keyword])
+                    ->orWhereRaw('LOWER(COALESCE(lfp.fund_source, spp.program)) LIKE ?', [$keyword])
+                    ->orWhereRaw('LOWER(COALESCE(lfp.mode_of_procurement, spp.procurement_type, spp.procurement)) LIKE ?', [$keyword]);
+            });
+        }
+
+        if ($filters['funding_year'] !== '') {
+            $query->whereRaw('TRIM(COALESCE(spp.funding_year, \'\')) = ?', [$filters['funding_year']]);
+        }
+
+        if ($filters['fund_source'] !== '') {
+            $normalizedFundSource = strtolower($filters['fund_source']);
+            if ($normalizedFundSource === 'falgu') {
+                $query->whereRaw(
+                    'LOWER(TRIM(COALESCE(lfp.fund_source, spp.program, \'\'))) LIKE ?',
+                    ['%falgu%']
+                );
+            } else {
+                $query->whereRaw(
+                    'LOWER(TRIM(COALESCE(lfp.fund_source, spp.program, \'\'))) = ?',
+                    [$normalizedFundSource]
+                );
+            }
+        }
+
+        if ($filters['province'] !== '') {
+            $query->whereRaw('LOWER(TRIM(COALESCE(spp.province, \'\'))) = ?', [strtolower($filters['province'])]);
+        }
+
+        if ($filters['city'] !== '') {
+            $query->whereRaw('LOWER(TRIM(COALESCE(spp.city_municipality, \'\'))) = ?', [strtolower($filters['city'])]);
+        }
+
+        if ($filters['procurement'] !== '') {
+            $query->whereRaw(
+                'LOWER(TRIM(COALESCE(lfp.mode_of_procurement, spp.procurement_type, spp.procurement, \'\'))) = ?',
+                [strtolower($filters['procurement'])]
+            );
+        }
+
+        if ($filters['status'] !== '') {
+            $normalizedStatus = strtolower($filters['status']);
+            if ($normalizedStatus === 'pending') {
+                $query->where(function ($statusQuery) {
+                    $statusQuery
+                        ->whereRaw('TRIM(COALESCE(lpu.status_project_ro, spp.status, \'\')) = \'\'')
+                        ->orWhereRaw('LOWER(TRIM(COALESCE(lpu.status_project_ro, spp.status, \'\'))) = ?', ['pending']);
+                });
+            } else {
+                $query->whereRaw(
+                    'LOWER(TRIM(COALESCE(lpu.status_project_ro, spp.status, \'\'))) = ?',
+                    [$normalizedStatus]
+                );
+            }
+        }
+
+        if ($filters['project_update_status'] !== '') {
+            $normalizedUpdateStatus = strtoupper(preg_replace('/[^A-Z]/', '', $filters['project_update_status']) ?? '');
+            if (in_array($normalizedUpdateStatus, ['HIGHRISK', 'LOWRISK', 'NORISK'], true)) {
+                $query->whereNotNull('spp_latest_update.latest_update_date');
+                $query->whereRaw("LOWER(TRIM(COALESCE(lpu.status_project_ro, spp.status, ''))) <> 'completed'");
+
+                if ($normalizedUpdateStatus === 'HIGHRISK') {
+                    $query->whereRaw('DATEDIFF(CURDATE(), spp_latest_update.latest_update_date) >= 60');
+                } elseif ($normalizedUpdateStatus === 'LOWRISK') {
+                    $query->whereRaw('DATEDIFF(CURDATE(), spp_latest_update.latest_update_date) > 30 AND DATEDIFF(CURDATE(), spp_latest_update.latest_update_date) < 60');
+                } elseif ($normalizedUpdateStatus === 'NORISK') {
+                    $query->whereRaw('DATEDIFF(CURDATE(), spp_latest_update.latest_update_date) <= 30');
+                }
+            }
+        }
+
+        $sortBy = trim((string) request('sort_by', 'funding_year'));
+        $sortDir = strtolower(trim((string) request('sort_dir', 'asc')));
+        if (!in_array($sortDir, ['asc', 'desc'], true)) {
+            $sortDir = 'asc';
+        }
+
+        $query->select($select);
+
+        $allocationExpr = "COALESCE(lfp.lgsf_allocation, NULLIF(REPLACE(spp.national_subsidy_original_allocation, ',', ''), ''))";
+        $obligationExpr = $hasFinancialUpdatesTable
+            ? ($hasLfpObligationColumn
+                ? "COALESCE(lffu_totals.lffu_obligation_total, lfp.obligation, NULLIF(REPLACE(spp.obligation, ',', ''), ''))"
+                : "COALESCE(lffu_totals.lffu_obligation_total, NULLIF(REPLACE(spp.obligation, ',', ''), ''))")
+            : ($hasLfpObligationColumn
+                ? "COALESCE(lfp.obligation, NULLIF(REPLACE(spp.obligation, ',', ''), ''))"
+                : "NULLIF(REPLACE(spp.obligation, ',', ''), '')");
+        $disbursedExpr = $hasFinancialUpdatesTable
+            ? ($hasLfpDisbursedAmountColumn
+                ? "COALESCE(lffu_totals.lffu_disbursed_amount_total, lfp.disbursed_amount, NULLIF(REPLACE(spp.disbursement, ',', ''), ''))"
+                : "COALESCE(lffu_totals.lffu_disbursed_amount_total, NULLIF(REPLACE(spp.disbursement, ',', ''), ''))")
+            : ($hasLfpDisbursedAmountColumn
+                ? "COALESCE(lfp.disbursed_amount, NULLIF(REPLACE(spp.disbursement, ',', ''), ''))"
+                : "NULLIF(REPLACE(spp.disbursement, ',', ''), '')");
+        $revertedExpr = $hasFinancialUpdatesTable
+            ? ($hasLfpRevertedAmountColumn
+                ? "COALESCE(lffu_totals.lffu_reverted_amount_total, lfp.reverted_amount, NULLIF(REPLACE(spp.liquidations, ',', ''), ''))"
+                : "COALESCE(lffu_totals.lffu_reverted_amount_total, NULLIF(REPLACE(spp.liquidations, ',', ''), ''))")
+            : ($hasLfpRevertedAmountColumn
+                ? "COALESCE(lfp.reverted_amount, NULLIF(REPLACE(spp.liquidations, ',', ''), ''))"
+                : "NULLIF(REPLACE(spp.liquidations, ',', ''), '')");
+        $utilizationExpr = "CASE WHEN ({$allocationExpr} + 0) = 0 THEN NULL ELSE ((COALESCE({$disbursedExpr}, 0) + COALESCE({$revertedExpr}, 0)) / ({$allocationExpr} + 0)) * 100 END";
+        $effectiveStatusExpr = "LOWER(TRIM(COALESCE(lpu.status_project_ro, spp.status, '')))";
+
+        // Keep completed projects at the bottom regardless of active column sort.
+        $query->orderByRaw("CASE WHEN {$effectiveStatusExpr} = 'completed' THEN 1 ELSE 0 END");
+
+        switch ($sortBy) {
+            case 'project_code':
+                $query
+                    ->orderByRaw("CASE WHEN spp.project_code IS NULL OR TRIM(spp.project_code) = '' THEN 1 ELSE 0 END")
+                    ->orderBy('spp.project_code', $sortDir);
+                break;
+            case 'project_title':
+                $query
+                    ->orderByRaw("CASE WHEN spp.project_title IS NULL OR TRIM(spp.project_title) = '' THEN 1 ELSE 0 END")
+                    ->orderBy('spp.project_title', $sortDir);
+                break;
+            case 'location':
+                $query
+                    ->orderByRaw("CASE WHEN spp.city_municipality IS NULL OR TRIM(spp.city_municipality) = '' THEN 1 ELSE 0 END")
+                    ->orderBy('spp.city_municipality', $sortDir)
+                    ->orderByRaw("CASE WHEN spp.province IS NULL OR TRIM(spp.province) = '' THEN 1 ELSE 0 END")
+                    ->orderBy('spp.province', $sortDir);
+                break;
+            case 'funding_year':
+                $query
+                    ->orderByRaw("CASE WHEN spp.funding_year IS NULL OR TRIM(spp.funding_year) = '' THEN 1 ELSE 0 END")
+                    ->orderByRaw("CAST(spp.funding_year AS UNSIGNED) {$sortDir}");
+                break;
+            case 'fund_source':
+                $query
+                    ->orderByRaw("CASE WHEN COALESCE(lfp.fund_source, spp.program) IS NULL OR TRIM(COALESCE(lfp.fund_source, spp.program)) = '' THEN 1 ELSE 0 END")
+                    ->orderByRaw("COALESCE(lfp.fund_source, spp.program) {$sortDir}");
+                break;
+            case 'procurement':
+                $query
+                    ->orderByRaw("CASE WHEN COALESCE(lfp.mode_of_procurement, spp.procurement_type, spp.procurement) IS NULL OR TRIM(COALESCE(lfp.mode_of_procurement, spp.procurement_type, spp.procurement)) = '' THEN 1 ELSE 0 END")
+                    ->orderByRaw("COALESCE(lfp.mode_of_procurement, spp.procurement_type, spp.procurement) {$sortDir}");
+                break;
+            case 'lgsf_allocation':
+                $query
+                    ->orderByRaw("CASE WHEN {$allocationExpr} IS NULL THEN 1 ELSE 0 END")
+                    ->orderByRaw("{$allocationExpr} + 0 {$sortDir}");
+                break;
+            case 'utilization_rate':
+                $query
+                    ->orderByRaw("CASE WHEN {$utilizationExpr} IS NULL THEN 1 ELSE 0 END")
+                    ->orderByRaw("{$utilizationExpr} {$sortDir}");
+                break;
+            case 'obligation':
+                $query
+                    ->orderByRaw("CASE WHEN {$obligationExpr} IS NULL THEN 1 ELSE 0 END")
+                    ->orderByRaw("{$obligationExpr} + 0 {$sortDir}");
+                break;
+            case 'disbursed_amount':
+                $query
+                    ->orderByRaw("CASE WHEN {$disbursedExpr} IS NULL THEN 1 ELSE 0 END")
+                    ->orderByRaw("{$disbursedExpr} + 0 {$sortDir}");
+                break;
+            case 'reverted_amount':
+                $query
+                    ->orderByRaw("CASE WHEN {$revertedExpr} IS NULL THEN 1 ELSE 0 END")
+                    ->orderByRaw("{$revertedExpr} + 0 {$sortDir}");
+                break;
+            case 'physical_subaybayan':
+                $query
+                    ->orderByRaw("CASE WHEN COALESCE(lpu.accomplishment_pct_ro, NULLIF(REPLACE(spp.total_accomplishment, ',', ''), '')) IS NULL THEN 1 ELSE 0 END")
+                    ->orderByRaw("COALESCE(lpu.accomplishment_pct_ro, NULLIF(REPLACE(spp.total_accomplishment, ',', ''), '')) + 0 {$sortDir}");
+                break;
+            case 'status_actual':
+                $query
+                    ->orderByRaw("CASE WHEN lpu.status_project_fou IS NULL OR TRIM(lpu.status_project_fou) = '' THEN 1 ELSE 0 END")
+                    ->orderBy('lpu.status_project_fou', $sortDir);
+                break;
+            case 'status_subaybayan':
+                $query
+                    ->orderByRaw("CASE WHEN COALESCE(lpu.status_project_ro, spp.status) IS NULL OR TRIM(COALESCE(lpu.status_project_ro, spp.status)) = '' THEN 1 ELSE 0 END")
+                    ->orderByRaw("COALESCE(lpu.status_project_ro, spp.status) {$sortDir}");
+                break;
+            case 'last_updated':
+                $query
+                    ->orderByRaw("CASE WHEN COALESCE(lfp.updated_at, spp.updated_at) IS NULL THEN 1 ELSE 0 END")
+                    ->orderByRaw("COALESCE(lfp.updated_at, spp.updated_at) {$sortDir}");
+                break;
+            default:
+                $sortBy = 'funding_year';
+                $sortDir = 'asc';
+                $query
+                    ->orderByRaw("CASE WHEN spp.funding_year IS NULL OR TRIM(spp.funding_year) = '' THEN 1 ELSE 0 END")
+                    ->orderByRaw('CAST(spp.funding_year AS UNSIGNED) ASC')
+                    ->orderByRaw("CASE WHEN spp.city_municipality IS NULL OR TRIM(spp.city_municipality) = '' THEN 1 ELSE 0 END")
+                    ->orderBy('spp.city_municipality')
+                    ->orderByRaw("CASE WHEN spp.province IS NULL OR TRIM(spp.province) = '' THEN 1 ELSE 0 END")
+                    ->orderBy('spp.province');
+                break;
+        }
+
+        $projects = $query
+            ->orderBy('spp.project_code')
+            ->paginate($perPage)
+            ->withQueryString();
+
+        $projects->getCollection()->transform(function ($row) {
+            $parseNumber = function ($value) {
+                if ($value === null) {
+                    return null;
+                }
+                $value = trim((string) $value);
+                if ($value === '') {
+                    return null;
+                }
+                $clean = preg_replace('/[^0-9\\.-]/', '', $value);
+                return $clean === '' ? null : (float) $clean;
+            };
+
+            $updatedAt = $row->lfp_updated_at ?: $row->subay_updated_at;
+            $updatedAt = $updatedAt ? Carbon::parse($updatedAt) : null;
+
+            $allocation = $row->lfp_lgsf_allocation;
+            if ($allocation === null) {
+                $allocation = $parseNumber($row->national_subsidy_original_allocation);
+            }
+
+            $obligation = $row->lffu_obligation_total;
+            if ($obligation === null) {
+                $obligation = $row->lfp_obligation;
+            }
+            if ($obligation === null) {
+                $obligation = $parseNumber($row->spp_obligation ?? null);
+            }
+
+            $disbursedAmount = $row->lffu_disbursed_amount_total;
+            if ($disbursedAmount === null) {
+                $disbursedAmount = $row->lfp_disbursed_amount;
+            }
+            if ($disbursedAmount === null) {
+                $disbursedAmount = $parseNumber($row->spp_disbursed_amount ?? null);
+            }
+
+            $revertedAmount = $row->lffu_reverted_amount_total;
+            if ($revertedAmount === null) {
+                $revertedAmount = $row->lfp_reverted_amount;
+            }
+            if ($revertedAmount === null) {
+                $revertedAmount = $parseNumber($row->spp_reverted_amount ?? null);
+            }
+
+            $subayAccomplishment = $parseNumber($row->total_accomplishment);
+
+            $projectTitle = $row->project_title;
+            if ($projectTitle === null || trim((string) $projectTitle) === '') {
+                $projectTitle = $row->project_code;
+            }
+
+            $lfpUtilizationRate = $row->lfp_utilization_rate ?? null;
+            $utilizationRate = null;
+            if ($allocation !== null) {
+                $allocationFloat = (float) $allocation;
+                if ($allocationFloat > 0) {
+                    $utilizationRate = ((((float) ($disbursedAmount ?? 0)) + ((float) ($revertedAmount ?? 0))) / $allocationFloat) * 100;
+                } else {
+                    $utilizationRate = 0.0;
+                }
+            } elseif ($lfpUtilizationRate !== null) {
+                $utilizationRate = (float) $lfpUtilizationRate;
+            }
+
+            return (object) [
+                'lfp_id' => $row->lfp_id,
+                'subaybayan_project_code' => $row->project_code,
+                'project_name' => $projectTitle,
+                'province' => $row->province,
+                'city_municipality' => $row->city_municipality,
+                'barangay' => $row->barangay,
+                'funding_year' => $row->funding_year,
+                'fund_source' => $row->lfp_fund_source ?: $row->program,
+                'mode_of_procurement' => $row->lfp_mode_of_procurement ?: ($row->procurement_type ?: $row->procurement),
+                'lgsf_allocation' => $allocation,
+                'obligation' => $obligation !== null ? (float) $obligation : null,
+                'disbursed_amount' => $disbursedAmount !== null ? (float) $disbursedAmount : null,
+                'reverted_amount' => $revertedAmount !== null ? (float) $revertedAmount : null,
+                'utilization_rate' => $utilizationRate,
+                'updated_at' => $updatedAt,
+                'status_subaybayan' => $row->status,
+                'subay_accomplishment_pct' => $subayAccomplishment,
+            ];
+        });
 
         // Get current physical status for each project
-        $projectIds = $projects->pluck('id');
+        $projectIds = $projects->getCollection()->pluck('lfp_id')->filter()->values();
         $physicalStatuses = [];
 
         if ($projectIds->isNotEmpty()) {
@@ -67,7 +945,7 @@ class LocallyFundedProjectController extends Controller
                 ->whereIn('project_id', $projectIds)
                 ->where('year', $currentYear)
                 ->where('month', $currentMonth)
-                ->select('project_id', 'status_project_fou', 'status_project_ro')
+                ->select('project_id', 'status_project_fou', 'status_project_ro', 'accomplishment_pct_ro')
                 ->get()
                 ->keyBy('project_id');
 
@@ -75,11 +953,216 @@ class LocallyFundedProjectController extends Controller
                 $physicalStatuses[$update->project_id] = [
                     'status_actual' => $update->status_project_fou,
                     'status_subaybayan' => $update->status_project_ro,
+                    'accomplishment_pct_ro' => $update->accomplishment_pct_ro,
                 ];
             }
         }
 
-        return view('projects.locally-funded', compact('projects', 'physicalStatuses'));
+        $options = $this->getProjectFormOptions();
+
+        return view('projects.locally-funded', array_merge(
+            $options,
+            compact('projects', 'physicalStatuses', 'perPage', 'sortBy', 'sortDir', 'filters')
+        ));
+    }
+
+    /**
+     * Ensure a locally funded project exists for the SubayBAYAN project code,
+     * then redirect to the show page.
+     */
+    public function ensureFromSubay(string $projectCode)
+    {
+        $projectCode = trim($projectCode);
+        if ($projectCode === '') {
+            abort(404);
+        }
+
+        $existing = LocallyFundedProject::where('subaybayan_project_code', $projectCode)->first();
+        if ($existing) {
+            $this->ensureFundUtilizationReport($existing);
+            return redirect()->route('locally-funded-project.show', $existing);
+        }
+
+        if (!Schema::hasTable('subay_project_profiles')) {
+            abort(404);
+        }
+
+        $subay = DB::table('subay_project_profiles')
+            ->where('project_code', $projectCode)
+            ->first();
+
+        if (!$subay) {
+            abort(404);
+        }
+
+        $today = now()->toDateString();
+
+        $cleanText = function ($value, $default = 'N/A') {
+            $value = is_string($value) ? trim($value) : '';
+            return $value !== '' ? $value : $default;
+        };
+
+        $parseNumber = function ($value, $default = 0) {
+            if ($value === null) {
+                return $default;
+            }
+            $value = trim((string) $value);
+            if ($value === '') {
+                return $default;
+            }
+            $clean = preg_replace('/[^0-9\\.-]/', '', $value);
+            if ($clean === '' || $clean === '-' || $clean === '.') {
+                return $default;
+            }
+            return (float) $clean;
+        };
+
+        $parseDate = function ($value) use ($today) {
+            $value = is_string($value) ? trim($value) : '';
+            if ($value === '') {
+                return $today;
+            }
+            try {
+                return Carbon::parse($value)->toDateString();
+            } catch (\Exception $e) {
+                return $today;
+            }
+        };
+
+        $mapProjectType = function ($value) {
+            $value = strtolower((string) $value);
+            if (str_contains($value, 'evac') || str_contains($value, 'multi')) {
+                return 'Evacuation Center / Multi-Purpose Hall';
+            }
+            if (str_contains($value, 'water')) {
+                return 'Water Supply and Sanitation';
+            }
+            if (str_contains($value, 'road') || str_contains($value, 'bridge')) {
+                return 'Local Roads and Bridges';
+            }
+            return 'Others';
+        };
+
+        $mapModeOfProcurement = function ($value) {
+            $value = strtolower((string) $value);
+            if (str_contains($value, 'contract')) {
+                return 'contract';
+            }
+            if (str_contains($value, 'admin') || str_contains($value, 'implementation')) {
+                return 'admin';
+            }
+            return 'admin';
+        };
+
+        $mapImplementingUnit = function ($value) {
+            $value = strtolower((string) $value);
+            if (str_contains($value, 'prov')) {
+                return 'Provincial LGU';
+            }
+            if (str_contains($value, 'barang')) {
+                return 'Barangay LGU';
+            }
+            if (str_contains($value, 'mun') || str_contains($value, 'city')) {
+                return 'Municipal LGU';
+            }
+            return 'Municipal LGU';
+        };
+
+        $fundingYear = (int) $parseNumber($subay->funding_year ?? null, now()->year);
+        if ($fundingYear < 2020 || $fundingYear > 2099) {
+            $fundingYear = (int) now()->year;
+        }
+
+        $modeSource = $subay->procurement_type ?? $subay->procurement ?? $subay->moi ?? null;
+        $implementingSource = $subay->implementing_unit ?? $subay->unit_implementing_the_project ?? null;
+
+        $data = [
+            'user_id' => Auth::id(),
+            'office' => Auth::user()->office ?? null,
+            'region' => Auth::user()->region ?? null,
+
+            'province' => $cleanText($subay->province ?? null, 'Unknown'),
+            'city_municipality' => $cleanText($subay->city_municipality ?? null, 'Unknown'),
+            'barangay' => $cleanText($subay->barangay ?? null, 'Unknown'),
+            'project_name' => $cleanText($subay->project_title ?? null, $projectCode),
+            'funding_year' => $fundingYear,
+            'fund_source' => $cleanText($subay->program ?? null, 'SBDP'),
+            'subaybayan_project_code' => $projectCode,
+            'project_description' => $cleanText($subay->project_description ?? $subay->remarks ?? null, 'Auto-created from SubayBAYAN'),
+            'project_type' => $mapProjectType($subay->type_of_project ?? $subay->type ?? null),
+            'date_nadai' => $parseDate($subay->date_of_nadai ?? null),
+            'lgsf_allocation' => $parseNumber($subay->national_subsidy_original_allocation ?? $subay->national_subsidy_revised_allocation ?? null, 0),
+            'lgu_counterpart' => $parseNumber($subay->lgu_counterpart_original_allocation ?? $subay->lgu_counterpart_revised_allocation ?? null, 0),
+            'no_of_beneficiaries' => (int) $parseNumber($subay->beneficiaries ?? null, 0),
+            'rainwater_collection_system' => 'No',
+            'date_confirmation_fund_receipt' => $parseDate(
+                $subay->submission_of_certificate_on_the_receipt_of_funds
+                    ?? $subay->date_of_receipt_of_notice_to_proceed
+                    ?? $subay->date_of_receipt_of_ntp
+                    ?? null
+            ),
+
+            'mode_of_procurement' => $mapModeOfProcurement($modeSource),
+            'implementing_unit' => $mapImplementingUnit($implementingSource),
+            'date_posting_itb' => $parseDate($subay->invitation_to_bid_ib_posted ?? null),
+            'date_bid_opening' => $parseDate($subay->bid_opening_bid_evaluation ?? $subay->bid_opening_evaluation ?? null),
+            'date_noa' => $parseDate($subay->noa_issuance ?? null),
+            'date_ntp' => $parseDate($subay->date_of_receipt_of_ntp ?? $subay->date_of_receipt_of_notice_to_proceed ?? null),
+            'contractor' => $cleanText($subay->name_of_contractor ?? null, 'N/A'),
+            'contract_amount' => $parseNumber($subay->contract_price ?? $subay->total_project_cost ?? $subay->total_estimated_cost_of_project ?? null, 0),
+            'project_duration' => $cleanText($subay->contract_duration ?? $subay->duration ?? null, 'N/A'),
+            'actual_start_date' => $parseDate($subay->actual_start_of_construction ?? null),
+            'target_date_completion' => $parseDate(
+                $subay->intended_completion_date
+                    ?? $subay->intended_completion_date_2
+                    ?? $subay->date_of_expiration_of_contract
+                    ?? null
+            ),
+        ];
+
+        try {
+            $project = LocallyFundedProject::create($data);
+        } catch (\Illuminate\Database\QueryException $e) {
+            $project = LocallyFundedProject::where('subaybayan_project_code', $projectCode)->first();
+            if ($project) {
+                $this->ensureFundUtilizationReport($project);
+                return redirect()->route('locally-funded-project.show', $project);
+            }
+            throw $e;
+        }
+
+        $this->ensureFundUtilizationReport($project);
+
+        return redirect()->route('locally-funded-project.show', $project)
+            ->with('success', 'Locally funded project created from SubayBAYAN data.');
+    }
+
+    /**
+     * Display a SubayBAYAN project profile (read-only).
+     */
+    public function showSubaybayan(string $projectCode)
+    {
+        if (!Schema::hasTable('subay_project_profiles')) {
+            abort(404);
+        }
+
+        $project = DB::table('subay_project_profiles')
+            ->where('project_code', $projectCode)
+            ->first();
+
+        if (!$project) {
+            abort(404);
+        }
+
+        $columns = Schema::getColumnListing('subay_project_profiles');
+        $columns = array_values(array_filter($columns, function ($column) {
+            return strtolower((string) $column) !== 'id';
+        }));
+
+        return view('projects.locally-funded-subay-show', [
+            'project' => $project,
+            'columns' => $columns,
+        ]);
     }
 
     /**
@@ -89,6 +1172,152 @@ class LocallyFundedProjectController extends Controller
     {
         $currentYear = now()->year;
         $currentMonth = now()->month;
+        $parseNumericValue = static function ($value): ?float {
+            if ($value === null) {
+                return null;
+            }
+
+            $value = trim((string) $value);
+            if ($value === '') {
+                return null;
+            }
+
+            $cleaned = preg_replace('/[^0-9\.\-]/', '', $value);
+            if ($cleaned === '' || $cleaned === '-' || $cleaned === '.') {
+                return null;
+            }
+
+            return (float) $cleaned;
+        };
+
+        $subayFinancialValues = [
+            'obligation' => null,
+            'disbursed_amount' => null,
+            'reverted_amount' => null,
+            'updated_at' => null,
+        ];
+        $subayPhysicalValues = [
+            'status_project_ro' => null,
+            'accomplishment_pct_ro' => null,
+            'updated_at' => null,
+        ];
+        $projectAtRiskValues = [
+            'slippage_ro' => null,
+            'risk_aging' => null,
+            'updated_at' => null,
+        ];
+
+        if (Schema::hasTable('subay_project_profiles')) {
+            $projectCode = trim((string) $project->subaybayan_project_code);
+
+            if ($projectCode !== '') {
+                $obligationColumn = Schema::hasColumn('subay_project_profiles', 'obligation')
+                    ? 'obligation'
+                    : (Schema::hasColumn('subay_project_profiles', 'amount') ? 'amount' : null);
+                $disbursementColumn = Schema::hasColumn('subay_project_profiles', 'disbursement')
+                    ? 'disbursement'
+                    : (Schema::hasColumn('subay_project_profiles', 'amount_2') ? 'amount_2' : null);
+                $liquidationsColumn = Schema::hasColumn('subay_project_profiles', 'liquidations')
+                    ? 'liquidations'
+                    : (Schema::hasColumn('subay_project_profiles', 'amount_3') ? 'amount_3' : null);
+                $hasStatusColumn = Schema::hasColumn('subay_project_profiles', 'status');
+                $hasTotalAccomplishmentColumn = Schema::hasColumn('subay_project_profiles', 'total_accomplishment');
+
+                $selectColumns = array_values(array_unique(array_filter([
+                    $obligationColumn,
+                    $disbursementColumn,
+                    $liquidationsColumn,
+                    $hasStatusColumn ? 'status' : null,
+                    $hasTotalAccomplishmentColumn ? 'total_accomplishment' : null,
+                    'updated_at',
+                ])));
+
+                if (count($selectColumns) > 0) {
+                    $subayRow = DB::table('subay_project_profiles')
+                        ->where('project_code', $projectCode)
+                        ->first($selectColumns);
+
+                    if ($subayRow) {
+                        $subayFinancialValues['obligation'] = $parseNumericValue(
+                            $obligationColumn ? ($subayRow->{$obligationColumn} ?? null) : null
+                        );
+                        $subayFinancialValues['disbursed_amount'] = $parseNumericValue(
+                            $disbursementColumn ? ($subayRow->{$disbursementColumn} ?? null) : null
+                        );
+                        $subayFinancialValues['reverted_amount'] = $parseNumericValue(
+                            $liquidationsColumn ? ($subayRow->{$liquidationsColumn} ?? null) : null
+                        );
+                        if ($hasStatusColumn) {
+                            $statusFromSubay = trim((string) ($subayRow->status ?? ''));
+                            $subayPhysicalValues['status_project_ro'] = $statusFromSubay !== '' ? $statusFromSubay : null;
+                        }
+                        if ($hasTotalAccomplishmentColumn) {
+                            $subayPhysicalValues['accomplishment_pct_ro'] = $parseNumericValue(
+                                $subayRow->total_accomplishment ?? null
+                            );
+                        }
+                        $subayPhysicalValues['updated_at'] = $subayRow->updated_at ?? null;
+                        $subayFinancialValues['updated_at'] = $subayRow->updated_at ?? null;
+                    }
+                }
+            }
+        }
+
+        if (Schema::hasTable('project_at_risks')) {
+            $projectCode = trim((string) $project->subaybayan_project_code);
+            if ($projectCode !== '') {
+                $hasAgingColumn = Schema::hasColumn('project_at_risks', 'aging');
+                $hasDateOfExtractionColumn = Schema::hasColumn('project_at_risks', 'date_of_extraction');
+
+                $selectColumns = array_values(array_unique(array_filter([
+                    'slippage',
+                    $hasAgingColumn ? 'aging' : null,
+                    $hasDateOfExtractionColumn ? 'date_of_extraction' : null,
+                    'updated_at',
+                    'id',
+                ])));
+
+                $normalizedProjectCode = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $projectCode) ?? '');
+
+                $projectAtRiskRow = DB::table('project_at_risks')
+                    ->where(function ($query) use ($projectCode, $normalizedProjectCode) {
+                        $query->whereRaw('UPPER(TRIM(project_code)) = ?', [strtoupper($projectCode)]);
+
+                        if ($normalizedProjectCode !== '') {
+                            $query->orWhereRaw(
+                                "UPPER(REPLACE(REPLACE(REPLACE(TRIM(project_code), '-', ''), ' ', ''), '/', '')) = ?",
+                                [$normalizedProjectCode]
+                            );
+                        }
+                    })
+                    ->orderByRaw(($hasDateOfExtractionColumn ? 'date_of_extraction' : 'updated_at') . ' DESC')
+                    ->orderByRaw($hasDateOfExtractionColumn ? 'COALESCE(updated_at, date_of_extraction) DESC' : 'updated_at DESC')
+                    ->orderBy('id', 'desc')
+                    ->first($selectColumns);
+
+                if ($projectAtRiskRow) {
+                    $projectAtRiskValues['slippage_ro'] = $parseNumericValue($projectAtRiskRow->slippage ?? null);
+
+                    $riskAgingValue = $hasAgingColumn ? ($projectAtRiskRow->aging ?? null) : null;
+                    if ($riskAgingValue !== null && $riskAgingValue !== '') {
+                        if (is_numeric($riskAgingValue)) {
+                            $numericAging = (float) $riskAgingValue;
+                            $riskAgingValue = fmod($numericAging, 1.0) === 0.0
+                                ? (string) ((int) $numericAging)
+                                : (string) $numericAging;
+                        } else {
+                            $riskAgingValue = trim((string) $riskAgingValue);
+                        }
+                    }
+                    $projectAtRiskValues['risk_aging'] = ($riskAgingValue !== null && $riskAgingValue !== '')
+                        ? (string) $riskAgingValue
+                        : null;
+
+                    $projectAtRiskValues['updated_at'] = $projectAtRiskRow->updated_at
+                        ?? ($hasDateOfExtractionColumn ? ($projectAtRiskRow->date_of_extraction ?? null) : null);
+                }
+            }
+        }
 
         $physicalUpdates = \Illuminate\Support\Facades\DB::table('locally_funded_physical_updates')
             ->leftJoin('tbusers', 'tbusers.idno', '=', 'locally_funded_physical_updates.updated_by')
@@ -153,9 +1382,44 @@ class LocallyFundedProjectController extends Controller
             }
         }
 
+        $physicalRowDefaults = [
+            'status_project_fou' => null,
+            'status_project_ro' => null,
+            'accomplishment_pct' => null,
+            'accomplishment_pct_ro' => null,
+            'slippage' => null,
+            'slippage_ro' => null,
+            'risk_aging' => null,
+            'nc_letters' => null,
+            'status_project_fou_updated_at' => null,
+            'status_project_ro_updated_at' => null,
+            'accomplishment_pct_updated_at' => null,
+            'accomplishment_pct_ro_updated_at' => null,
+            'slippage_updated_at' => null,
+            'slippage_ro_updated_at' => null,
+            'risk_aging_updated_at' => null,
+            'nc_letters_updated_at' => null,
+            'status_project_fou_updated_by' => null,
+            'status_project_ro_updated_by' => null,
+            'accomplishment_pct_updated_by' => null,
+            'accomplishment_pct_ro_updated_by' => null,
+            'slippage_updated_by' => null,
+            'slippage_ro_updated_by' => null,
+            'risk_aging_updated_by' => null,
+            'nc_letters_updated_by' => null,
+            'status_project_fou_updated_by_name' => null,
+            'status_project_ro_updated_by_name' => null,
+            'accomplishment_pct_updated_by_name' => null,
+            'accomplishment_pct_ro_updated_by_name' => null,
+            'slippage_updated_by_name' => null,
+            'slippage_ro_updated_by_name' => null,
+            'risk_aging_updated_by_name' => null,
+            'nc_letters_updated_by_name' => null,
+        ];
+
         $physicalByMonth = [];
         foreach ($physicalUpdates as $row) {
-            $physicalByMonth[(int) $row->month] = [
+            $physicalByMonth[(int) $row->month] = array_merge($physicalRowDefaults, [
                 'status_project_fou' => $row->status_project_fou,
                 'status_project_ro' => $row->status_project_ro ?? null,
                 'accomplishment_pct' => $row->accomplishment_pct,
@@ -204,7 +1468,51 @@ class LocallyFundedProjectController extends Controller
                 'nc_letters_updated_by_name' => $row->nc_letters_updated_by && $usersById->has($row->nc_letters_updated_by)
                     ? trim($usersById[$row->nc_letters_updated_by]->fname . ' ' . $usersById[$row->nc_letters_updated_by]->lname)
                     : null,
-            ];
+            ]);
+        }
+
+        if (!isset($physicalByMonth[$currentMonth])) {
+            $physicalByMonth[$currentMonth] = $physicalRowDefaults;
+        } else {
+            $physicalByMonth[$currentMonth] = array_merge($physicalRowDefaults, $physicalByMonth[$currentMonth]);
+        }
+
+        $currentStatusProjectRo = trim((string) ($physicalByMonth[$currentMonth]['status_project_ro'] ?? ''));
+        if ($currentStatusProjectRo === '' && !empty($subayPhysicalValues['status_project_ro'])) {
+            $physicalByMonth[$currentMonth]['status_project_ro'] = $subayPhysicalValues['status_project_ro'];
+            if (empty($physicalByMonth[$currentMonth]['status_project_ro_updated_at'])) {
+                $physicalByMonth[$currentMonth]['status_project_ro_updated_at'] = $subayPhysicalValues['updated_at'];
+            }
+        }
+
+        $currentAccomplishmentPctRo = $physicalByMonth[$currentMonth]['accomplishment_pct_ro'] ?? null;
+        if (
+            ($currentAccomplishmentPctRo === null || $currentAccomplishmentPctRo === '')
+            && $subayPhysicalValues['accomplishment_pct_ro'] !== null
+        ) {
+            $physicalByMonth[$currentMonth]['accomplishment_pct_ro'] = $subayPhysicalValues['accomplishment_pct_ro'];
+            if (empty($physicalByMonth[$currentMonth]['accomplishment_pct_ro_updated_at'])) {
+                $physicalByMonth[$currentMonth]['accomplishment_pct_ro_updated_at'] = $subayPhysicalValues['updated_at'];
+            }
+        }
+
+        $currentSlippageRo = $physicalByMonth[$currentMonth]['slippage_ro'] ?? null;
+        if (
+            ($currentSlippageRo === null || $currentSlippageRo === '')
+            && $projectAtRiskValues['slippage_ro'] !== null
+        ) {
+            $physicalByMonth[$currentMonth]['slippage_ro'] = $projectAtRiskValues['slippage_ro'];
+            if (empty($physicalByMonth[$currentMonth]['slippage_ro_updated_at'])) {
+                $physicalByMonth[$currentMonth]['slippage_ro_updated_at'] = $projectAtRiskValues['updated_at'];
+            }
+        }
+
+        $currentRiskAging = trim((string) ($physicalByMonth[$currentMonth]['risk_aging'] ?? ''));
+        if ($currentRiskAging === '' && !empty($projectAtRiskValues['risk_aging'])) {
+            $physicalByMonth[$currentMonth]['risk_aging'] = $projectAtRiskValues['risk_aging'];
+            if (empty($physicalByMonth[$currentMonth]['risk_aging_updated_at'])) {
+                $physicalByMonth[$currentMonth]['risk_aging_updated_at'] = $projectAtRiskValues['updated_at'];
+            }
         }
 
         $currentPhysical = $physicalByMonth[$currentMonth] ?? null;
@@ -214,6 +1522,23 @@ class LocallyFundedProjectController extends Controller
             'obligation' => 0,
             'disbursed_amount' => 0,
             'reverted_amount' => 0,
+        ];
+        $financialRowDefaults = [
+            'obligation' => null,
+            'disbursed_amount' => null,
+            'reverted_amount' => null,
+            'utilization_rate' => null,
+            'updated_at' => null,
+            'updated_by' => null,
+            'updated_by_name' => null,
+            'obligation_updated_at' => null,
+            'obligation_updated_by' => null,
+            'disbursed_amount_updated_at' => null,
+            'disbursed_amount_updated_by' => null,
+            'reverted_amount_updated_at' => null,
+            'reverted_amount_updated_by' => null,
+            'utilization_rate_updated_at' => null,
+            'utilization_rate_updated_by' => null,
         ];
         $financialUpdates = collect();
 
@@ -244,7 +1569,7 @@ class LocallyFundedProjectController extends Controller
                 ->get();
 
             foreach ($financialUpdates as $row) {
-                $financialByMonth[(int) $row->month] = [
+                $financialByMonth[(int) $row->month] = array_merge($financialRowDefaults, [
                     'obligation' => $row->obligation,
                     'disbursed_amount' => $row->disbursed_amount,
                     'reverted_amount' => $row->reverted_amount,
@@ -260,7 +1585,7 @@ class LocallyFundedProjectController extends Controller
                     'reverted_amount_updated_by' => $row->reverted_amount_updated_by,
                     'utilization_rate_updated_at' => $row->utilization_rate_updated_at,
                     'utilization_rate_updated_by' => $row->utilization_rate_updated_by,
-                ];
+                ]);
             }
 
             foreach ($financialByMonth as $row) {
@@ -268,6 +1593,36 @@ class LocallyFundedProjectController extends Controller
                 $financialTotals['disbursed_amount'] += (float) ($row['disbursed_amount'] ?? 0);
                 $financialTotals['reverted_amount'] += (float) ($row['reverted_amount'] ?? 0);
             }
+        }
+
+        foreach (['obligation', 'disbursed_amount', 'reverted_amount'] as $field) {
+            $hasMonthlyValue = collect($financialByMonth)->contains(function ($row) use ($field) {
+                $value = $row[$field] ?? null;
+                return $value !== null && $value !== '';
+            });
+
+            if ($hasMonthlyValue) {
+                continue;
+            }
+
+            $fallbackValue = $subayFinancialValues[$field] ?? null;
+            if ($fallbackValue === null) {
+                $fallbackValue = $parseNumericValue($project->{$field} ?? null);
+            }
+            if ($fallbackValue === null) {
+                continue;
+            }
+
+            if (!isset($financialByMonth[$currentMonth])) {
+                $financialByMonth[$currentMonth] = $financialRowDefaults;
+            } else {
+                $financialByMonth[$currentMonth] = array_merge($financialRowDefaults, $financialByMonth[$currentMonth]);
+            }
+
+            $financialByMonth[$currentMonth][$field] = $fallbackValue;
+            $financialByMonth[$currentMonth][$field . '_updated_at'] = $subayFinancialValues['updated_at'] ?? null;
+            $financialByMonth[$currentMonth][$field . '_updated_by'] = null;
+            $financialTotals[$field] = (float) $fallbackValue;
         }
 
         $activityLogs = [];
@@ -412,6 +1767,7 @@ class LocallyFundedProjectController extends Controller
             ['field' => 'ro_remarks', 'label' => 'RO Remarks', 'section' => 'Monitoring', 'action' => 'remarks', 'updated_at' => 'ro_remarks_updated_at', 'updated_by' => 'ro_remarks_updated_by'],
             ['field' => 'pcr_submission_deadline', 'label' => 'PCR Submission Deadline', 'section' => 'Post Implementation', 'action' => 'update', 'updated_at' => 'pcr_submission_deadline_updated_at', 'updated_by' => 'pcr_submission_deadline_updated_by'],
             ['field' => 'pcr_date_submitted_to_po', 'label' => 'PCR Date Submitted to PO', 'section' => 'Post Implementation', 'action' => 'update', 'updated_at' => 'pcr_date_submitted_to_po_updated_at', 'updated_by' => 'pcr_date_submitted_to_po_updated_by'],
+            ['field' => 'pcr_mov_file_path', 'label' => 'PCR MOV Upload', 'section' => 'Post Implementation', 'action' => 'upload', 'updated_at' => 'pcr_mov_uploaded_at', 'updated_by' => 'pcr_mov_uploaded_by'],
             ['field' => 'pcr_date_received_by_ro', 'label' => 'PCR Date Received by RO', 'section' => 'Post Implementation', 'action' => 'update', 'updated_at' => 'pcr_date_received_by_ro_updated_at', 'updated_by' => 'pcr_date_received_by_ro_updated_by'],
             ['field' => 'pcr_remarks', 'label' => 'PCR Remarks', 'section' => 'Post Implementation', 'action' => 'remarks', 'updated_at' => 'pcr_remarks_updated_at', 'updated_by' => 'pcr_remarks_updated_by'],
             ['field' => 'rssa_report_deadline', 'label' => 'RSSA Report Deadline', 'section' => 'Post Implementation', 'action' => 'update', 'updated_at' => 'rssa_report_deadline_updated_at', 'updated_by' => 'rssa_report_deadline_updated_by'],
@@ -438,10 +1794,11 @@ class LocallyFundedProjectController extends Controller
             }
         }
 
+        $activityLogs = $this->mergeLocallyFundedActivityLogs($activityLogs, $project);
+
         $activityLogs = collect($activityLogs)
             ->sortByDesc('timestamp')
             ->values()
-            ->take(200)
             ->all();
 
         $logUserIds = collect($activityLogs)
@@ -493,10 +1850,11 @@ class LocallyFundedProjectController extends Controller
         $fundingYears = [2025, 2024, 2023, 2022, 2021];
 
         $financialAllocationTotal = (float) $project->lgsf_allocation;
-        $financialBalance = $financialAllocationTotal
-            - ($financialTotals['disbursed_amount'] + $financialTotals['reverted_amount']);
+        $financialDisbursedTotal = (float) ($financialTotals['disbursed_amount'] ?? 0);
+        $financialRevertedTotal = (float) ($financialTotals['reverted_amount'] ?? 0);
+        $financialBalance = $financialAllocationTotal - ($financialDisbursedTotal + $financialRevertedTotal);
         $financialUtilizationRate = $financialAllocationTotal > 0
-            ? (100 - (($financialBalance / $financialAllocationTotal) * 100))
+            ? (($financialAllocationTotal - $financialBalance) / $financialAllocationTotal) * 100
             : 0;
 
         $remarksUserIds = collect([
@@ -512,6 +1870,7 @@ class LocallyFundedProjectController extends Controller
             $project->ro_remarks_updated_by,
             $project->pcr_submission_deadline_updated_by,
             $project->pcr_date_submitted_to_po_updated_by,
+            $project->pcr_mov_uploaded_by,
             $project->pcr_date_received_by_ro_updated_by,
             $project->pcr_remarks_updated_by,
             $project->rssa_report_deadline_updated_by,
@@ -569,6 +1928,9 @@ class LocallyFundedProjectController extends Controller
         $pcrDateSubmittedToPoUpdatedByName = $project->pcr_date_submitted_to_po_updated_by && $remarksUsers->has($project->pcr_date_submitted_to_po_updated_by)
             ? trim($remarksUsers[$project->pcr_date_submitted_to_po_updated_by]->fname . ' ' . $remarksUsers[$project->pcr_date_submitted_to_po_updated_by]->lname)
             : null;
+        $pcrMovUploadedByName = $project->pcr_mov_uploaded_by && $remarksUsers->has($project->pcr_mov_uploaded_by)
+            ? trim($remarksUsers[$project->pcr_mov_uploaded_by]->fname . ' ' . $remarksUsers[$project->pcr_mov_uploaded_by]->lname)
+            : null;
         $pcrDateReceivedByRoUpdatedByName = $project->pcr_date_received_by_ro_updated_by && $remarksUsers->has($project->pcr_date_received_by_ro_updated_by)
             ? trim($remarksUsers[$project->pcr_date_received_by_ro_updated_by]->fname . ' ' . $remarksUsers[$project->pcr_date_received_by_ro_updated_by]->lname)
             : null;
@@ -594,7 +1956,21 @@ class LocallyFundedProjectController extends Controller
             ? trim($remarksUsers[$project->rssa_remarks_updated_by]->fname . ' ' . $remarksUsers[$project->rssa_remarks_updated_by]->lname)
             : null;
 
-        return view('projects.locally-funded-show', compact('project', 'provinces', 'provinceMunicipalities', 'fundSources', 'fundingYears', 'physicalByMonth', 'currentPhysical', 'currentYear', 'currentMonth', 'actualCompletionUpdatedByName', 'financialByMonth', 'financialTotals', 'financialBalance', 'financialUtilizationRate', 'physicalRemarksUpdatedByName', 'physicalRemarksEncodedByName', 'financialRemarksUpdatedByName', 'financialRemarksEncodedByName', 'poMonitoringDateUpdatedByName', 'poFinalInspectionUpdatedByName', 'poRemarksUpdatedByName', 'roMonitoringDateUpdatedByName', 'roFinalInspectionUpdatedByName', 'roRemarksUpdatedByName', 'pcrSubmissionDeadlineUpdatedByName', 'pcrDateSubmittedToPoUpdatedByName', 'pcrDateReceivedByRoUpdatedByName', 'pcrRemarksUpdatedByName', 'rssaReportDeadlineUpdatedByName', 'rssaSubmissionStatusUpdatedByName', 'rssaDateSubmittedToPoUpdatedByName', 'rssaDateReceivedByRoUpdatedByName', 'rssaDateSubmittedToCoUpdatedByName', 'rssaRemarksUpdatedByName', 'activityLogs'));
+        return view('projects.locally-funded-show', compact('project', 'provinces', 'provinceMunicipalities', 'fundSources', 'fundingYears', 'physicalByMonth', 'currentPhysical', 'currentYear', 'currentMonth', 'actualCompletionUpdatedByName', 'financialByMonth', 'financialTotals', 'financialBalance', 'financialUtilizationRate', 'physicalRemarksUpdatedByName', 'physicalRemarksEncodedByName', 'financialRemarksUpdatedByName', 'financialRemarksEncodedByName', 'poMonitoringDateUpdatedByName', 'poFinalInspectionUpdatedByName', 'poRemarksUpdatedByName', 'roMonitoringDateUpdatedByName', 'roFinalInspectionUpdatedByName', 'roRemarksUpdatedByName', 'pcrSubmissionDeadlineUpdatedByName', 'pcrDateSubmittedToPoUpdatedByName', 'pcrMovUploadedByName', 'pcrDateReceivedByRoUpdatedByName', 'pcrRemarksUpdatedByName', 'rssaReportDeadlineUpdatedByName', 'rssaSubmissionStatusUpdatedByName', 'rssaDateSubmittedToPoUpdatedByName', 'rssaDateReceivedByRoUpdatedByName', 'rssaDateSubmittedToCoUpdatedByName', 'rssaRemarksUpdatedByName', 'activityLogs'));
+    }
+
+    public function viewPcrMov(LocallyFundedProject $project)
+    {
+        if (!$project->pcr_mov_file_path) {
+            abort(404, 'PCR MOV document not found');
+        }
+
+        $filePath = storage_path('app/public/' . $project->pcr_mov_file_path);
+        if (!file_exists($filePath)) {
+            abort(404, 'PCR MOV file not found on disk');
+        }
+
+        return response()->file($filePath);
     }
 
     /**
@@ -661,40 +2037,19 @@ class LocallyFundedProjectController extends Controller
      */
     public function create()
     {
-        // Cordillera Administrative Region (CAR) provinces
-        $provinces = [
-            'Abra',
-            'Apayao',
-            'Benguet',
-            'City of Baguio',
-            'Ifugao',
-            'Kalinga',
-            'Mountain Province'
-        ];
-        
-        // Province to municipalities/cities mapping
-        $provinceMunicipalities = [
-            'Abra' => ['Bangued', 'Boliney', 'Bucay', 'Daguioman', 'Danglas', 'Dolores', 'La Paz', 'Lacub', 'Lagangilang', 'Lagayan', 'Langiden', 'Licuan-Baay', 'Malibcong', 'Manabo', 'Peñarrubia', 'Pidcal', 'Pilar', 'Sallapadan', 'San Isidro', 'San Juan', 'San Quintin'],
-            'Apayao' => ['Calanasan', 'Conner', 'Flora', 'Kabugao', 'Pudtol', 'Santa Marcela'],
-            'Benguet' => ['Atok', 'Baguio City', 'Bakun', 'Buguias', 'Itogon', 'Kabayan', 'Kapangan', 'Kibungan', 'La Trinidad', 'Mankayan', 'Sablan', 'Tuba', 'Tublay'],
-            'City of Baguio' => ['Baguio City'],
-            'Ifugao' => ['Aguinaldo', 'Alfonso Lista', 'Asipulo', 'Banaue', 'Hingyon', 'Hungduan', 'Kiangan', 'Lagawe', 'Mayoyao', 'Tinoc'],
-            'Kalinga' => ['Balbalan', 'Dagupagsan', 'Lubuagan', 'Mabunguran', 'Pasil', 'Pinukpuk', 'Rizal', 'Tabuk City', 'Tanudan', 'Tinglayan'],
-            'Mountain Province' => ['Amlang', 'Amtan', 'Bauko', 'Besao', 'Cervantes', 'Natonin', 'Paracelis', 'Sabangan', 'Sagada', 'Tadian']
-        ];
-        
+        $options = $this->getProjectFormOptions();
+
         // Get current user's information
         $user = Auth::user();
         $currentUserOffice = $user->office;
         $currentUserRegion = $user->region;
         $currentUserAgency = $user->agency;
         $currentUserProvince = $user->province;
-        
-        // Fund source and funding year options
-        $fundSources = ['SBDP', 'FALGU', 'CMGP', 'SGLGIF', 'SAFPB'];
-        $fundingYears = [2025, 2024, 2023, 2022, 2021];
-        
-        return view('projects.locally-funded-create', compact('provinces', 'provinceMunicipalities', 'currentUserOffice', 'currentUserRegion', 'currentUserAgency', 'currentUserProvince', 'fundSources', 'fundingYears'));
+
+        return view('projects.locally-funded-create', array_merge(
+            $options,
+            compact('currentUserOffice', 'currentUserRegion', 'currentUserAgency', 'currentUserProvince')
+        ));
     }
 
     /**
@@ -807,10 +2162,11 @@ class LocallyFundedProjectController extends Controller
         $validated['region'] = $user->region;
 
         // Create the project
-        \Illuminate\Support\Facades\DB::table('locally_funded_projects')->insert($validated);
+        $project = LocallyFundedProject::create($validated);
+        $this->ensureFundUtilizationReport($project);
 
         return redirect()->route('projects.locally-funded')
-                       ->with('success', 'Locally funded project created successfully!');
+                        ->with('success', 'Locally funded project created successfully!');
     }
 
     /**
@@ -854,6 +2210,7 @@ class LocallyFundedProjectController extends Controller
                     'physical_remarks_updated_by' => Auth::id(),
                     'physical_remarks_encoded_by' => $project->physical_remarks_encoded_by ?: Auth::id(),
                 ]);
+                $this->notifyLocallyFundedUpdateRecipients($project, 'updated Physical Remarks', false);
 
                 return redirect()->route('locally-funded-project.show', $project)
                     ->with('success', 'Physical remarks updated successfully!');
@@ -868,6 +2225,7 @@ class LocallyFundedProjectController extends Controller
                     'actual_date_completion' => $validated['actual_date_completion'] ?? null,
                     'actual_date_completion_updated_by' => Auth::id(),
                 ]);
+                $this->notifyLocallyFundedUpdateRecipients($project, 'updated Actual Date of Completion', false);
 
                 return redirect()->route('locally-funded-project.show', $project)
                     ->with('success', 'Actual date of completion updated successfully!');
@@ -886,6 +2244,16 @@ class LocallyFundedProjectController extends Controller
                 'slippage_ro' => 'nullable|numeric|min:0|max:100',
                 'risk_aging' => 'nullable|string',
                 'nc_letters' => 'nullable|string',
+            ];
+            $physicalFieldLabels = [
+                'status_project_fou' => 'Status (Actual)',
+                'status_project_ro' => 'Status (Subaybayan)',
+                'accomplishment_pct' => 'Accomplishment % (Actual)',
+                'accomplishment_pct_ro' => 'Accomplishment % (Subaybayan)',
+                'slippage' => 'Slippage (Actual)',
+                'slippage_ro' => 'Slippage (Subaybayan)',
+                'risk_aging' => 'Risk/Aging',
+                'nc_letters' => 'NC Letters',
             ];
 
             if (array_key_exists($field, $rulesByField)) {
@@ -910,6 +2278,26 @@ class LocallyFundedProjectController extends Controller
                     ]
                 );
 
+                $formattedValue = $this->formatLocallyFundedActivityValue($field, $validated[$field] ?? null);
+                $details = 'Month: ' . $month;
+                if ($formattedValue !== null && $formattedValue !== '') {
+                    $details .= ' • ' . $formattedValue;
+                }
+                $this->logLocallyFundedActivity(
+                    $project,
+                    'update',
+                    'Physical',
+                    $physicalFieldLabels[$field] ?? $field,
+                    $details,
+                    $now,
+                    Auth::id()
+                );
+                $this->notifyLocallyFundedUpdateRecipients(
+                    $project,
+                    'updated ' . ($physicalFieldLabels[$field] ?? $field),
+                    in_array($field, ['status_project_fou', 'status_project_ro'], true)
+                );
+
                 return redirect()->route('locally-funded-project.show', $project)
                     ->with('success', 'Physical accomplishment updated successfully!');
             }
@@ -930,6 +2318,7 @@ class LocallyFundedProjectController extends Controller
 
                 $now = now();
                 $m = (int) $now->month;
+                $updatedCurrentMonth = false;
 
                 if (isset($validated[$field]) && array_key_exists($m, $validated[$field])) {
                     $value = $validated[$field][$m];
@@ -948,6 +2337,30 @@ class LocallyFundedProjectController extends Controller
                             'updated_at' => $now,
                             'created_at' => $now,
                         ])
+                    );
+                    $updatedCurrentMonth = true;
+
+                    $formattedValue = $this->formatLocallyFundedActivityValue($field, $value === '' ? null : $value);
+                    $details = 'Month: ' . $m;
+                    if ($formattedValue !== null && $formattedValue !== '') {
+                        $details .= ' • ' . $formattedValue;
+                    }
+                    $this->logLocallyFundedActivity(
+                        $project,
+                        'update',
+                        'Physical',
+                        $physicalFieldLabels[$field] ?? $field,
+                        $details,
+                        $now,
+                        Auth::id()
+                    );
+                }
+
+                if ($updatedCurrentMonth) {
+                    $this->notifyLocallyFundedUpdateRecipients(
+                        $project,
+                        'updated ' . ($physicalFieldLabels[$field] ?? $field),
+                        in_array($field, ['status_project_fou', 'status_project_ro'], true)
                     );
                 }
 
@@ -976,6 +2389,7 @@ class LocallyFundedProjectController extends Controller
                     'financial_remarks_updated_by' => Auth::id(),
                     'financial_remarks_encoded_by' => $project->financial_remarks_encoded_by ?: Auth::id(),
                 ]);
+                $this->notifyLocallyFundedUpdateRecipients($project, 'updated Financial Remarks', false);
 
                 return redirect()->route('locally-funded-project.show', $project)
                     ->with('success', 'Financial remarks updated successfully!');
@@ -986,6 +2400,12 @@ class LocallyFundedProjectController extends Controller
                 'disbursed_amount' => 'nullable|numeric|min:0',
                 'reverted_amount' => 'nullable|numeric|min:0',
                 'utilization_rate' => 'nullable|numeric|min:0|max:100',
+            ];
+            $financialFieldLabels = [
+                'obligation' => 'Obligation',
+                'disbursed_amount' => 'Disbursed Amount',
+                'reverted_amount' => 'Reverted Amount',
+                'utilization_rate' => 'Utilization Rate',
             ];
 
             $field = null;
@@ -1004,6 +2424,7 @@ class LocallyFundedProjectController extends Controller
 
                 $now = now();
                 $m = (int) $now->month;
+                $updatedCurrentMonth = false;
 
                 if (isset($validated[$field]) && array_key_exists($m, $validated[$field])) {
                     $value = $validated[$field][$m];
@@ -1022,6 +2443,30 @@ class LocallyFundedProjectController extends Controller
                             'updated_at' => $now,
                             'created_at' => $now,
                         ])
+                    );
+                    $updatedCurrentMonth = true;
+
+                    $formattedValue = $this->formatLocallyFundedActivityValue($field, $value === '' ? null : $value);
+                    $details = 'Month: ' . $m;
+                    if ($formattedValue !== null && $formattedValue !== '') {
+                        $details .= ' • ' . $formattedValue;
+                    }
+                    $this->logLocallyFundedActivity(
+                        $project,
+                        'update',
+                        'Financial',
+                        $financialFieldLabels[$field] ?? $field,
+                        $details,
+                        $now,
+                        Auth::id()
+                    );
+                }
+
+                if ($updatedCurrentMonth) {
+                    $this->notifyLocallyFundedUpdateRecipients(
+                        $project,
+                        'updated ' . ($financialFieldLabels[$field] ?? $field),
+                        false
                     );
                 }
 
@@ -1045,6 +2490,7 @@ class LocallyFundedProjectController extends Controller
                     'po_monitoring_date_updated_at' => now(),
                     'po_monitoring_date_updated_by' => Auth::id(),
                 ]);
+                $this->notifyLocallyFundedUpdateRecipients($project, 'updated PO Monitoring Date', false);
 
                 return redirect()->route('locally-funded-project.show', $project)
                     ->with('success', 'PO monitoring date updated successfully!');
@@ -1060,6 +2506,7 @@ class LocallyFundedProjectController extends Controller
                     'po_final_inspection_updated_at' => now(),
                     'po_final_inspection_updated_by' => Auth::id(),
                 ]);
+                $this->notifyLocallyFundedUpdateRecipients($project, 'updated PO Final Inspection', false);
 
                 return redirect()->route('locally-funded-project.show', $project)
                     ->with('success', 'PO final inspection updated successfully!');
@@ -1075,6 +2522,7 @@ class LocallyFundedProjectController extends Controller
                     'po_remarks_updated_at' => now(),
                     'po_remarks_updated_by' => Auth::id(),
                 ]);
+                $this->notifyLocallyFundedUpdateRecipients($project, 'updated PO Remarks', false);
 
                 return redirect()->route('locally-funded-project.show', $project)
                     ->with('success', 'PO remarks updated successfully!');
@@ -1091,6 +2539,7 @@ class LocallyFundedProjectController extends Controller
                     'ro_monitoring_date_updated_at' => now(),
                     'ro_monitoring_date_updated_by' => Auth::id(),
                 ]);
+                $this->notifyLocallyFundedUpdateRecipients($project, 'updated RO Monitoring Date', false);
 
                 return redirect()->route('locally-funded-project.show', $project)
                     ->with('success', 'RO monitoring date updated successfully!');
@@ -1106,6 +2555,7 @@ class LocallyFundedProjectController extends Controller
                     'ro_final_inspection_updated_at' => now(),
                     'ro_final_inspection_updated_by' => Auth::id(),
                 ]);
+                $this->notifyLocallyFundedUpdateRecipients($project, 'updated RO Final Inspection', false);
 
                 return redirect()->route('locally-funded-project.show', $project)
                     ->with('success', 'RO final inspection updated successfully!');
@@ -1121,6 +2571,7 @@ class LocallyFundedProjectController extends Controller
                     'ro_remarks_updated_at' => now(),
                     'ro_remarks_updated_by' => Auth::id(),
                 ]);
+                $this->notifyLocallyFundedUpdateRecipients($project, 'updated RO Remarks', false);
 
                 return redirect()->route('locally-funded-project.show', $project)
                     ->with('success', 'RO remarks updated successfully!');
@@ -1137,6 +2588,7 @@ class LocallyFundedProjectController extends Controller
                     'pcr_submission_deadline_updated_at' => now(),
                     'pcr_submission_deadline_updated_by' => Auth::id(),
                 ]);
+                $this->notifyLocallyFundedUpdateRecipients($project, 'updated PCR Submission Deadline', false);
 
                 return redirect()->route('locally-funded-project.show', $project)
                     ->with('success', 'PCR submission deadline updated successfully!');
@@ -1152,9 +2604,38 @@ class LocallyFundedProjectController extends Controller
                     'pcr_date_submitted_to_po_updated_at' => now(),
                     'pcr_date_submitted_to_po_updated_by' => Auth::id(),
                 ]);
+                $this->notifyLocallyFundedUpdateRecipients($project, 'updated PCR Date Submitted to PO', false);
 
                 return redirect()->route('locally-funded-project.show', $project)
                     ->with('success', 'PCR date submitted to PO updated successfully!');
+            }
+
+            if ($request->hasFile('pcr_mov_file')) {
+                $request->validate([
+                    'pcr_mov_file' => 'required|mimes:pdf,jpg,jpeg,png|max:10240',
+                ]);
+
+                $oldFilePath = $project->pcr_mov_file_path;
+                $file = $request->file('pcr_mov_file');
+                $path = $file->store('lfp/pcr/' . $project->id, 'public');
+                $now = now();
+
+                $project->update([
+                    'pcr_mov_file_path' => $path,
+                    'pcr_mov_uploaded_at' => $now,
+                    'pcr_mov_uploaded_by' => Auth::id(),
+                    'pcr_date_received_by_ro' => $now->toDateString(),
+                    'pcr_date_received_by_ro_updated_at' => $now,
+                    'pcr_date_received_by_ro_updated_by' => Auth::id(),
+                ]);
+
+                if ($oldFilePath && $oldFilePath !== $path && Storage::disk('public')->exists($oldFilePath)) {
+                    Storage::disk('public')->delete($oldFilePath);
+                }
+                $this->notifyLocallyFundedUpdateRecipients($project, 'uploaded PCR MOV', true);
+
+                return redirect()->route('locally-funded-project.show', $project)
+                    ->with('success', 'PCR MOV uploaded successfully!');
             }
 
             if ($request->has('pcr_date_received_by_ro')) {
@@ -1167,6 +2648,7 @@ class LocallyFundedProjectController extends Controller
                     'pcr_date_received_by_ro_updated_at' => now(),
                     'pcr_date_received_by_ro_updated_by' => Auth::id(),
                 ]);
+                $this->notifyLocallyFundedUpdateRecipients($project, 'updated PCR Date Received by RO', false);
 
                 return redirect()->route('locally-funded-project.show', $project)
                     ->with('success', 'PCR date received by RO updated successfully!');
@@ -1182,6 +2664,7 @@ class LocallyFundedProjectController extends Controller
                     'pcr_remarks_updated_at' => now(),
                     'pcr_remarks_updated_by' => Auth::id(),
                 ]);
+                $this->notifyLocallyFundedUpdateRecipients($project, 'updated PCR Remarks', false);
 
                 return redirect()->route('locally-funded-project.show', $project)
                     ->with('success', 'PCR remarks updated successfully!');
@@ -1197,6 +2680,7 @@ class LocallyFundedProjectController extends Controller
                     'rssa_report_deadline_updated_at' => now(),
                     'rssa_report_deadline_updated_by' => Auth::id(),
                 ]);
+                $this->notifyLocallyFundedUpdateRecipients($project, 'updated RSSA Report Deadline', false);
 
                 return redirect()->route('locally-funded-project.show', $project)
                     ->with('success', 'RSSA report deadline updated successfully!');
@@ -1212,6 +2696,7 @@ class LocallyFundedProjectController extends Controller
                     'rssa_submission_status_updated_at' => now(),
                     'rssa_submission_status_updated_by' => Auth::id(),
                 ]);
+                $this->notifyLocallyFundedUpdateRecipients($project, 'updated RSSA Submission Status', true);
 
                 return redirect()->route('locally-funded-project.show', $project)
                     ->with('success', 'RSSA submission status updated successfully!');
@@ -1227,6 +2712,7 @@ class LocallyFundedProjectController extends Controller
                     'rssa_date_submitted_to_po_updated_at' => now(),
                     'rssa_date_submitted_to_po_updated_by' => Auth::id(),
                 ]);
+                $this->notifyLocallyFundedUpdateRecipients($project, 'updated RSSA Date Submitted to PO', false);
 
                 return redirect()->route('locally-funded-project.show', $project)
                     ->with('success', 'RSSA date submitted to PO updated successfully!');
@@ -1242,6 +2728,7 @@ class LocallyFundedProjectController extends Controller
                     'rssa_date_received_by_ro_updated_at' => now(),
                     'rssa_date_received_by_ro_updated_by' => Auth::id(),
                 ]);
+                $this->notifyLocallyFundedUpdateRecipients($project, 'updated RSSA Date Received by RO', false);
 
                 return redirect()->route('locally-funded-project.show', $project)
                     ->with('success', 'RSSA date received by RO updated successfully!');
@@ -1257,6 +2744,7 @@ class LocallyFundedProjectController extends Controller
                     'rssa_date_submitted_to_co_updated_at' => now(),
                     'rssa_date_submitted_to_co_updated_by' => Auth::id(),
                 ]);
+                $this->notifyLocallyFundedUpdateRecipients($project, 'updated RSSA Date Submitted to CO', false);
 
                 return redirect()->route('locally-funded-project.show', $project)
                     ->with('success', 'RSSA date submitted to CO updated successfully!');
@@ -1272,6 +2760,7 @@ class LocallyFundedProjectController extends Controller
                     'rssa_remarks_updated_at' => now(),
                     'rssa_remarks_updated_by' => Auth::id(),
                 ]);
+                $this->notifyLocallyFundedUpdateRecipients($project, 'updated RSSA Remarks', false);
 
                 return redirect()->route('locally-funded-project.show', $project)
                     ->with('success', 'RSSA remarks updated successfully!');
@@ -1373,6 +2862,8 @@ class LocallyFundedProjectController extends Controller
         }
 
         $project->update($validated);
+        $this->ensureFundUtilizationReport($project);
+        $this->notifyLocallyFundedUpdateRecipients($project, 'updated Locally Funded Project details', false);
 
         return redirect()->route('locally-funded-project.show', $project)
             ->with('success', 'Locally funded project updated successfully!');

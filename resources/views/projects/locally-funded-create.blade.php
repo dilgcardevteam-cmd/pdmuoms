@@ -28,6 +28,13 @@
                 <h3 style="color: #002C76; font-size: 16px; font-weight: 700; margin: 0 0 25px 0; padding-bottom: 12px; border-bottom: 2px solid #002C76;">Project Profile</h3>
 
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+                    <!-- Project Description (Full Width) -->
+                    <div style="grid-column: 1 / -1;">
+                        <label for="project_description" style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Project Description *</label>
+                        <textarea id="project_description" name="project_description" required rows="3"
+                                  style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; box-sizing: border-box; resize: vertical;">{{ old('project_description') }}</textarea>
+                    </div>
+
                     <!-- Province -->
                     <div>
                         <label for="province" style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Province *</label>
@@ -163,12 +170,6 @@
                                style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; box-sizing: border-box;">
                     </div>
 
-                    <!-- Project Description (Full Width) -->
-                    <div style="grid-column: 1 / -1;">
-                        <label for="project_description" style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Project Description *</label>
-                        <textarea id="project_description" name="project_description" required rows="3"
-                                  style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; box-sizing: border-box; resize: vertical;">{{ old('project_description') }}</textarea>
-                    </div>
                 </div>
             </div>
 

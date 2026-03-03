@@ -276,7 +276,7 @@ verification_token  : NULL                                  ← CLEARED
 Email configuration is in `config/mail.php`. Current setup:
 - **Driver**: SMTP (or can use other drivers)
 - **From Address**: Configured in `.env` or `config/mail.php`
-- **Subject**: "Verify Your Email Address - PDMU POMS"
+- **Subject**: "Verify Your Email Address - PDMU PDMUOMS"
 
 ## Troubleshooting
 

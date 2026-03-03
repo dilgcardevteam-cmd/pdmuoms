@@ -56,15 +56,15 @@
 │                                                          │
 │  From: noreply@pdmu-poms.local                          │
 │  To: john@example.com                                   │
-│  Subject: Verify Your Email Address - PDMU POMS        │
+│  Subject: Verify Your Email Address - PDMU PDMUOMS        │
 │                                                          │
 │  ┌───────────────────────────────────────────────────┐  │
-│  │ PDMU POMS - Email Verification                    │  │
+│  │ PDMU PDMUOMS - Email Verification                    │  │
 │  ├───────────────────────────────────────────────────┤  │
 │  │                                                   │  │
 │  │ Hello John Doe!                                   │  │
 │  │                                                   │  │
-│  │ Thank you for registering with PDMU POMS.        │  │
+│  │ Thank you for registering with PDMU PDMUOMS.        │  │
 │  │                                                   │  │
 │  │ To activate your account, please verify your     │  │
 │  │ email address by clicking the button below:      │  │

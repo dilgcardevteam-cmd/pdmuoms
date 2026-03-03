@@ -2,7 +2,7 @@
 
 ## System is Ready! ✅
 
-Your PDMU POMS system is now configured to send verification emails after user registration.
+Your PDMU PDMUOMS system is now configured to send verification emails after user registration.
 
 ## What Happens When a User Registers
 
@@ -21,7 +21,7 @@ The verification email includes:
 - ✅ Link to verify email address
 - ✅ Expiration time (60 minutes)
 - ✅ Help text if they didn't receive it
-- ✅ Professional POMS branding
+- ✅ Professional PDMUOMS branding
 
 ## What Users Need to Do
 
@@ -66,7 +66,7 @@ include 'test_email_verification.php'
 - **SMTP Port**: 587
 - **Encryption**: TLS
 - **From Address**: subaybayancordillera@gmail.com
-- **From Name**: PDMU Operations Management System (POMS)
+- **From Name**: PDMU Operations Management System (PDMUOMS)
 - **Verification Link Expires**: 60 minutes
 - **Resend Rate Limit**: 6 requests per minute
 

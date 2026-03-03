@@ -13,13 +13,13 @@
 <body>
     <div class="container">
         <div class="header">
-            <h2>PDMU POMS - Email Verification</h2>
+            <h2>PDMU PDMUOMS - Email Verification</h2>
         </div>
         
         <div class="content">
             <p>Hello {{ $user->fname }} {{ $user->lname }}!</p>
             
-            <p>Thank you for registering with the <strong>PDMU Operations Management System (POMS)</strong>.</p>
+            <p>Thank you for registering with the <strong>PDMU Operations Management System (PDMUOMS)</strong>.</p>
             
             <p>Your account has been successfully created. To activate your account, please verify your email address by clicking the button below.</p>
             
@@ -36,7 +36,7 @@
             
             <hr>
             
-            <p>Best regards,<br>PDMU Operations Management System (POMS)</p>
+            <p>Best regards,<br>PDMU Operations Management System (PDMUOMS)</p>
         </div>
         
         <div class="footer">

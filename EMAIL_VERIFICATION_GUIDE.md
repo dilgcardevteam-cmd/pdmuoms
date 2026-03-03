@@ -104,11 +104,11 @@ Rate limited to: **6 requests per minute**
 The verification email includes:
 
 ```
-Subject: Verify Your Email Address - PDMU POMS
+Subject: Verify Your Email Address - PDMU PDMUOMS
 
 Hello [First Name] [Last Name]!
 
-Thank you for registering with the PDMU Operations Management System (POMS).
+Thank you for registering with the PDMU Operations Management System (PDMUOMS).
 Your account has been successfully created. 
 To activate your account, please verify your email address by clicking the button below.
 
@@ -122,7 +122,7 @@ If the button above does not work, copy and paste this URL into your web browser
 [Verification Link URL]
 
 Best regards,
-PDMU Operations Management System (POMS)
+PDMU Operations Management System (PDMUOMS)
 ```
 
 ## User Status Changes

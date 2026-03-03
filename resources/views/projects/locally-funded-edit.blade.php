@@ -48,6 +48,13 @@
                 <h3 style="color: #002C76; font-size: 16px; font-weight: 700; margin: 0 0 25px 0; padding-bottom: 12px; border-bottom: 2px solid #002C76;">Project Profile</h3>
 
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+                    <!-- Project Description (Full Width) -->
+                    <div style="grid-column: 1 / -1;">
+                        <label for="project_description" style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Project Description *</label>
+                        <textarea id="project_description" name="project_description" required rows="3"
+                                  style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; box-sizing: border-box; resize: vertical;">{{ old('project_description') }}</textarea>
+                    </div>
+
                     <!-- Province -->
                     <div>
                         <label for="province" style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Province *</label>
@@ -183,12 +190,6 @@
                                style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; box-sizing: border-box;">
                     </div>
 
-                    <!-- Project Description (Full Width) -->
-                    <div style="grid-column: 1 / -1;">
-                        <label for="project_description" style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Project Description *</label>
-                        <textarea id="project_description" name="project_description" required rows="3"
-                                  style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; box-sizing: border-box; resize: vertical;">{{ old('project_description') }}</textarea>
-                    </div>
                 </div>
             </div>
 
@@ -452,10 +453,15 @@
                                 <select id="status_project_fou" name="status_project_fou"
                                         style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; box-sizing: border-box; background-color: white;">
                                     <option value="">-- Select Status --</option>
-                                    <option value="Not Started" {{ old('status_project_fou') === 'Not Started' ? 'selected' : '' }}>Not Started</option>
-                                    <option value="Ongoing" {{ old('status_project_fou') === 'Ongoing' ? 'selected' : '' }}>Ongoing</option>
-                                    <option value="Completed" {{ old('status_project_fou') === 'Completed' ? 'selected' : '' }}>Completed</option>
-                                    <option value="Delayed" {{ old('status_project_fou') === 'Delayed' ? 'selected' : '' }}>Delayed</option>
+                                    <option value="COMPLETED" {{ old('status_project_fou') === 'COMPLETED' ? 'selected' : '' }}>Completed</option>
+                                    <option value="ONGOING" {{ old('status_project_fou') === 'ONGOING' ? 'selected' : '' }}>On-going</option>
+                                    <option value="BID EVALUATION/OPENING" {{ old('status_project_fou') === 'BID EVALUATION/OPENING' ? 'selected' : '' }}>Bid Evaluation/Opening</option>
+                                    <option value="NOA ISSUANCE" {{ old('status_project_fou') === 'NOA ISSUANCE' ? 'selected' : '' }}>NOA Issuance</option>
+                                    <option value="DED PREPARATION" {{ old('status_project_fou') === 'DED PREPARATION' ? 'selected' : '' }}>DED Preparation</option>
+                                    <option value="NOT YET STARTED" {{ old('status_project_fou') === 'NOT YET STARTED' ? 'selected' : '' }}>Not Yet Started</option>
+                                    <option value="ITB/AD POSTED" {{ old('status_project_fou') === 'ITB/AD POSTED' ? 'selected' : '' }}>ITB/AD Posted</option>
+                                    <option value="TERMINATED" {{ old('status_project_fou') === 'TERMINATED' ? 'selected' : '' }}>Terminated</option>
+                                    <option value="CANCELLED" {{ old('status_project_fou') === 'CANCELLED' ? 'selected' : '' }}>Cancelled</option>
                                 </select>
                                 <button type="submit" class="physical-save" style="display: none; margin-top: 8px; align-items: center; padding: 8px 16px; background-color: #002C76; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13px; text-decoration: none; transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(0, 44, 118, 0.2);">
                                     <i class="fas fa-save" style="margin-right: 6px;"></i> Save
@@ -551,10 +557,15 @@
                                 <select id="status_project_ro" name="status_project_ro"
                                         style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; box-sizing: border-box; background-color: white;">
                                     <option value="">-- Select Status --</option>
-                                    <option value="Not Started" {{ old('status_project_ro') === 'Not Started' ? 'selected' : '' }}>Not Started</option>
-                                    <option value="Ongoing" {{ old('status_project_ro') === 'Ongoing' ? 'selected' : '' }}>Ongoing</option>
-                                    <option value="Completed" {{ old('status_project_ro') === 'Completed' ? 'selected' : '' }}>Completed</option>
-                                    <option value="Delayed" {{ old('status_project_ro') === 'Delayed' ? 'selected' : '' }}>Delayed</option>
+                                    <option value="COMPLETED" {{ old('status_project_ro') === 'COMPLETED' ? 'selected' : '' }}>Completed</option>
+                                    <option value="ONGOING" {{ old('status_project_ro') === 'ONGOING' ? 'selected' : '' }}>On-going</option>
+                                    <option value="BID EVALUATION/OPENING" {{ old('status_project_ro') === 'BID EVALUATION/OPENING' ? 'selected' : '' }}>Bid Evaluation/Opening</option>
+                                    <option value="NOA ISSUANCE" {{ old('status_project_ro') === 'NOA ISSUANCE' ? 'selected' : '' }}>NOA Issuance</option>
+                                    <option value="DED PREPARATION" {{ old('status_project_ro') === 'DED PREPARATION' ? 'selected' : '' }}>DED Preparation</option>
+                                    <option value="NOT YET STARTED" {{ old('status_project_ro') === 'NOT YET STARTED' ? 'selected' : '' }}>Not Yet Started</option>
+                                    <option value="ITB/AD POSTED" {{ old('status_project_ro') === 'ITB/AD POSTED' ? 'selected' : '' }}>ITB/AD Posted</option>
+                                    <option value="TERMINATED" {{ old('status_project_ro') === 'TERMINATED' ? 'selected' : '' }}>Terminated</option>
+                                    <option value="CANCELLED" {{ old('status_project_ro') === 'CANCELLED' ? 'selected' : '' }}>Cancelled</option>
                                 </select>
 
             <!-- MONITORING / INSPECTION ACTIVITIES SECTION -->

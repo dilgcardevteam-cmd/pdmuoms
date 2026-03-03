@@ -252,7 +252,7 @@ MAIL_DRIVER=smtp
 MAIL_HOST=your.smtp.server
 MAIL_PORT=your_port
 MAIL_FROM_ADDRESS=noreply@pdmu-poms.local
-MAIL_FROM_NAME="PDMU POMS"
+MAIL_FROM_NAME="PDMU PDMUOMS"
 ```
 
 ### Application Configuration

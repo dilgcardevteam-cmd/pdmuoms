@@ -19,7 +19,7 @@ System creates user record with:
 ### 2️⃣ Verification Email Sent
 ```
 System sends email containing:
-  - Subject: "Verify Your Email Address - PDMU POMS"
+  - Subject: "Verify Your Email Address - PDMU PDMUOMS"
   - Link: http://localhost:8000/email/verify/token/{verification_token}
   - Instructions to click link
 ```
@@ -147,7 +147,7 @@ MAIL_PORT=2525 (or your port)
 MAIL_USERNAME=your_username
 MAIL_PASSWORD=your_password
 MAIL_FROM_ADDRESS=noreply@pdmu-poms.local
-MAIL_FROM_NAME="PDMU POMS"
+MAIL_FROM_NAME="PDMU PDMUOMS"
 ```
 
 ## Summary

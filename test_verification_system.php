@@ -13,7 +13,7 @@ $kernel->bootstrap();
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
-echo "\n=== PDMU POMS - Email Verification System Test ===\n\n";
+echo "\n=== PDMU PDMUOMS - Email Verification System Test ===\n\n";
 
 // Test 1: Check database connection
 echo "✓ Test 1: Database Connection\n";

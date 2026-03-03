@@ -40,9 +40,9 @@ class TestSmtp extends Command
         $this->info("Sending test email to: {$email}");
         
         try {
-            Mail::raw('This is a test email from PDMU POMS. If you received this, SMTP is working correctly!', function ($message) use ($email) {
+            Mail::raw('This is a test email from PDMU PDMUOMS. If you received this, SMTP is working correctly!', function ($message) use ($email) {
                 $message->to($email)
-                        ->subject('PDMU POMS - SMTP Test Email');
+                        ->subject('PDMU PDMUOMS - SMTP Test Email');
             });
             
             $this->info('✓ Email sent successfully!');

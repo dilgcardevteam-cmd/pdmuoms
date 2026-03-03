@@ -4,9 +4,13 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Foundation\Auth\AuthenticatesUsers;
+use Illuminate\Auth\Events\Lockout;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
 use App\Models\User;
 
 class LoginController extends Controller
@@ -30,6 +34,8 @@ class LoginController extends Controller
      * @var string
      */
     protected $redirectTo = '/dashboard';
+    protected int $maxLoginAttempts = 5;
+    protected int $loginDecaySeconds = 900;
 
     /**
      * Create a new controller instance.
@@ -50,6 +56,30 @@ class LoginController extends Controller
     public function username()
     {
         return 'username';
+    }
+
+    /**
+     * Handle an authentication attempt with explicit rate limiting.
+     */
+    public function login(Request $request)
+    {
+        $this->validateLogin($request);
+        $lockoutResponse = $this->ensureIsNotRateLimited($request);
+        if ($lockoutResponse) {
+            return $lockoutResponse;
+        }
+
+        if ($this->attemptLogin($request)) {
+            RateLimiter::clear($this->throttleKey($request));
+            $request->session()->regenerate();
+
+            return $this->authenticated($request, Auth::user())
+                ?: redirect()->intended($this->redirectPath());
+        }
+
+        RateLimiter::hit($this->throttleKey($request), $this->decaySeconds());
+
+        return $this->sendFailedLoginResponse($request);
     }
 
     /**
@@ -86,6 +116,56 @@ class LoginController extends Controller
     }
 
     /**
+     * Validate incoming login request.
+     */
+    protected function validateLogin(Request $request): void
+    {
+        $request->validate([
+            'username' => ['required', 'string', 'max:255'],
+            'password' => ['required', 'string', 'max:255'],
+        ]);
+    }
+
+    /**
+     * Block requests when too many failed attempts were recorded.
+     */
+    protected function ensureIsNotRateLimited(Request $request): ?RedirectResponse
+    {
+        if (! RateLimiter::tooManyAttempts($this->throttleKey($request), $this->maxAttempts())) {
+            return null;
+        }
+
+        event(new Lockout($request));
+
+        $seconds = RateLimiter::availableIn($this->throttleKey($request));
+        $minutes = (int) ceil($seconds / 60);
+        $unit = $minutes === 1 ? 'minute' : 'minutes';
+
+        return redirect('/login')->withErrors([
+            'login_error' => 'Too many login attempts. Please try again in '.$minutes.' '.$unit.'.',
+        ])->withInput($request->only('username', 'remember'))
+          ->with('lockout_seconds', $seconds);
+    }
+
+    /**
+     * Build a unique throttle key using username and client IP.
+     */
+    protected function throttleKey(Request $request): string
+    {
+        return Str::lower((string) $request->input('username')).'|'.$request->ip();
+    }
+
+    protected function maxAttempts(): int
+    {
+        return $this->maxLoginAttempts;
+    }
+
+    protected function decaySeconds(): int
+    {
+        return $this->loginDecaySeconds;
+    }
+
+    /**
      * The user has been authenticated.
      *
      * @param  \Illuminate\Http\Request  $request
@@ -118,4 +198,3 @@ class LoginController extends Controller
         ])->withInput($request->only('username', 'remember'));
     }
 }
-

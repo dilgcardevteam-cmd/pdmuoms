@@ -11,11 +11,6 @@
         </div>
         <div style="display: flex; gap: 8px; align-items: center;">
             <a href="{{ route('projects.locally-funded') }}" style="padding: 8px 16px; background-color: #002C76; color: white; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 13px;"><i class="fas fa-arrow-left"></i> Back to List</a>
-            <form action="{{ route('locally-funded-project.destroy', $project) }}" method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this project? This action cannot be undone.');">
-                @csrf
-                @method('DELETE')
-                <button type="submit" style="padding: 8px 16px; background-color: #dc2626; color: white; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 13px; border: none; cursor: pointer;"><i class="fas fa-trash"></i> Delete</button>
-            </form>
         </div>
     </div>
 
@@ -30,10 +25,22 @@
     @endif
 
     @if (session('success'))
-        <div style="background-color: #d1fae5; border: 1px solid #a7f3d0; color: #065f46; padding: 12px 16px; border-radius: 8px; margin: 16px 0;">
+        <div id="success-alert" style="background-color: #d1fae5; border: 1px solid #a7f3d0; color: #065f46; padding: 12px 16px; border-radius: 8px; margin: 16px 0;">
             {{ session('success') }}
         </div>
+        <script>
+            setTimeout(function () {
+                const successAlert = document.getElementById('success-alert');
+                if (successAlert) {
+                    successAlert.style.display = 'none';
+                }
+            }, 3000);
+        </script>
     @endif
+
+    @php
+        $isLguAgencyUser = strtoupper(trim((string) (Auth::user()->agency ?? ''))) === 'LGU';
+    @endphp
 
     <div style="background: #f8fafc; padding: 24px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 24px;">
@@ -55,9 +62,15 @@
         <div id="projectProfileSection" style="margin-bottom: 24px; padding: 20px; border: 1px solid #00267C; border-radius: 10px; background-color: #ffffff;">
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 2px solid #00267C; padding-bottom: 10px;">
                 <h3 style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Project Profile</h3>
-                <a href="#" data-toggle="inline-edit" data-target="editProfileForm" style="padding: 6px 12px; background-color: #7c3aed; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 12px;"><i class="fas fa-edit" style="margin-right: 6px;"></i>Update</a>
+                @if(!$isLguAgencyUser)
+                    <a href="#" data-toggle="inline-edit" data-target="editProfileForm" data-confirm-skip="true" style="padding: 6px 12px; background-color: #7c3aed; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 12px;"><i class="fas fa-edit" style="margin-right: 6px;"></i>Update</a>
+                @endif
             </div>
             <div style="display: grid; grid-template-columns: repeat(3, minmax(260px, 1fr)); gap: 14px;">
+                <div style="grid-column: 1 / -1;">
+                    <strong>Project Description:</strong>
+                    <div style="margin-top: 6px; color: #374151;">{!! nl2br(e($project->project_description)) !!}</div>
+                </div>
                 <div><strong>Province:</strong> {{ $project->province }}</div>
                 <div><strong>City/Municipality:</strong> {{ $project->city_municipality }}</div>
                 @php
@@ -80,10 +93,6 @@
                 <div><strong>Date of Confirmation Fund Receipt:</strong> {{ $project->date_confirmation_fund_receipt ? $project->date_confirmation_fund_receipt->format('F j, Y') : '' }}</div>
                 <div><strong>LGSF Allocation:</strong> ₱ {{ number_format($project->lgsf_allocation, 2) }}</div>
                 <div><strong>LGU Counterpart:</strong> ₱ {{ number_format($project->lgu_counterpart, 2) }}</div>
-                <div style="grid-column: 1 / -1;">
-                    <strong>Project Description:</strong>
-                    <div style="margin-top: 6px; color: #374151;">{!! nl2br(e($project->project_description)) !!}</div>
-                </div>
             </div>
             <div id="editProfileFormWrapper" style="display: {{ old('section') === 'profile' ? 'block' : 'none' }}; margin-top: 16px; padding: 16px; border-radius: 10px; background-color: #e7f1ff; border: 1px solid #cfe3ff;">
             <form id="editProfileForm" action="{{ route('locally-funded-project.update', $project) }}" method="POST">
@@ -92,14 +101,41 @@
                 <input type="hidden" name="section" value="profile">
 
                 <div style="display: grid; grid-template-columns: repeat(3, minmax(260px, 1fr)); gap: 20px;">
+                    @php
+                        $selectedProvince = old('province', $project->province);
+                        $selectedProvinceNorm = strtolower(trim((string) $selectedProvince));
+                        $hasProvinceInOptions = collect($provinces)->contains(function ($item) use ($selectedProvinceNorm) {
+                            return strtolower(trim((string) $item)) === $selectedProvinceNorm;
+                        });
+
+                        $selectedFundingYear = (string) old('funding_year', $project->funding_year);
+                        $hasFundingYearInOptions = collect($fundingYears)->contains(function ($item) use ($selectedFundingYear) {
+                            return (string) $item === $selectedFundingYear;
+                        });
+
+                        $selectedFundSource = old('fund_source', $project->fund_source);
+                        $selectedFundSourceNorm = strtolower(trim((string) $selectedFundSource));
+                        $hasFundSourceInOptions = collect($fundSources)->contains(function ($item) use ($selectedFundSourceNorm) {
+                            return strtolower(trim((string) $item)) === $selectedFundSourceNorm;
+                        });
+                    @endphp
+                    <div style="grid-column: 1 / -1;">
+                        <label for="project_description" style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Project Description *</label>
+                        <textarea id="project_description" name="project_description" required rows="3"
+                                  style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; box-sizing: border-box; resize: vertical;">{{ old('project_description', $project->project_description) }}</textarea>
+                    </div>
+
                     <div>
                         <label for="province" style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Province *</label>
                         <select id="province" name="province" required
                                 style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; box-sizing: border-box; background-color: white;">
                             <option value="">-- Select Province --</option>
                             @foreach($provinces as $province)
-                                <option value="{{ $province }}" {{ old('province', $project->province) === $province ? 'selected' : '' }}>{{ $province }}</option>
+                                <option value="{{ $province }}" {{ strtolower(trim((string) $province)) === $selectedProvinceNorm ? 'selected' : '' }}>{{ $province }}</option>
                             @endforeach
+                            @if(!$hasProvinceInOptions && trim((string) $selectedProvince) !== '')
+                                <option value="{{ $selectedProvince }}" selected>{{ $selectedProvince }}</option>
+                            @endif
                         </select>
                     </div>
 
@@ -132,8 +168,11 @@
                                 style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; box-sizing: border-box; background-color: white;">
                             <option value="">-- Select Funding Year --</option>
                             @foreach($fundingYears as $year)
-                                <option value="{{ $year }}" {{ old('funding_year', $project->funding_year) == $year ? 'selected' : '' }}>{{ $year }}</option>
+                                <option value="{{ $year }}" {{ (string) $year === $selectedFundingYear ? 'selected' : '' }}>{{ $year }}</option>
                             @endforeach
+                            @if(!$hasFundingYearInOptions && trim($selectedFundingYear) !== '')
+                                <option value="{{ $selectedFundingYear }}" selected>{{ $selectedFundingYear }}</option>
+                            @endif
                         </select>
                     </div>
 
@@ -143,8 +182,11 @@
                                 style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; box-sizing: border-box; background-color: white;">
                             <option value="">-- Select Fund Source --</option>
                             @foreach($fundSources as $source)
-                                <option value="{{ $source }}" {{ old('fund_source', $project->fund_source) === $source ? 'selected' : '' }}>{{ $source }}</option>
+                                <option value="{{ $source }}" {{ strtolower(trim((string) $source)) === $selectedFundSourceNorm ? 'selected' : '' }}>{{ $source }}</option>
                             @endforeach
+                            @if(!$hasFundSourceInOptions && trim((string) $selectedFundSource) !== '')
+                                <option value="{{ $selectedFundSource }}" selected>{{ $selectedFundSource }}</option>
+                            @endif
                         </select>
                     </div>
 
@@ -212,11 +254,6 @@
                                style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; box-sizing: border-box;">
                     </div>
 
-                    <div style="grid-column: 1 / -1;">
-                        <label for="project_description" style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Project Description *</label>
-                        <textarea id="project_description" name="project_description" required rows="3"
-                                  style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; box-sizing: border-box; resize: vertical;">{{ old('project_description', $project->project_description) }}</textarea>
-                    </div>
                 </div>
 
                 <div style="margin-top: 16px; display: flex; gap: 8px;">
@@ -230,7 +267,9 @@
         <div id="contractInfoSection" style="margin-bottom: 24px; padding: 20px; border: 1px solid #00267C; border-radius: 10px; background-color: #ffffff;">
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 2px solid #00267C; padding-bottom: 10px;">
                 <h3 style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Contract Information</h3>
-                <a href="#" data-toggle="inline-edit" data-target="editContractForm" style="padding: 6px 12px; background-color: #7c3aed; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 12px;"><i class="fas fa-edit" style="margin-right: 6px;"></i>Update</a>
+                @if(!$isLguAgencyUser)
+                    <a href="#" data-toggle="inline-edit" data-target="editContractForm" data-confirm-skip="true" style="padding: 6px 12px; background-color: #7c3aed; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 12px;"><i class="fas fa-edit" style="margin-right: 6px;"></i>Update</a>
+                @endif
             </div>
             <div style="display: grid; grid-template-columns: repeat(3, minmax(260px, 1fr)); gap: 14px;">
                 <div><strong>Mode of Procurement:</strong> {{ $project->mode_of_procurement }}</div>
@@ -253,13 +292,27 @@
                 <input type="hidden" name="section" value="contract">
 
                 <div style="display: grid; grid-template-columns: repeat(3, minmax(260px, 1fr)); gap: 20px;">
+                    @php
+                        $selectedModeOfProcurement = old('mode_of_procurement', $project->mode_of_procurement);
+                        $selectedModeOfProcurementNorm = strtolower(trim((string) $selectedModeOfProcurement));
+                        $knownModes = ['admin', 'contract'];
+                        $hasModeOption = in_array($selectedModeOfProcurementNorm, $knownModes, true);
+
+                        $selectedImplementingUnit = old('implementing_unit', $project->implementing_unit);
+                        $selectedImplementingUnitNorm = strtolower(trim((string) $selectedImplementingUnit));
+                        $knownImplementingUnits = ['provincial lgu', 'municipal lgu', 'barangay lgu'];
+                        $hasImplementingOption = in_array($selectedImplementingUnitNorm, $knownImplementingUnits, true);
+                    @endphp
                     <div>
                         <label for="mode_of_procurement" style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Mode of Procurement *</label>
                         <select id="mode_of_procurement" name="mode_of_procurement" required
                                 style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; box-sizing: border-box; background-color: white;">
                             <option value="">-- Select Mode of Procurement --</option>
-                            <option value="admin" {{ old('mode_of_procurement', $project->mode_of_procurement) === 'admin' ? 'selected' : '' }}>Admin</option>
-                            <option value="contract" {{ old('mode_of_procurement', $project->mode_of_procurement) === 'contract' ? 'selected' : '' }}>Contract</option>
+                            <option value="admin" {{ $selectedModeOfProcurementNorm === 'admin' ? 'selected' : '' }}>Admin</option>
+                            <option value="contract" {{ $selectedModeOfProcurementNorm === 'contract' ? 'selected' : '' }}>Contract</option>
+                            @if(!$hasModeOption && trim((string) $selectedModeOfProcurement) !== '')
+                                <option value="{{ $selectedModeOfProcurement }}" selected>{{ $selectedModeOfProcurement }}</option>
+                            @endif
                         </select>
                     </div>
 
@@ -268,9 +321,12 @@
                         <select id="implementing_unit" name="implementing_unit" required
                                 style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; box-sizing: border-box; background-color: white;">
                             <option value="">-- Select Implementing Unit --</option>
-                            <option value="Provincial LGU" {{ old('implementing_unit', $project->implementing_unit) === 'Provincial LGU' ? 'selected' : '' }}>Provincial LGU</option>
-                            <option value="Municipal LGU" {{ old('implementing_unit', $project->implementing_unit) === 'Municipal LGU' ? 'selected' : '' }}>Municipal LGU</option>
-                            <option value="Barangay LGU" {{ old('implementing_unit', $project->implementing_unit) === 'Barangay LGU' ? 'selected' : '' }}>Barangay LGU</option>
+                            <option value="Provincial LGU" {{ $selectedImplementingUnitNorm === 'provincial lgu' ? 'selected' : '' }}>Provincial LGU</option>
+                            <option value="Municipal LGU" {{ $selectedImplementingUnitNorm === 'municipal lgu' ? 'selected' : '' }}>Municipal LGU</option>
+                            <option value="Barangay LGU" {{ $selectedImplementingUnitNorm === 'barangay lgu' ? 'selected' : '' }}>Barangay LGU</option>
+                            @if(!$hasImplementingOption && trim((string) $selectedImplementingUnit) !== '')
+                                <option value="{{ $selectedImplementingUnit }}" selected>{{ $selectedImplementingUnit }}</option>
+                            @endif
                         </select>
                     </div>
 
@@ -365,34 +421,61 @@
                 12 => 'December',
             ];
             $statusOptions = [
-                'DED PREPARATION',
-                'PROCUREMENT',
-                'ONGOING',
-                'COMPLETED',
-                'TERMINATED/CANCEL',
-                'NOT YET STARTED',
+                ['value' => 'COMPLETED', 'label' => 'Completed'],
+                ['value' => 'ONGOING', 'label' => 'On-going'],
+                ['value' => 'BID EVALUATION/OPENING', 'label' => 'Bid Evaluation/Opening'],
+                ['value' => 'NOA ISSUANCE', 'label' => 'NOA Issuance'],
+                ['value' => 'DED PREPARATION', 'label' => 'DED Preparation'],
+                ['value' => 'NOT YET STARTED', 'label' => 'Not Yet Started'],
+                ['value' => 'ITB/AD POSTED', 'label' => 'ITB/AD Posted'],
+                ['value' => 'TERMINATED', 'label' => 'Terminated'],
+                ['value' => 'CANCELLED', 'label' => 'Cancelled'],
             ];
-            $statusBadge = function ($value) {
-                if (!$value) {
+            $statusOptionValues = array_column($statusOptions, 'value');
+            $statusLabelMap = [
+                'COMPLETED' => 'Completed',
+                'ONGOING' => 'On-going',
+                'BID EVALUATION/OPENING' => 'Bid Evaluation/Opening',
+                'NOA ISSUANCE' => 'NOA Issuance',
+                'DED PREPARATION' => 'DED Preparation',
+                'NOT YET STARTED' => 'Not Yet Started',
+                'ITB/AD POSTED' => 'ITB/AD Posted',
+                'TERMINATED' => 'Terminated',
+                'CANCELLED' => 'Cancelled',
+                'TERMINATED/CANCEL' => 'Terminated/Cancelled',
+                'PROCUREMENT' => 'Procurement',
+            ];
+            $statusLabel = function ($value) use ($statusLabelMap) {
+                return $statusLabelMap[$value] ?? $value;
+            };
+            $statusBadge = function ($value) use ($statusLabel) {
+                if ($value === null || $value === '') {
                     return '<span style="color: #6b7280;">-</span>';
                 }
                 $colors = [
-                    'DED PREPARATION' => ['#fef3c7', '#92400e'],
-                    'PROCUREMENT' => ['#e0f2fe', '#0369a1'],
-                    'ONGOING' => ['#dcfce7', '#166534'],
-                    'COMPLETED' => ['#e0e7ff', '#3730a3'],
-                    'TERMINATED/CANCEL' => ['#fee2e2', '#991b1b'],
+                    'COMPLETED' => ['#dcfce7', '#166534'],
+                    'ONGOING' => ['#dbeafe', '#1d4ed8'],
+                    'BID EVALUATION/OPENING' => ['#fef3c7', '#92400e'],
+                    'NOA ISSUANCE' => ['#ede9fe', '#6b21a8'],
+                    'DED PREPARATION' => ['#e0f2fe', '#0369a1'],
                     'NOT YET STARTED' => ['#f3f4f6', '#374151'],
+                    'ITB/AD POSTED' => ['#d1fae5', '#065f46'],
+                    'TERMINATED' => ['#fee2e2', '#991b1b'],
+                    'CANCELLED' => ['#fecaca', '#7f1d1d'],
+                    'TERMINATED/CANCEL' => ['#fee2e2', '#991b1b'],
+                    'PROCUREMENT' => ['#e0f2fe', '#0369a1'],
                 ];
                 $color = $colors[$value] ?? ['#e5e7eb', '#374151'];
-                return '<span style="display: inline-block; padding: 3px 8px; border-radius: 999px; background-color: ' . $color[0] . '; color: ' . $color[1] . '; font-size: 11px; font-weight: 600;">' . e($value) . '</span>';
+                return '<span style="display: inline-block; padding: 3px 8px; border-radius: 999px; background-color: ' . $color[0] . '; color: ' . $color[1] . '; font-size: 11px; font-weight: 600;">' . e($statusLabel($value)) . '</span>';
             };
         @endphp
 
         <div id="physicalAccomplishmentSection" style="margin-bottom: 24px; padding: 20px; border: 1px solid #00267C; border-radius: 10px; background-color: #ffffff;">
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 2px solid #00267C; padding-bottom: 10px;">
                 <h3 style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Physical Accomplishment</h3>
-                <a href="#" data-toggle="inline-edit" data-target="editPhysicalForm" data-physical-toggle="true" style="padding: 6px 12px; background-color: #7c3aed; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 12px;"><i class="fas fa-edit" style="margin-right: 6px;"></i>Update</a>
+                @if(!$isLguAgencyUser)
+                    <a href="#" data-toggle="inline-edit" data-target="editPhysicalForm" data-physical-toggle="true" data-confirm-skip="true" style="padding: 6px 12px; background-color: #7c3aed; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 12px;"><i class="fas fa-edit" style="margin-right: 6px;"></i>Update</a>
+                @endif
             </div>
             <div style="display: grid; grid-template-columns: repeat(2, minmax(300px, 1fr)); gap: 16px;">
                 <div>
@@ -426,8 +509,11 @@
                                             <select name="status_project_fou[{{ $monthNumber }}]" data-physical-edit="true" data-month="{{ $monthNumber }}" disabled
                                                     style="width: 100%; min-width: 0; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px; background-color: #f3f4f6;">
                                                 <option value="">-- Select --</option>
+                                                @if($value && !in_array($value, $statusOptionValues, true))
+                                                    <option value="{{ $value }}" selected>{{ $statusLabel($value) }}</option>
+                                                @endif
                                                 @foreach($statusOptions as $option)
-                                                    <option value="{{ $option }}" {{ $value === $option ? 'selected' : '' }}>{{ $option }}</option>
+                                                    <option value="{{ $option['value'] }}" {{ $value === $option['value'] ? 'selected' : '' }}>{{ $option['label'] }}</option>
                                                 @endforeach
                                             </select>
                                         </div>
@@ -473,8 +559,11 @@
                                             <select name="status_project_ro[{{ $monthNumber }}]" data-physical-edit="true" data-month="{{ $monthNumber }}" data-ro-only="true" {{ !(Auth::user()->agency === 'DILG' && Auth::user()->province === 'Regional Office') ? 'disabled' : '' }}
                                                     style="width: 100%; min-width: 0; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px; background-color: #f3f4f6;">
                                                 <option value="">-- Select --</option>
+                                                @if($value && !in_array($value, $statusOptionValues, true))
+                                                    <option value="{{ $value }}" selected>{{ $statusLabel($value) }}</option>
+                                                @endif
                                                 @foreach($statusOptions as $option)
-                                                    <option value="{{ $option }}" {{ $value === $option ? 'selected' : '' }}>{{ $option }}</option>
+                                                    <option value="{{ $option['value'] }}" {{ $value === $option['value'] ? 'selected' : '' }}>{{ $option['label'] }}</option>
                                                 @endforeach
                                             </select>
                                         </div>
@@ -679,6 +768,9 @@
                         <span title="Ahead (+ value of slippage)&#10;On Schedule (0%)&#10;No Risk (-0.01% to -4.99% slippage)&#10;Low Risk (-5% to -9.99% slippage)&#10;Moderate Risk (-10% to -14.99% slippage)&#10;High Risk (-15% and higher slippage)" style="display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; margin-left: 6px; border-radius: 999px; background-color: #e5e7eb; color: #374151; font-size: 11px; font-weight: 700; cursor: help;">i</span>
                     </strong>
                     {!! $statusBadge($currentPhysical['risk_aging'] ?? null) !!}
+                    @if((int) $project->id === 25)
+                        <span style="margin-left: 6px; color: #6b7280; font-size: 12px; font-weight: 600;">No Update</span>
+                    @endif
                     <details class="monthly-details" style="margin-top: 8px;">
                         <summary class="monthly-summary" style="cursor: pointer; color: #1d4ed8; background-color: #e0e7ff; border: 1px solid #c7d2fe; padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">View monthly Status</summary>
                         <div style="margin-top: 10px;">
@@ -707,6 +799,9 @@
                                             <select name="risk_aging[{{ $monthNumber }}]" data-physical-edit="true" data-month="{{ $monthNumber }}" data-ro-only="true" {{ !(Auth::user()->agency === 'DILG' && Auth::user()->province === 'Regional Office') ? 'disabled' : '' }}
                                                     style="width: 100%; min-width: 0; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px; background-color: #f3f4f6;">
                                                 <option value="">-- Select --</option>
+                                                @if($value !== '' && !in_array($value, ['Ahead', 'On Schedule', 'No Risk', 'Low Risk', 'Moderate Risk', 'High Risk'], true))
+                                                    <option value="{{ $value }}" selected>{{ $value }}</option>
+                                                @endif
                                                 <option value="Ahead" {{ $value === 'Ahead' ? 'selected' : '' }}>Ahead</option>
                                                 <option value="On Schedule" {{ $value === 'On Schedule' ? 'selected' : '' }}>On Schedule</option>
                                                 <option value="No Risk" {{ $value === 'No Risk' ? 'selected' : '' }}>No Risk</option>
@@ -813,7 +908,9 @@
         <div id="financialAccomplishmentSection" style="margin-bottom: 24px; padding: 20px; border: 1px solid #00267C; border-radius: 10px; background-color: #ffffff;">
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 2px solid #00267C; padding-bottom: 10px;">
                 <h3 style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Financial Accomplishment (based on Subaybayan)</h3>
-                <a href="#" data-toggle="inline-edit" data-target="editFinancialForm" data-financial-toggle="true" style="padding: 6px 12px; background-color: #7c3aed; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 12px;"><i class="fas fa-edit" style="margin-right: 6px;"></i>Update</a>
+                @if(!$isLguAgencyUser)
+                    <a href="#" data-toggle="inline-edit" data-target="editFinancialForm" data-financial-toggle="true" data-confirm-skip="true" style="padding: 6px 12px; background-color: #7c3aed; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 12px;"><i class="fas fa-edit" style="margin-right: 6px;"></i>Update</a>
+                @endif
             </div>
             <div style="display: grid; grid-template-columns: 1fr; gap: 16px;">
                 <div>
@@ -950,12 +1047,12 @@
 
                 <div>
                     <strong>Balance:</strong>
-                    {{ number_format((float) $financialBalance, 2) }}
+                    <span id="financialBalance">{{ number_format((float) $financialBalance, 2) }}</span>
                 </div>
 
                 <div>
                     <strong>Utilization Rate:</strong>
-                    {{ number_format((float) $financialUtilizationRate, 2) . '%' }}
+                    <span id="financialUtilizationRate" style="color: {{ (float) $financialUtilizationRate < 100 ? '#dc2626' : '#111827' }};">{{ number_format((float) $financialUtilizationRate, 2) . '%' }}</span>
                 </div>
 
                 <div>
@@ -981,7 +1078,9 @@
         <div id="monitoringInspectionSection" style="margin-bottom: 24px; padding: 20px; border: 1px solid #00267C; border-radius: 10px; background-color: #ffffff;">
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 2px solid #00267C; padding-bottom: 10px;">
                 <h3 style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Monitoring/Inspection Activities</h3>
-                <a href="#" data-toggle="inline-edit" data-target="editMonitoringForm" data-monitoring-toggle="true" style="padding: 6px 12px; background-color: #7c3aed; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 12px;"><i class="fas fa-edit" style="margin-right: 6px;"></i>Update</a>
+                @if(!$isLguAgencyUser)
+                    <a href="#" data-toggle="inline-edit" data-target="editMonitoringForm" data-monitoring-toggle="true" data-confirm-skip="true" style="padding: 6px 12px; background-color: #7c3aed; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 12px;"><i class="fas fa-edit" style="margin-right: 6px;"></i>Update</a>
+                @endif
             </div>
 
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
@@ -1106,7 +1205,9 @@
         <div id="postImplementationSection" style="margin-bottom: 24px; padding: 20px; border: 1px solid #00267C; border-radius: 10px; background-color: #ffffff;">
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 2px solid #00267C; padding-bottom: 10px;">
                 <h3 style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Post Implementation Requirements</h3>
-                <a href="#" data-toggle="inline-edit" data-target="editPostImplementationForm" data-post-implementation-toggle="true" style="padding: 6px 12px; background-color: #7c3aed; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 12px;"><i class="fas fa-edit" style="margin-right: 6px;"></i>Update</a>
+                @if(!$isLguAgencyUser)
+                    <a href="#" data-toggle="inline-edit" data-target="editPostImplementationForm" data-post-implementation-toggle="true" data-confirm-skip="true" style="padding: 6px 12px; background-color: #7c3aed; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 12px;"><i class="fas fa-edit" style="margin-right: 6px;"></i>Update</a>
+                @endif
             </div>
 
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
@@ -1118,7 +1219,12 @@
                             @method('PUT')
                             <input type="hidden" name="section" value="monitoring">
                             <label for="pcr_submission_deadline" style="display: block; font-weight: 600; color: #374151; margin-bottom: 6px;">Deadline of PCR Submission</label>
-                            <input type="date" id="pcr_submission_deadline" name="pcr_submission_deadline" value="{{ old('pcr_submission_deadline', $project->pcr_submission_deadline ? $project->pcr_submission_deadline->format('Y-m-d') : '') }}"
+                            @php
+                                $computedPcrDeadline = $project->target_date_completion
+                                    ? $project->target_date_completion->copy()->addDays(30)
+                                    : $project->pcr_submission_deadline;
+                            @endphp
+                            <input type="date" id="pcr_submission_deadline" name="pcr_submission_deadline" value="{{ old('pcr_submission_deadline', $computedPcrDeadline ? $computedPcrDeadline->format('Y-m-d') : '') }}"
                                    data-post-implementation-edit="true" data-ro-only="true" disabled
                                    style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; box-sizing: border-box; background-color: #f3f4f6;">
                             @if($pcrSubmissionDeadlineUpdatedByName || $project->pcr_submission_deadline_updated_at)
@@ -1145,6 +1251,33 @@
                                 <span><strong>Updated By:</strong> {{ $pcrDateSubmittedToPoUpdatedByName ?? '-' }}</span>
                                 <span><strong>Date & Time:</strong> {{ $project->pcr_date_submitted_to_po_updated_at ? $project->pcr_date_submitted_to_po_updated_at->format('M d, Y h:i A') : '-' }}</span>
                             </div>
+                            @endif
+                            <div style="margin-top: 8px;">
+                                <button type="submit" data-post-implementation-save="true" style="display: none; padding: 6px 12px; background-color: #16a34a; color: white; border: none; border-radius: 6px; font-size: 12px; cursor: pointer;"><i class="fas fa-check" style="margin-right: 4px;"></i>Save</button>
+                            </div>
+                        </form>
+
+                        <form method="POST" action="{{ route('locally-funded-project.update', $project) }}" enctype="multipart/form-data">
+                            @csrf
+                            @method('PUT')
+                            <input type="hidden" name="section" value="monitoring">
+                            <label for="pcr_mov_file" style="display: block; font-weight: 600; color: #374151; margin-bottom: 6px;">Upload PCR MOV</label>
+                            <input type="file" id="pcr_mov_file" name="pcr_mov_file" accept="application/pdf,image/*"
+                                   data-post-implementation-edit="true" disabled
+                                   style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; box-sizing: border-box; background-color: #f3f4f6;">
+                            @if($project->pcr_mov_file_path)
+                                <div style="display: flex; gap: 8px; align-items: center; margin-top: 8px; font-size: 12px; color: #6b7280; flex-wrap: wrap;">
+                                    <a href="{{ route('locally-funded-project.view-pcr-mov', $project) }}" target="_blank" style="padding: 4px 8px; background-color: #0369a1; color: white; border-radius: 4px; text-decoration: none; font-size: 11px; font-weight: 600;">
+                                        <i class="fas fa-eye" style="margin-right: 4px;"></i>View
+                                    </a>
+                                    <span>Uploaded: {{ basename($project->pcr_mov_file_path) }}</span>
+                                </div>
+                            @endif
+                            @if($project->pcr_mov_uploaded_at)
+                                <div style="display: flex; gap: 12px; align-items: center; margin-top: 8px; font-size: 12px; color: #6b7280; flex-wrap: wrap;">
+                                    <span><strong>Submitted By:</strong> {{ $pcrMovUploadedByName ?? '-' }}</span>
+                                    <span><strong>Date & Time:</strong> {{ $project->pcr_mov_uploaded_at->format('M d, Y h:i A') }}</span>
+                                </div>
                             @endif
                             <div style="margin-top: 8px;">
                                 <button type="submit" data-post-implementation-save="true" style="display: none; padding: 6px 12px; background-color: #16a34a; color: white; border: none; border-radius: 6px; font-size: 12px; cursor: pointer;"><i class="fas fa-check" style="margin-right: 4px;"></i>Save</button>
@@ -1198,7 +1331,12 @@
                             @method('PUT')
                             <input type="hidden" name="section" value="monitoring">
                             <label for="rssa_report_deadline" style="display: block; font-weight: 600; color: #374151; margin-bottom: 6px;">Deadline of RSSA Report</label>
-                            <input type="date" id="rssa_report_deadline" name="rssa_report_deadline" value="{{ old('rssa_report_deadline', $project->rssa_report_deadline ? $project->rssa_report_deadline->format('Y-m-d') : '') }}"
+                            @php
+                                $computedRssaDeadline = $project->target_date_completion
+                                    ? $project->target_date_completion->copy()->addDays(395)
+                                    : $project->rssa_report_deadline;
+                            @endphp
+                            <input type="date" id="rssa_report_deadline" name="rssa_report_deadline" value="{{ old('rssa_report_deadline', $computedRssaDeadline ? $computedRssaDeadline->format('Y-m-d') : '') }}"
                                    data-post-implementation-edit="true" data-ro-only="true" disabled
                                    style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; box-sizing: border-box; background-color: #f3f4f6;">
                             @if($rssaReportDeadlineUpdatedByName || $project->rssa_report_deadline_updated_at)
@@ -2918,6 +3056,7 @@ const locationData = {
                 maximumFractionDigits: 2
             });
         }
+        const financialAllocation = Number(@json((float) $project->lgsf_allocation)) || 0;
 
         function getFinancialFieldSum(field) {
             let sum = 0;
@@ -2940,6 +3079,24 @@ const locationData = {
                     el.textContent = formatMoney(getFinancialFieldSum(field));
                 }
             });
+
+            const disbursedTotal = getFinancialFieldSum('disbursed_amount');
+            const revertedTotal = getFinancialFieldSum('reverted_amount');
+            const balance = financialAllocation - (disbursedTotal + revertedTotal);
+            const utilizationRate = financialAllocation > 0
+                ? ((financialAllocation - balance) / financialAllocation) * 100
+                : 0;
+
+            const balanceEl = document.getElementById('financialBalance');
+            if (balanceEl) {
+                balanceEl.textContent = formatMoney(balance);
+            }
+
+            const utilizationEl = document.getElementById('financialUtilizationRate');
+            if (utilizationEl) {
+                utilizationEl.textContent = formatMoney(utilizationRate) + '%';
+                utilizationEl.style.color = utilizationRate < 100 ? '#dc2626' : '#111827';
+            }
         }
 
         document.addEventListener('input', (event) => {
@@ -3312,13 +3469,50 @@ const locationData = {
                     citySelect.appendChild(option);
                 });
                 if (initialCity) {
-                    citySelect.value = initialCity;
+                    const matchedCity = Object.keys(locationData[initialProvince]).find((city) => {
+                        return city.toLowerCase() === initialCity.toLowerCase();
+                    });
+                    if (matchedCity) {
+                        citySelect.value = matchedCity;
+                    } else {
+                        const customCityOption = document.createElement('option');
+                        customCityOption.value = initialCity;
+                        customCityOption.textContent = initialCity;
+                        citySelect.appendChild(customCityOption);
+                        citySelect.value = initialCity;
+                    }
+                }
+            } else if (initialCity) {
+                citySelect.innerHTML = '<option value="">-- Select City/Municipality --</option>';
+                const customCityOption = document.createElement('option');
+                customCityOption.value = initialCity;
+                customCityOption.textContent = initialCity;
+                citySelect.appendChild(customCityOption);
+                citySelect.value = initialCity;
+            }
+
+            const resolvedCity = citySelect.value || initialCity;
+            if (initialProvince && resolvedCity && locationData[initialProvince]) {
+                const matchedCityKey = Object.keys(locationData[initialProvince]).find((city) => {
+                    return city.toLowerCase() === resolvedCity.toLowerCase();
+                });
+                if (matchedCityKey && locationData[initialProvince][matchedCityKey]) {
+                    barangaySelect.innerHTML = '';
+                    locationData[initialProvince][matchedCityKey].forEach((barangay) => {
+                        const option = document.createElement('option');
+                        option.value = barangay;
+                        option.textContent = barangay;
+                        barangaySelect.appendChild(option);
+                    });
                 }
             }
 
-            if (initialProvince && initialCity && locationData[initialProvince] && locationData[initialProvince][initialCity]) {
+            if (!barangaySelect.options.length && initialBarangays.length) {
                 barangaySelect.innerHTML = '';
-                locationData[initialProvince][initialCity].forEach((barangay) => {
+                initialBarangays.forEach((barangay) => {
+                    if (!barangay) {
+                        return;
+                    }
                     const option = document.createElement('option');
                     option.value = barangay;
                     option.textContent = barangay;
@@ -3369,6 +3563,57 @@ const locationData = {
                 }
             });
         }
+
+        function submitFormWithAutoSave(form, submitter) {
+            if (!form || form.dataset.autoSaveSubmitting === 'true') {
+                return;
+            }
+
+            if (typeof form.reportValidity === 'function' && !form.reportValidity()) {
+                return;
+            }
+
+            form.dataset.autoSaveSubmitting = 'true';
+            form.dataset.confirmSkipOnce = 'true';
+
+            if (submitter && typeof form.requestSubmit === 'function') {
+                form.requestSubmit(submitter);
+                return;
+            }
+
+            if (typeof form.requestSubmit === 'function') {
+                form.requestSubmit();
+                return;
+            }
+
+            form.submit();
+        }
+
+        function bindInlineAutoSave(selector) {
+            document.querySelectorAll(selector).forEach((field) => {
+                field.addEventListener('change', () => {
+                    if (field.disabled) {
+                        return;
+                    }
+
+                    const form = field.closest('form');
+                    if (!form) {
+                        return;
+                    }
+
+                    const saveButton = form.querySelector(
+                        '[data-physical-save="true"], [data-financial-save="true"], [data-monitoring-save="true"], [data-post-implementation-save="true"]'
+                    );
+
+                    submitFormWithAutoSave(form, saveButton);
+                });
+            });
+        }
+
+        bindInlineAutoSave('[data-physical-edit="true"]');
+        bindInlineAutoSave('[data-financial-edit="true"]');
+        bindInlineAutoSave('[data-monitoring-edit="true"]');
+        bindInlineAutoSave('[data-post-implementation-edit="true"]');
 
         const activityLogSection = document.getElementById('activityLogSection');
         const activityLogBackdrop = document.getElementById('activityLogBackdrop');

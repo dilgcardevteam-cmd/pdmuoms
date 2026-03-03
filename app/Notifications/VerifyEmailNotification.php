@@ -43,9 +43,9 @@ class VerifyEmailNotification extends VerifyEmail
         $verificationUrl = $this->verificationUrl($notifiable);
 
         return (new \Illuminate\Notifications\Messages\MailMessage)
-            ->subject('Verify Your Email Address - PDMU POMS')
+            ->subject('Verify Your Email Address - PDMU PDMUOMS')
             ->greeting('Hello ' . $notifiable->fname . ' ' . $notifiable->lname . '!')
-            ->line('Thank you for registering with the PDMU Operations Management System (POMS).')
+            ->line('Thank you for registering with the PDMU Operations Management System (PDMUOMS).')
             ->line('Your account has been successfully created. To activate your account, please verify your email address by clicking the button below.')
             ->action('Verify Email Address', $verificationUrl, '#ffffff')
             ->line('This verification link will expire in 60 minutes.')

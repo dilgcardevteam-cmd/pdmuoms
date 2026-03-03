@@ -11,8 +11,14 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->web(
+            prepend: [\App\Http\Middleware\SecurityHeaders::class],
+            append: ['throttle:web-traffic']
+        );
+
         $middleware->alias([
             'superadmin' => \App\Http\Middleware\SuperAdminMiddleware::class,
+            'regional_dilg' => \App\Http\Middleware\RegionalOfficeDilgMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

@@ -40,7 +40,7 @@ class VerifyEmailMailable extends Mailable
         return new Envelope(
             from: config('mail.from.address'),
             to: [$this->user->emailaddress],
-            subject: 'Verify Your Email Address - PDMU POMS',
+            subject: 'Verify Your Email Address - PDMU PDMUOMS',
         );
     }
 

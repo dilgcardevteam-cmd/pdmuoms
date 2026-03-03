@@ -142,13 +142,13 @@
 
                     <!-- Office -->
                     <div style="grid-column: 1 / -1;">
-                        <label style="display: block; margin-bottom: 8px; color: #374151; font-weight: 500; font-size: 14px;">Office <span style="color: #dc2626;">*</span></label>
+                        <label style="display: block; margin-bottom: 8px; color: #374151; font-weight: 500; font-size: 14px;">Office</label>
                         <div style="position: relative;">
                             <div style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#9ca3af; display:flex; align-items:center; pointer-events:none">
                                 <i class="fas fa-home" style="width: 16px; height: 16px;"></i>
                             </div>
-                            <select id="officeSelect" name="office" required style="width: 100%; padding: 10px 44px 10px 40px; border-radius:8px; border: 1px solid #e6eef8; background: white; font-size: 14px; color: #111827; @error('office') border-color: #dc2626; @enderror">
-                                <option value="" disabled selected>Select Office</option>
+                            <select id="officeSelect" name="office" style="width: 100%; padding: 10px 44px 10px 40px; border-radius:8px; border: 1px solid #e6eef8; background: white; font-size: 14px; color: #111827; @error('office') border-color: #dc2626; @enderror">
+                                <option value="" selected>Select Office (Optional)</option>
                             </select>
                         </div>
                         @error('office')
@@ -375,7 +375,7 @@
             const currentOffice = '{{ old("office") }}';
             
             // Clear office dropdown and reset to default
-            officeSelect.innerHTML = '<option value="" disabled selected>Select Office</option>';
+            officeSelect.innerHTML = '<option value="" selected>Select Office (Optional)</option>';
             
             // If LGU agency, populate office options
             if(selectedAgency === 'LGU' && offices[selectedProvince]) {

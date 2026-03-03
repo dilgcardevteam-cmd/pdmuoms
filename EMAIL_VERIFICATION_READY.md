@@ -66,7 +66,7 @@ php artisan user:verify-email johndoe
 ```env
 MAIL_MAILER=log                              # Use log driver for testing
 MAIL_FROM_ADDRESS=subaybayancordillera@gmail.com
-MAIL_FROM_NAME=PDMU Operations Management System (POMS)
+MAIL_FROM_NAME=PDMU Operations Management System (PDMUOMS)
 ```
 
 ### To Enable Gmail SMTP (Production)
@@ -161,7 +161,7 @@ Users receive an email with:
 - ✅ Professional verification button
 - ✅ Direct verification link
 - ✅ Expiration time (60 minutes)
-- ✅ POMS branding and footer
+- ✅ PDMUOMS branding and footer
 - ✅ From: `subaybayancordillera@gmail.com`
 
 ---

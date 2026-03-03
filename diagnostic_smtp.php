@@ -23,10 +23,10 @@ echo "  From: " . config('mail.from.address') . "\n\n";
 // Test 2: Try to send via raw Mail facade
 echo "Test 2: Send Test Email via Mail Facade\n";
 try {
-    $result = Mail::raw('Test email from PDMU POMS system. If received, SMTP is working!', function ($message) {
+    $result = Mail::raw('Test email from PDMU PDMUOMS system. If received, SMTP is working!', function ($message) {
         $message->to('subaybayancordillera@gmail.com')
                 ->from(config('mail.from.address'), config('mail.from.name'))
-                ->subject('PDMU POMS - SMTP Test Email');
+                ->subject('PDMU PDMUOMS - SMTP Test Email');
     });
     
     echo "  ✓ Email sent successfully!\n";

@@ -21,9 +21,9 @@ echo "From Name: " . config('mail.from.name') . "\n\n";
 // Test 2: Send a test email
 echo "=== Sending Test Email ===\n";
 try {
-    Mail::raw('This is a test email from your PDMU POMS system. If you received this, your email configuration is working correctly!', function (Message $message) {
+    Mail::raw('This is a test email from your PDMU PDMUOMS system. If you received this, your email configuration is working correctly!', function (Message $message) {
         $message->to('subaybayancordillera@gmail.com')
-                ->subject('PDMU POMS - Email Configuration Test');
+                ->subject('PDMU PDMUOMS - Email Configuration Test');
     });
     echo "✓ Email sent successfully!\n";
     echo "Check your email at: subaybayancordillera@gmail.com\n";

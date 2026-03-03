@@ -8,7 +8,7 @@ The system is now configured to send verification emails to users after successf
 ### 1. **Created Custom Email Verification Notification**
    - File: `app/Notifications/VerifyEmailNotification.php`
    - Extends Laravel's default `VerifyEmail` notification
-   - Customized email template with POMS branding
+   - Customized email template with PDMUOMS branding
    - Includes personalized greeting with user's name
    - Professional email layout with clear instructions
 
@@ -23,7 +23,7 @@ The system is now configured to send verification emails to users after successf
    - SMTP Provider: Gmail (smtp.gmail.com:587)
    - Using TLS encryption
    - Sender: subaybayancordillera@gmail.com
-   - Sender Name: "PDMU Operations Management System (POMS)"
+   - Sender Name: "PDMU Operations Management System (PDMUOMS)"
 
 ### 4. **Email Verification Routes**
    - File: `routes/web.php`

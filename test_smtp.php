@@ -20,9 +20,9 @@ echo "From Name: " . config('mail.from.name') . "\n\n";
 // Test 2: Send a test email
 echo "=== Sending Test Email ===\n";
 try {
-    Mail::raw('This is a test email from your PDMU POMS system. If you received this, your SMTP configuration is working correctly!', function ($message) {
+    Mail::raw('This is a test email from your PDMU PDMUOMS system. If you received this, your SMTP configuration is working correctly!', function ($message) {
         $message->to('test@example.com') // Change this to your test email
-                ->subject('PDMU POMS - SMTP Test');
+                ->subject('PDMU PDMUOMS - SMTP Test');
     });
     echo "✓ Email sent successfully!\n";
     echo "Check your email for the test message.\n";

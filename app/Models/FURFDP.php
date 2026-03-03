@@ -18,6 +18,8 @@ class FURFDP extends Model
         'approved_at',
         'approved_at_dilg_po',
         'approved_at_dilg_ro',
+        'approved_by_dilg_po',
+        'approved_by_dilg_ro',
         'user_remarks',
         'encoder_id',
         // Individual FDP approval fields
@@ -27,6 +29,7 @@ class FURFDP extends Model
         'posting_uploaded_at', 'posting_encoder_id',
         // Posting link validation timestamps
         'posting_approved_at_dilg_po', 'posting_approved_at_dilg_ro',
+        'posting_approved_by_dilg_po', 'posting_approved_by_dilg_ro',
     ];
     
     protected $casts = [

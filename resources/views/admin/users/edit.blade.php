@@ -151,12 +151,12 @@
 
                     <!-- Office -->
                     <div style="grid-column: 1 / -1;">
-                        <label style="display: block; margin-bottom: 8px; color: #374151; font-weight: 500; font-size: 14px;">Office <span style="color: #dc2626;">*</span></label>
+                        <label style="display: block; margin-bottom: 8px; color: #374151; font-weight: 500; font-size: 14px;">Office</label>
                         <div style="position: relative;">
                             <div style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#9ca3af; display:flex; align-items:center; pointer-events:none">
                                 <i data-feather="building" style="width: 16px; height: 16px;"></i>
                             </div>
-                            <select id="officeSelect" name="office" required style="width: 100%; padding: 10px 44px 10px 40px; border-radius:8px; border: 1px solid #e6eef8; background: white; font-size: 14px; color: #111827; @error('office') border-color: #dc2626; @enderror">
+                            <select id="officeSelect" name="office" style="width: 100%; padding: 10px 44px 10px 40px; border-radius:8px; border: 1px solid #e6eef8; background: white; font-size: 14px; color: #111827; @error('office') border-color: #dc2626; @enderror">
                                 <option value="{{ $user->office }}" selected>{{ $user->office }}</option>
                             </select>
                         </div>
@@ -374,7 +374,7 @@
             const selectedProvince = provinceSelect.value;
             const currentOffice = '{{ $user->office }}';
             
-            officeSelect.innerHTML = '<option value="" disabled>Select Office</option>';
+            officeSelect.innerHTML = '<option value="">Select Office (Optional)</option>';
             
             // If LGU agency, populate office options
             if(selectedAgency === 'LGU' && offices[selectedProvince]) {

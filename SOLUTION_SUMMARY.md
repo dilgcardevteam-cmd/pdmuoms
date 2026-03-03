@@ -1,4 +1,4 @@
-# PDMU POMS - Email Verification System
+# PDMU PDMUOMS - Email Verification System
 
 ## ✅ SOLUTION COMPLETE
 
@@ -57,7 +57,7 @@ Get-Content storage/logs/laravel.log -Tail 50
 Look for email content that includes:
 ```
 [To] => subaybayancordillera@gmail.com
-[Subject] => Verify Your Email Address - PDMU POMS
+[Subject] => Verify Your Email Address - PDMU PDMUOMS
 [Message] => Hello [First Name]...
 ```
 

@@ -36,7 +36,7 @@ class PasswordResetOtpMail extends Mailable
         return new Envelope(
             from: config('mail.from.address'),
             to: [$this->user->emailaddress],
-            subject: 'Password Reset OTP - PDMU POMS',
+            subject: 'Password Reset OTP - PDMU PDMUOMS',
         );
     }
 

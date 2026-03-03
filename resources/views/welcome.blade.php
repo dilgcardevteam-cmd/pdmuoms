@@ -117,6 +117,9 @@
                             </a>
                         </li>
                     </ul>
+
+                    <h2 class="mb-1 font-medium">Project at Risk</h2>
+                    <p class="mb-2 text-[#706f6c] dark:text-[#A1A09A]">This project at risk is to monitor the slippages of the projects.</p>
                 </div>
                 <div class="bg-[#fff2f2] dark:bg-[#1D0002] relative lg:-ml-px -mb-px lg:mb-0 rounded-t-lg lg:rounded-t-none lg:rounded-r-lg aspect-[335/376] lg:aspect-auto w-full lg:w-[438px] shrink-0 overflow-hidden">
                     {{-- Laravel Logo --}}
@@ -273,5 +276,6 @@
         @if (Route::has('login'))
             <div class="h-14.5 hidden lg:block"></div>
         @endif
+        @include('partials.global-error-confirm')
     </body>
 </html>

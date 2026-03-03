@@ -18,6 +18,8 @@ class FURMovUpload extends Model
         'approved_at',
         'approved_at_dilg_po',
         'approved_at_dilg_ro',
+        'approved_by_dilg_po',
+        'approved_by_dilg_ro',
         'user_remarks',
         'encoder_id',
         'mov_uploaded_at',

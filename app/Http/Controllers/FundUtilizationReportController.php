@@ -14,33 +14,300 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 
 class FundUtilizationReportController extends Controller
 {
+    private function syncMissingLfpReports(): void
+    {
+        if (!Schema::hasTable('tbfur')) {
+            return;
+        }
+
+        $now = now();
+
+        LocallyFundedProject::query()
+            ->whereNotExists(function ($query) {
+                $query->select(DB::raw(1))
+                    ->from('tbfur')
+                    ->whereColumn('tbfur.project_code', 'locally_funded_projects.subaybayan_project_code');
+            })
+            ->orderBy('id')
+            ->chunkById(200, function ($projects) use ($now) {
+                $rows = [];
+
+                foreach ($projects as $project) {
+                    $projectCode = trim((string) $project->subaybayan_project_code);
+                    if ($projectCode === '') {
+                        continue;
+                    }
+
+                    $rows[] = [
+                        'project_code' => $projectCode,
+                        'province' => $project->province,
+                        'implementing_unit' => $project->implementing_unit,
+                        'barangay' => $project->barangay,
+                        'fund_source' => $project->fund_source,
+                        'funding_year' => $project->funding_year,
+                        'project_title' => $project->project_name,
+                        'allocation' => $project->lgsf_allocation,
+                        'contract_amount' => $project->contract_amount,
+                        'project_status' => 'Ongoing',
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ];
+                }
+
+                if (!empty($rows)) {
+                    DB::table('tbfur')->insertOrIgnore($rows);
+                }
+            });
+
+        $this->syncMissingSubayReports();
+    }
+
+    private function normalizeText($value, string $fallback = ''): string
+    {
+        if ($value === null) {
+            return $fallback;
+        }
+
+        $value = trim((string) $value);
+
+        return $value !== '' ? $value : $fallback;
+    }
+
+    private function parseNumericValue($value): ?float
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $value = trim((string) $value);
+        if ($value === '') {
+            return null;
+        }
+
+        $clean = preg_replace('/[^0-9\\.-]/', '', $value);
+        if ($clean === '' || $clean === '-' || $clean === '.') {
+            return null;
+        }
+
+        return (float) $clean;
+    }
+
+    private function parseYearValue($value, int $fallback): int
+    {
+        $value = trim((string) $value);
+        if ($value === '') {
+            return $fallback;
+        }
+
+        if (preg_match('/(19|20)\\d{2}/', $value, $matches)) {
+            return (int) $matches[0];
+        }
+
+        $numeric = $this->parseNumericValue($value);
+        if ($numeric === null) {
+            return $fallback;
+        }
+
+        $year = (int) $numeric;
+        if ($year < 1900 || $year > 2100) {
+            return $fallback;
+        }
+
+        return $year;
+    }
+
+    private function syncMissingSubayReports(): void
+    {
+        if (!Schema::hasTable('tbfur') || !Schema::hasTable('subay_project_profiles')) {
+            return;
+        }
+
+        $now = now();
+
+        DB::table('subay_project_profiles')
+            ->whereNotNull('project_code')
+            ->whereRaw('TRIM(project_code) <> ""')
+            ->whereNotExists(function ($query) {
+                $query->select(DB::raw(1))
+                    ->from('tbfur')
+                    ->whereColumn('tbfur.project_code', 'subay_project_profiles.project_code');
+            })
+            ->orderBy('id')
+            ->chunkById(200, function ($projects) use ($now) {
+                $rows = [];
+                $fallbackYear = (int) $now->year;
+
+                foreach ($projects as $project) {
+                    $projectCode = $this->normalizeText($project->project_code);
+                    if ($projectCode === '') {
+                        continue;
+                    }
+
+                    $fundingYear = $this->parseYearValue($project->funding_year ?? null, $fallbackYear);
+                    $allocation = $this->parseNumericValue(
+                        $project->national_subsidy_revised_allocation
+                        ?? $project->national_subsidy_original_allocation
+                        ?? $project->total_project_cost
+                        ?? $project->total_estimated_cost_of_project
+                        ?? null
+                    );
+                    $contractAmount = $this->parseNumericValue(
+                        $project->contract_price
+                        ?? $project->total_project_cost
+                        ?? $project->total_estimated_cost_of_project
+                        ?? null
+                    );
+
+                    $rows[] = [
+                        'project_code' => $projectCode,
+                        'province' => $this->normalizeText($project->province ?? null, 'Unknown'),
+                        'implementing_unit' => $this->normalizeText(
+                            $project->implementing_unit ?? $project->unit_implementing_the_project ?? null,
+                            'Unknown'
+                        ),
+                        'barangay' => $this->normalizeText($project->barangay ?? null),
+                        'fund_source' => $this->normalizeText($project->program ?? null, 'Unknown'),
+                        'funding_year' => $fundingYear,
+                        'project_title' => $this->normalizeText($project->project_title ?? null, $projectCode),
+                        'allocation' => $allocation,
+                        'contract_amount' => $contractAmount,
+                        'project_status' => $this->normalizeText($project->status ?? null, 'Ongoing'),
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ];
+                }
+
+                if (!empty($rows)) {
+                    DB::table('tbfur')->insertOrIgnore($rows);
+                }
+            });
+    }
+
+    /**
+     * Get report or LFP project by project code
+     */
+    private function getReportOrLfpProject($projectCode)
+    {
+        $report = FundUtilizationReport::where('project_code', $projectCode)->first();
+        if ($report) {
+            $report->is_lfp = false;
+            return $report;
+        }
+
+        $lfpProject = LocallyFundedProject::where('subaybayan_project_code', $projectCode)->firstOrFail();
+
+        // Ensure LFP projects have a parent tbfur row so upload FKs can be satisfied.
+        $report = FundUtilizationReport::firstOrCreate(
+            ['project_code' => $lfpProject->subaybayan_project_code],
+            [
+                'province' => $lfpProject->province,
+                'implementing_unit' => $lfpProject->implementing_unit,
+                'barangay' => $lfpProject->barangay,
+                'fund_source' => $lfpProject->fund_source,
+                'funding_year' => $lfpProject->funding_year,
+                'project_title' => $lfpProject->project_name,
+                'allocation' => $lfpProject->lgsf_allocation,
+                'contract_amount' => $lfpProject->contract_amount,
+                'project_status' => 'Ongoing',
+            ]
+        );
+
+        $report->is_lfp = true;
+        $report->lfp_id = $lfpProject->id;
+
+        return $report;
+    }
+
+    private function isProvincialDilgUser(?User $user): bool
+    {
+        if (!$user) {
+            return false;
+        }
+
+        $agency = strtoupper(trim((string) $user->agency));
+        if ($agency !== 'DILG') {
+            return false;
+        }
+
+        $provinceLower = strtolower(trim((string) $user->province));
+        return $provinceLower !== '' && $provinceLower !== 'regional office';
+    }
+
     /**
      * Display a listing of the Fund Utilization Reports.
      */
     public function index(Request $request)
     {
+        $this->syncMissingLfpReports();
         [$reportsQuery, $filters] = $this->buildFilteredReportsQuery($request);
+        $perPage = (int) $request->query('per_page', 10);
+        $allowedPerPage = [10, 15, 25, 50];
+        if (!in_array($perPage, $allowedPerPage, true)) {
+            $perPage = 10;
+        }
 
         $reports = $reportsQuery
-            ->orderByDesc('funding_year')
+            ->orderByRaw("CASE WHEN project_status IS NULL OR TRIM(project_status) = '' THEN 1 ELSE 0 END")
+            ->orderBy('project_status')
+            ->orderByRaw('CAST(funding_year AS UNSIGNED) DESC')
+            ->orderByRaw("CASE WHEN city_municipality IS NULL OR TRIM(city_municipality) = '' THEN 1 ELSE 0 END")
+            ->orderBy('city_municipality')
+            ->orderByRaw("CASE WHEN province IS NULL OR TRIM(province) = '' THEN 1 ELSE 0 END")
+            ->orderBy('province')
             ->orderBy('project_code')
-            ->get();
+            ->paginate($perPage)
+            ->withQueryString();
 
-        // Calculate accomplishment percentages for each quarter for each report
         $quarters = ['Q1', 'Q2', 'Q3', 'Q4'];
-        foreach ($reports as $report) {
+        $reportsCollection = $reports->getCollection();
+        $projectCodes = $reportsCollection
+            ->pluck('project_code')
+            ->filter(fn($code) => trim((string) $code) !== '')
+            ->map(fn($code) => trim((string) $code))
+            ->unique()
+            ->values();
+
+        $movUploadsByKey = collect();
+        $writtenNoticesByKey = collect();
+        $fdpDocumentsByKey = collect();
+
+        if ($projectCodes->isNotEmpty()) {
+            $movUploadsByKey = FURMovUpload::query()
+                ->whereIn('project_code', $projectCodes)
+                ->whereIn('quarter', $quarters)
+                ->get()
+                ->keyBy(fn($row) => $row->project_code . '|' . strtoupper((string) $row->quarter));
+
+            $writtenNoticesByKey = FURWrittenNotice::query()
+                ->whereIn('project_code', $projectCodes)
+                ->whereIn('quarter', $quarters)
+                ->get()
+                ->keyBy(fn($row) => $row->project_code . '|' . strtoupper((string) $row->quarter));
+
+            $fdpDocumentsByKey = FURFDP::query()
+                ->whereIn('project_code', $projectCodes)
+                ->whereIn('quarter', $quarters)
+                ->get()
+                ->keyBy(fn($row) => $row->project_code . '|' . strtoupper((string) $row->quarter));
+        }
+
+        $reports->setCollection($reportsCollection->map(function ($report) use ($quarters, $movUploadsByKey, $writtenNoticesByKey, $fdpDocumentsByKey) {
+            $projectCode = trim((string) ($report->project_code ?? ''));
             foreach ($quarters as $quarter) {
-                $movUpload = $report->movUploads()->where('quarter', $quarter)->first();
-                $writtenNotice = $report->writtenNotices()->where('quarter', $quarter)->first();
-                $fdpDocument = $report->fdpDocuments()->where('quarter', $quarter)->first();
+                $key = $projectCode . '|' . $quarter;
+                $movUpload = $movUploadsByKey->get($key);
+                $writtenNotice = $writtenNoticesByKey->get($key);
+                $fdpDocument = $fdpDocumentsByKey->get($key);
 
                 $report->{'quarter_' . strtolower($quarter) . '_percentage'} = $this->calculateAccomplishmentPercentage($movUpload, $writtenNotice, $fdpDocument);
             }
-        }
+            return $report;
+        }));
 
         $filterOptions = [
             'fund_sources' => collect([
@@ -57,7 +324,7 @@ class FundUtilizationReportController extends Controller
             ])->flatten()->unique()->sort()->values(),
         ];
 
-        return view('reports.fund-utilization.index', compact('reports', 'filters', 'filterOptions'));
+        return view('reports.fund-utilization.index', compact('reports', 'filters', 'filterOptions', 'perPage'));
     }
 
     /**
@@ -75,6 +342,7 @@ class FundUtilizationReportController extends Controller
                 ->with('error', 'Invalid export format.');
         }
 
+        $this->syncMissingLfpReports();
         [$reportsQuery, $filters] = $this->buildFilteredReportsQuery($request);
         $selectedQuarter = trim((string) $request->query('quarter', ''));
 
@@ -85,7 +353,13 @@ class FundUtilizationReportController extends Controller
 
         $reports = $reportsQuery
             ->with(['movUploads', 'writtenNotices', 'fdpDocuments'])
-            ->orderByDesc('funding_year')
+            ->orderByRaw("CASE WHEN project_status IS NULL OR TRIM(project_status) = '' THEN 1 ELSE 0 END")
+            ->orderBy('project_status')
+            ->orderByRaw('CAST(funding_year AS UNSIGNED) DESC')
+            ->orderByRaw("CASE WHEN city_municipality IS NULL OR TRIM(city_municipality) = '' THEN 1 ELSE 0 END")
+            ->orderBy('city_municipality')
+            ->orderByRaw("CASE WHEN province IS NULL OR TRIM(province) = '' THEN 1 ELSE 0 END")
+            ->orderBy('province')
             ->orderBy('project_code')
             ->get();
 
@@ -219,89 +493,114 @@ class FundUtilizationReportController extends Controller
         $province = trim((string) $request->query('province', ''));
 
         $user = Auth::user();
+        $agency = $user ? strtoupper(trim((string) $user->agency)) : '';
+        $userProvince = $user ? trim((string) $user->province) : '';
+        $userOffice = $user ? trim((string) $user->office) : '';
+        $userProvinceLower = strtolower($userProvince);
+        $userOfficeLower = strtolower($userOffice);
 
         // Build query for Fund Utilization Reports
         $furQuery = FundUtilizationReport::query()
+            ->leftJoin('locally_funded_projects', 'locally_funded_projects.subaybayan_project_code', '=', 'tbfur.project_code')
+            ->leftJoin('subay_project_profiles as spp', 'spp.project_code', '=', 'tbfur.project_code')
             ->select([
-                'project_code',
-                'project_title',
-                'province',
-                'implementing_unit',
-                'barangay',
-                'funding_year',
-                'fund_source',
-                'allocation',
-                'contract_amount',
-                'project_status',
+                'tbfur.project_code',
+                'tbfur.project_title',
+                'tbfur.province',
+                'tbfur.implementing_unit',
+                'tbfur.barangay',
+                'tbfur.funding_year',
+                'tbfur.fund_source',
+                'tbfur.allocation',
+                'tbfur.contract_amount',
+                'tbfur.project_status',
                 DB::raw("'fur' as source_type"),
                 DB::raw('NULL as subaybayan_project_code'),
-                DB::raw('NULL as city_municipality'),
+                DB::raw('COALESCE(locally_funded_projects.city_municipality, spp.city_municipality) as city_municipality'),
                 DB::raw('NULL as lgsf_allocation'),
                 DB::raw('NULL as user_id')
             ]);
 
         // Build query for Locally Funded Projects
         $lfpQuery = LocallyFundedProject::query()
+            ->leftJoin('tbfur', 'tbfur.project_code', '=', 'locally_funded_projects.subaybayan_project_code')
+            ->whereNull('tbfur.project_code')
             ->select([
-                'subaybayan_project_code as project_code',
-                'project_name as project_title',
-                'province',
-                'implementing_unit',
-                'barangay',
-                'funding_year',
-                'fund_source',
-                'lgsf_allocation as allocation',
-                'contract_amount',
+                'locally_funded_projects.subaybayan_project_code as project_code',
+                'locally_funded_projects.project_name as project_title',
+                'locally_funded_projects.province',
+                'locally_funded_projects.implementing_unit',
+                'locally_funded_projects.barangay',
+                'locally_funded_projects.funding_year',
+                'locally_funded_projects.fund_source',
+                'locally_funded_projects.lgsf_allocation as allocation',
+                'locally_funded_projects.contract_amount',
                 DB::raw("'Ongoing' as project_status"),
                 DB::raw("'lfp' as source_type"),
-                'subaybayan_project_code',
-                'city_municipality',
-                'lgsf_allocation',
-                'user_id'
+                'locally_funded_projects.subaybayan_project_code',
+                'locally_funded_projects.city_municipality',
+                'locally_funded_projects.lgsf_allocation',
+                'locally_funded_projects.user_id'
             ]);
 
         // Apply user scoping
-        if ($user && $user->agency === 'LGU') {
-            $furQuery->where('province', $user->province)
-                    ->where('implementing_unit', $user->office);
-            $lfpQuery->where('province', $user->province)
-                    ->where('city_municipality', $user->office);
-        } elseif ($user && $user->agency === 'DILG' && $user->province !== 'Regional Office') {
-            $furQuery->where('province', $user->province);
-            $lfpQuery->where('province', $user->province);
+        if ($agency === 'LGU') {
+            if ($userOfficeLower !== '') {
+                if ($userProvinceLower !== '') {
+                    $furQuery->whereRaw('LOWER(tbfur.province) = ?', [$userProvinceLower]);
+                    $lfpQuery->whereRaw('LOWER(locally_funded_projects.province) = ?', [$userProvinceLower]);
+                }
+
+                $furQuery->where(function ($subQuery) use ($userOfficeLower) {
+                    $subQuery->whereRaw('LOWER(tbfur.implementing_unit) = ?', [$userOfficeLower])
+                        ->orWhereRaw('LOWER(locally_funded_projects.office) = ?', [$userOfficeLower])
+                        ->orWhereRaw('LOWER(locally_funded_projects.city_municipality) = ?', [$userOfficeLower])
+                        ->orWhereRaw('LOWER(spp.city_municipality) = ?', [$userOfficeLower]);
+                });
+                $lfpQuery->where(function ($subQuery) use ($userOfficeLower) {
+                    $subQuery->whereRaw('LOWER(locally_funded_projects.office) = ?', [$userOfficeLower])
+                        ->orWhereRaw('LOWER(locally_funded_projects.city_municipality) = ?', [$userOfficeLower]);
+                });
+            } elseif ($userProvinceLower !== '') {
+                $furQuery->whereRaw('LOWER(tbfur.province) = ?', [$userProvinceLower]);
+                $lfpQuery->whereRaw('LOWER(locally_funded_projects.province) = ?', [$userProvinceLower]);
+            }
+        } elseif ($agency === 'DILG' && $userProvinceLower !== '' && $userProvinceLower !== 'regional office') {
+            $furQuery->whereRaw('LOWER(tbfur.province) = ?', [$userProvinceLower]);
+            $lfpQuery->whereRaw('LOWER(locally_funded_projects.province) = ?', [$userProvinceLower]);
         }
 
         // Apply filters
         if ($search !== '') {
             $furQuery->where(function ($query) use ($search) {
-                $query->where('project_code', 'like', "%{$search}%")
-                    ->orWhere('project_title', 'like', "%{$search}%")
-                    ->orWhere('implementing_unit', 'like', "%{$search}%")
-                    ->orWhere('province', 'like', "%{$search}%")
-                    ->orWhere('fund_source', 'like', "%{$search}%");
+                $query->where('tbfur.project_code', 'like', "%{$search}%")
+                    ->orWhere('tbfur.project_title', 'like', "%{$search}%")
+                    ->orWhere('tbfur.implementing_unit', 'like', "%{$search}%")
+                    ->orWhere('tbfur.province', 'like', "%{$search}%")
+                    ->orWhere('tbfur.fund_source', 'like', "%{$search}%");
             });
             $lfpQuery->where(function ($query) use ($search) {
-                $query->where('subaybayan_project_code', 'like', "%{$search}%")
-                    ->orWhere('project_name', 'like', "%{$search}%")
-                    ->orWhere('implementing_unit', 'like', "%{$search}%")
-                    ->orWhere('province', 'like', "%{$search}%")
-                    ->orWhere('fund_source', 'like', "%{$search}%");
+                $query->where('locally_funded_projects.subaybayan_project_code', 'like', "%{$search}%")
+                    ->orWhere('locally_funded_projects.project_name', 'like', "%{$search}%")
+                    ->orWhere('locally_funded_projects.implementing_unit', 'like', "%{$search}%")
+                    ->orWhere('locally_funded_projects.province', 'like', "%{$search}%")
+                    ->orWhere('locally_funded_projects.fund_source', 'like', "%{$search}%");
             });
         }
 
         if ($fundSource !== '') {
-            $furQuery->where('fund_source', $fundSource);
-            $lfpQuery->where('fund_source', $fundSource);
+            $furQuery->where('tbfur.fund_source', $fundSource);
+            $lfpQuery->where('locally_funded_projects.fund_source', $fundSource);
         }
 
         if ($fundingYear !== '') {
-            $furQuery->where('funding_year', $fundingYear);
-            $lfpQuery->where('funding_year', $fundingYear);
+            $furQuery->where('tbfur.funding_year', $fundingYear);
+            $lfpQuery->where('locally_funded_projects.funding_year', $fundingYear);
         }
 
         if ($province !== '') {
-            $furQuery->where('province', $province);
-            $lfpQuery->where('province', $province);
+            $furQuery->where('tbfur.province', $province);
+            $lfpQuery->where('locally_funded_projects.province', $province);
         }
 
         // Union the queries
@@ -708,20 +1007,21 @@ class FundUtilizationReportController extends Controller
             'mov_file' => 'required|mimes:pdf|max:10240',
         ]);
 
-        $report = FundUtilizationReport::findOrFail($projectCode);
+        $report = $this->getReportOrLfpProject($projectCode);
+        $user = Auth::user();
+        $autoElevateToRegional = $this->isProvincialDilgUser($user);
 
         if ($request->hasFile('mov_file')) {
+            $existingRecord = FURMovUpload::where('project_code', $projectCode)
+                                         ->where('quarter', $request->quarter)
+                                         ->first();
+            $oldFilePath = $existingRecord?->mov_file_path;
             $file = $request->file('mov_file');
             $path = $file->store('fur/mov/' . $projectCode, 'public');
 
             // Get secure, tamper-proof timestamp from PAGASA server
             // User cannot change this by modifying their computer's clock
             $secureTimestamp = SecureTimestampService::getUploadTimestamp();
-
-            // Get the existing record to check if it's new
-            $existingRecord = FURMovUpload::where('project_code', $projectCode)
-                                         ->where('quarter', $request->quarter)
-                                         ->first();
             
             $updates = [
                 'mov_file_path' => $path, 
@@ -735,8 +1035,19 @@ class FundUtilizationReportController extends Controller
                 'approved_at' => null,
                 'approved_at_dilg_po' => null,
                 'approved_at_dilg_ro' => null,
+                'approved_by_dilg_po' => null,
+                'approved_by_dilg_ro' => null,
                 'approval_remarks' => null,
             ];
+
+            if ($autoElevateToRegional) {
+                $updates['approved_by'] = auth()->id();
+                $updates['approved_at'] = $secureTimestamp;
+                $updates['approved_at_dilg_po'] = $secureTimestamp;
+                $updates['approved_at_dilg_ro'] = null;
+                $updates['approved_by_dilg_po'] = auth()->id();
+                $updates['approved_by_dilg_ro'] = null;
+            }
             
             // Add created_at with secure timestamp only for new records
             if (!$existingRecord) {
@@ -748,11 +1059,19 @@ class FundUtilizationReportController extends Controller
                 $updates
             );
 
+            if ($oldFilePath && $oldFilePath !== $path && Storage::disk('public')->exists($oldFilePath)) {
+                Storage::disk('public')->delete($oldFilePath);
+            }
+
             // Log the upload for audit trail
             SecureTimestampService::logUploadTimestamp('mov', $projectCode, $request->quarter, $secureTimestamp);
 
-            // Notify DILG users in the same province when an LGU submits.
-            $this->notifyDilgProvinceUsers($report, 'mov', $request->quarter);
+            if ($autoElevateToRegional) {
+                $this->notifyDilgRegionalUsers($report, 'mov', $request->quarter);
+            } else {
+                // Notify DILG users in the same province when an LGU submits.
+                $this->notifyDilgProvinceUsers($report, 'mov', $request->quarter);
+            }
         }
 
         return back()->with('success', 'MOV file uploaded successfully.');
@@ -773,12 +1092,18 @@ class FundUtilizationReportController extends Controller
             'senate_committee' => 'nullable|mimes:pdf,jpg,jpeg,png|max:5120',
         ]);
 
-        $report = FundUtilizationReport::findOrFail($projectCode);
+        $report = $this->getReportOrLfpProject($projectCode);
+        $user = Auth::user();
+        $autoElevateToRegional = $this->isProvincialDilgUser($user);
         $data = ['project_code' => $projectCode, 'quarter' => $request->quarter];
         $updates = [];
 
         // Get secure, tamper-proof timestamp from PAGASA server
         $secureTimestamp = SecureTimestampService::getUploadTimestamp();
+        $existingRecord = FURWrittenNotice::where('project_code', $projectCode)
+            ->where('quarter', $request->quarter)
+            ->first();
+        $replacedPaths = [];
 
         // Map request fields to database fields and individual upload timestamp fields
         $fields = [
@@ -852,9 +1177,11 @@ class FundUtilizationReportController extends Controller
 
         foreach ($fields as $requestField => $fieldConfig) {
             if ($request->hasFile($requestField)) {
+                $oldPath = $existingRecord?->{$fieldConfig['path']};
                 $file = $request->file($requestField);
                 $path = $file->store('fur/written-notice/' . $projectCode, 'public');
                 $updates[$fieldConfig['path']] = $path;
+                $replacedPaths[] = ['old' => $oldPath, 'new' => $path];
                 // Set individual upload timestamp for this specific document
                 $updates[$fieldConfig['uploaded_at']] = $secureTimestamp;
                 $updates[$fieldConfig['encoder_id']] = auth()->id();
@@ -877,28 +1204,49 @@ class FundUtilizationReportController extends Controller
                 $updates['approved_at_dilg_ro'] = null;
                 $updates['approval_remarks'] = null;
                 $updates['user_remarks'] = null;
+
+                if ($autoElevateToRegional) {
+                    $updates[$fieldConfig['approved_by']] = auth()->id();
+                    $updates[$fieldConfig['approved_at']] = $secureTimestamp;
+                    if (!empty($fieldConfig['approved_at_dilg_po'])) {
+                        $updates[$fieldConfig['approved_at_dilg_po']] = $secureTimestamp;
+                    }
+                    if (!empty($fieldConfig['approved_at_dilg_ro'])) {
+                        $updates[$fieldConfig['approved_at_dilg_ro']] = null;
+                    }
+                    $updates[$fieldConfig['approved_by'] . '_dilg_po'] = auth()->id();
+                    $updates[$fieldConfig['approved_by'] . '_dilg_ro'] = null;
+                }
                 
                 // Log the upload for audit trail
                 $shortFieldName = str_replace('secretary_', '', $requestField);
                 SecureTimestampService::logUploadTimestamp('written-notice-' . $shortFieldName, $projectCode, $request->quarter, $secureTimestamp);
 
-                // Notify DILG users in the same province when an LGU submits.
-                $this->notifyDilgProvinceUsers($report, 'written-notice-' . $shortFieldName, $request->quarter);
+                if ($autoElevateToRegional) {
+                    $this->notifyDilgRegionalUsers($report, 'written-notice-' . $shortFieldName, $request->quarter);
+                } else {
+                    // Notify DILG users in the same province when an LGU submits.
+                    $this->notifyDilgProvinceUsers($report, 'written-notice-' . $shortFieldName, $request->quarter);
+                }
             }
         }
 
         if (!empty($updates)) {
-            // Get the existing record to check if it's new
-            $existingRecord = FURWrittenNotice::where('project_code', $projectCode)
-                                              ->where('quarter', $request->quarter)
-                                              ->first();
-            
             // Add created_at with secure timestamp only for new records
             if (!$existingRecord) {
                 $updates['created_at'] = $secureTimestamp;
             }
             
             FURWrittenNotice::updateOrCreate($data, $updates);
+
+            foreach ($replacedPaths as $replacedPath) {
+                $oldPath = $replacedPath['old'] ?? null;
+                $newPath = $replacedPath['new'] ?? null;
+
+                if ($oldPath && $oldPath !== $newPath && Storage::disk('public')->exists($oldPath)) {
+                    Storage::disk('public')->delete($oldPath);
+                }
+            }
         }
 
         return back()->with('success', 'Written Notice files uploaded successfully.');
@@ -914,19 +1262,20 @@ class FundUtilizationReportController extends Controller
             'fdp_file' => 'required|mimes:pdf,jpg,jpeg,png|max:10240',
         ]);
 
-        $report = FundUtilizationReport::findOrFail($projectCode);
+        $report = $this->getReportOrLfpProject($projectCode);
+        $user = Auth::user();
+        $autoElevateToRegional = $this->isProvincialDilgUser($user);
 
         if ($request->hasFile('fdp_file')) {
+            $existingRecord = FURFDP::where('project_code', $projectCode)
+                                    ->where('quarter', $request->quarter)
+                                    ->first();
+            $oldFilePath = $existingRecord?->fdp_file_path;
             $file = $request->file('fdp_file');
             $path = $file->store('fur/fdp/' . $projectCode, 'public');
 
             // Get secure, tamper-proof timestamp from PAGASA server
             $secureTimestamp = SecureTimestampService::getUploadTimestamp();
-
-            // Get the existing record to check if it's new
-            $existingRecord = FURFDP::where('project_code', $projectCode)
-                                    ->where('quarter', $request->quarter)
-                                    ->first();
             
             $updates = [
                 'fdp_file_path' => $path, 
@@ -945,9 +1294,20 @@ class FundUtilizationReportController extends Controller
                 'approved_at' => null,
                 'approved_at_dilg_po' => null,
                 'approved_at_dilg_ro' => null,
+                'approved_by_dilg_po' => null,
+                'approved_by_dilg_ro' => null,
                 'approval_remarks' => null,
                 'user_remarks' => null,
             ];
+
+            if ($autoElevateToRegional) {
+                $updates['fdp_approved_by'] = auth()->id();
+                $updates['fdp_approved_at'] = $secureTimestamp;
+                $updates['approved_at_dilg_po'] = $secureTimestamp;
+                $updates['approved_at_dilg_ro'] = null;
+                $updates['approved_by_dilg_po'] = auth()->id();
+                $updates['approved_by_dilg_ro'] = null;
+            }
             
             // Add created_at with secure timestamp only for new records
             if (!$existingRecord) {
@@ -959,11 +1319,19 @@ class FundUtilizationReportController extends Controller
                 $updates
             );
 
+            if ($oldFilePath && $oldFilePath !== $path && Storage::disk('public')->exists($oldFilePath)) {
+                Storage::disk('public')->delete($oldFilePath);
+            }
+
             // Log the upload for audit trail
             SecureTimestampService::logUploadTimestamp('fdp', $projectCode, $request->quarter, $secureTimestamp);
 
-            // Notify DILG users in the same province when an LGU submits.
-            $this->notifyDilgProvinceUsers($report, 'fdp', $request->quarter);
+            if ($autoElevateToRegional) {
+                $this->notifyDilgRegionalUsers($report, 'fdp', $request->quarter);
+            } else {
+                // Notify DILG users in the same province when an LGU submits.
+                $this->notifyDilgProvinceUsers($report, 'fdp', $request->quarter);
+            }
         }
 
         return back()->with('success', 'FDP document uploaded successfully.');
@@ -979,7 +1347,9 @@ class FundUtilizationReportController extends Controller
             'posting_link' => 'required|string|max:2048',
         ]);
 
-        $report = FundUtilizationReport::findOrFail($projectCode);
+        $report = $this->getReportOrLfpProject($projectCode);
+        $user = Auth::user();
+        $autoElevateToRegional = $this->isProvincialDilgUser($user);
 
         $secureTimestamp = SecureTimestampService::getUploadTimestamp();
 
@@ -999,8 +1369,19 @@ class FundUtilizationReportController extends Controller
             'posting_approved_at' => null,
             'posting_approved_at_dilg_po' => null,
             'posting_approved_at_dilg_ro' => null,
+            'posting_approved_by_dilg_po' => null,
+            'posting_approved_by_dilg_ro' => null,
             'posting_remarks' => null,
         ];
+
+        if ($autoElevateToRegional) {
+            $updates['posting_approved_by'] = auth()->id();
+            $updates['posting_approved_at'] = $secureTimestamp;
+            $updates['posting_approved_at_dilg_po'] = $secureTimestamp;
+            $updates['posting_approved_at_dilg_ro'] = null;
+            $updates['posting_approved_by_dilg_po'] = auth()->id();
+            $updates['posting_approved_by_dilg_ro'] = null;
+        }
 
         FURFDP::updateOrCreate(
             ['project_code' => $projectCode, 'quarter' => $request->quarter],
@@ -1018,7 +1399,11 @@ class FundUtilizationReportController extends Controller
             'user_id' => auth()->id(),
         ]);
 
-        $this->notifyDilgProvinceUsers($report, 'posting-link', $request->quarter);
+        if ($autoElevateToRegional) {
+            $this->notifyDilgRegionalUsers($report, 'posting-link', $request->quarter);
+        } else {
+            $this->notifyDilgProvinceUsers($report, 'posting-link', $request->quarter);
+        }
 
         return back()->with('success', 'LGU posting link saved successfully.');
     }
@@ -1035,7 +1420,8 @@ class FundUtilizationReportController extends Controller
 
         $user = Auth::user();
         $isDilgUser = $user && $user->agency === 'DILG';
-        $isRegionalOffice = $isDilgUser && $user->province === 'Regional Office';
+        $isRegionalOffice = $isDilgUser
+            && strtolower(trim((string) ($user->province ?? ''))) === 'regional office';
         $isProvincialOffice = $isDilgUser && !$isRegionalOffice;
 
         $action = $request->action;
@@ -1308,8 +1694,14 @@ class FundUtilizationReportController extends Controller
 
         // Notify DILG Regional Office users when a provincial DILG user validates.
         if ($action === 'approve' && $isProvincialOffice) {
-            $report = FundUtilizationReport::findOrFail($projectCode);
+            $report = $this->getReportOrLfpProject($projectCode);
             $this->notifyDilgRegionalUsers($report, $uploadType, $quarter);
+        }
+
+        // Notify LGU users when DILG Regional Office approves.
+        if ($action === 'approve' && $isRegionalOffice) {
+            $report = $this->getReportOrLfpProject($projectCode);
+            $this->notifyLguUsersAfterRegionalApproval($report, $uploadType, $quarter);
         }
 
         Log::channel('upload_timestamps')->info('Document action', [
@@ -1667,6 +2059,10 @@ class FundUtilizationReportController extends Controller
     private function getFundUtilizationLogs(string $projectCode): array
     {
         $logFiles = glob(storage_path('logs/upload_timestamps-*.log')) ?: [];
+        $singleLogFile = storage_path('logs/upload_timestamps.log');
+        if (is_file($singleLogFile)) {
+            $logFiles[] = $singleLogFile;
+        }
         rsort($logFiles);
 
         $entries = [];
@@ -1782,9 +2178,18 @@ class FundUtilizationReportController extends Controller
             return;
         }
 
+        $targetProvince = trim((string) ($user->province ?? ''));
+        if ($targetProvince === '') {
+            $targetProvince = trim((string) $report->province);
+        }
+        if ($targetProvince === '') {
+            return;
+        }
+
         $dilgUsers = User::query()
-            ->where('agency', 'DILG')
-            ->where('province', $report->province)
+            ->whereRaw('UPPER(TRIM(COALESCE(agency, ""))) = ?', ['DILG'])
+            ->whereRaw('LOWER(TRIM(COALESCE(province, ""))) = ?', [strtolower($targetProvince)])
+            ->whereRaw('LOWER(TRIM(COALESCE(province, ""))) <> ?', ['regional office'])
             ->where('status', 'active')
             ->get(['idno']);
 
@@ -1798,7 +2203,7 @@ class FundUtilizationReportController extends Controller
             strtoupper(str_replace('-', ' ', $documentType)),
             $report->project_code,
             $quarter,
-            $report->province
+            $targetProvince
         );
 
         $url = url('/fund-utilization/' . $report->project_code);
@@ -1820,20 +2225,146 @@ class FundUtilizationReportController extends Controller
         DB::table('tbnotifications')->insert($rows);
     }
 
+    private function notifyLguUsersAfterRegionalApproval(FundUtilizationReport $report, string $documentType, string $quarter): void
+    {
+        try {
+            if (!Schema::hasTable('tbnotifications')) {
+                return;
+            }
+
+            $user = Auth::user();
+            if (!$user || strtoupper(trim((string) ($user->agency ?? ''))) !== 'DILG') {
+                return;
+            }
+
+            $isRegionalOffice = strtolower(trim((string) ($user->province ?? ''))) === 'regional office'
+                || str_contains(strtolower(trim((string) ($user->office ?? ''))), 'regional office');
+            if (!$isRegionalOffice) {
+                return;
+            }
+
+            $targetProvince = trim((string) ($report->province ?? ''));
+            if ($targetProvince === '') {
+                return;
+            }
+
+            $implementingUnit = trim((string) ($report->implementing_unit ?? ''));
+            $candidateOfficeNames = collect([$implementingUnit])
+                ->map(function ($value) {
+                    return strtolower(trim((string) $value));
+                })
+                ->filter(function ($value) {
+                    return $value !== '';
+                })
+                ->flatMap(function ($value) {
+                    $withoutPrefix = trim((string) preg_replace('/^(municipality|city)\s+of\s+/i', '', $value));
+                    return array_values(array_unique(array_filter([$value, $withoutPrefix])));
+                })
+                ->values()
+                ->all();
+
+            $provinceLguUsers = User::query()
+                ->whereRaw('UPPER(TRIM(COALESCE(agency, ""))) = ?', ['LGU'])
+                ->whereRaw('LOWER(TRIM(COALESCE(province, ""))) = ?', [strtolower($targetProvince)])
+                ->where('status', 'active')
+                ->get(['idno', 'office']);
+
+            if ($provinceLguUsers->isEmpty()) {
+                return;
+            }
+
+            $recipients = $provinceLguUsers;
+            if (!empty($candidateOfficeNames)) {
+                $filteredRecipients = $provinceLguUsers->filter(function ($lguUser) use ($candidateOfficeNames) {
+                    $office = strtolower(trim((string) ($lguUser->office ?? '')));
+                    $officeWithoutPrefix = trim((string) preg_replace('/^(municipality|city)\s+of\s+/i', '', $office));
+                    return in_array($office, $candidateOfficeNames, true)
+                        || in_array($officeWithoutPrefix, $candidateOfficeNames, true);
+                })->values();
+
+                // Fallback to province-wide LGU recipients if office name matching is unavailable.
+                if ($filteredRecipients->isNotEmpty()) {
+                    $recipients = $filteredRecipients;
+                }
+            }
+
+            $actorName = trim((string) ($user->fname ?? '') . ' ' . (string) ($user->lname ?? ''));
+            if ($actorName === '') {
+                $actorName = 'DILG Regional Office';
+            }
+
+            $projectLabel = trim((string) ($report->project_code ?? ''));
+            $projectTitle = trim((string) ($report->project_title ?? ''));
+            if ($projectTitle !== '') {
+                $projectLabel .= ' (' . $projectTitle . ')';
+            }
+
+            $message = sprintf(
+                '%s approved %s for %s (%s) - %s.',
+                $actorName,
+                strtoupper(str_replace('-', ' ', $documentType)),
+                $projectLabel,
+                $quarter,
+                $targetProvince
+            );
+
+            $now = now();
+            $url = trim((string) ($report->project_code ?? '')) !== ''
+                ? route('fund-utilization.show', ['projectCode' => $report->project_code])
+                : route('fund-utilization.index');
+            $actorId = (int) Auth::id();
+
+            $rows = $recipients
+                ->filter(function ($recipient) use ($actorId) {
+                    return (int) ($recipient->idno ?? 0) !== $actorId;
+                })
+                ->map(function ($recipient) use ($message, $url, $documentType, $quarter, $now) {
+                    return [
+                        'user_id' => (int) $recipient->idno,
+                        'message' => $message,
+                        'url' => $url,
+                        'document_type' => $documentType,
+                        'quarter' => $quarter,
+                        'read_at' => null,
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ];
+                })
+                ->values()
+                ->all();
+
+            if (!empty($rows)) {
+                DB::table('tbnotifications')->insert($rows);
+            }
+        } catch (\Throwable $error) {
+            Log::warning('Failed to create LGU notifications after regional approval (FUR).', [
+                'project_code' => $report->project_code ?? null,
+                'document_type' => $documentType,
+                'quarter' => $quarter,
+                'error' => $error->getMessage(),
+            ]);
+        }
+    }
+
     private function notifyDilgRegionalUsers(FundUtilizationReport $report, string $documentType, string $quarter): void
     {
         $user = Auth::user();
+        $userProvinceLower = strtolower(trim((string) ($user->province ?? '')));
         if (
             !$user
             || $user->agency !== 'DILG'
-            || $user->province === 'Regional Office'
+            || $userProvinceLower === ''
+            || $userProvinceLower === 'regional office'
         ) {
             return;
         }
 
         $regionalUsers = User::query()
-            ->where('agency', 'DILG')
-            ->where('province', 'Regional Office')
+            ->whereRaw('UPPER(TRIM(COALESCE(agency, ""))) = ?', ['DILG'])
+            ->where(function ($query) {
+                $query->whereRaw('LOWER(TRIM(COALESCE(province, ""))) = ?', ['regional office'])
+                    ->orWhereRaw('LOWER(TRIM(COALESCE(office, ""))) LIKE ?', ['%regional office%']);
+            })
             ->where('status', 'active')
             ->get(['idno']);
 

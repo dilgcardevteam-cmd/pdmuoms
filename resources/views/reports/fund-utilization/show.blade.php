@@ -13,16 +13,6 @@
             <a href="{{ route('fund-utilization.index') }}" style="display: inline-flex; padding: 10px 18px; background-color: #6b7280; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; text-decoration: none; align-items: center; gap: 6px; white-space: nowrap;">
                 <i class="fas fa-arrow-left"></i> Back to Reports
             </a>
-            @if(Auth::user()->agency === 'DILG')
-                <a href="{{ route('fund-utilization.edit', $report->project_code) }}" style="display: inline-flex; padding: 10px 18px; background-color: #f59e0b; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; text-decoration: none; align-items: center; gap: 6px; white-space: nowrap;">
-                    <i class="fas fa-edit"></i> Update Project
-                </a>
-            @endif
-            @if(Auth::user()->agency === 'DILG' && Auth::user()->province === 'Regional Office')
-                <button type="button" onclick="deleteProjectConfirm('{{ $report->project_code }}')" style="padding: 10px 20px; background-color: #dc2626; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 8px; white-space: nowrap;">
-                    <i class="fas fa-trash-alt"></i> Delete Project
-                </button>
-            @endif
         </div>
     </div>
 
@@ -112,7 +102,39 @@
         </div>
     </div>
 
-    
+    @php
+        $isProvincialDilgViewer = Auth::user()->agency === 'DILG' && Auth::user()->province !== 'Regional Office';
+        $resolveUploaderMeta = function ($record, ?string $uploadedAtField = null, ?string $encoderField = null) use ($isProvincialDilgViewer) {
+            if (!$record) {
+                return ['time' => null, 'name' => 'Unknown'];
+            }
+
+            $uploadedAt = $uploadedAtField ? ($record->{$uploadedAtField} ?? null) : null;
+            if (!$uploadedAt) {
+                $uploadedAt = $record->created_at ?? $record->updated_at ?? null;
+            }
+
+            $uploadedTime = null;
+            if ($uploadedAt) {
+                $uploadedTime = is_string($uploadedAt)
+                    ? \Carbon\Carbon::parse($uploadedAt)->setTimezone(config('app.timezone'))
+                    : $uploadedAt->setTimezone(config('app.timezone'));
+            }
+
+            $encoderId = $encoderField ? ($record->{$encoderField} ?? null) : null;
+            if (!$encoderId) {
+                $encoderId = $record->encoder_id ?? null;
+            }
+            if (!$encoderId && $isProvincialDilgViewer) {
+                $encoderId = $record->approved_by_dilg_po ?? $record->approved_by ?? null;
+            }
+
+            $encoderUser = $encoderId ? \App\Models\User::where('idno', $encoderId)->first() : null;
+            $encoderName = $encoderUser ? trim($encoderUser->fname . ' ' . $encoderUser->lname) : 'Unknown';
+
+            return ['time' => $uploadedTime, 'name' => $encoderName];
+        };
+    @endphp
 
     <!-- Quarterly Sections -->
     @foreach ($quarters as $quarter)
@@ -212,15 +234,14 @@
                     </label>
                     <div data-pagasa-time style="display: none; margin-bottom: 8px; color: #059669; font-size: 11px; font-weight: 600; min-height: 16px;"></div>
                     <label style="display: block; margin-bottom: 8px; color: #374151; font-weight: 600; font-size: 12px;">
-                        @if($movUploads[$quarter] && $movUploads[$quarter]->mov_file_path && $movUploads[$quarter]->mov_uploaded_at)
+                        @if($movUploads[$quarter] && $movUploads[$quarter]->mov_file_path)
                             <span style="display: block; font-size: 10px; font-weight: normal; color: #6b7280; margin-top: 4px;">
                                 @php
-                                    $uploadedAt = $movUploads[$quarter]->mov_uploaded_at;
-                                    $uploadedTime = is_string($uploadedAt) ? \Carbon\Carbon::parse($uploadedAt)->setTimezone(config('app.timezone')) : $uploadedAt->setTimezone(config('app.timezone'));
-                                    $movEncoderUser = \App\Models\User::where('idno', $movUploads[$quarter]->mov_encoder_id)->first();
-                                    $encoderName = $movEncoderUser ? trim($movEncoderUser->fname . ' ' . $movEncoderUser->lname) : 'Unknown';
+                                    $uploadedInfo = $resolveUploaderMeta($movUploads[$quarter], 'mov_uploaded_at', 'mov_encoder_id');
+                                    $uploadedTime = $uploadedInfo['time'];
+                                    $encoderName = $uploadedInfo['name'];
                                 @endphp
-                                Uploaded at: {{ $uploadedTime->format('M d, Y H:i') }} by {{ $encoderName }}
+                                Uploaded at: {{ $uploadedTime ? $uploadedTime->format('M d, Y h:i A') : '-' }} by {{ $encoderName }}
                             </span>
                             @php
                                 $cordilleraProvinces = ['Abra', 'Apayao', 'Benguet', 'City of Baguio', 'Ifugao', 'Kalinga', 'Mountain Province'];
@@ -231,20 +252,22 @@
                                 <span style="display: block; font-size: 10px; font-weight: normal; color: #059669; margin-top: 4px;">
                                     @php
                                         $poApprovedAt = is_string($movUploads[$quarter]->approved_at_dilg_po) ? \Carbon\Carbon::parse($movUploads[$quarter]->approved_at_dilg_po)->setTimezone(config('app.timezone')) : $movUploads[$quarter]->approved_at_dilg_po->setTimezone(config('app.timezone'));
-                                        $poApproverUser = $movUploads[$quarter]->approved_by_dilg_po ? \App\Models\User::where('idno', $movUploads[$quarter]->approved_by_dilg_po)->first() : null;
+                                        $poApproverId = $movUploads[$quarter]->approved_by_dilg_po ?? $movUploads[$quarter]->approved_by;
+                                        $poApproverUser = $poApproverId ? \App\Models\User::where('idno', $poApproverId)->first() : null;
                                         $poApproverName = $poApproverUser ? trim($poApproverUser->fname . ' ' . $poApproverUser->lname) : 'Unknown';
                                     @endphp
-                                    DILG Provincial Validated at: {{ $poApprovedAt->format('M d, Y H:i') }} by {{ $poApproverName }}
+                                    DILG Provincial Validated at: {{ $poApprovedAt->format('M d, Y h:i A') }} by {{ $poApproverName }}
                                 </span>
                             @endif
                             @if($movUploads[$quarter] && $movUploads[$quarter]->approved_at_dilg_ro)
                                 <span style="display: block; font-size: 10px; font-weight: normal; color: #0891b2; margin-top: 4px;">
                                     @php
                                         $roApprovedAt = is_string($movUploads[$quarter]->approved_at_dilg_ro) ? \Carbon\Carbon::parse($movUploads[$quarter]->approved_at_dilg_ro)->setTimezone(config('app.timezone')) : $movUploads[$quarter]->approved_at_dilg_ro->setTimezone(config('app.timezone'));
-                                        $roApproverUser = $movUploads[$quarter]->approved_by_dilg_ro ? \App\Models\User::where('idno', $movUploads[$quarter]->approved_by_dilg_ro)->first() : null;
+                                        $roApproverId = $movUploads[$quarter]->approved_by_dilg_ro ?? $movUploads[$quarter]->approved_by;
+                                        $roApproverUser = $roApproverId ? \App\Models\User::where('idno', $roApproverId)->first() : null;
                                         $roApproverName = $roApproverUser ? trim($roApproverUser->fname . ' ' . $roApproverUser->lname) : 'Unknown';
                                     @endphp
-                                    DILG Regional Validated at: {{ $roApprovedAt->format('M d, Y H:i') }} by {{ $roApproverName }}
+                                    DILG Regional Validated at: {{ $roApprovedAt->format('M d, Y h:i A') }} by {{ $roApproverName }}
                                 </span>
                             @endif
                             @if($isMovReturned && $movUploads[$quarter] && $movUploads[$quarter]->approved_at)
@@ -253,7 +276,7 @@
                                         $returnedAt = is_string($movUploads[$quarter]->approved_at) ? \Carbon\Carbon::parse($movUploads[$quarter]->approved_at)->setTimezone(config('app.timezone')) : $movUploads[$quarter]->approved_at->setTimezone(config('app.timezone'));
                                         $returnedByUser = $movUploads[$quarter]->approver ? trim($movUploads[$quarter]->approver->fname . ' ' . $movUploads[$quarter]->approver->lname) : 'Unknown';
                                     @endphp
-                                    Returned at: {{ $returnedAt->format('M d, Y H:i') }} by {{ $returnedByUser }}
+                                    Returned at: {{ $returnedAt->format('M d, Y h:i A') }} by {{ $returnedByUser }}
                                 </span>
                             @endif
                         @endif
@@ -398,13 +421,13 @@
                                 $createdAt = $writtenNotices[$quarter]->updated_at;
                                 $uploadedTime = is_string($createdAt) ? \Carbon\Carbon::parse($createdAt)->setTimezone(config('app.timezone')) : $createdAt->setTimezone(config('app.timezone'));
                             @endphp
-                            Uploaded: {{ $uploadedTime->format('M d, Y H:i') }}
+                            Uploaded: {{ $uploadedTime->format('M d, Y h:i A') }}
                             @if($writtenNotices[$quarter]->approved_at)
                                 @php
                                     $approvedAt = $writtenNotices[$quarter]->approved_at;
                                     $approvalTime = is_string($approvedAt) ? \Carbon\Carbon::parse($approvedAt)->setTimezone(config('app.timezone')) : $approvedAt->setTimezone(config('app.timezone'));
                                 @endphp
-                                | Approved: {{ $approvalTime->format('M d, Y H:i') }}
+                                | Approved: {{ $approvalTime->format('M d, Y h:i A') }}
                             @endif
                         </span>
                     @endif
@@ -462,19 +485,18 @@
                                 </label>
                                 <div data-pagasa-time style="display: none; margin-bottom: 8px; color: #059669; font-size: 11px; font-weight: 600; min-height: 16px;"></div>
                                 @if(
-                                    ($writtenNotices[$quarter] && $writtenNotices[$quarter]->secretary_dbm_path && $writtenNotices[$quarter]->dbm_uploaded_at)
+                                    ($writtenNotices[$quarter] && $writtenNotices[$quarter]->secretary_dbm_path)
                                     || ($isDbmReturned && $writtenNotices[$quarter] && $writtenNotices[$quarter]->dbm_approved_at)
                                 )
                                     <label style="display: block; margin-bottom: 8px; color: #374151; font-weight: 600; font-size: 12px;">
-                                        @if($writtenNotices[$quarter] && $writtenNotices[$quarter]->secretary_dbm_path && $writtenNotices[$quarter]->dbm_uploaded_at)
+                                        @if($writtenNotices[$quarter] && $writtenNotices[$quarter]->secretary_dbm_path)
                                             <span style="display: block; font-size: 10px; font-weight: normal; color: #6b7280; margin-top: 4px;">
                                                 @php
-                                                    $createdAt = $writtenNotices[$quarter]->dbm_uploaded_at;
-                                                    $uploadedTime = is_string($createdAt) ? \Carbon\Carbon::parse($createdAt)->setTimezone(config('app.timezone')) : $createdAt->setTimezone(config('app.timezone'));
-                                                    $dbmEncoderUser = \App\Models\User::where('idno', $writtenNotices[$quarter]->dbm_encoder_id)->first();
-                                                    $encoderName = $dbmEncoderUser ? trim($dbmEncoderUser->fname . ' ' . $dbmEncoderUser->lname) : 'Unknown';
+                                                    $uploadedInfo = $resolveUploaderMeta($writtenNotices[$quarter], 'dbm_uploaded_at', 'dbm_encoder_id');
+                                                    $uploadedTime = $uploadedInfo['time'];
+                                                    $encoderName = $uploadedInfo['name'];
                                                 @endphp
-                                                Uploaded at: {{ $uploadedTime->format('M d, Y H:i') }} by {{ $encoderName }}
+                                                Uploaded at: {{ $uploadedTime ? $uploadedTime->format('M d, Y h:i A') : '-' }} by {{ $encoderName }}
                                             </span>
                                             @php
                                                 $cordilleraProvinces = ['Abra', 'Apayao', 'Benguet', 'City of Baguio', 'Ifugao', 'Kalinga', 'Mountain Province'];
@@ -486,16 +508,21 @@
                                                 @php
                                                     $poTimestamp = $writtenNotices[$quarter]->dbm_approved_at_dilg_po;
                                                     $poApprovedAt = is_string($poTimestamp) ? \Carbon\Carbon::parse($poTimestamp)->setTimezone(config('app.timezone')) : $poTimestamp->setTimezone(config('app.timezone'));
-                                                    $poApproverName = Auth::user() ? trim(Auth::user()->fname . ' ' . Auth::user()->lname) : 'Unknown';
+                                                    $poApproverId = $writtenNotices[$quarter]->dbm_approved_by_dilg_po ?? $writtenNotices[$quarter]->dbm_approved_by;
+                                                    $poApproverUser = $poApproverId ? \App\Models\User::where('idno', $poApproverId)->first() : null;
+                                                    $poApproverName = $poApproverUser ? trim($poApproverUser->fname . ' ' . $poApproverUser->lname) : 'Unknown';
                                                 @endphp
-                                                <span style="display: block; font-size: 10px; font-weight: normal; color: #059669; margin-top: 4px;">DILG Provincial Validated at: {{ $poApprovedAt->format('M d, Y H:i') }} by {{ $poApproverName }}</span>
+                                                <span style="display: block; font-size: 10px; font-weight: normal; color: #059669; margin-top: 4px;">DILG Provincial Validated at: {{ $poApprovedAt->format('M d, Y h:i A') }} by {{ $poApproverName }}</span>
                                             @endif
                                             @if($writtenNotices[$quarter] && $writtenNotices[$quarter]->dbm_approved_at_dilg_ro && $writtenNotices[$quarter]->dbm_status === 'approved')
                                                 @php
                                                     $roTimestamp = $writtenNotices[$quarter]->dbm_approved_at_dilg_ro;
                                                     $roApprovedAt = is_string($roTimestamp) ? \Carbon\Carbon::parse($roTimestamp)->setTimezone(config('app.timezone')) : $roTimestamp->setTimezone(config('app.timezone'));
+                                                    $roApproverId = $writtenNotices[$quarter]->dbm_approved_by_dilg_ro ?? $writtenNotices[$quarter]->dbm_approved_by;
+                                                    $roApproverUser = $roApproverId ? \App\Models\User::where('idno', $roApproverId)->first() : null;
+                                                    $roApproverName = $roApproverUser ? trim($roApproverUser->fname . ' ' . $roApproverUser->lname) : 'Unknown';
                                                 @endphp
-                                                <span style="display: block; font-size: 10px; font-weight: normal; color: #0891b2; margin-top: 4px;">DILG Regional Validated at: {{ $roApprovedAt->format('M d, Y H:i') }} by {{ Auth::user() ? trim(Auth::user()->fname . ' ' . Auth::user()->lname) : 'Unknown' }}</span>
+                                                <span style="display: block; font-size: 10px; font-weight: normal; color: #0891b2; margin-top: 4px;">DILG Regional Validated at: {{ $roApprovedAt->format('M d, Y h:i A') }} by {{ $roApproverName }}</span>
                                             @endif
                                         @endif
                                         @if($isDbmReturned && $writtenNotices[$quarter] && $writtenNotices[$quarter]->dbm_approved_at)
@@ -504,7 +531,7 @@
                                                 $dbmApproverUser = $writtenNotices[$quarter]->dbm_approved_by ? \App\Models\User::where('idno', $writtenNotices[$quarter]->dbm_approved_by)->first() : null;
                                                 $dbmApproverName = $dbmApproverUser ? trim($dbmApproverUser->fname . ' ' . $dbmApproverUser->lname) : 'Unknown';
                                             @endphp
-                                            <span style="display: block; font-size: 10px; font-weight: normal; color: #dc2626; margin-top: 4px;">Returned at: {{ $dbmReturnedAt->format('M d, Y H:i') }} by {{ $dbmApproverName }}</span>
+                                            <span style="display: block; font-size: 10px; font-weight: normal; color: #dc2626; margin-top: 4px;">Returned at: {{ $dbmReturnedAt->format('M d, Y h:i A') }} by {{ $dbmApproverName }}</span>
                                         @endif
                                     </label>
                                 @endif
@@ -639,19 +666,18 @@
                                 </label>
                                 <div data-pagasa-time style="display: none; margin-bottom: 8px; color: #059669; font-size: 11px; font-weight: 600; min-height: 16px;"></div>
                                 @if(
-                                    ($writtenNotices[$quarter] && $writtenNotices[$quarter]->secretary_dilg_path && $writtenNotices[$quarter]->dilg_uploaded_at)
+                                    ($writtenNotices[$quarter] && $writtenNotices[$quarter]->secretary_dilg_path)
                                     || ($isDilgReturned && $writtenNotices[$quarter] && $writtenNotices[$quarter]->dilg_approved_at)
                                 )
                                     <label style="display: block; margin-bottom: 8px; color: #374151; font-weight: 600; font-size: 12px;">
-                                        @if($writtenNotices[$quarter] && $writtenNotices[$quarter]->secretary_dilg_path && $writtenNotices[$quarter]->dilg_uploaded_at)
+                                        @if($writtenNotices[$quarter] && $writtenNotices[$quarter]->secretary_dilg_path)
                                             <span style="display: block; font-size: 10px; font-weight: normal; color: #6b7280; margin-top: 4px;">
                                                 @php
-                                                    $createdAt = $writtenNotices[$quarter]->dilg_uploaded_at;
-                                                    $uploadedTime = is_string($createdAt) ? \Carbon\Carbon::parse($createdAt)->setTimezone(config('app.timezone')) : $createdAt->setTimezone(config('app.timezone'));
-                                                    $dilgEncoderUser = \App\Models\User::where('idno', $writtenNotices[$quarter]->dilg_encoder_id)->first();
-                                                    $encoderName = $dilgEncoderUser ? trim($dilgEncoderUser->fname . ' ' . $dilgEncoderUser->lname) : 'Unknown';
+                                                    $uploadedInfo = $resolveUploaderMeta($writtenNotices[$quarter], 'dilg_uploaded_at', 'dilg_encoder_id');
+                                                    $uploadedTime = $uploadedInfo['time'];
+                                                    $encoderName = $uploadedInfo['name'];
                                                 @endphp
-                                                Uploaded at: {{ $uploadedTime->format('M d, Y H:i') }} by {{ $encoderName }}
+                                                Uploaded at: {{ $uploadedTime ? $uploadedTime->format('M d, Y h:i A') : '-' }} by {{ $encoderName }}
                                             </span>
                                             @php
                                                 $cordilleraProvinces = ['Abra', 'Apayao', 'Benguet', 'City of Baguio', 'Ifugao', 'Kalinga', 'Mountain Province'];
@@ -663,16 +689,21 @@
                                                 @php
                                                     $poTimestamp = $writtenNotices[$quarter]->dilg_approved_at_dilg_po;
                                                     $poApprovedAt = is_string($poTimestamp) ? \Carbon\Carbon::parse($poTimestamp)->setTimezone(config('app.timezone')) : $poTimestamp->setTimezone(config('app.timezone'));
-                                                    $poApproverName = Auth::user() ? trim(Auth::user()->fname . ' ' . Auth::user()->lname) : 'Unknown';
+                                                    $poApproverId = $writtenNotices[$quarter]->dilg_approved_by_dilg_po ?? $writtenNotices[$quarter]->dilg_approved_by;
+                                                    $poApproverUser = $poApproverId ? \App\Models\User::where('idno', $poApproverId)->first() : null;
+                                                    $poApproverName = $poApproverUser ? trim($poApproverUser->fname . ' ' . $poApproverUser->lname) : 'Unknown';
                                                 @endphp
-                                                <span style="display: block; font-size: 10px; font-weight: normal; color: #059669; margin-top: 4px;">DILG Provincial Validated at: {{ $poApprovedAt->format('M d, Y H:i') }} by {{ $poApproverName }}</span>
+                                                <span style="display: block; font-size: 10px; font-weight: normal; color: #059669; margin-top: 4px;">DILG Provincial Validated at: {{ $poApprovedAt->format('M d, Y h:i A') }} by {{ $poApproverName }}</span>
                                             @endif
                                             @if($writtenNotices[$quarter] && $writtenNotices[$quarter]->dilg_approved_at_dilg_ro && $writtenNotices[$quarter]->dilg_status === 'approved')
                                                 @php
                                                     $roTimestamp = $writtenNotices[$quarter]->dilg_approved_at_dilg_ro;
                                                     $roApprovedAt = is_string($roTimestamp) ? \Carbon\Carbon::parse($roTimestamp)->setTimezone(config('app.timezone')) : $roTimestamp->setTimezone(config('app.timezone'));
+                                                    $roApproverId = $writtenNotices[$quarter]->dilg_approved_by_dilg_ro ?? $writtenNotices[$quarter]->dilg_approved_by;
+                                                    $roApproverUser = $roApproverId ? \App\Models\User::where('idno', $roApproverId)->first() : null;
+                                                    $roApproverName = $roApproverUser ? trim($roApproverUser->fname . ' ' . $roApproverUser->lname) : 'Unknown';
                                                 @endphp
-                                                <span style="display: block; font-size: 10px; font-weight: normal; color: #0891b2; margin-top: 4px;">DILG Regional Validated at: {{ $roApprovedAt->format('M d, Y H:i') }} by {{ Auth::user() ? trim(Auth::user()->fname . ' ' . Auth::user()->lname) : 'Unknown' }}</span>
+                                                <span style="display: block; font-size: 10px; font-weight: normal; color: #0891b2; margin-top: 4px;">DILG Regional Validated at: {{ $roApprovedAt->format('M d, Y h:i A') }} by {{ $roApproverName }}</span>
                                             @endif
                                         @endif
                                         @if($isDilgReturned && $writtenNotices[$quarter] && $writtenNotices[$quarter]->dilg_approved_at)
@@ -681,7 +712,7 @@
                                                 $dilgApproverUser = $writtenNotices[$quarter]->dilg_approved_by ? \App\Models\User::where('idno', $writtenNotices[$quarter]->dilg_approved_by)->first() : null;
                                                 $approverName = $dilgApproverUser ? trim($dilgApproverUser->fname . ' ' . $dilgApproverUser->lname) : 'Unknown';
                                             @endphp
-                                            <span style="display: block; font-size: 10px; font-weight: normal; color: #dc2626; margin-top: 4px;">Returned at: {{ $returnedAt->format('M d, Y H:i') }} by {{ $approverName }}</span>
+                                            <span style="display: block; font-size: 10px; font-weight: normal; color: #dc2626; margin-top: 4px;">Returned at: {{ $returnedAt->format('M d, Y h:i A') }} by {{ $approverName }}</span>
                                         @endif
                                     </label>
                                 @endif
@@ -820,16 +851,15 @@
                                     </span>
                                 </label>
                                 <div data-pagasa-time style="display: none; margin-bottom: 8px; color: #059669; font-size: 11px; font-weight: 600; min-height: 16px;"></div>
-                                @if($writtenNotices[$quarter] && $writtenNotices[$quarter]->speaker_house_path && $writtenNotices[$quarter]->speaker_uploaded_at)
+                                @if($writtenNotices[$quarter] && $writtenNotices[$quarter]->speaker_house_path)
                                     <label style="display: block; margin-bottom: 8px; color: #374151; font-weight: 600; font-size: 12px;">
                                         <span style="display: block; font-size: 10px; font-weight: normal; color: #6b7280; margin-top: 4px;">
                                             @php
-                                                $createdAt = $writtenNotices[$quarter]->speaker_uploaded_at;
-                                                $uploadedTime = is_string($createdAt) ? \Carbon\Carbon::parse($createdAt)->setTimezone(config('app.timezone')) : $createdAt->setTimezone(config('app.timezone'));
-                                                $speakerEncoderUser = $writtenNotices[$quarter]->speaker_encoder_id ? \App\Models\User::where('idno', $writtenNotices[$quarter]->speaker_encoder_id)->first() : null;
-                                                $encoderName = $speakerEncoderUser ? trim($speakerEncoderUser->fname . ' ' . $speakerEncoderUser->lname) : 'Unknown';
+                                                $uploadedInfo = $resolveUploaderMeta($writtenNotices[$quarter], 'speaker_uploaded_at', 'speaker_encoder_id');
+                                                $uploadedTime = $uploadedInfo['time'];
+                                                $encoderName = $uploadedInfo['name'];
                                             @endphp
-                                            Uploaded at: {{ $uploadedTime->format('M d, Y H:i') }} by {{ $encoderName }}
+                                            Uploaded at: {{ $uploadedTime ? $uploadedTime->format('M d, Y h:i A') : '-' }} by {{ $encoderName }}
                                         </span>
                                         @php
                                             $cordilleraProvinces = ['Abra', 'Apayao', 'Benguet', 'City of Baguio', 'Ifugao', 'Kalinga', 'Mountain Province'];
@@ -841,16 +871,21 @@
                                             @php
                                                 $poTimestamp = $writtenNotices[$quarter]->speaker_approved_at_dilg_po;
                                                 $poApprovedAt = is_string($poTimestamp) ? \Carbon\Carbon::parse($poTimestamp)->setTimezone(config('app.timezone')) : $poTimestamp->setTimezone(config('app.timezone'));
-                                                $poApproverName = Auth::user() ? trim(Auth::user()->fname . ' ' . Auth::user()->lname) : 'Unknown';
+                                                $poApproverId = $writtenNotices[$quarter]->speaker_approved_by_dilg_po ?? $writtenNotices[$quarter]->speaker_approved_by;
+                                                $poApproverUser = $poApproverId ? \App\Models\User::where('idno', $poApproverId)->first() : null;
+                                                $poApproverName = $poApproverUser ? trim($poApproverUser->fname . ' ' . $poApproverUser->lname) : 'Unknown';
                                             @endphp
-                                            <span style="display: block; font-size: 10px; font-weight: normal; color: #059669; margin-top: 4px;">DILG Provincial Validated at: {{ $poApprovedAt->format('M d, Y H:i') }} by {{ $poApproverName }}</span>
+                                            <span style="display: block; font-size: 10px; font-weight: normal; color: #059669; margin-top: 4px;">DILG Provincial Validated at: {{ $poApprovedAt->format('M d, Y h:i A') }} by {{ $poApproverName }}</span>
                                         @endif
                                         @if($writtenNotices[$quarter] && $writtenNotices[$quarter]->speaker_approved_at_dilg_ro && $writtenNotices[$quarter]->speaker_status === 'approved')
                                             @php
                                                 $roTimestamp = $writtenNotices[$quarter]->speaker_approved_at_dilg_ro;
                                                 $roApprovedAt = is_string($roTimestamp) ? \Carbon\Carbon::parse($roTimestamp)->setTimezone(config('app.timezone')) : $roTimestamp->setTimezone(config('app.timezone'));
+                                                $roApproverId = $writtenNotices[$quarter]->speaker_approved_by_dilg_ro ?? $writtenNotices[$quarter]->speaker_approved_by;
+                                                $roApproverUser = $roApproverId ? \App\Models\User::where('idno', $roApproverId)->first() : null;
+                                                $roApproverName = $roApproverUser ? trim($roApproverUser->fname . ' ' . $roApproverUser->lname) : 'Unknown';
                                             @endphp
-                                            <span style="display: block; font-size: 10px; font-weight: normal; color: #0891b2; margin-top: 4px;">DILG Regional Validated at: {{ $roApprovedAt->format('M d, Y H:i') }} by {{ Auth::user() ? trim(Auth::user()->fname . ' ' . Auth::user()->lname) : 'Unknown' }}</span>
+                                            <span style="display: block; font-size: 10px; font-weight: normal; color: #0891b2; margin-top: 4px;">DILG Regional Validated at: {{ $roApprovedAt->format('M d, Y h:i A') }} by {{ $roApproverName }}</span>
                                         @endif
                                     </label>
                                 @endif
@@ -978,16 +1013,15 @@
                                     </span>
                                 </label>
                                 <div data-pagasa-time style="display: none; margin-bottom: 8px; color: #059669; font-size: 11px; font-weight: 600; min-height: 16px;"></div>
-                                @if($writtenNotices[$quarter] && $writtenNotices[$quarter]->president_senate_path && $writtenNotices[$quarter]->president_uploaded_at)
+                                @if($writtenNotices[$quarter] && $writtenNotices[$quarter]->president_senate_path)
                                     <label style="display: block; margin-bottom: 8px; color: #374151; font-weight: 600; font-size: 12px;">
                                         <span style="display: block; font-size: 10px; font-weight: normal; color: #6b7280; margin-top: 4px;">
                                             @php
-                                                $createdAt = $writtenNotices[$quarter]->president_uploaded_at;
-                                                $uploadedTime = is_string($createdAt) ? \Carbon\Carbon::parse($createdAt)->setTimezone(config('app.timezone')) : $createdAt->setTimezone(config('app.timezone'));
-                                                $presidentEncoderUser = $writtenNotices[$quarter]->president_encoder_id ? \App\Models\User::where('idno', $writtenNotices[$quarter]->president_encoder_id)->first() : null;
-                                                $encoderName = $presidentEncoderUser ? trim($presidentEncoderUser->fname . ' ' . $presidentEncoderUser->lname) : 'Unknown';
+                                                $uploadedInfo = $resolveUploaderMeta($writtenNotices[$quarter], 'president_uploaded_at', 'president_encoder_id');
+                                                $uploadedTime = $uploadedInfo['time'];
+                                                $encoderName = $uploadedInfo['name'];
                                             @endphp
-                                            Uploaded at: {{ $uploadedTime->format('M d, Y H:i') }} by {{ $encoderName }}
+                                            Uploaded at: {{ $uploadedTime ? $uploadedTime->format('M d, Y h:i A') : '-' }} by {{ $encoderName }}
                                         </span>
                                         @php
                                             $cordilleraProvinces = ['Abra', 'Apayao', 'Benguet', 'City of Baguio', 'Ifugao', 'Kalinga', 'Mountain Province'];
@@ -999,16 +1033,21 @@
                                             @php
                                                 $poTimestamp = $writtenNotices[$quarter]->president_approved_at_dilg_po;
                                                 $poApprovedAt = is_string($poTimestamp) ? \Carbon\Carbon::parse($poTimestamp)->setTimezone(config('app.timezone')) : $poTimestamp->setTimezone(config('app.timezone'));
-                                                $poApproverName = Auth::user() ? trim(Auth::user()->fname . ' ' . Auth::user()->lname) : 'Unknown';
+                                                $poApproverId = $writtenNotices[$quarter]->president_approved_by_dilg_po ?? $writtenNotices[$quarter]->president_approved_by;
+                                                $poApproverUser = $poApproverId ? \App\Models\User::where('idno', $poApproverId)->first() : null;
+                                                $poApproverName = $poApproverUser ? trim($poApproverUser->fname . ' ' . $poApproverUser->lname) : 'Unknown';
                                             @endphp
-                                            <span style="display: block; font-size: 10px; font-weight: normal; color: #059669; margin-top: 4px;">DILG Provincial Validated at: {{ $poApprovedAt->format('M d, Y H:i') }} by {{ $poApproverName }}</span>
+                                            <span style="display: block; font-size: 10px; font-weight: normal; color: #059669; margin-top: 4px;">DILG Provincial Validated at: {{ $poApprovedAt->format('M d, Y h:i A') }} by {{ $poApproverName }}</span>
                                         @endif
                                         @if($writtenNotices[$quarter] && $writtenNotices[$quarter]->president_approved_at_dilg_ro && $writtenNotices[$quarter]->president_status === 'approved')
                                             @php
                                                 $roTimestamp = $writtenNotices[$quarter]->president_approved_at_dilg_ro;
                                                 $roApprovedAt = is_string($roTimestamp) ? \Carbon\Carbon::parse($roTimestamp)->setTimezone(config('app.timezone')) : $roTimestamp->setTimezone(config('app.timezone'));
+                                                $roApproverId = $writtenNotices[$quarter]->president_approved_by_dilg_ro ?? $writtenNotices[$quarter]->president_approved_by;
+                                                $roApproverUser = $roApproverId ? \App\Models\User::where('idno', $roApproverId)->first() : null;
+                                                $roApproverName = $roApproverUser ? trim($roApproverUser->fname . ' ' . $roApproverUser->lname) : 'Unknown';
                                             @endphp
-                                            <span style="display: block; font-size: 10px; font-weight: normal; color: #0891b2; margin-top: 4px;">DILG Regional Validated at: {{ $roApprovedAt->format('M d, Y H:i') }} by {{ Auth::user() ? trim(Auth::user()->fname . ' ' . Auth::user()->lname) : 'Unknown' }}</span>
+                                            <span style="display: block; font-size: 10px; font-weight: normal; color: #0891b2; margin-top: 4px;">DILG Regional Validated at: {{ $roApprovedAt->format('M d, Y h:i A') }} by {{ $roApproverName }}</span>
                                         @endif
                                     </label>
                                 @endif
@@ -1132,16 +1171,15 @@
                                     </span>
                                 </label>
                                 <div data-pagasa-time style="display: none; margin-bottom: 8px; color: #059669; font-size: 11px; font-weight: 600; min-height: 16px;"></div>
-                                @if($writtenNotices[$quarter] && $writtenNotices[$quarter]->house_committee_path && $writtenNotices[$quarter]->house_uploaded_at)
+                                @if($writtenNotices[$quarter] && $writtenNotices[$quarter]->house_committee_path)
                                     <label style="display: block; margin-bottom: 8px; color: #374151; font-weight: 600; font-size: 12px;">
                                         <span style="display: block; font-size: 10px; font-weight: normal; color: #6b7280; margin-top: 4px;">
                                             @php
-                                                $createdAt = $writtenNotices[$quarter]->house_uploaded_at;
-                                                $uploadedTime = is_string($createdAt) ? \Carbon\Carbon::parse($createdAt)->setTimezone(config('app.timezone')) : $createdAt->setTimezone(config('app.timezone'));
-                                                $houseEncoderUser = $writtenNotices[$quarter]->house_encoder_id ? \App\Models\User::where('idno', $writtenNotices[$quarter]->house_encoder_id)->first() : null;
-                                                $encoderName = $houseEncoderUser ? trim($houseEncoderUser->fname . ' ' . $houseEncoderUser->lname) : 'Unknown';
+                                                $uploadedInfo = $resolveUploaderMeta($writtenNotices[$quarter], 'house_uploaded_at', 'house_encoder_id');
+                                                $uploadedTime = $uploadedInfo['time'];
+                                                $encoderName = $uploadedInfo['name'];
                                             @endphp
-                                            Uploaded at: {{ $uploadedTime->format('M d, Y H:i') }} by {{ $encoderName }}
+                                            Uploaded at: {{ $uploadedTime ? $uploadedTime->format('M d, Y h:i A') : '-' }} by {{ $encoderName }}
                                         </span>
                                         @php
                                             $cordilleraProvinces = ['Abra', 'Apayao', 'Benguet', 'City of Baguio', 'Ifugao', 'Kalinga', 'Mountain Province'];
@@ -1153,16 +1191,21 @@
                                             @php
                                                 $poTimestamp = $writtenNotices[$quarter]->house_approved_at_dilg_po;
                                                 $poApprovedAt = is_string($poTimestamp) ? \Carbon\Carbon::parse($poTimestamp)->setTimezone(config('app.timezone')) : $poTimestamp->setTimezone(config('app.timezone'));
-                                                $poApproverName = Auth::user() ? trim(Auth::user()->fname . ' ' . Auth::user()->lname) : 'Unknown';
+                                                $poApproverId = $writtenNotices[$quarter]->house_approved_by_dilg_po ?? $writtenNotices[$quarter]->house_approved_by;
+                                                $poApproverUser = $poApproverId ? \App\Models\User::where('idno', $poApproverId)->first() : null;
+                                                $poApproverName = $poApproverUser ? trim($poApproverUser->fname . ' ' . $poApproverUser->lname) : 'Unknown';
                                             @endphp
-                                            <span style="display: block; font-size: 10px; font-weight: normal; color: #059669; margin-top: 4px;">DILG Provincial Validated at: {{ $poApprovedAt->format('M d, Y H:i') }} by {{ $poApproverName }}</span>
+                                            <span style="display: block; font-size: 10px; font-weight: normal; color: #059669; margin-top: 4px;">DILG Provincial Validated at: {{ $poApprovedAt->format('M d, Y h:i A') }} by {{ $poApproverName }}</span>
                                         @endif
                                         @if($writtenNotices[$quarter] && $writtenNotices[$quarter]->house_approved_at_dilg_ro && $writtenNotices[$quarter]->house_status === 'approved')
                                             @php
                                                 $roTimestamp = $writtenNotices[$quarter]->house_approved_at_dilg_ro;
                                                 $roApprovedAt = is_string($roTimestamp) ? \Carbon\Carbon::parse($roTimestamp)->setTimezone(config('app.timezone')) : $roTimestamp->setTimezone(config('app.timezone'));
+                                                $roApproverId = $writtenNotices[$quarter]->house_approved_by_dilg_ro ?? $writtenNotices[$quarter]->house_approved_by;
+                                                $roApproverUser = $roApproverId ? \App\Models\User::where('idno', $roApproverId)->first() : null;
+                                                $roApproverName = $roApproverUser ? trim($roApproverUser->fname . ' ' . $roApproverUser->lname) : 'Unknown';
                                             @endphp
-                                            <span style="display: block; font-size: 10px; font-weight: normal; color: #0891b2; margin-top: 4px;">DILG Regional Validated at: {{ $roApprovedAt->format('M d, Y H:i') }} by {{ Auth::user() ? trim(Auth::user()->fname . ' ' . Auth::user()->lname) : 'Unknown' }}</span>
+                                            <span style="display: block; font-size: 10px; font-weight: normal; color: #0891b2; margin-top: 4px;">DILG Regional Validated at: {{ $roApprovedAt->format('M d, Y h:i A') }} by {{ $roApproverName }}</span>
                                         @endif
                                     </label>
                                 @endif
@@ -1284,16 +1327,15 @@
                                     </span>
                                 </label>
                                 <div data-pagasa-time style="display: none; margin-bottom: 8px; color: #059669; font-size: 11px; font-weight: 600; min-height: 16px;"></div>
-                                @if($writtenNotices[$quarter] && $writtenNotices[$quarter]->senate_committee_path && $writtenNotices[$quarter]->senate_uploaded_at)
+                                @if($writtenNotices[$quarter] && $writtenNotices[$quarter]->senate_committee_path)
                                     <label style="display: block; margin-bottom: 8px; color: #374151; font-weight: 600; font-size: 12px;">
                                         <span style="display: block; font-size: 10px; font-weight: normal; color: #6b7280; margin-top: 4px;">
                                             @php
-                                                $createdAt = $writtenNotices[$quarter]->senate_uploaded_at;
-                                                $uploadedTime = is_string($createdAt) ? \Carbon\Carbon::parse($createdAt)->setTimezone(config('app.timezone')) : $createdAt->setTimezone(config('app.timezone'));
-                                                $senateEncoderUser = $writtenNotices[$quarter]->senate_encoder_id ? \App\Models\User::where('idno', $writtenNotices[$quarter]->senate_encoder_id)->first() : null;
-                                                $encoderName = $senateEncoderUser ? trim($senateEncoderUser->fname . ' ' . $senateEncoderUser->lname) : 'Unknown';
+                                                $uploadedInfo = $resolveUploaderMeta($writtenNotices[$quarter], 'senate_uploaded_at', 'senate_encoder_id');
+                                                $uploadedTime = $uploadedInfo['time'];
+                                                $encoderName = $uploadedInfo['name'];
                                             @endphp
-                                            Uploaded at: {{ $uploadedTime->format('M d, Y H:i') }} by {{ $encoderName }}
+                                            Uploaded at: {{ $uploadedTime ? $uploadedTime->format('M d, Y h:i A') : '-' }} by {{ $encoderName }}
                                         </span>
                                         @php
                                             $cordilleraProvinces = ['Abra', 'Apayao', 'Benguet', 'City of Baguio', 'Ifugao', 'Kalinga', 'Mountain Province'];
@@ -1305,16 +1347,21 @@
                                             @php
                                                 $poTimestamp = $writtenNotices[$quarter]->senate_approved_at_dilg_po;
                                                 $poApprovedAt = is_string($poTimestamp) ? \Carbon\Carbon::parse($poTimestamp)->setTimezone(config('app.timezone')) : $poTimestamp->setTimezone(config('app.timezone'));
-                                                $poApproverName = Auth::user() ? trim(Auth::user()->fname . ' ' . Auth::user()->lname) : 'Unknown';
+                                                $poApproverId = $writtenNotices[$quarter]->senate_approved_by_dilg_po ?? $writtenNotices[$quarter]->senate_approved_by;
+                                                $poApproverUser = $poApproverId ? \App\Models\User::where('idno', $poApproverId)->first() : null;
+                                                $poApproverName = $poApproverUser ? trim($poApproverUser->fname . ' ' . $poApproverUser->lname) : 'Unknown';
                                             @endphp
-                                            <span style="display: block; font-size: 10px; font-weight: normal; color: #059669; margin-top: 4px;">DILG Provincial Validated at: {{ $poApprovedAt->format('M d, Y H:i') }} by {{ $poApproverName }}</span>
+                                            <span style="display: block; font-size: 10px; font-weight: normal; color: #059669; margin-top: 4px;">DILG Provincial Validated at: {{ $poApprovedAt->format('M d, Y h:i A') }} by {{ $poApproverName }}</span>
                                         @endif
                                         @if($writtenNotices[$quarter] && $writtenNotices[$quarter]->senate_approved_at_dilg_ro && $writtenNotices[$quarter]->senate_status === 'approved')
                                             @php
                                                 $roTimestamp = $writtenNotices[$quarter]->senate_approved_at_dilg_ro;
                                                 $roApprovedAt = is_string($roTimestamp) ? \Carbon\Carbon::parse($roTimestamp)->setTimezone(config('app.timezone')) : $roTimestamp->setTimezone(config('app.timezone'));
+                                                $roApproverId = $writtenNotices[$quarter]->senate_approved_by_dilg_ro ?? $writtenNotices[$quarter]->senate_approved_by;
+                                                $roApproverUser = $roApproverId ? \App\Models\User::where('idno', $roApproverId)->first() : null;
+                                                $roApproverName = $roApproverUser ? trim($roApproverUser->fname . ' ' . $roApproverUser->lname) : 'Unknown';
                                             @endphp
-                                            <span style="display: block; font-size: 10px; font-weight: normal; color: #0891b2; margin-top: 4px;">DILG Regional Validated at: {{ $roApprovedAt->format('M d, Y H:i') }} by {{ Auth::user() ? trim(Auth::user()->fname . ' ' . Auth::user()->lname) : 'Unknown' }}</span>
+                                            <span style="display: block; font-size: 10px; font-weight: normal; color: #0891b2; margin-top: 4px;">DILG Regional Validated at: {{ $roApprovedAt->format('M d, Y h:i A') }} by {{ $roApproverName }}</span>
                                         @endif
                                     </label>
                                 @endif
@@ -1477,12 +1524,11 @@
                         @if($fdpDocuments[$quarter] && $fdpDocuments[$quarter]->fdp_file_path)
                             <span style="display: block; font-size: 10px; font-weight: normal; color: #6b7280; margin-top: 4px;">
                                 @php
-                                    $uploadedAt = $fdpDocuments[$quarter]->fdp_uploaded_at;
-                                    $uploadedTime = is_string($uploadedAt) ? \Carbon\Carbon::parse($uploadedAt)->setTimezone(config('app.timezone')) : $uploadedAt->setTimezone(config('app.timezone'));
-                                    $fdpEncoderUser = \App\Models\User::where('idno', $fdpDocuments[$quarter]->fdp_encoder_id)->first();
-                                    $encoderName = $fdpEncoderUser ? trim($fdpEncoderUser->fname . ' ' . $fdpEncoderUser->lname) : 'Unknown';
+                                    $uploadedInfo = $resolveUploaderMeta($fdpDocuments[$quarter], 'fdp_uploaded_at', 'fdp_encoder_id');
+                                    $uploadedTime = $uploadedInfo['time'];
+                                    $encoderName = $uploadedInfo['name'];
                                 @endphp
-                                Uploaded at: {{ $uploadedTime->format('M d, Y H:i') }} by {{ $encoderName }}
+                                Uploaded at: {{ $uploadedTime ? $uploadedTime->format('M d, Y h:i A') : '-' }} by {{ $encoderName }}
                             </span>
                             @php
                                 $cordilleraProvinces = ['Abra', 'Apayao', 'Benguet', 'City of Baguio', 'Ifugao', 'Kalinga', 'Mountain Province'];
@@ -1493,17 +1539,22 @@
                                 <span style="display: block; font-size: 10px; font-weight: normal; color: #059669; margin-top: 4px;">
                                     @php
                                         $poApprovedAt = is_string($fdpDocuments[$quarter]->approved_at_dilg_po) ? \Carbon\Carbon::parse($fdpDocuments[$quarter]->approved_at_dilg_po)->setTimezone(config('app.timezone')) : $fdpDocuments[$quarter]->approved_at_dilg_po->setTimezone(config('app.timezone'));
-                                        $poApproverName = Auth::user() ? trim(Auth::user()->fname . ' ' . Auth::user()->lname) : 'Unknown';
+                                        $poApproverId = $fdpDocuments[$quarter]->approved_by_dilg_po ?? $fdpDocuments[$quarter]->approved_by;
+                                        $poApproverUser = $poApproverId ? \App\Models\User::where('idno', $poApproverId)->first() : null;
+                                        $poApproverName = $poApproverUser ? trim($poApproverUser->fname . ' ' . $poApproverUser->lname) : 'Unknown';
                                     @endphp
-                                    DILG Provincial Validated at: {{ $poApprovedAt->format('M d, Y H:i') }} by {{ $poApproverName }}
+                                    DILG Provincial Validated at: {{ $poApprovedAt->format('M d, Y h:i A') }} by {{ $poApproverName }}
                                 </span>
                             @endif
                             @if($fdpDocuments[$quarter] && $fdpDocuments[$quarter]->approved_at_dilg_ro)
                                 <span style="display: block; font-size: 10px; font-weight: normal; color: #0891b2; margin-top: 4px;">
                                     @php
                                         $roApprovedAt = is_string($fdpDocuments[$quarter]->approved_at_dilg_ro) ? \Carbon\Carbon::parse($fdpDocuments[$quarter]->approved_at_dilg_ro)->setTimezone(config('app.timezone')) : $fdpDocuments[$quarter]->approved_at_dilg_ro->setTimezone(config('app.timezone'));
+                                        $roApproverId = $fdpDocuments[$quarter]->approved_by_dilg_ro ?? $fdpDocuments[$quarter]->approved_by;
+                                        $roApproverUser = $roApproverId ? \App\Models\User::where('idno', $roApproverId)->first() : null;
+                                        $roApproverName = $roApproverUser ? trim($roApproverUser->fname . ' ' . $roApproverUser->lname) : 'Unknown';
                                     @endphp
-                                    DILG Regional Validated at: {{ $roApprovedAt->format('M d, Y H:i') }} by {{ Auth::user() ? trim(Auth::user()->fname . ' ' . Auth::user()->lname) : 'Unknown' }}
+                                    DILG Regional Validated at: {{ $roApprovedAt->format('M d, Y h:i A') }} by {{ $roApproverName }}
                                 </span>
                             @endif
                             @if($isFdpReturned && $fdpDocuments[$quarter]->fdp_approved_at)
@@ -1513,7 +1564,7 @@
                                         $fdpApproverUser = $fdpDocuments[$quarter]->fdp_approved_by ? \App\Models\User::where('idno', $fdpDocuments[$quarter]->fdp_approved_by)->first() : null;
                                         $fdpApproverName = $fdpApproverUser ? trim($fdpApproverUser->fname . ' ' . $fdpApproverUser->lname) : 'Unknown';
                                     @endphp
-                                    Returned at: {{ $returnedAt->format('M d, Y H:i') }} by {{ $fdpApproverName }}
+                                    Returned at: {{ $returnedAt->format('M d, Y h:i A') }} by {{ $fdpApproverName }}
                                 </span>
                             @endif
                         @endif
@@ -1641,15 +1692,14 @@
                     </label>
                     <div data-pagasa-time style="display: none; margin-bottom: 8px; color: #059669; font-size: 11px; font-weight: 600; min-height: 16px;"></div>
                     <label style="display: block; margin-bottom: 8px; color: #374151; font-weight: 600; font-size: 12px;">
-                        @if($hasPostingLink && $fdpDocuments[$quarter]->posting_uploaded_at)
+                        @if($hasPostingLink)
                             <span style="display: block; font-size: 10px; font-weight: normal; color: #6b7280; margin-top: 4px;">
                                 @php
-                                    $uploadedAt = $fdpDocuments[$quarter]->posting_uploaded_at;
-                                    $uploadedTime = is_string($uploadedAt) ? \Carbon\Carbon::parse($uploadedAt)->setTimezone(config('app.timezone')) : $uploadedAt->setTimezone(config('app.timezone'));
-                                    $postingEncoderUser = $fdpDocuments[$quarter]->posting_encoder_id ? \App\Models\User::where('idno', $fdpDocuments[$quarter]->posting_encoder_id)->first() : null;
-                                    $postingEncoderName = $postingEncoderUser ? trim($postingEncoderUser->fname . ' ' . $postingEncoderUser->lname) : 'Unknown';
+                                    $uploadedInfo = $resolveUploaderMeta($fdpDocuments[$quarter], 'posting_uploaded_at', 'posting_encoder_id');
+                                    $uploadedTime = $uploadedInfo['time'];
+                                    $postingEncoderName = $uploadedInfo['name'];
                                 @endphp
-                                Uploaded at: {{ $uploadedTime->format('M d, Y H:i') }} by {{ $postingEncoderName }}
+                                Uploaded at: {{ $uploadedTime ? $uploadedTime->format('M d, Y h:i A') : '-' }} by {{ $postingEncoderName }}
                             </span>
                             @php
                                 $cordilleraProvinces = ['Abra', 'Apayao', 'Benguet', 'City of Baguio', 'Ifugao', 'Kalinga', 'Mountain Province'];
@@ -1662,7 +1712,7 @@
                                     @php
                                         $poApprovedAt = is_string($fdpDocuments[$quarter]->posting_approved_at_dilg_po) ? \Carbon\Carbon::parse($fdpDocuments[$quarter]->posting_approved_at_dilg_po)->setTimezone(config('app.timezone')) : $fdpDocuments[$quarter]->posting_approved_at_dilg_po->setTimezone(config('app.timezone'));
                                     @endphp
-                                    DILG Provincial Validated at: {{ $poApprovedAt->format('M d, Y H:i') }}
+                                    DILG Provincial Validated at: {{ $poApprovedAt->format('M d, Y h:i A') }}
                                 </span>
                             @endif
                             @if($hasRoApproval)
@@ -1670,7 +1720,7 @@
                                     @php
                                         $roApprovedAt = is_string($fdpDocuments[$quarter]->posting_approved_at_dilg_ro) ? \Carbon\Carbon::parse($fdpDocuments[$quarter]->posting_approved_at_dilg_ro)->setTimezone(config('app.timezone')) : $fdpDocuments[$quarter]->posting_approved_at_dilg_ro->setTimezone(config('app.timezone'));
                                     @endphp
-                                    DILG Regional Validated at: {{ $roApprovedAt->format('M d, Y H:i') }}
+                                    DILG Regional Validated at: {{ $roApprovedAt->format('M d, Y h:i A') }}
                                 </span>
                             @endif
                         @endif
@@ -1681,7 +1731,7 @@
                                     $postingApproverUser = $fdpDocuments[$quarter]->posting_approved_by ? \App\Models\User::where('idno', $fdpDocuments[$quarter]->posting_approved_by)->first() : null;
                                     $postingApproverName = $postingApproverUser ? trim($postingApproverUser->fname . ' ' . $postingApproverUser->lname) : 'Unknown';
                                 @endphp
-                                Returned at: {{ $returnedAt->format('M d, Y H:i') }} by {{ $postingApproverName }}
+                                Returned at: {{ $returnedAt->format('M d, Y h:i A') }} by {{ $postingApproverName }}
                             </span>
                         @endif
                     </label>
@@ -1919,7 +1969,7 @@
                                     }
                                 @endphp
                                 <tr>
-                                    <td>{{ $log['timestamp']->format('M d, Y H:i') }}</td>
+                                    <td>{{ $log['timestamp']->format('M d, Y h:i A') }}</td>
                                     <td>{{ $userDisplay }}</td>
                                     <td><span class="log-pill {{ $actionClass }}">{{ $actionLabel }}</span></td>
                                     <td>{{ $docLabel }}</td>
@@ -2156,8 +2206,11 @@
         }
 
         // Delete Document
-        function deleteDocument(docType, quarter) {
-            if (!confirm('Are you sure you want to delete this document? This action cannot be undone.')) {
+        async function deleteDocument(docType, quarter) {
+            const confirmed = window.AppUI && typeof window.AppUI.confirm === 'function'
+                ? await window.AppUI.confirm('Are you sure you want to delete this document? This action cannot be undone.')
+                : confirm('Are you sure you want to delete this document? This action cannot be undone.');
+            if (!confirmed) {
                 return;
             }
 
@@ -2185,9 +2238,12 @@
             });
         }
 
-        function deleteProjectConfirm(projectCode) {
+        async function deleteProjectConfirm(projectCode) {
             const message = `Are you sure you want to delete this project and ALL its associated data and logs?\n\nProject Code: ${projectCode}\n\nThis action CANNOT be undone.`;
-            if (!confirm(message)) {
+            const confirmed = window.AppUI && typeof window.AppUI.confirm === 'function'
+                ? await window.AppUI.confirm(message)
+                : confirm(message);
+            if (!confirmed) {
                 return;
             }
 
@@ -2277,79 +2333,6 @@
         }
     </script>
 
-    <script>
-        /**
-         * Display live time synchronized from Google servers
-         * Fetches from Google's HTTP headers every second - completely tamper-proof
-         * Cannot be manipulated by changing system clock
-         */
-        function initializePagasaTime() {
-            // Update time display from server
-            function updatePagasaTimeDisplay() {
-                fetch('{{ route("pagasa-time.current") }}')
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error('Time service returned error: ' + response.status);
-                        }
-                        return response.json();
-                    })
-                    .then(data => {
-                        if (data.success) {
-                            // Get fresh time from server
-                            const serverTime = new Date(data.ntp_time);
-                            const formattedTime = serverTime.toLocaleString('en-US', {
-                                year: 'numeric',
-                                month: 'short',
-                                day: '2-digit',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                                second: '2-digit',
-                                hour12: true
-                            });
-                            
-                            // Update all time display elements
-                            const timeElements = document.querySelectorAll('[data-pagasa-time]');
-                            timeElements.forEach(el => {
-                                el.textContent = 'Current Time: ' + formattedTime;
-                                el.style.color = '#059669';
-                                el.style.fontSize = '11px';
-                                el.style.fontWeight = '600';
-                            });
-                        } else {
-                            // Show error if time unavailable
-                            const timeElements = document.querySelectorAll('[data-pagasa-time]');
-                            timeElements.forEach(el => {
-                                el.textContent = 'Time unavailable - ' + (data.message || 'Please refresh');
-                                el.style.color = '#dc2626';
-                                el.style.fontSize = '10px';
-                                el.style.fontWeight = '600';
-                            });
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Failed to fetch time:', error);
-                        // Show error state
-                        const timeElements = document.querySelectorAll('[data-pagasa-time]');
-                        timeElements.forEach(el => {
-                            el.textContent = 'Time error - checking...';
-                            el.style.color = '#f59e0b';
-                            el.style.fontSize = '10px';
-                            el.style.fontWeight = '600';
-                        });
-                    });
-            }
-            
-            // Update immediately when page loads
-            updatePagasaTimeDisplay();
-            
-            // Fetch FRESH time from server every second (prevents system clock tampering)
-            setInterval(updatePagasaTimeDisplay, 1000);
-        }
-        
-        // Initialize when DOM is ready
-        document.addEventListener('DOMContentLoaded', initializePagasaTime);
-    </script>
-
     <!-- Floating Log History Button -->
     <button onclick="openLogsModal()" style="position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px; background-color: #002C76; color: white; border: none; border-radius: 50%; cursor: pointer; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); z-index: 1000; display: flex; align-items: center; justify-content: center; font-size: 20px; transition: all 0.3s ease;" onmouseover="this.style.transform='scale(1.1)'; this.style.boxShadow='0 6px 16px rgba(0, 0, 0, 0.4)';" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(0, 0, 0, 0.3)';">
         <i class="fas fa-history"></i>
@@ -2357,6 +2340,7 @@
 
 
 @endsection
+
 
 
 

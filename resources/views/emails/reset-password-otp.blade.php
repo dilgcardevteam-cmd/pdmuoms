@@ -13,7 +13,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h2>PDMU POMS - Password Reset OTP</h2>
+            <h2>PDMU PDMUOMS - Password Reset OTP</h2>
         </div>
 
         <div class="content">
@@ -29,7 +29,7 @@
 
             <hr>
 
-            <p>Best regards,<br>PDMU Operations Management System (POMS)</p>
+            <p>Best regards,<br>PDMU Operations Management System (PDMUOMS)</p>
         </div>
 
         <div class="footer">

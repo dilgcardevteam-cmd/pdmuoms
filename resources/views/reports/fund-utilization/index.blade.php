@@ -23,6 +23,7 @@
 
     <div style="background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); margin-bottom: 20px; border: 1px solid #e5e7eb;">
         <form method="GET" action="{{ route('fund-utilization.index') }}" style="display: grid; grid-template-columns: minmax(220px, 2fr) repeat(3, minmax(140px, 1fr)) auto auto; gap: 10px; align-items: center;">
+            <input type="hidden" name="per_page" value="{{ $perPage ?? 10 }}">
             <div style="position: relative;">
                 <i class="fas fa-search" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #6b7280; font-size: 12px;"></i>
                 <input
@@ -66,10 +67,8 @@
             <thead>
                 <tr style="background-color: #f3f4f6; border-bottom: 2px solid #e5e7eb;">
                     <th style="padding: 12px; text-align: left; color: #374151; font-weight: 600; font-size: 14px;">Project Code</th>
-                    <th style="padding: 12px; text-align: left; color: #374151; font-weight: 600; font-size: 14px;">Project Title</th>
-                    <th style="padding: 12px; text-align: left; color: #374151; font-weight: 600; font-size: 14px;">Province</th>
-                    <th style="padding: 12px; text-align: left; color: #374151; font-weight: 600; font-size: 14px;">Implementing Unit</th>
-                    <th style="padding: 12px; text-align: left; color: #374151; font-weight: 600; font-size: 14px;">Barangay</th>
+                    <th style="padding: 12px; text-align: left; color: #374151; font-weight: 600; font-size: 14px; width: 180px; max-width: 180px;">Project Title</th>
+                    <th style="padding: 12px; text-align: left; color: #374151; font-weight: 600; font-size: 14px;">Location</th>
                     <th style="padding: 12px; text-align: left; color: #374151; font-weight: 600; font-size: 14px;">Fund Source</th>
                     <th style="padding: 12px; text-align: left; color: #374151; font-weight: 600; font-size: 14px;">Funding Year</th>
                     <th style="padding: 12px; text-align: left; color: #374151; font-weight: 600; font-size: 14px;">Allocation</th>
@@ -86,24 +85,31 @@
                 @forelse ($reports as $report)
                     <tr style="border-bottom: 1px solid #e5e7eb; transition: all 0.3s ease;">
                         <td style="padding: 12px; color: #111827; font-size: 14px;">{{ $report->project_code }}</td>
-                        <td style="padding: 12px; color: #111827; font-size: 14px;">{{ \Str::limit($report->project_title, 40) }}</td>
-                        <td style="padding: 12px; color: #111827; font-size: 14px;">{{ $report->province }}</td>
-                        <td style="padding: 12px; color: #111827; font-size: 14px;">{{ $report->implementing_unit }}</td>
+                        <td style="padding: 12px; color: #111827; font-size: 14px; width: 180px; max-width: 180px;">
+                            <div style="max-width: 180px; white-space: normal; word-break: break-word;">{{ $report->project_title }}</div>
+                        </td>
                         <td style="padding: 12px; color: #111827; font-size: 14px;">
                             @php
                                 $barangayList = collect(preg_split('/[\\r\\n,]+/', $report->barangay ?? ''))
                                     ->map(fn($item) => trim($item))
                                     ->filter();
                             @endphp
-                            @if($barangayList->isEmpty())
-                                <span>Not specified</span>
-                            @else
-                                <ul style="margin: 0; padding-left: 18px;">
-                                    @foreach($barangayList as $barangay)
-                                        <li>{{ $barangay }}</li>
-                                    @endforeach
-                                </ul>
-                            @endif
+                            <div style="font-size: 12px; line-height: 1.4;">
+                                <strong>Province:</strong> {{ $report->province ?: '-' }}<br>
+                                <strong>City/Mun:</strong> {{ $report->city_municipality ?: ($report->implementing_unit ?: '-') }}<br>
+                                <strong>Barangay:</strong>
+                                @if($barangayList->isEmpty())
+                                    <span> Not specified</span><br>
+                                @else
+                                    <ul style="margin: 4px 0 0 16px; padding: 0;">
+                                        @foreach($barangayList as $barangay)
+                                            <li style="margin: 0; list-style: disc;">{{ $barangay }}</li>
+                                        @endforeach
+                                    </ul>
+                                @endif
+                                <strong>Implementing Unit:</strong><br>
+                                <span>{{ $report->implementing_unit ?: '-' }}</span>
+                            </div>
                         </td>
                         <td style="padding: 12px; color: #111827; font-size: 14px;">{{ $report->fund_source }}</td>
                         <td style="padding: 12px; color: #111827; font-size: 14px;">{{ $report->funding_year }}</td>
@@ -122,7 +128,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="15" style="padding: 40px; text-align: center; color: #6b7280;">
+                        <td colspan="13" style="padding: 40px; text-align: center; color: #6b7280;">
                             <i class="fas fa-inbox" style="font-size: 32px; margin-bottom: 10px; display: block;"></i>
                             No reports found. Create one to get started.
                         </td>
@@ -130,6 +136,49 @@
                 @endforelse
             </tbody>
         </table>
+
+        @if($reports->count() > 0)
+            <div style="margin-top: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                    <div style="font-size: 12px; color: #6b7280;">
+                        Page {{ $reports->currentPage() }} of {{ $reports->lastPage() }} ·
+                        Showing {{ $reports->firstItem() ?? 0 }}–{{ $reports->lastItem() ?? 0 }} of {{ $reports->total() }}
+                    </div>
+                    <form method="GET" action="{{ route('fund-utilization.index') }}" style="display: inline-flex; align-items: center;">
+                        <input type="hidden" name="search" value="{{ $filters['search'] ?? '' }}">
+                        <input type="hidden" name="fund_source" value="{{ $filters['fund_source'] ?? '' }}">
+                        <input type="hidden" name="funding_year" value="{{ $filters['funding_year'] ?? '' }}">
+                        <input type="hidden" name="province" value="{{ $filters['province'] ?? '' }}">
+                        <select id="per-page" name="per_page" onchange="this.form.submit()" aria-label="Rows per page" title="Rows per page" style="padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px;">
+                            @foreach([10, 15, 25, 50] as $option)
+                                <option value="{{ $option }}" {{ (int) ($perPage ?? 10) === $option ? 'selected' : '' }}>{{ $option }}</option>
+                            @endforeach
+                        </select>
+                    </form>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap;">
+                    @if($reports->onFirstPage())
+                        <span style="padding: 8px 12px; background-color: #e5e7eb; color: #9ca3af; border-radius: 6px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+                            <i class="fas fa-chevron-left"></i> Back
+                        </span>
+                    @else
+                        <a href="{{ $reports->previousPageUrl() }}" style="padding: 8px 12px; background-color: #ffffff; color: #374151; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; text-decoration: none;">
+                            <i class="fas fa-chevron-left"></i> Back
+                        </a>
+                    @endif
+
+                    @if($reports->hasMorePages())
+                        <a href="{{ $reports->nextPageUrl() }}" style="padding: 8px 12px; background-color: #002C76; color: white; border: 1px solid #002C76; border-radius: 6px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; text-decoration: none;">
+                            Next <i class="fas fa-chevron-right"></i>
+                        </a>
+                    @else
+                        <span style="padding: 8px 12px; background-color: #e5e7eb; color: #9ca3af; border-radius: 6px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+                            Next <i class="fas fa-chevron-right"></i>
+                        </span>
+                    @endif
+                </div>
+            </div>
+        @endif
     </div>
 
     <!-- Export Modal -->
