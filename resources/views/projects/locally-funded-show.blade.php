@@ -73,57 +73,26 @@
         }
 
         .lfp-inline-modal-backdrop {
-            position: fixed;
-            inset: 0;
-            background: rgba(15, 23, 42, 0.45);
-            backdrop-filter: blur(2px);
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.2s ease, visibility 0.2s ease;
-            z-index: 1190;
-        }
-
-        .lfp-inline-modal-backdrop.is-visible {
-            opacity: 1;
-            visibility: visible;
+            display: none !important;
         }
 
         .lfp-inline-modal {
-            position: fixed;
-            left: 50%;
-            top: 50%;
-            transform: translate(-50%, -50%) scale(0.98);
-            width: min(1120px, 94vw);
-            max-height: 88vh;
             display: none;
-            overflow: hidden;
-            background-color: #ffffff;
+            margin-top: 16px;
+            border-radius: 10px;
+            background-color: #e7f1ff;
             border: 1px solid #cfe3ff;
-            border-radius: 12px;
-            box-shadow: 0 24px 48px rgba(15, 23, 42, 0.22);
-            z-index: 1200;
-        }
-
-        .lfp-inline-modal.is-visible {
-            display: block;
-            transform: translate(-50%, -50%) scale(1);
         }
 
         .lfp-inline-modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 12px;
-            padding: 18px 20px;
-            border-bottom: 2px solid #00267c;
-            background: linear-gradient(180deg, #f8fbff 0%, #eef5ff 100%);
+            display: none;
         }
 
         .lfp-inline-modal-body {
-            max-height: calc(88vh - 76px);
-            overflow: auto;
-            padding: 20px;
-            background-color: #ffffff;
+            max-height: none;
+            overflow: visible;
+            padding: 16px;
+            background-color: transparent;
         }
 
         .lfp-inline-modal-close {
@@ -141,36 +110,8 @@
             line-height: 1;
         }
 
-        .lfp-inline-modal-section {
-            transition: transform 0.2s ease;
-        }
-
-        .lfp-inline-modal-section.is-visible {
-            position: fixed;
-            left: 50%;
-            top: 50%;
-            transform: translate(-50%, -50%);
-            width: min(1280px, 96vw);
-            max-height: 90vh;
-            overflow: auto;
-            margin: 0;
-            z-index: 1200;
-            box-shadow: 0 24px 48px rgba(15, 23, 42, 0.22);
-        }
-
-        .lfp-inline-modal-section.is-visible > div:first-child {
-            position: sticky;
-            top: 0;
-            background-color: #ffffff;
-            z-index: 1;
-        }
-
         .lfp-inline-modal-section-close {
             display: none;
-        }
-
-        .lfp-inline-modal-section.is-visible .lfp-inline-modal-section-close {
-            display: inline-flex;
         }
 
         @media (max-width: 768px) {
@@ -191,12 +132,6 @@
                 font-size: clamp(1.45rem, 6vw, 2rem);
             }
 
-            .lfp-inline-modal {
-                width: 94vw;
-                max-height: 90vh;
-            }
-
-            .lfp-inline-modal-header,
             .lfp-inline-modal-body {
                 padding: 16px;
             }
@@ -206,10 +141,6 @@
                 grid-template-columns: 1fr !important;
             }
 
-            .lfp-inline-modal-section.is-visible {
-                width: 94vw;
-                max-height: 90vh;
-            }
         }
     </style>
 @endsection
@@ -410,13 +341,13 @@
                         });
                     @endphp
                     <div style="grid-column: 1 / -1;">
-                        <label for="project_description" style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Project Description *</label>
+                        <label for="project_description" style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Project Description <span class="asterisk">*</span></label>
                         <textarea id="project_description" name="project_description" required rows="3"
                                   style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; box-sizing: border-box; resize: vertical;">{{ old('project_description', $project->project_description) }}</textarea>
                     </div>
 
                     <div>
-                        <label for="province" style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Province *</label>
+                        <label for="province" style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Province <span class="asterisk">*</span></label>
                         <select id="province" name="province" required
                                 style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; box-sizing: border-box; background-color: white;">
                             <option value="">-- Select Province --</option>
@@ -430,7 +361,7 @@
                     </div>
 
                     <div>
-                        <label for="city_municipality" style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">City/Municipality *</label>
+                        <label for="city_municipality" style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">City/Municipality <span class="asterisk">*</span></label>
                         <select id="city_municipality" name="city_municipality" required data-selected="{{ old('city_municipality', $project->city_municipality) }}"
                                 style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; box-sizing: border-box; background-color: white;">
                             <option value="">-- Select Province First --</option>
@@ -439,21 +370,26 @@
                     </div>
 
                     <div>
-                        <label for="barangay" style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Barangay *</label>
+                        <label for="barangay" style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Barangay <span class="asterisk">*</span></label>
                         <div style="position: relative;">
                             <div id="barangay_badges" style="display: flex; flex-wrap: wrap; gap: 6px; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; min-height: 44px; background-color: white; margin-bottom: 8px; align-content: flex-start;">
                                 <span style="color: #9ca3af; font-size: 14px; align-self: center;">Click dropdown to add barangays</span>
                             </div>
-                            <select id="barangay" name="barangay[]" multiple
-                                    style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; box-sizing: border-box; background-color: white; min-height: 120px;">
-                            </select>
+                            <details style="border: 1px solid #d1d5db; border-radius: 6px; background-color: white;">
+                                <summary style="cursor: pointer; padding: 10px 12px; font-size: 13px; font-weight: 600; color: #374151; user-select: none;">Show barangay choices</summary>
+                                <div style="padding: 0 12px 12px;">
+                                    <select id="barangay" name="barangay[]" multiple
+                                            style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; box-sizing: border-box; background-color: white; min-height: 120px;">
+                                    </select>
+                                </div>
+                            </details>
                         </div>
                         <small style="color: #9ca3af; font-size: 12px; margin-top: 4px; display: block;">Select city/municipality first, then click items to add as badges. Click badge X to remove.</small>
                         <input type="hidden" id="barangay_hidden" name="barangay_json" value="{{ old('barangay_json', json_encode(array_values(array_filter(array_map('trim', explode(',', $project->barangay)))))) }}">
                     </div>
 
                     <div>
-                        <label for="funding_year" style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Funding Year *</label>
+                        <label for="funding_year" style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Funding Year <span class="asterisk">*</span></label>
                         <select id="funding_year" name="funding_year" required
                                 style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; box-sizing: border-box; background-color: white;">
                             <option value="">-- Select Funding Year --</option>
@@ -467,7 +403,7 @@
                     </div>
 
                     <div>
-                        <label for="fund_source" style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Fund Source *</label>
+                        <label for="fund_source" style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Fund Source <span class="asterisk">*</span></label>
                         <select id="fund_source" name="fund_source" required
                                 style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; box-sizing: border-box; background-color: white;">
                             <option value="">-- Select Fund Source --</option>
@@ -481,19 +417,19 @@
                     </div>
 
                     <div>
-                        <label for="subaybayan_project_code" style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">SubayBayan Project Code *</label>
+                        <label for="subaybayan_project_code" style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">SubayBayan Project Code <span class="asterisk">*</span></label>
                         <input type="text" id="subaybayan_project_code" name="subaybayan_project_code" value="{{ old('subaybayan_project_code', $project->subaybayan_project_code) }}" required
                                style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; box-sizing: border-box;">
                     </div>
 
                     <div>
-                        <label for="project_name" style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Project Name *</label>
+                        <label for="project_name" style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Project Name <span class="asterisk">*</span></label>
                         <input type="text" id="project_name" name="project_name" value="{{ old('project_name', $project->project_name) }}" required
                                style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; box-sizing: border-box;">
                     </div>
 
                     <div>
-                        <label for="project_type" style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Project Type *</label>
+                        <label for="project_type" style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Project Type <span class="asterisk">*</span></label>
                         <select id="project_type" name="project_type" required
                                 style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; box-sizing: border-box; background-color: white;">
                             <option value="">-- Select Project Type --</option>
@@ -505,25 +441,25 @@
                     </div>
 
                     <div>
-                        <label for="date_nadai" style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Date of NADAI *</label>
+                        <label for="date_nadai" style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Date of NADAI <span class="asterisk">*</span></label>
                         <input type="date" id="date_nadai" name="date_nadai" value="{{ old('date_nadai', $project->date_nadai ? $project->date_nadai->format('Y-m-d') : '') }}" required
                                style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; box-sizing: border-box;">
                     </div>
 
                     <div>
-                        <label for="lgsf_allocation" style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">LGSF Allocation (based on NADAI) *</label>
+                        <label for="lgsf_allocation" style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">LGSF Allocation (based on NADAI) <span class="asterisk">*</span></label>
                         <input type="text" id="lgsf_allocation" name="lgsf_allocation" value="{{ old('lgsf_allocation', number_format((float)$project->lgsf_allocation, 2, '.', ',')) }}" placeholder="0.00" required
                                style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; box-sizing: border-box;">
                     </div>
 
                     <div>
-                        <label for="lgu_counterpart" style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">LGU Counterpart *</label>
+                        <label for="lgu_counterpart" style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">LGU Counterpart <span class="asterisk">*</span></label>
                         <input type="text" id="lgu_counterpart" name="lgu_counterpart" value="{{ old('lgu_counterpart', number_format((float)$project->lgu_counterpart, 2, '.', ',')) }}" placeholder="0.00" required
                                style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; box-sizing: border-box;">
                     </div>
 
                     <div>
-                        <label for="no_of_beneficiaries" style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">No. of Beneficiaries *</label>
+                        <label for="no_of_beneficiaries" style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">No. of Beneficiaries <span class="asterisk">*</span></label>
                         <input type="number" id="no_of_beneficiaries" name="no_of_beneficiaries" value="{{ old('no_of_beneficiaries', $project->no_of_beneficiaries) }}" min="0" required
                                style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; box-sizing: border-box;">
                     </div>
@@ -539,7 +475,7 @@
                     </div>
 
                     <div>
-                        <label for="date_confirmation_fund_receipt" style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Date of Confirmation Fund Receipt *</label>
+                        <label for="date_confirmation_fund_receipt" style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Date of Confirmation Fund Receipt <span class="asterisk">*</span></label>
                         <input type="date" id="date_confirmation_fund_receipt" name="date_confirmation_fund_receipt" value="{{ old('date_confirmation_fund_receipt', $project->date_confirmation_fund_receipt ? $project->date_confirmation_fund_receipt->format('Y-m-d') : '') }}" required
                                style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; box-sizing: border-box;">
                     </div>
@@ -1787,6 +1723,9 @@
         <div id="activityLogBackdrop" aria-hidden="true"></div>
 
     <style>
+        .asterisk {
+            color: #dc2626;
+        }
         .form-label{
             font-size: 12px; color: #002C76; font-weight: 700; text-transform: uppercase;
         }
@@ -3447,11 +3386,10 @@ const locationData = {
         }
 
         function syncBodyModalState() {
-            const hasInlineModal = document.querySelector('[data-inline-modal="true"].is-visible, [data-inline-modal-section="true"].is-visible') !== null;
             const activityLogModal = document.getElementById('activityLogSection');
             const hasActivityLogModal = activityLogModal ? activityLogModal.classList.contains('is-visible') : false;
 
-            document.body.classList.toggle('modal-open', hasInlineModal || hasActivityLogModal);
+            document.body.classList.toggle('modal-open', hasActivityLogModal);
         }
 
         function setInlineToggleState(button, isEditing) {
@@ -3469,39 +3407,14 @@ const locationData = {
 
         function openInlineEdit(button) {
             const targetId = button.getAttribute('data-target');
-            const { target, wrapper, backdrop } = getInlineEditElements(targetId);
-            const el = wrapper || target;
-            if (el) {
-                if (wrapper && wrapper.hasAttribute('data-inline-modal')) {
-                    el.style.display = 'block';
-                    wrapper.classList.add('is-visible');
-                    wrapper.setAttribute('aria-hidden', 'false');
-                    if (backdrop) {
-                        backdrop.classList.add('is-visible');
-                        backdrop.setAttribute('aria-hidden', 'false');
-                    }
-                    syncBodyModalState();
+            const { wrapper } = getInlineEditElements(targetId);
+            if (wrapper) {
+                wrapper.style.display = 'block';
+                wrapper.setAttribute('aria-hidden', 'false');
 
-                    const focusTarget = wrapper.querySelector('button, input, select, textarea');
-                    if (focusTarget) {
-                        setTimeout(() => focusTarget.focus(), 0);
-                    }
-                } else if (target && target.hasAttribute('data-inline-modal-section')) {
-                    target.classList.add('is-visible');
-                    target.setAttribute('aria-hidden', 'false');
-                    if (backdrop) {
-                        backdrop.classList.add('is-visible');
-                        backdrop.setAttribute('aria-hidden', 'false');
-                    }
-                    syncBodyModalState();
-
-                    const focusTarget = target.querySelector('button, input, select, textarea');
-                    if (focusTarget) {
-                        setTimeout(() => focusTarget.focus(), 0);
-                    }
-                } else {
-                    el.style.display = 'block';
-                    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                const focusTarget = wrapper.querySelector('button, input, select, textarea');
+                if (focusTarget) {
+                    setTimeout(() => focusTarget.focus(), 0);
                 }
             }
 
@@ -3629,29 +3542,10 @@ const locationData = {
         }
 
         function closeInlineEdit(targetId) {
-            const { target, wrapper, backdrop } = getInlineEditElements(targetId);
-            const el = wrapper || target;
-            if (el) {
-                if (wrapper && wrapper.hasAttribute('data-inline-modal')) {
-                    wrapper.classList.remove('is-visible');
-                    wrapper.setAttribute('aria-hidden', 'true');
-                    el.style.display = 'none';
-                    if (backdrop) {
-                        backdrop.classList.remove('is-visible');
-                        backdrop.setAttribute('aria-hidden', 'true');
-                    }
-                    syncBodyModalState();
-                } else if (target && target.hasAttribute('data-inline-modal-section')) {
-                    target.classList.remove('is-visible');
-                    target.setAttribute('aria-hidden', 'true');
-                    if (backdrop) {
-                        backdrop.classList.remove('is-visible');
-                        backdrop.setAttribute('aria-hidden', 'true');
-                    }
-                    syncBodyModalState();
-                } else {
-                    el.style.display = 'none';
-                }
+            const { wrapper } = getInlineEditElements(targetId);
+            if (wrapper) {
+                wrapper.style.display = 'none';
+                wrapper.setAttribute('aria-hidden', 'true');
             }
 
             if (targetId === 'editPhysicalForm') {
@@ -3801,6 +3695,24 @@ const locationData = {
             field.value = value;
         }
 
+        function openReusableConfirmation(message, onConfirm, onCancel) {
+            if (typeof window.openConfirmationModal === 'function') {
+                window.openConfirmationModal(message, onConfirm, onCancel);
+                return;
+            }
+
+            if (window.confirm(message)) {
+                if (typeof onConfirm === 'function') {
+                    onConfirm();
+                }
+                return;
+            }
+
+            if (typeof onCancel === 'function') {
+                onCancel();
+            }
+        }
+
         function initializeFieldChangeConfirmation() {
             const editableFieldSelectors = [
                 'select[data-physical-edit="true"]',
@@ -3856,32 +3768,19 @@ const locationData = {
                         field.dataset.previousValue = previousValue;
                     };
 
-                    if (typeof window.openConfirmationModal === 'function') {
-                        window.openConfirmationModal(
-                            confirmMessage,
-                            () => {
-                                field.dataset.previousValue = currentValue;
-                                const submitted = submitFieldChangeForm(field);
-                                if (!submitted) {
-                                    handleFieldSubmitFailure(restorePreviousValue);
-                                }
-                            },
-                            () => {
-                                restorePreviousValue();
+                    openReusableConfirmation(
+                        confirmMessage,
+                        () => {
+                            field.dataset.previousValue = currentValue;
+                            const submitted = submitFieldChangeForm(field);
+                            if (!submitted) {
+                                handleFieldSubmitFailure(restorePreviousValue);
                             }
-                        );
-                        return;
-                    }
-
-                    if (window.confirm(confirmMessage)) {
-                        field.dataset.previousValue = currentValue;
-                        const submitted = submitFieldChangeForm(field);
-                        if (!submitted) {
-                            handleFieldSubmitFailure(restorePreviousValue);
+                        },
+                        () => {
+                            restorePreviousValue();
                         }
-                    } else {
-                        restorePreviousValue();
-                    }
+                    );
                 });
             });
         }
@@ -3890,22 +3789,10 @@ const locationData = {
 
         document.querySelectorAll('[data-toggle="inline-edit"]').forEach((button) => {
             const targetId = button.getAttribute('data-target');
-            const { target, wrapper, backdrop } = getInlineEditElements(targetId);
+            const { wrapper } = getInlineEditElements(targetId);
             const isVisible = wrapper
                 ? wrapper.style.display !== 'none'
-                : !!(target && target.classList.contains('is-visible'));
-            if (wrapper && wrapper.hasAttribute('data-inline-modal') && isVisible) {
-                wrapper.classList.add('is-visible');
-                wrapper.setAttribute('aria-hidden', 'false');
-                if (backdrop) {
-                    backdrop.classList.add('is-visible');
-                    backdrop.setAttribute('aria-hidden', 'false');
-                }
-            }
-            if (target && target.hasAttribute('data-inline-modal-section') && isVisible && backdrop) {
-                backdrop.classList.add('is-visible');
-                backdrop.setAttribute('aria-hidden', 'false');
-            }
+                : false;
             setInlineToggleState(button, isVisible);
 
             button.addEventListener('click', (event) => {
@@ -3926,15 +3813,6 @@ const locationData = {
         document.querySelectorAll('[data-toggle="inline-cancel"]').forEach((button) => {
             button.addEventListener('click', () => {
                 const targetId = button.getAttribute('data-target');
-                closeInlineEdit(targetId);
-                const editButton = document.querySelector('[data-toggle="inline-edit"][data-target="' + targetId + '"]');
-                setInlineToggleState(editButton, false);
-            });
-        });
-
-        document.querySelectorAll('.lfp-inline-modal-backdrop').forEach((backdrop) => {
-            backdrop.addEventListener('click', () => {
-                const targetId = backdrop.id.replace(/Backdrop$/, '');
                 closeInlineEdit(targetId);
                 const editButton = document.querySelector('[data-toggle="inline-edit"][data-target="' + targetId + '"]');
                 setInlineToggleState(editButton, false);
@@ -4140,7 +4018,11 @@ const locationData = {
                     const selectedList = Object.keys(selectedBarangays);
                     if (selectedList.length === 0) {
                         event.preventDefault();
-                        alert('Please select at least one barangay.');
+                        if (typeof window.showSystemErrorModal === 'function') {
+                            window.showSystemErrorModal('Please select at least one barangay.');
+                        } else {
+                            alert('Please select at least one barangay.');
+                        }
                         return;
                     }
                     hiddenField.value = JSON.stringify(selectedList);
@@ -4309,17 +4191,6 @@ const locationData = {
 
             document.addEventListener('keydown', (event) => {
                 if (event.key !== 'Escape') {
-                    return;
-                }
-
-                const activeInlineModal = document.querySelector('[data-inline-modal="true"].is-visible');
-                const activeInlineSection = document.querySelector('[data-inline-modal-section="true"].is-visible');
-                if (activeInlineModal || activeInlineSection) {
-                    const activeTarget = activeInlineModal || activeInlineSection;
-                    const targetId = activeTarget.dataset.inlineTarget || activeTarget.id.replace(/Wrapper$/, '');
-                    closeInlineEdit(targetId);
-                    const editButton = document.querySelector('[data-toggle="inline-edit"][data-target="' + targetId + '"]');
-                    setInlineToggleState(editButton, false);
                     return;
                 }
 
