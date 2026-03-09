@@ -3,6 +3,179 @@
 @section('title', 'Project Details')
 @section('page-title', 'Project Details')
 
+@section('styles')
+    <style>
+        .lfp-summary-card {
+            margin-bottom: 24px;
+            padding: 18px 20px 16px;
+            background: linear-gradient(180deg, #f4f6f8 0%, #ffffff 100%);
+            border: 1px solid #00267c;
+            border-radius: 10px;
+            color: #00267c;
+            font-size: 15px;
+            font-weight: 700;
+            box-shadow: 0 8px 18px rgba(0, 44, 118, 0.14);
+        }
+
+        .lfp-summary-row {
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+            border-bottom: 2px solid rgba(17, 24, 39, 0.14);
+        }
+
+        .lfp-summary-row:last-child {
+            padding-bottom: 0;
+            margin-bottom: 0;
+            border-bottom: none;
+        }
+
+        .lfp-summary-label {
+            display: block;
+            margin-bottom: 4px;
+            color: inherit;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            line-height: 1.1;
+            text-transform: uppercase;
+        }
+
+        .lfp-summary-code {
+            color: #111827;
+            font-size: 18px;
+            font-weight: inherit;
+            line-height: 1.08;
+            text-decoration: none;
+            word-break: break-word;
+        }
+
+        .lfp-summary-name {
+            color: #111827;
+            font-size: 20px;
+            font-weight: inherit;
+            line-height: 1.05;
+            word-break: break-word;
+        }
+
+        .lfp-summary-funding {
+            display: grid;
+            grid-template-columns: repeat(2, max-content);
+            gap: 16px 24px;
+            align-items: start;
+            justify-content: start;
+        }
+
+        .lfp-summary-value {
+            color: #111827;
+            font-size: 18px;
+            font-weight: inherit;
+            line-height: 1.05;
+        }
+
+        .lfp-inline-modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.45);
+            backdrop-filter: blur(2px);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.2s ease, visibility 0.2s ease;
+            z-index: 1190;
+        }
+
+        .lfp-inline-modal-backdrop.is-visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .lfp-inline-modal {
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%) scale(0.98);
+            width: min(1120px, 94vw);
+            max-height: 88vh;
+            display: none;
+            overflow: hidden;
+            background-color: #ffffff;
+            border: 1px solid #cfe3ff;
+            border-radius: 12px;
+            box-shadow: 0 24px 48px rgba(15, 23, 42, 0.22);
+            z-index: 1200;
+        }
+
+        .lfp-inline-modal.is-visible {
+            display: block;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .lfp-inline-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            padding: 18px 20px;
+            border-bottom: 2px solid #00267c;
+            background: linear-gradient(180deg, #f8fbff 0%, #eef5ff 100%);
+        }
+
+        .lfp-inline-modal-body {
+            max-height: calc(88vh - 76px);
+            overflow: auto;
+            padding: 20px;
+            background-color: #ffffff;
+        }
+
+        .lfp-inline-modal-close {
+            border: none;
+            background: #e2e8f0;
+            color: #0f172a;
+            width: 32px;
+            height: 32px;
+            border-radius: 999px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            line-height: 1;
+        }
+
+        @media (max-width: 768px) {
+            .lfp-summary-card {
+                padding: 16px;
+            }
+
+            .lfp-summary-funding {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+
+            .lfp-summary-name {
+                font-size: clamp(1.75rem, 7vw, 2.4rem);
+            }
+
+            .lfp-summary-value {
+                font-size: clamp(1.45rem, 6vw, 2rem);
+            }
+
+            .lfp-inline-modal {
+                width: 94vw;
+                max-height: 90vh;
+            }
+
+            .lfp-inline-modal-header,
+            .lfp-inline-modal-body {
+                padding: 16px;
+            }
+
+            #editProfileForm > div:first-of-type {
+                grid-template-columns: 1fr !important;
+            }
+        }
+    </style>
+@endsection
+
 @section('content')
     <div class="content-header" style="display: flex; justify-content: space-between; align-items: center; gap: 12px;">
         <div>
@@ -43,19 +216,26 @@
     @endphp
 
     <div style="background: #f8fafc; padding: 24px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 24px;">
-            <div style="padding: 16px; border: 1px solid #002C76; border-radius: 8px;">
-                <div style="font-size: 12px; color: #002C76; font-weight: 700; text-transform: uppercase;">Project Code</div>
-                <div style="font-size: 16px; font-weight: 700; color: #111827; margin-top: 6px;">{{ $project->subaybayan_project_code }}</div>
+        <div class="lfp-summary-card">
+            <div class="lfp-summary-row">
+                <span class="lfp-summary-label">Project Code</span>
+                <div class="lfp-summary-code">{{ $project->subaybayan_project_code }}</div>
             </div>
-            <div style="padding: 16px; border: 1px solid #002C76; border-radius: 8px;">
-                <div style="font-size: 12px; color: #002C76; font-weight: 700; text-transform: uppercase;">Project Name</div>
-                <div style="font-size: 16px; font-weight: 700; color: #111827; margin-top: 6px;">{{ $project->project_name }}</div>
+            <div class="lfp-summary-row">
+                <span class="lfp-summary-label">Project Name</span>
+                <div class="lfp-summary-name">{{ $project->project_name }}</div>
             </div>
-            <div style="padding: 16px; border: 1px solid #002C76; border-radius: 8px;">
-                <div style="font-size: 12px; color: #002C76; font-weight: 700; text-transform: uppercase;">Funding</div>
-                <div style="font-size: 14px; color: #111827; margin-top: 6px;">Year: <strong>{{ $project->funding_year }}</strong></div>
-                <div style="font-size: 14px; color: #111827;">Source: <strong>{{ $project->fund_source }}</strong></div>
+            <div class="lfp-summary-row">
+                <div class="lfp-summary-funding">
+                    <div>
+                        <span class="lfp-summary-label">Funding Year</span>
+                        <div class="lfp-summary-value">{{ $project->funding_year }}</div>
+                    </div>
+                    <div>
+                        <span class="lfp-summary-label">Fund Source</span>
+                        <div class="lfp-summary-value">{{ $project->fund_source }}</div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -94,7 +274,13 @@
                 <div><strong>LGSF Allocation:</strong> ₱ {{ number_format($project->lgsf_allocation, 2) }}</div>
                 <div><strong>LGU Counterpart:</strong> ₱ {{ number_format($project->lgu_counterpart, 2) }}</div>
             </div>
-            <div id="editProfileFormWrapper" style="display: {{ old('section') === 'profile' ? 'block' : 'none' }}; margin-top: 16px; padding: 16px; border-radius: 10px; background-color: #e7f1ff; border: 1px solid #cfe3ff;">
+            <div id="editProfileFormBackdrop" class="lfp-inline-modal-backdrop{{ old('section') === 'profile' ? ' is-visible' : '' }}" aria-hidden="{{ old('section') === 'profile' ? 'false' : 'true' }}"></div>
+            <div id="editProfileFormWrapper" class="lfp-inline-modal{{ old('section') === 'profile' ? ' is-visible' : '' }}" data-inline-modal="true" role="dialog" aria-modal="true" aria-labelledby="editProfileModalTitle" aria-hidden="{{ old('section') === 'profile' ? 'false' : 'true' }}" style="display: {{ old('section') === 'profile' ? 'block' : 'none' }};">
+                <div class="lfp-inline-modal-header">
+                    <h3 id="editProfileModalTitle" style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Edit Project Profile</h3>
+                    <button type="button" class="lfp-inline-modal-close" data-toggle="inline-cancel" data-target="editProfileForm" aria-label="Close project profile editor">&times;</button>
+                </div>
+                <div class="lfp-inline-modal-body">
             <form id="editProfileForm" action="{{ route('locally-funded-project.update', $project) }}" method="POST">
                 @csrf
                 @method('PUT')
@@ -261,6 +447,7 @@
                     <button type="button" data-toggle="inline-cancel" data-target="editProfileForm" style="padding: 8px 16px; background-color: #6b7280; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;"><i class="fas fa-times" style="margin-right: 8px;"></i>Cancel</button>
                 </div>
             </form>
+                </div>
             </div>
         </div>
 
@@ -3107,6 +3294,22 @@ const locationData = {
 
         updateFinancialSums();
 
+        function getInlineEditElements(targetId) {
+            return {
+                target: document.getElementById(targetId),
+                wrapper: document.getElementById(targetId + 'Wrapper'),
+                backdrop: document.getElementById(targetId + 'Backdrop'),
+            };
+        }
+
+        function syncBodyModalState() {
+            const hasInlineModal = document.querySelector('[data-inline-modal="true"].is-visible') !== null;
+            const activityLogModal = document.getElementById('activityLogSection');
+            const hasActivityLogModal = activityLogModal ? activityLogModal.classList.contains('is-visible') : false;
+
+            document.body.classList.toggle('modal-open', hasInlineModal || hasActivityLogModal);
+        }
+
         function setInlineToggleState(button, isEditing) {
             if (!button) return;
             if (!button.dataset.originalText) {
@@ -3122,12 +3325,26 @@ const locationData = {
 
         function openInlineEdit(button) {
             const targetId = button.getAttribute('data-target');
-            const target = document.getElementById(targetId);
-            const wrapper = document.getElementById(targetId + 'Wrapper');
+            const { target, wrapper, backdrop } = getInlineEditElements(targetId);
             const el = wrapper || target;
             if (el) {
                 el.style.display = 'block';
-                el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                if (wrapper && wrapper.hasAttribute('data-inline-modal')) {
+                    wrapper.classList.add('is-visible');
+                    wrapper.setAttribute('aria-hidden', 'false');
+                    if (backdrop) {
+                        backdrop.classList.add('is-visible');
+                        backdrop.setAttribute('aria-hidden', 'false');
+                    }
+                    syncBodyModalState();
+
+                    const focusTarget = wrapper.querySelector('button, input, select, textarea');
+                    if (focusTarget) {
+                        setTimeout(() => focusTarget.focus(), 0);
+                    }
+                } else {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
             }
 
             if (button.hasAttribute('data-physical-toggle')) {
@@ -3262,11 +3479,21 @@ const locationData = {
         }
 
         function closeInlineEdit(targetId) {
-            const target = document.getElementById(targetId);
-            const wrapper = document.getElementById(targetId + 'Wrapper');
+            const { target, wrapper, backdrop } = getInlineEditElements(targetId);
             const el = wrapper || target;
             if (el) {
-                el.style.display = 'none';
+                if (wrapper && wrapper.hasAttribute('data-inline-modal')) {
+                    wrapper.classList.remove('is-visible');
+                    wrapper.setAttribute('aria-hidden', 'true');
+                    el.style.display = 'none';
+                    if (backdrop) {
+                        backdrop.classList.remove('is-visible');
+                        backdrop.setAttribute('aria-hidden', 'true');
+                    }
+                    syncBodyModalState();
+                } else {
+                    el.style.display = 'none';
+                }
             }
 
             if (targetId === 'editPhysicalForm') {
@@ -3509,8 +3736,16 @@ const locationData = {
 
         document.querySelectorAll('[data-toggle="inline-edit"]').forEach((button) => {
             const targetId = button.getAttribute('data-target');
-            const wrapper = document.getElementById(targetId + 'Wrapper');
+            const { wrapper, backdrop } = getInlineEditElements(targetId);
             const isVisible = wrapper ? wrapper.style.display !== 'none' : false;
+            if (wrapper && wrapper.hasAttribute('data-inline-modal') && isVisible) {
+                wrapper.classList.add('is-visible');
+                wrapper.setAttribute('aria-hidden', 'false');
+                if (backdrop) {
+                    backdrop.classList.add('is-visible');
+                    backdrop.setAttribute('aria-hidden', 'false');
+                }
+            }
             setInlineToggleState(button, isVisible);
 
             button.addEventListener('click', (event) => {
@@ -3526,9 +3761,20 @@ const locationData = {
             });
         });
 
+        syncBodyModalState();
+
         document.querySelectorAll('[data-toggle="inline-cancel"]').forEach((button) => {
             button.addEventListener('click', () => {
                 const targetId = button.getAttribute('data-target');
+                closeInlineEdit(targetId);
+                const editButton = document.querySelector('[data-toggle="inline-edit"][data-target="' + targetId + '"]');
+                setInlineToggleState(editButton, false);
+            });
+        });
+
+        document.querySelectorAll('.lfp-inline-modal-backdrop').forEach((backdrop) => {
+            backdrop.addEventListener('click', () => {
+                const targetId = backdrop.id.replace(/Backdrop$/, '');
                 closeInlineEdit(targetId);
                 const editButton = document.querySelector('[data-toggle="inline-edit"][data-target="' + targetId + '"]');
                 setInlineToggleState(editButton, false);
@@ -3823,11 +4069,11 @@ const locationData = {
 
             activityLogSection.classList.toggle('is-visible', isVisible);
             activityLogBackdrop.classList.toggle('is-visible', isVisible);
-            document.body.classList.toggle('modal-open', isVisible);
             activityLogFab.setAttribute('aria-expanded', isVisible ? 'true' : 'false');
             activityLogFab.dataset.state = isVisible ? 'open' : 'closed';
             activityLogSection.setAttribute('aria-hidden', isVisible ? 'false' : 'true');
             activityLogBackdrop.setAttribute('aria-hidden', isVisible ? 'false' : 'true');
+            syncBodyModalState();
 
             const labelSpan = activityLogFab.querySelector('span');
             if (labelSpan) {
@@ -3856,7 +4102,20 @@ const locationData = {
             }
 
             document.addEventListener('keydown', (event) => {
-                if (event.key === 'Escape' && activityLogSection.classList.contains('is-visible')) {
+                if (event.key !== 'Escape') {
+                    return;
+                }
+
+                const activeInlineModal = document.querySelector('[data-inline-modal="true"].is-visible');
+                if (activeInlineModal) {
+                    const targetId = activeInlineModal.id.replace(/Wrapper$/, '');
+                    closeInlineEdit(targetId);
+                    const editButton = document.querySelector('[data-toggle="inline-edit"][data-target="' + targetId + '"]');
+                    setInlineToggleState(editButton, false);
+                    return;
+                }
+
+                if (activityLogSection.classList.contains('is-visible')) {
                     setActivityLogVisibility(false);
                 }
             });
@@ -3869,6 +4128,3 @@ const locationData = {
         // Monthly accordion uses native <details> only; no JS needed.
     </script>
 @endsection
-
-
-
