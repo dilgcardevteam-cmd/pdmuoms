@@ -281,21 +281,31 @@
                     <a href="#" data-toggle="inline-edit" data-target="editProfileForm" style="padding: 6px 12px; background-color: #002C76; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 12px;"><i class="fas fa-edit" style="margin-right: 6px;"></i>Update</a>
                 @endif
             </div>
-            <div style="display: grid; grid-template-columns: repeat(3, minmax(260px, 1fr)); gap: 14px;">
+            <div style="display: grid; grid-template-columns: repeat(2, minmax(260px, 1fr)); gap: 14px;">
                 <div style="grid-column: 1 / -1;">
-                    <strong>Project Description:</strong>
-                    <div style="margin-top: 6px; color: #374151;">{!! nl2br(e($project->project_description)) !!}</div>
+                    <span class="font-bold text-[#374151]">Project Description:</span>
+                    </br>
+                    <span class="text-[#374151]" style="margin-top: 6px; color: #374151;">{!! nl2br(e($project->project_description)) !!}</span>
                 </div>
 
-                <div class="grid lg:grid-cols-2 gap-2 bg-red-400 w-full">
+                    <!-- OTHER INFO -->
+                    <div class="flex flex-col text-[#374151]">
+                        <span><strong>Project Type:</strong> {{ $project->project_type }}</span>
+                        <span><strong>Date of NADAI:</strong> {{ $project->date_nadai ? $project->date_nadai->format('F j, Y') : '' }}</span>
+                        <span><strong>No. of Beneficiaries:</strong> {{ number_format($project->no_of_beneficiaries) }}</span>
+                        <span><strong>Rainwater Collection System:</strong> {{ $project->rainwater_collection_system }}</span>
+                        <span><strong>Date of Confirmation Fund Receipt:</strong> {{ $project->date_confirmation_fund_receipt ? $project->date_confirmation_fund_receipt->format('F j, Y') : '' }}</span>
+                        <span><strong>LGSF Allocation:</strong> ₱ {{ number_format($project->lgsf_allocation, 2) }}</span>
+                        <span><strong>LGU Counterpart:</strong> ₱ {{ number_format($project->lgu_counterpart, 2) }}</span>
+                    </div>    
                     <!-- SITE / LOCATION -->
-                    <div class="flex flex-col">
-                        <span class="text-red-400"><strong>Province:</strong> {{ $project->province }}</span>
-                        <span class="text-red-400"><strong>City/Municipality:</strong> {{ $project->city_municipality }}</span>
+                    <div class="flex flex-col text-[#374151]">
+                        <span class=""><strong>Province:</strong> {{ $project->province }}</span>
+                        <span class=""><strong>City/Municipality:</strong> {{ $project->city_municipality }}</span>
                         @php
                             $barangays = array_filter(array_map('trim', explode(',', (string) $project->barangay)));
                         @endphp
-                        <span class="text-red-400">
+                        <span class="">
                             <strong>Barangay:</strong>
                             @if(count($barangays))
                                 <ul style="margin: 4px 0 0 16px; padding: 0;">
@@ -306,17 +316,6 @@
                             @endif
                         </span>
                     </div>
-                    <!-- OTHER INFO -->
-                    <div class="flex flex-col">
-                        <span><strong>Project Type:</strong> {{ $project->project_type }}</span>
-                        <span><strong>Date of NADAI:</strong> {{ $project->date_nadai ? $project->date_nadai->format('F j, Y') : '' }}</span>
-                        <span><strong>No. of Beneficiaries:</strong> {{ number_format($project->no_of_beneficiaries) }}</span>
-                        <span><strong>Rainwater Collection System:</strong> {{ $project->rainwater_collection_system }}</span>
-                        <span><strong>Date of Confirmation Fund Receipt:</strong> {{ $project->date_confirmation_fund_receipt ? $project->date_confirmation_fund_receipt->format('F j, Y') : '' }}</span>
-                        <span><strong>LGSF Allocation:</strong> ₱ {{ number_format($project->lgsf_allocation, 2) }}</span>
-                        <span><strong>LGU Counterpart:</strong> ₱ {{ number_format($project->lgu_counterpart, 2) }}</span>
-                    </div>
-                </div>
             </div>
             <div id="editProfileFormBackdrop" class="lfp-inline-modal-backdrop{{ old('section') === 'profile' ? ' is-visible' : '' }}" aria-hidden="{{ old('section') === 'profile' ? 'false' : 'true' }}"></div>
             <div id="editProfileFormWrapper" class="lfp-inline-modal{{ old('section') === 'profile' ? ' is-visible' : '' }}" data-inline-modal="true" role="dialog" aria-modal="true" aria-labelledby="editProfileModalTitle" aria-hidden="{{ old('section') === 'profile' ? 'false' : 'true' }}" style="display: {{ old('section') === 'profile' ? 'block' : 'none' }};">
