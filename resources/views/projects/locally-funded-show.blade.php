@@ -141,6 +141,38 @@
             line-height: 1;
         }
 
+        .lfp-inline-modal-section {
+            transition: transform 0.2s ease;
+        }
+
+        .lfp-inline-modal-section.is-visible {
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: min(1280px, 96vw);
+            max-height: 90vh;
+            overflow: auto;
+            margin: 0;
+            z-index: 1200;
+            box-shadow: 0 24px 48px rgba(15, 23, 42, 0.22);
+        }
+
+        .lfp-inline-modal-section.is-visible > div:first-child {
+            position: sticky;
+            top: 0;
+            background-color: #ffffff;
+            z-index: 1;
+        }
+
+        .lfp-inline-modal-section-close {
+            display: none;
+        }
+
+        .lfp-inline-modal-section.is-visible .lfp-inline-modal-section-close {
+            display: inline-flex;
+        }
+
         @media (max-width: 768px) {
             .lfp-summary-card {
                 padding: 16px;
@@ -169,8 +201,14 @@
                 padding: 16px;
             }
 
-            #editProfileForm > div:first-of-type {
+            #editProfileForm > div:first-of-type,
+            #editContractForm > div:first-of-type {
                 grid-template-columns: 1fr !important;
+            }
+
+            .lfp-inline-modal-section.is-visible {
+                width: 94vw;
+                max-height: 90vh;
             }
         }
     </style>
@@ -472,7 +510,13 @@
                 <div><strong>Target Date of Completion:</strong> {{ $project->target_date_completion ? $project->target_date_completion->format('F j, Y') : '' }}</div>
                 <div><strong>Revised Target Date:</strong> {{ $project->revised_target_date_completion ? $project->revised_target_date_completion->format('F j, Y') : 'N/A' }}</div>
             </div>
-            <div id="editContractFormWrapper" style="display: {{ old('section') === 'contract' ? 'block' : 'none' }}; margin-top: 16px; padding: 16px; border-radius: 10px; background-color: #e7f1ff; border: 1px solid #cfe3ff;">
+            <div id="editContractFormBackdrop" class="lfp-inline-modal-backdrop{{ old('section') === 'contract' ? ' is-visible' : '' }}" aria-hidden="{{ old('section') === 'contract' ? 'false' : 'true' }}"></div>
+            <div id="editContractFormWrapper" class="lfp-inline-modal{{ old('section') === 'contract' ? ' is-visible' : '' }}" data-inline-modal="true" role="dialog" aria-modal="true" aria-labelledby="editContractModalTitle" aria-hidden="{{ old('section') === 'contract' ? 'false' : 'true' }}" style="display: {{ old('section') === 'contract' ? 'block' : 'none' }};">
+                <div class="lfp-inline-modal-header">
+                    <h3 id="editContractModalTitle" style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Edit Contract Information</h3>
+                    <button type="button" class="lfp-inline-modal-close" data-toggle="inline-cancel" data-target="editContractForm" aria-label="Close contract information editor">&times;</button>
+                </div>
+                <div class="lfp-inline-modal-body">
             <form id="editContractForm" action="{{ route('locally-funded-project.update', $project) }}" method="POST">
                 @csrf
                 @method('PUT')
@@ -589,6 +633,7 @@
                     <button type="button" data-toggle="inline-cancel" data-target="editContractForm" style="padding: 8px 16px; background-color: #6b7280; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;"><i class="fas fa-times" style="margin-right: 8px;"></i>Cancel</button>
                 </div>
             </form>
+                </div>
             </div>
         </div>
 
@@ -657,12 +702,16 @@
             };
         @endphp
 
-        <div id="physicalAccomplishmentSection" style="margin-bottom: 24px; padding: 20px; border: 1px solid #00267C; border-radius: 10px; background-color: #ffffff;">
+        <div id="editPhysicalFormBackdrop" class="lfp-inline-modal-backdrop" aria-hidden="true"></div>
+        <div id="physicalAccomplishmentSection" class="lfp-inline-modal-section" data-inline-modal-section="true" data-inline-target="editPhysicalForm" style="margin-bottom: 24px; padding: 20px; border: 1px solid #00267C; border-radius: 10px; background-color: #ffffff;">
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 2px solid #00267C; padding-bottom: 10px;">
                 <h3 style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Physical Accomplishment</h3>
-                @if(!$isLguAgencyUser)
-                    <a href="#" data-toggle="inline-edit" data-target="editPhysicalForm" data-physical-toggle="true" style="padding: 6px 12px; background-color: #002C76; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 12px;"><i class="fas fa-edit" style="margin-right: 6px;"></i>Update</a>
-                @endif
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    @if(!$isLguAgencyUser)
+                        <a href="#" data-toggle="inline-edit" data-target="editPhysicalForm" data-physical-toggle="true" style="padding: 6px 12px; background-color: #002C76; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 12px;"><i class="fas fa-edit" style="margin-right: 6px;"></i>Update</a>
+                    @endif
+                    <button type="button" class="lfp-inline-modal-close lfp-inline-modal-section-close" data-toggle="inline-cancel" data-target="editPhysicalForm" aria-label="Close physical accomplishment editor">&times;</button>
+                </div>
             </div>
             <div style="display: grid; grid-template-columns: repeat(2, minmax(300px, 1fr)); gap: 16px;">
                 <div>
@@ -707,9 +756,6 @@
                                         <div><span style="display: inline-block; padding: 3px 8px; border-radius: 999px; border: 1px solid #e5e7eb; background-color: #f3f4f6; color: #374151; font-size: 11px; font-weight: 600;">{{ $updatedAt }}</span></div>
                                         <div><span style="display: inline-block; padding: 3px 8px; border-radius: 999px; border: 1px solid #e5e7eb; background-color: #eef2ff; color: #4338ca; font-size: 11px; font-weight: 600;">{{ $updatedBy }}</span></div>
                                     @endforeach
-                                </div>
-                                <div style="margin-top: 10px;">
-                                    <button type="submit" data-physical-save="true" style="display: none; padding: 6px 12px; background-color: #16a34a; color: white; border: none; border-radius: 6px; font-size: 12px; cursor: pointer;"><i class="fas fa-check" style="margin-right: 4px;"></i>Save</button>
                                 </div>
                             </form>
                         </div>
@@ -758,9 +804,6 @@
                                         <div><span style="display: inline-block; padding: 3px 8px; border-radius: 999px; border: 1px solid #e5e7eb; background-color: #eef2ff; color: #4338ca; font-size: 11px; font-weight: 600;">{{ $updatedBy }}</span></div>
                                     @endforeach
                                 </div>
-                                <div style="margin-top: 10px;">
-                                    <button type="submit" data-physical-save="true" style="display: none; padding: 6px 12px; background-color: #16a34a; color: white; border: none; border-radius: 6px; font-size: 12px; cursor: pointer;"><i class="fas fa-check" style="margin-right: 4px;"></i>Save</button>
-                                </div>
                             </form>
                         </div>
                     </details>
@@ -800,9 +843,6 @@
                                         <div><span style="display: inline-block; padding: 3px 8px; border-radius: 999px; border: 1px solid #e5e7eb; background-color: #eef2ff; color: #4338ca; font-size: 11px; font-weight: 600;">{{ $updatedBy }}</span></div>
                                     @endforeach
                                 </div>
-                                <div style="margin-top: 10px;">
-                                    <button type="submit" data-physical-save="true" style="display: none; padding: 6px 12px; background-color: #16a34a; color: white; border: none; border-radius: 6px; font-size: 12px; cursor: pointer;"><i class="fas fa-check" style="margin-right: 4px;"></i>Save</button>
-                                </div>
                             </form>
                         </div>
                     </details>
@@ -840,9 +880,6 @@
                                         <div><span style="display: inline-block; padding: 3px 8px; border-radius: 999px; border: 1px solid #e5e7eb; background-color: #f3f4f6; color: #374151; font-size: 11px; font-weight: 600;">{{ $updatedAt }}</span></div>
                                         <div><span style="display: inline-block; padding: 3px 8px; border-radius: 999px; border: 1px solid #e5e7eb; background-color: #eef2ff; color: #4338ca; font-size: 11px; font-weight: 600;">{{ $updatedBy }}</span></div>
                                     @endforeach
-                                </div>
-                                <div style="margin-top: 10px;">
-                                    <button type="submit" data-physical-save="true" style="display: none; padding: 6px 12px; background-color: #16a34a; color: white; border: none; border-radius: 6px; font-size: 12px; cursor: pointer;"><i class="fas fa-check" style="margin-right: 4px;"></i>Save</button>
                                 </div>
                             </form>
                         </div>
@@ -883,9 +920,6 @@
                                         <div><span style="display: inline-block; padding: 3px 8px; border-radius: 999px; border: 1px solid #e5e7eb; background-color: #eef2ff; color: #4338ca; font-size: 11px; font-weight: 600;">{{ $updatedBy }}</span></div>
                                     @endforeach
                                 </div>
-                                <div style="margin-top: 10px;">
-                                    <button type="submit" data-physical-save="true" style="display: none; padding: 6px 12px; background-color: #16a34a; color: white; border: none; border-radius: 6px; font-size: 12px; cursor: pointer;"><i class="fas fa-check" style="margin-right: 4px;"></i>Save</button>
-                                </div>
                             </form>
                         </div>
                     </details>
@@ -924,9 +958,6 @@
                                         <div><span style="display: inline-block; padding: 3px 8px; border-radius: 999px; border: 1px solid #e5e7eb; background-color: #eef2ff; color: #4338ca; font-size: 11px; font-weight: 600;">{{ $updatedBy }}</span></div>
                                     @endforeach
                                 </div>
-                                <div style="margin-top: 10px;">
-                                    <button type="submit" data-physical-save="true" style="display: none; padding: 6px 12px; background-color: #16a34a; color: white; border: none; border-radius: 6px; font-size: 12px; cursor: pointer;"><i class="fas fa-check" style="margin-right: 4px;"></i>Save</button>
-                                </div>
                             </form>
                         </div>
                     </details>
@@ -945,7 +976,6 @@
                         <input type="date" id="actual_date_completion_physical" name="actual_date_completion" value="{{ old('actual_date_completion', $project->actual_date_completion ? $project->actual_date_completion->format('Y-m-d') : '') }}"
                                data-physical-edit="true" data-month="{{ $currentMonth }}" disabled
                                style="padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px; background-color: #f3f4f6;">
-                        <button type="submit" data-physical-save="true" style="display: none; padding: 6px 12px; background-color: #16a34a; color: white; border: none; border-radius: 6px; font-size: 12px; cursor: pointer;"><i class="fas fa-check" style="margin-right: 4px;"></i>Save</button>
                     </div>
                 </form>
 
@@ -1000,9 +1030,6 @@
                                         <div><span style="display: inline-block; padding: 3px 8px; border-radius: 999px; border: 1px solid #e5e7eb; background-color: #f3f4f6; color: #374151; font-size: 11px; font-weight: 600;">{{ $updatedAt }}</span></div>
                                         <div><span style="display: inline-block; padding: 3px 8px; border-radius: 999px; border: 1px solid #e5e7eb; background-color: #eef2ff; color: #4338ca; font-size: 11px; font-weight: 600;">{{ $updatedBy }}</span></div>
                                     @endforeach
-                                </div>
-                                <div style="margin-top: 10px;">
-                                    <button type="submit" data-physical-save="true" style="display: none; padding: 6px 12px; background-color: #16a34a; color: white; border: none; border-radius: 6px; font-size: 12px; cursor: pointer;"><i class="fas fa-check" style="margin-right: 4px;"></i>Save</button>
                                 </div>
                             </form>
                         </div>
@@ -1064,9 +1091,6 @@
                                         <div><span style="display: inline-block; padding: 3px 8px; border-radius: 999px; border: 1px solid #e5e7eb; background-color: #eef2ff; color: #4338ca; font-size: 11px; font-weight: 600;">{{ $updatedBy }}</span></div>
                                     @endforeach
                                 </div>
-                                <div style="margin-top: 10px;">
-                                    <button type="submit" data-physical-save="true" style="display: none; padding: 6px 12px; background-color: #16a34a; color: white; border: none; border-radius: 6px; font-size: 12px; cursor: pointer;"><i class="fas fa-check" style="margin-right: 4px;"></i>Save</button>
-                                </div>
                             </form>
                         </div>
                     </details>
@@ -1083,21 +1107,22 @@
                             <span><strong>Updated By:</strong> {{ $physicalRemarksUpdatedByName ?? '-' }}</span>
                             <span><strong>Date & Time:</strong> {{ $project->physical_remarks_updated_at ? $project->physical_remarks_updated_at->format('M d, Y h:i A') : '-' }}</span>
                         </div>
-                        <div style="margin-top: 8px;">
-                            <button type="submit" data-physical-save="true" style="display: none; padding: 6px 12px; background-color: #16a34a; color: white; border: none; border-radius: 6px; font-size: 12px; cursor: pointer;"><i class="fas fa-check" style="margin-right: 4px;"></i>Save</button>
-                        </div>
                     </form>
                 </div>
             </div>
             
         </div>
 
-        <div id="financialAccomplishmentSection" style="margin-bottom: 24px; padding: 20px; border: 1px solid #00267C; border-radius: 10px; background-color: #ffffff;">
+        <div id="editFinancialFormBackdrop" class="lfp-inline-modal-backdrop" aria-hidden="true"></div>
+        <div id="financialAccomplishmentSection" class="lfp-inline-modal-section" data-inline-modal-section="true" data-inline-target="editFinancialForm" style="margin-bottom: 24px; padding: 20px; border: 1px solid #00267C; border-radius: 10px; background-color: #ffffff;">
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 2px solid #00267C; padding-bottom: 10px;">
                 <h3 style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Financial Accomplishment (based on Subaybayan)</h3>
-                @if(!$isLguAgencyUser)
-                    <a href="#" data-toggle="inline-edit" data-target="editFinancialForm" data-financial-toggle="true" style="padding: 6px 12px; background-color: #002C76; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 12px;"><i class="fas fa-edit" style="margin-right: 6px;"></i>Update</a>
-                @endif
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    @if(!$isLguAgencyUser)
+                        <a href="#" data-toggle="inline-edit" data-target="editFinancialForm" data-financial-toggle="true" style="padding: 6px 12px; background-color: #002C76; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 12px;"><i class="fas fa-edit" style="margin-right: 6px;"></i>Update</a>
+                    @endif
+                    <button type="button" class="lfp-inline-modal-close lfp-inline-modal-section-close" data-toggle="inline-cancel" data-target="editFinancialForm" aria-label="Close financial accomplishment editor">&times;</button>
+                </div>
             </div>
             <div style="display: grid; grid-template-columns: 1fr; gap: 16px;">
                 <div>
@@ -1262,12 +1287,16 @@
             </div>
         </div>
 
-        <div id="monitoringInspectionSection" style="margin-bottom: 24px; padding: 20px; border: 1px solid #00267C; border-radius: 10px; background-color: #ffffff;">
+        <div id="editMonitoringFormBackdrop" class="lfp-inline-modal-backdrop" aria-hidden="true"></div>
+        <div id="monitoringInspectionSection" class="lfp-inline-modal-section" data-inline-modal-section="true" data-inline-target="editMonitoringForm" style="margin-bottom: 24px; padding: 20px; border: 1px solid #00267C; border-radius: 10px; background-color: #ffffff;">
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 2px solid #00267C; padding-bottom: 10px;">
                 <h3 style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Monitoring/Inspection Activities</h3>
-                @if(!$isLguAgencyUser)
-                    <a href="#" data-toggle="inline-edit" data-target="editMonitoringForm" data-monitoring-toggle="true" style="padding: 6px 12px; background-color: #002C76; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 12px;"><i class="fas fa-edit" style="margin-right: 6px;"></i>Update</a>
-                @endif
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    @if(!$isLguAgencyUser)
+                        <a href="#" data-toggle="inline-edit" data-target="editMonitoringForm" data-monitoring-toggle="true" style="padding: 6px 12px; background-color: #002C76; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 12px;"><i class="fas fa-edit" style="margin-right: 6px;"></i>Update</a>
+                    @endif
+                    <button type="button" class="lfp-inline-modal-close lfp-inline-modal-section-close" data-toggle="inline-cancel" data-target="editMonitoringForm" aria-label="Close monitoring editor">&times;</button>
+                </div>
             </div>
 
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
@@ -1389,12 +1418,16 @@
             </div>
         </div>
 
-        <div id="postImplementationSection" style="margin-bottom: 24px; padding: 20px; border: 1px solid #00267C; border-radius: 10px; background-color: #ffffff;">
+        <div id="editPostImplementationFormBackdrop" class="lfp-inline-modal-backdrop" aria-hidden="true"></div>
+        <div id="postImplementationSection" class="lfp-inline-modal-section" data-inline-modal-section="true" data-inline-target="editPostImplementationForm" style="margin-bottom: 24px; padding: 20px; border: 1px solid #00267C; border-radius: 10px; background-color: #ffffff;">
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 2px solid #00267C; padding-bottom: 10px;">
                 <h3 style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Post Implementation Requirements</h3>
-                @if(!$isLguAgencyUser)
-                    <a href="#" data-toggle="inline-edit" data-target="editPostImplementationForm" data-post-implementation-toggle="true" style="padding: 6px 12px; background-color: #002C76; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 12px;"><i class="fas fa-edit" style="margin-right: 6px;"></i>Update</a>
-                @endif
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    @if(!$isLguAgencyUser)
+                        <a href="#" data-toggle="inline-edit" data-target="editPostImplementationForm" data-post-implementation-toggle="true" style="padding: 6px 12px; background-color: #002C76; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 12px;"><i class="fas fa-edit" style="margin-right: 6px;"></i>Update</a>
+                    @endif
+                    <button type="button" class="lfp-inline-modal-close lfp-inline-modal-section-close" data-toggle="inline-cancel" data-target="editPostImplementationForm" aria-label="Close post implementation editor">&times;</button>
+                </div>
             </div>
 
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
@@ -3294,16 +3327,24 @@ const locationData = {
 
         updateFinancialSums();
 
+        const inlineSectionTargetMap = {
+            editPhysicalForm: 'physicalAccomplishmentSection',
+            editFinancialForm: 'financialAccomplishmentSection',
+            editMonitoringForm: 'monitoringInspectionSection',
+            editPostImplementationForm: 'postImplementationSection',
+        };
+
         function getInlineEditElements(targetId) {
+            const mappedTargetId = inlineSectionTargetMap[targetId] || targetId;
             return {
-                target: document.getElementById(targetId),
+                target: document.getElementById(mappedTargetId),
                 wrapper: document.getElementById(targetId + 'Wrapper'),
                 backdrop: document.getElementById(targetId + 'Backdrop'),
             };
         }
 
         function syncBodyModalState() {
-            const hasInlineModal = document.querySelector('[data-inline-modal="true"].is-visible') !== null;
+            const hasInlineModal = document.querySelector('[data-inline-modal="true"].is-visible, [data-inline-modal-section="true"].is-visible') !== null;
             const activityLogModal = document.getElementById('activityLogSection');
             const hasActivityLogModal = activityLogModal ? activityLogModal.classList.contains('is-visible') : false;
 
@@ -3328,8 +3369,8 @@ const locationData = {
             const { target, wrapper, backdrop } = getInlineEditElements(targetId);
             const el = wrapper || target;
             if (el) {
-                el.style.display = 'block';
                 if (wrapper && wrapper.hasAttribute('data-inline-modal')) {
+                    el.style.display = 'block';
                     wrapper.classList.add('is-visible');
                     wrapper.setAttribute('aria-hidden', 'false');
                     if (backdrop) {
@@ -3342,7 +3383,21 @@ const locationData = {
                     if (focusTarget) {
                         setTimeout(() => focusTarget.focus(), 0);
                     }
+                } else if (target && target.hasAttribute('data-inline-modal-section')) {
+                    target.classList.add('is-visible');
+                    target.setAttribute('aria-hidden', 'false');
+                    if (backdrop) {
+                        backdrop.classList.add('is-visible');
+                        backdrop.setAttribute('aria-hidden', 'false');
+                    }
+                    syncBodyModalState();
+
+                    const focusTarget = target.querySelector('button, input, select, textarea');
+                    if (focusTarget) {
+                        setTimeout(() => focusTarget.focus(), 0);
+                    }
                 } else {
+                    el.style.display = 'block';
                     el.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
             }
@@ -3369,14 +3424,6 @@ const locationData = {
                     } else {
                         input.disabled = true;
                         input.style.backgroundColor = '#f3f4f6';
-                    }
-                });
-                // Only show save button if user is RO user
-                document.querySelectorAll('[data-physical-save="true"]').forEach((saveBtn) => {
-                    if (isROUser) {
-                        saveBtn.style.display = 'inline-block';
-                    } else {
-                        saveBtn.style.display = 'none';
                     }
                 });
             }
@@ -3491,6 +3538,14 @@ const locationData = {
                         backdrop.setAttribute('aria-hidden', 'true');
                     }
                     syncBodyModalState();
+                } else if (target && target.hasAttribute('data-inline-modal-section')) {
+                    target.classList.remove('is-visible');
+                    target.setAttribute('aria-hidden', 'true');
+                    if (backdrop) {
+                        backdrop.classList.remove('is-visible');
+                        backdrop.setAttribute('aria-hidden', 'true');
+                    }
+                    syncBodyModalState();
                 } else {
                     el.style.display = 'none';
                 }
@@ -3500,9 +3555,6 @@ const locationData = {
                 document.querySelectorAll('[data-physical-edit="true"]').forEach((input) => {
                     input.disabled = true;
                     input.style.backgroundColor = '#f3f4f6';
-                });
-                document.querySelectorAll('[data-physical-save="true"]').forEach((saveBtn) => {
-                    saveBtn.style.display = 'none';
                 });
             }
 
@@ -3551,7 +3603,6 @@ const locationData = {
             });
 
             const saveSelectors = [
-                '[data-physical-save="true"]',
                 '[data-financial-save="true"]',
                 '[data-monitoring-save="true"]',
                 '[data-post-implementation-save="true"]',
@@ -3575,7 +3626,7 @@ const locationData = {
             }
 
             const submitterCandidates = Array.from(form.querySelectorAll(
-                '[data-physical-save="true"], [data-financial-save="true"], [data-monitoring-save="true"], [data-post-implementation-save="true"], button[type="submit"], input[type="submit"]'
+                '[data-financial-save="true"], [data-monitoring-save="true"], [data-post-implementation-save="true"], button[type="submit"], input[type="submit"]'
             ));
             const submitter = submitterCandidates.find((button) => {
                 if (!button || button.disabled) {
@@ -3736,8 +3787,10 @@ const locationData = {
 
         document.querySelectorAll('[data-toggle="inline-edit"]').forEach((button) => {
             const targetId = button.getAttribute('data-target');
-            const { wrapper, backdrop } = getInlineEditElements(targetId);
-            const isVisible = wrapper ? wrapper.style.display !== 'none' : false;
+            const { target, wrapper, backdrop } = getInlineEditElements(targetId);
+            const isVisible = wrapper
+                ? wrapper.style.display !== 'none'
+                : !!(target && target.classList.contains('is-visible'));
             if (wrapper && wrapper.hasAttribute('data-inline-modal') && isVisible) {
                 wrapper.classList.add('is-visible');
                 wrapper.setAttribute('aria-hidden', 'false');
@@ -3745,6 +3798,10 @@ const locationData = {
                     backdrop.classList.add('is-visible');
                     backdrop.setAttribute('aria-hidden', 'false');
                 }
+            }
+            if (target && target.hasAttribute('data-inline-modal-section') && isVisible && backdrop) {
+                backdrop.classList.add('is-visible');
+                backdrop.setAttribute('aria-hidden', 'false');
             }
             setInlineToggleState(button, isVisible);
 
@@ -3785,8 +3842,8 @@ const locationData = {
             const submitter = event.submitter;
             if (!submitter) return;
             let targetId = event.target && event.target.getAttribute('id');
-            if (submitter.hasAttribute('data-physical-save')) {
-                targetId = 'editPhysicalForm';
+            if (submitter.hasAttribute('data-financial-save')) {
+                targetId = 'editFinancialForm';
             }
             if (submitter.hasAttribute('data-monitoring-save')) {
                 targetId = 'editMonitoringForm';
@@ -4044,7 +4101,7 @@ const locationData = {
                     }
 
                     const saveButton = form.querySelector(
-                        '[data-physical-save="true"], [data-financial-save="true"], [data-monitoring-save="true"], [data-post-implementation-save="true"]'
+                        '[data-financial-save="true"], [data-monitoring-save="true"], [data-post-implementation-save="true"]'
                     );
 
                     submitFormWithAutoSave(form, saveButton);
@@ -4107,8 +4164,10 @@ const locationData = {
                 }
 
                 const activeInlineModal = document.querySelector('[data-inline-modal="true"].is-visible');
-                if (activeInlineModal) {
-                    const targetId = activeInlineModal.id.replace(/Wrapper$/, '');
+                const activeInlineSection = document.querySelector('[data-inline-modal-section="true"].is-visible');
+                if (activeInlineModal || activeInlineSection) {
+                    const activeTarget = activeInlineModal || activeInlineSection;
+                    const targetId = activeTarget.dataset.inlineTarget || activeTarget.id.replace(/Wrapper$/, '');
                     closeInlineEdit(targetId);
                     const editButton = document.querySelector('[data-toggle="inline-edit"][data-target="' + targetId + '"]');
                     setInlineToggleState(editButton, false);
