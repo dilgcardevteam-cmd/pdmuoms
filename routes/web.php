@@ -1614,6 +1614,8 @@ Route::middleware(['auth'])->group(function () {
         })->name('system-management.index');
         Route::get('/system-management/upload-subaybayan', [SystemManagementController::class, 'uploadSubaybayan'])
             ->name('system-management.upload-subaybayan');
+        Route::view('/system-management/upload-rlip-lime', 'system-management.upload-rlip-lime')
+            ->name('system-management.upload-rlip-lime');
         Route::post('/system-management/upload-subaybayan/import', [SystemManagementController::class, 'importSubaybayan'])
             ->name('system-management.upload-subaybayan.import');
         Route::post('/system-management/upload-subaybayan/import/{importId}/load', [SystemManagementController::class, 'loadSubaybayanImport'])

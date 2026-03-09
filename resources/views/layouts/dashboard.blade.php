@@ -124,7 +124,9 @@
             color: rgba(255, 255, 255, 0.8);
             text-decoration: none;
             border-radius: 6px;
-            transition: background-color 0.22s ease, color 0.22s ease, padding-left 0.22s ease;
+            transform: translateY(0);
+            box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+            transition: background-color 0.22s ease, color 0.22s ease, padding-left 0.22s ease, transform 0.22s ease, box-shadow 0.22s ease;
             font-size: 14px;
         }
         
@@ -132,6 +134,8 @@
             background-color: rgba(255, 255, 255, 0.15);
             color: white;
             padding-left: 20px;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 18px rgba(15, 23, 42, 0.22);
         }
         
         .sidebar-menu a.active {
@@ -177,13 +181,15 @@
             color: rgba(255, 255, 255, 0.8);
             text-decoration: none;
             font-size: 13px;
-            transition: all 0.3s ease;
+            transition: background-color 0.22s ease, color 0.22s ease, padding-left 0.22s ease, transform 0.22s ease, box-shadow 0.22s ease;
         }
 
         .submenu a:hover {
             background-color: rgba(255, 255, 255, 0.15);
             color: white;
             padding-left: 52px !important;
+            transform: translateY(-3px);
+            box-shadow: 0 12px 20px rgba(15, 23, 42, 0.24);
         }
 
         .submenu a.active {
@@ -1125,7 +1131,13 @@
                         <li>
                             <a href="{{ route('system-management.upload-subaybayan') }}" class="@if(Route::currentRouteName() == 'system-management.upload-subaybayan') active @endif">
                                 <i class="fas fa-upload"></i>
-                                <span>Upload SubayBAYAN Data</span>
+                                <span>Upload LFP Data</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ route('system-management.upload-rlip-lime') }}" class="@if(Route::currentRouteName() == 'system-management.upload-rlip-lime') active @endif">
+                                <i class="fas fa-file-import"></i>
+                                <span>Upload RLIP/LIME-20 Data</span>
                             </a>
                         </li>
                     </ul>

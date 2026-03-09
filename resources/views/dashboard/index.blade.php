@@ -2770,6 +2770,16 @@
             border: 1px solid #dbeafe;
             border-radius: 8px;
             background-color: #f8fbff;
+            transform: translateY(0);
+            box-shadow: 0 0 0 rgba(37, 99, 235, 0);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+        }
+
+        .expected-completion-item.clickable-dashboard-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 20px rgba(37, 99, 235, 0.16);
+            border-color: #93c5fd;
+            background-color: #ffffff;
         }
 
         .expected-completion-item-code {
