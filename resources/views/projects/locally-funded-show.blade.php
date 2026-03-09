@@ -313,7 +313,8 @@
                 <div><strong>LGU Counterpart:</strong> ₱ {{ number_format($project->lgu_counterpart, 2) }}</div>
             </div>
             <div id="editProfileFormBackdrop" class="lfp-inline-modal-backdrop{{ old('section') === 'profile' ? ' is-visible' : '' }}" aria-hidden="{{ old('section') === 'profile' ? 'false' : 'true' }}"></div>
-            <div id="editProfileFormWrapper" class="lfp-inline-modal{{ old('section') === 'profile' ? ' is-visible' : '' }}" data-inline-modal="true" role="dialog" aria-modal="true" aria-labelledby="editProfileModalTitle" aria-hidden="{{ old('section') === 'profile' ? 'false' : 'true' }}" style="display: {{ old('section') === 'profile' ? 'block' : 'none' }};">
+            @php $showProfile = old('section') === 'profile'; @endphp
+            <div id="editProfileFormWrapper" class="lfp-inline-modal{{ $showProfile ? ' is-visible' : '' }}" data-inline-modal="true" role="dialog" aria-modal="true" aria-labelledby="editProfileModalTitle" aria-hidden="{{ $showProfile ? 'false' : 'true' }}" style="display: {{ $showProfile ? 'block' : 'none' }};">
                 <div class="lfp-inline-modal-header">
                     <h3 id="editProfileModalTitle" style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Edit Project Profile</h3>
                     <button type="button" class="lfp-inline-modal-close" data-toggle="inline-cancel" data-target="editProfileForm" aria-label="Close project profile editor">&times;</button>
@@ -511,7 +512,8 @@
                 <div><strong>Revised Target Date:</strong> {{ $project->revised_target_date_completion ? $project->revised_target_date_completion->format('F j, Y') : 'N/A' }}</div>
             </div>
             <div id="editContractFormBackdrop" class="lfp-inline-modal-backdrop{{ old('section') === 'contract' ? ' is-visible' : '' }}" aria-hidden="{{ old('section') === 'contract' ? 'false' : 'true' }}"></div>
-            <div id="editContractFormWrapper" class="lfp-inline-modal{{ old('section') === 'contract' ? ' is-visible' : '' }}" data-inline-modal="true" role="dialog" aria-modal="true" aria-labelledby="editContractModalTitle" aria-hidden="{{ old('section') === 'contract' ? 'false' : 'true' }}" style="display: {{ old('section') === 'contract' ? 'block' : 'none' }};">
+            @php $showContract = old('section') === 'contract'; @endphp
+            <div id="editContractFormWrapper" class="lfp-inline-modal{{ $showContract ? ' is-visible' : '' }}" data-inline-modal="true" role="dialog" aria-modal="true" aria-labelledby="editContractModalTitle" aria-hidden="{{ $showContract ? 'false' : 'true' }}" style="display: {{ $showContract ? 'block' : 'none' }};">
                 <div class="lfp-inline-modal-header">
                     <h3 id="editContractModalTitle" style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Edit Contract Information</h3>
                     <button type="button" class="lfp-inline-modal-close" data-toggle="inline-cancel" data-target="editContractForm" aria-label="Close contract information editor">&times;</button>
@@ -1078,8 +1080,9 @@
                                         @endphp
                                         <div>{{ $monthName }}</div>
                                         <div>
+                                            @php $selectBg = $bgColor; $selectColor = $textColor; @endphp
                                             <select name="nc_letters[{{ $monthNumber }}]" data-physical-edit="true" data-month="{{ $monthNumber }}" disabled
-                                                    style="width: 100%; min-width: 0; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px; background-color: {{ $bgColor }}; color: {{ $textColor }};">
+                                                    style="width: 100%; min-width: 0; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px; background-color: {{ $selectBg }}; color: {{ $selectColor }};">
                                                 <option value="">-- Select --</option>
                                                 <option value="NC No. 1" {{ $value === 'NC No. 1' ? 'selected' : '' }}>NC No. 1</option>
                                                 <option value="NC No. 2" {{ $value === 'NC No. 2' ? 'selected' : '' }}>NC No. 2</option>
@@ -1264,7 +1267,8 @@
 
                 <div>
                     <strong>Utilization Rate:</strong>
-                    <span id="financialUtilizationRate" style="color: {{ (float) $financialUtilizationRate < 100 ? '#dc2626' : '#111827' }};">{{ number_format((float) $financialUtilizationRate, 2) . '%' }}</span>
+                    @php $utilColor = (float) $financialUtilizationRate < 100 ? '#dc2626' : '#111827'; @endphp
+                    <span id="financialUtilizationRate" style="color: {{ $utilColor }};">{{ number_format((float) $financialUtilizationRate, 2) . '%' }}</span>
                 </div>
 
                 <div>
@@ -3276,7 +3280,7 @@ const locationData = {
                 maximumFractionDigits: 2
             });
         }
-        const financialAllocation = Number(@json((float) $project->lgsf_allocation)) || 0;
+        const financialAllocation = Number({{ json_encode((float) $project->lgsf_allocation) }}) || 0;
 
         function getFinancialFieldSum(field) {
             let sum = 0;
@@ -3403,9 +3407,9 @@ const locationData = {
             }
 
             if (button.hasAttribute('data-physical-toggle')) {
-                const currentMonth = {{ $currentMonth }};
-                const userAgency = '{{ Auth::user()->agency }}';
-                const userProvince = '{{ Auth::user()->province }}';
+                const currentMonth = {{ json_encode((int) $currentMonth) }};
+                const userAgency = {{ json_encode(Auth::user()->agency ?? '') }};
+                const userProvince = {{ json_encode(Auth::user()->province ?? '') }};
                 const isROUser = userAgency === 'DILG' && userProvince === 'Regional Office';
                 
                 document.querySelectorAll('[data-physical-edit="true"]').forEach((input) => {
@@ -3429,9 +3433,9 @@ const locationData = {
             }
 
             if (button.hasAttribute('data-financial-toggle')) {
-                const currentMonth = {{ $currentMonth }};
-                const userAgency = '{{ Auth::user()->agency }}';
-                const userProvince = '{{ Auth::user()->province }}';
+                const currentMonth = {{ json_encode((int) $currentMonth) }};
+                const userAgency = {{ json_encode(Auth::user()->agency ?? '') }};
+                const userProvince = {{ json_encode(Auth::user()->province ?? '') }};
                 const isROUser = userAgency === 'DILG' && userProvince === 'Regional Office';
                 
                 document.querySelectorAll('[data-financial-edit="true"]').forEach((input) => {
@@ -3463,8 +3467,8 @@ const locationData = {
             }
 
             if (button.hasAttribute('data-monitoring-toggle')) {
-                const userAgency = '{{ Auth::user()->agency }}';
-                const userProvince = '{{ Auth::user()->province }}';
+                const userAgency = {{ json_encode(Auth::user()->agency ?? '') }};
+                const userProvince = {{ json_encode(Auth::user()->province ?? '') }};
                 const isROUser = userAgency === 'DILG' && userProvince === 'Regional Office';
                 
                 document.querySelectorAll('[data-monitoring-edit="true"]').forEach((input) => {
@@ -3628,17 +3632,7 @@ const locationData = {
             const submitterCandidates = Array.from(form.querySelectorAll(
                 '[data-financial-save="true"], [data-monitoring-save="true"], [data-post-implementation-save="true"], button[type="submit"], input[type="submit"]'
             ));
-            const submitter = submitterCandidates.find((button) => {
-                if (!button || button.disabled) {
-                    return false;
-                }
-                const style = window.getComputedStyle(button);
-                return style.display !== 'none' && style.visibility !== 'hidden' && button.offsetParent !== null;
-            }) || null;
-
-            if (!submitter) {
-                return false;
-            }
+            const submitter = submitterCandidates.find((button) => button && !button.disabled) || null;
 
             if (submitter && submitter.dataset) {
                 submitter.dataset.confirmSkip = 'true';
@@ -3646,8 +3640,10 @@ const locationData = {
             }
 
             try {
-                if (typeof form.requestSubmit === 'function') {
+                if (submitter && typeof form.requestSubmit === 'function') {
                     form.requestSubmit(submitter);
+                } else if (typeof form.requestSubmit === 'function') {
+                    form.requestSubmit();
                 } else {
                     form.submit();
                 }
@@ -4063,56 +4059,6 @@ const locationData = {
                 }
             });
         }
-
-        function submitFormWithAutoSave(form, submitter) {
-            if (!form || form.dataset.autoSaveSubmitting === 'true') {
-                return;
-            }
-
-            if (typeof form.reportValidity === 'function' && !form.reportValidity()) {
-                return;
-            }
-
-            form.dataset.autoSaveSubmitting = 'true';
-
-            if (submitter && typeof form.requestSubmit === 'function') {
-                form.requestSubmit(submitter);
-                return;
-            }
-
-            if (typeof form.requestSubmit === 'function') {
-                form.requestSubmit();
-                return;
-            }
-
-            form.submit();
-        }
-
-        function bindInlineAutoSave(selector) {
-            document.querySelectorAll(selector).forEach((field) => {
-                field.addEventListener('change', () => {
-                    if (field.disabled) {
-                        return;
-                    }
-
-                    const form = field.closest('form');
-                    if (!form) {
-                        return;
-                    }
-
-                    const saveButton = form.querySelector(
-                        '[data-financial-save="true"], [data-monitoring-save="true"], [data-post-implementation-save="true"]'
-                    );
-
-                    submitFormWithAutoSave(form, saveButton);
-                });
-            });
-        }
-
-        bindInlineAutoSave('[data-physical-edit="true"]');
-        bindInlineAutoSave('[data-financial-edit="true"]');
-        bindInlineAutoSave('[data-monitoring-edit="true"]');
-        bindInlineAutoSave('[data-post-implementation-edit="true"]');
 
         const activityLogSection = document.getElementById('activityLogSection');
         const activityLogBackdrop = document.getElementById('activityLogBackdrop');

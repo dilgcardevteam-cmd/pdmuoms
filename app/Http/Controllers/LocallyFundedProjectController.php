@@ -40,8 +40,11 @@ class LocallyFundedProjectController extends Controller
         ];
 
         // Fund source and funding year options
-        $fundSources = ['SBDP', 'FALGU', 'CMGP', 'GEF', 'SAFPB'];
-        $fundingYears = [2025, 2024, 2023, 2022, 2021];
+        $currentYear = (int) now()->year;
+        $fundSources = ['SBDP', 'FALGU', 'CMGP', 'GEF', 'SGLGIF', 'SAFPB'];
+        $fundingYears = $currentYear >= 2021
+            ? range($currentYear, 2021)
+            : [$currentYear];
 
         // Procurement types (mode of procurement)
         $procurementTypes = ['admin', 'contract'];
@@ -1823,31 +1826,12 @@ class LocallyFundedProjectController extends Controller
         }
         unset($log);
 
-        // Cordillera Administrative Region (CAR) provinces
-        $provinces = [
-            'Abra',
-            'Apayao',
-            'Benguet',
-            'City of Baguio',
-            'Ifugao',
-            'Kalinga',
-            'Mountain Province'
-        ];
-
-        // Province to municipalities/cities mapping
-        $provinceMunicipalities = [
-            'Abra' => ['Bangued', 'Boliney', 'Bucay', 'Daguioman', 'Danglas', 'Dolores', 'La Paz', 'Lacub', 'Lagangilang', 'Lagayan', 'Langiden', 'Licuan-Baay', 'Malibcong', 'Manabo', 'Peñarrubia', 'Pidcal', 'Pilar', 'Sallapadan', 'San Isidro', 'San Juan', 'San Quintin'],
-            'Apayao' => ['Calanasan', 'Conner', 'Flora', 'Kabugao', 'Pudtol', 'Santa Marcela'],
-            'Benguet' => ['Atok', 'Baguio City', 'Bakun', 'Buguias', 'Itogon', 'Kabayan', 'Kapangan', 'Kibungan', 'La Trinidad', 'Mankayan', 'Sablan', 'Tuba', 'Tublay'],
-            'City of Baguio' => ['Baguio City'],
-            'Ifugao' => ['Aguinaldo', 'Alfonso Lista', 'Asipulo', 'Banaue', 'Hingyon', 'Hungduan', 'Kiangan', 'Lagawe', 'Mayoyao', 'Tinoc'],
-            'Kalinga' => ['Balbalan', 'Dagupagsan', 'Lubuagan', 'Mabunguran', 'Pasil', 'Pinukpuk', 'Rizal', 'Tabuk City', 'Tanudan', 'Tinglayan'],
-            'Mountain Province' => ['Amlang', 'Amtan', 'Bauko', 'Besao', 'Cervantes', 'Natonin', 'Paracelis', 'Sabangan', 'Sagada', 'Tadian']
-        ];
-
-        // Fund source and funding year options
-        $fundSources = ['SBDP', 'FALGU', 'CMGP', 'SGLGIF', 'SAFPB'];
-        $fundingYears = [2025, 2024, 2023, 2022, 2021];
+        [
+            'provinces' => $provinces,
+            'provinceMunicipalities' => $provinceMunicipalities,
+            'fundSources' => $fundSources,
+            'fundingYears' => $fundingYears,
+        ] = $this->getProjectFormOptions();
 
         $financialAllocationTotal = (float) $project->lgsf_allocation;
         $financialDisbursedTotal = (float) ($financialTotals['disbursed_amount'] ?? 0);
@@ -1991,34 +1975,14 @@ class LocallyFundedProjectController extends Controller
      */
     public function edit(LocallyFundedProject $project)
     {
-        // Cordillera Administrative Region (CAR) provinces
-        $provinces = [
-            'Abra',
-            'Apayao',
-            'Benguet',
-            'City of Baguio',
-            'Ifugao',
-            'Kalinga',
-            'Mountain Province'
-        ];
-
-        // Province to municipalities/cities mapping
-        $provinceMunicipalities = [
-            'Abra' => ['Bangued', 'Boliney', 'Bucay', 'Daguioman', 'Danglas', 'Dolores', 'La Paz', 'Lacub', 'Lagangilang', 'Lagayan', 'Langiden', 'Licuan-Baay', 'Malibcong', 'Manabo', 'Peñarrubia', 'Pidcal', 'Pilar', 'Sallapadan', 'San Isidro', 'San Juan', 'San Quintin'],
-            'Apayao' => ['Calanasan', 'Conner', 'Flora', 'Kabugao', 'Pudtol', 'Santa Marcela'],
-            'Benguet' => ['Atok', 'Baguio City', 'Bakun', 'Buguias', 'Itogon', 'Kabayan', 'Kapangan', 'Kibungan', 'La Trinidad', 'Mankayan', 'Sablan', 'Tuba', 'Tublay'],
-            'City of Baguio' => ['Baguio City'],
-            'Ifugao' => ['Aguinaldo', 'Alfonso Lista', 'Asipulo', 'Banaue', 'Hingyon', 'Hungduan', 'Kiangan', 'Lagawe', 'Mayoyao', 'Tinoc'],
-            'Kalinga' => ['Balbalan', 'Dagupagsan', 'Lubuagan', 'Mabunguran', 'Pasil', 'Pinukpuk', 'Rizal', 'Tabuk City', 'Tanudan', 'Tinglayan'],
-            'Mountain Province' => ['Amlang', 'Amtan', 'Bauko', 'Besao', 'Cervantes', 'Natonin', 'Paracelis', 'Sabangan', 'Sagada', 'Tadian']
-        ];
-
         // Get current user's office
         $currentUserOffice = Auth::user()->office;
-
-        // Fund source and funding year options
-        $fundSources = ['SBDP', 'FALGU', 'CMGP', 'SGLGIF', 'SAFPB'];
-        $fundingYears = [2025, 2024, 2023, 2022, 2021];
+        [
+            'provinces' => $provinces,
+            'provinceMunicipalities' => $provinceMunicipalities,
+            'fundSources' => $fundSources,
+            'fundingYears' => $fundingYears,
+        ] = $this->getProjectFormOptions();
 
         $prefill = $project->toArray();
         $prefill['barangay_json'] = json_encode(array_values(array_filter(array_map('trim', explode(',', $project->barangay)))));

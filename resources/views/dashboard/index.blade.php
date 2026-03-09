@@ -646,6 +646,9 @@
             @endif
         </div>
 
+        <div class="dashboard-card expected-completion-placeholder-card" style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); min-height: 220px;">
+        </div>
+
         <div class="dashboard-card status-subaybayan-card" style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
             <h2 style="color: #002C76; font-size: 16px; margin: 0 0 16px; display: flex; align-items: center; gap: 8px;">
                 <span style="width: 22px; height: 22px; border-radius: 999px; background-color: #e0f2fe; color: #0ea5e9; display: inline-flex; align-items: center; justify-content: center; font-size: 11px;">
@@ -2142,6 +2145,10 @@
 
         .dashboard-top-cards .expected-completion-card {
             order: 5;
+        }
+
+        .dashboard-top-cards .expected-completion-placeholder-card {
+            order: 6;
         }
 
         .dashboard-top-cards .status-subaybayan-card {
