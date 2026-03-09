@@ -11,15 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        if (!Schema::hasTable('tbusers')) {
+        if (!Schema::hasTable('tbusers') || Schema::hasColumn('tbusers', 'email_verified_at')) {
             return;
         }
 
-        if (!Schema::hasColumn('tbusers', 'email_verified_at')) {
-            Schema::table('tbusers', function (Blueprint $table) {
-                $table->timestamp('email_verified_at')->nullable();
-            });
-        }
+        Schema::table('tbusers', function (Blueprint $table) {
+            $table->timestamp('email_verified_at')->nullable();
+        });
     }
 
     /**

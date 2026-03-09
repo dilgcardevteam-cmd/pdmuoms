@@ -20,6 +20,8 @@ return new class extends Migration
             $table->string('city_municipality');
             $table->string('barangay');
             $table->string('project_name');
+            $table->year('funding_year');
+            $table->string('fund_source');
             $table->string('subaybayan_project_code')->unique();
             $table->longText('project_description');
             $table->string('project_type');

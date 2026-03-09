@@ -11,9 +11,18 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (!Schema::hasTable('locally_funded_projects')) {
+            return;
+        }
+
         Schema::table('locally_funded_projects', function (Blueprint $table) {
-            $table->year('funding_year')->after('project_name');
-            $table->string('fund_source')->after('funding_year');
+            if (!Schema::hasColumn('locally_funded_projects', 'funding_year')) {
+                $table->year('funding_year')->after('project_name');
+            }
+
+            if (!Schema::hasColumn('locally_funded_projects', 'fund_source')) {
+                $table->string('fund_source')->after('funding_year');
+            }
         });
     }
 
@@ -22,8 +31,24 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (!Schema::hasTable('locally_funded_projects')) {
+            return;
+        }
+
         Schema::table('locally_funded_projects', function (Blueprint $table) {
-            $table->dropColumn(['funding_year', 'fund_source']);
+            $columns = [];
+
+            if (Schema::hasColumn('locally_funded_projects', 'funding_year')) {
+                $columns[] = 'funding_year';
+            }
+
+            if (Schema::hasColumn('locally_funded_projects', 'fund_source')) {
+                $columns[] = 'fund_source';
+            }
+
+            if ($columns !== []) {
+                $table->dropColumn($columns);
+            }
         });
     }
 };
