@@ -286,28 +286,37 @@
                     <strong>Project Description:</strong>
                     <div style="margin-top: 6px; color: #374151;">{!! nl2br(e($project->project_description)) !!}</div>
                 </div>
-                <div><strong>Province:</strong> {{ $project->province }}</div>
-                <div><strong>City/Municipality:</strong> {{ $project->city_municipality }}</div>
-                @php
-                    $barangays = array_filter(array_map('trim', explode(',', (string) $project->barangay)));
-                @endphp
-                <div>
-                    <strong>Barangay:</strong>
-                    @if(count($barangays))
-                        <ul style="margin: 4px 0 0 16px; padding: 0;">
-                            @foreach($barangays as $barangay)
-                                <li style="margin: 0; list-style: disc;">{{ $barangay }}</li>
-                            @endforeach
-                        </ul>
-                    @endif
+
+                <div class="grid lg:grid-cols-2 gap-2 bg-red-400 w-full">
+                    <!-- SITE / LOCATION -->
+                    <div class="flex flex-col">
+                        <span class="text-red-400"><strong>Province:</strong> {{ $project->province }}</span>
+                        <span class="text-red-400"><strong>City/Municipality:</strong> {{ $project->city_municipality }}</span>
+                        @php
+                            $barangays = array_filter(array_map('trim', explode(',', (string) $project->barangay)));
+                        @endphp
+                        <span class="text-red-400">
+                            <strong>Barangay:</strong>
+                            @if(count($barangays))
+                                <ul style="margin: 4px 0 0 16px; padding: 0;">
+                                    @foreach($barangays as $barangay)
+                                        <li style="margin: 0; list-style: disc;">{{ $barangay }}</li>
+                                    @endforeach
+                                </ul>
+                            @endif
+                        </span>
+                    </div>
+                    <!-- OTHER INFO -->
+                    <div class="flex flex-col">
+                        <span><strong>Project Type:</strong> {{ $project->project_type }}</span>
+                        <span><strong>Date of NADAI:</strong> {{ $project->date_nadai ? $project->date_nadai->format('F j, Y') : '' }}</span>
+                        <span><strong>No. of Beneficiaries:</strong> {{ number_format($project->no_of_beneficiaries) }}</span>
+                        <span><strong>Rainwater Collection System:</strong> {{ $project->rainwater_collection_system }}</span>
+                        <span><strong>Date of Confirmation Fund Receipt:</strong> {{ $project->date_confirmation_fund_receipt ? $project->date_confirmation_fund_receipt->format('F j, Y') : '' }}</span>
+                        <span><strong>LGSF Allocation:</strong> ₱ {{ number_format($project->lgsf_allocation, 2) }}</span>
+                        <span><strong>LGU Counterpart:</strong> ₱ {{ number_format($project->lgu_counterpart, 2) }}</span>
+                    </div>
                 </div>
-                <div><strong>Project Type:</strong> {{ $project->project_type }}</div>
-                <div><strong>Date of NADAI:</strong> {{ $project->date_nadai ? $project->date_nadai->format('F j, Y') : '' }}</div>
-                <div><strong>No. of Beneficiaries:</strong> {{ number_format($project->no_of_beneficiaries) }}</div>
-                <div><strong>Rainwater Collection System:</strong> {{ $project->rainwater_collection_system }}</div>
-                <div><strong>Date of Confirmation Fund Receipt:</strong> {{ $project->date_confirmation_fund_receipt ? $project->date_confirmation_fund_receipt->format('F j, Y') : '' }}</div>
-                <div><strong>LGSF Allocation:</strong> ₱ {{ number_format($project->lgsf_allocation, 2) }}</div>
-                <div><strong>LGU Counterpart:</strong> ₱ {{ number_format($project->lgu_counterpart, 2) }}</div>
             </div>
             <div id="editProfileFormBackdrop" class="lfp-inline-modal-backdrop{{ old('section') === 'profile' ? ' is-visible' : '' }}" aria-hidden="{{ old('section') === 'profile' ? 'false' : 'true' }}"></div>
             <div id="editProfileFormWrapper" class="lfp-inline-modal{{ old('section') === 'profile' ? ' is-visible' : '' }}" data-inline-modal="true" role="dialog" aria-modal="true" aria-labelledby="editProfileModalTitle" aria-hidden="{{ old('section') === 'profile' ? 'false' : 'true' }}" style="display: {{ old('section') === 'profile' ? 'block' : 'none' }};">
@@ -1787,7 +1796,7 @@
         #monitoringInspectionSection,
         #postImplementationSection,
         #activityLogSection {
-            font-size: 0.8em;
+            font-size: 0.9em;
         }
 
         #activityLogBackdrop {
@@ -3701,11 +3710,8 @@ const locationData = {
                 return;
             }
 
-            if (window.confirm(message)) {
-                if (typeof onConfirm === 'function') {
-                    onConfirm();
-                }
-                return;
+            if (typeof window.showSystemErrorModal === 'function') {
+                window.showSystemErrorModal('Confirmation dialog is unavailable right now.');
             }
 
             if (typeof onCancel === 'function') {

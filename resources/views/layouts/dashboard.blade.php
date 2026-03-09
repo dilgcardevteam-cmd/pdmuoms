@@ -9,6 +9,11 @@
     
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Vite (Tailwind + app JS) -->
+    @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
+        @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @endif
     
     <style>
         * {
@@ -890,90 +895,6 @@
             }
         }
 
-        .system-dialog-modal {
-            position: fixed;
-            inset: 0;
-            z-index: 3000;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-
-        .system-dialog-modal.is-open {
-            display: flex;
-        }
-
-        .system-dialog-backdrop {
-            position: absolute;
-            inset: 0;
-            background: rgba(15, 23, 42, 0.55);
-        }
-
-        .system-dialog-card {
-            position: relative;
-            z-index: 1;
-            width: min(460px, 100%);
-            background: #ffffff;
-            border-radius: 12px;
-            box-shadow: 0 24px 60px rgba(15, 23, 42, 0.25);
-            border: 1px solid #e5e7eb;
-            overflow: hidden;
-        }
-
-        .system-dialog-header {
-            padding: 16px 18px 10px;
-            border-bottom: 1px solid #f1f5f9;
-        }
-
-        .system-dialog-title {
-            margin: 0;
-            font-size: 18px;
-            font-weight: 700;
-            color: #0f172a;
-        }
-
-        .system-dialog-body {
-            padding: 14px 18px;
-            font-size: 14px;
-            line-height: 1.6;
-            color: #334155;
-        }
-
-        .system-dialog-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-            padding: 12px 18px 18px;
-        }
-
-        .system-dialog-btn {
-            border: none;
-            border-radius: 8px;
-            padding: 9px 16px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-        }
-
-        .system-dialog-btn.cancel {
-            background: #e5e7eb;
-            color: #1f2937;
-        }
-
-        .system-dialog-btn.confirm {
-            background: #002c76;
-            color: #ffffff;
-        }
-
-        .system-dialog-btn.error-ok {
-            background: #dc2626;
-            color: #ffffff;
-        }
-
-        body.system-dialog-open {
-            overflow: hidden;
-        }
     </style>
     
     @yield('styles')
