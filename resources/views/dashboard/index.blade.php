@@ -646,7 +646,86 @@
             @endif
         </div>
 
-        <div class="dashboard-card expected-completion-placeholder-card" style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); min-height: 220px;">
+        @php
+            $missingDocumentsPreviewProjects = collect($missingDocumentsProjects ?? []);
+            $missingDocumentsPreviewLimit = 6;
+            $missingDocumentsPreviewRows = $missingDocumentsPreviewProjects->take($missingDocumentsPreviewLimit);
+            $missingDocumentsModalId = 'missing-documents-modal';
+        @endphp
+        <div class="dashboard-card expected-completion-placeholder-card" style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); min-height: 220px; display: flex; flex-direction: column;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 12px;">
+                <div>
+                    <h2 style="color: #002C76; font-size: 16px; margin: 0; display: flex; align-items: center; gap: 8px;">
+                        <span style="width: 22px; height: 22px; border-radius: 999px; background-color: #fee2e2; color: #dc2626; display: inline-flex; align-items: center; justify-content: center; font-size: 11px;">
+                            <i class="fas fa-file-circle-xmark"></i>
+                        </span>
+                        PROJECTS WITH MISSING DOCUMENTS
+                    </h2>
+                    <p style="margin: 6px 0 0; font-size: 12px; color: #6b7280; line-height: 1.4;">
+                        Based on the current SubayBAYAN snapshot, applied dashboard filters, and the required data matrix you provided.
+                    </p>
+                </div>
+                <div class="missing-documents-count-pill">{{ number_format($missingDocumentsPreviewProjects->count()) }}</div>
+            </div>
+
+            @if ($missingDocumentsPreviewProjects->isEmpty())
+                <div class="missing-documents-empty-state">
+                    No missing-document lapses found for the current dashboard filters.
+                </div>
+            @else
+                <div class="missing-documents-list">
+                    @foreach ($missingDocumentsPreviewRows as $projectRow)
+                        @php
+                            $projectCode = trim((string) ($projectRow->project_code ?? ''));
+                            $projectTitle = trim((string) ($projectRow->project_title ?? ''));
+                            $province = trim((string) ($projectRow->province ?? ''));
+                            $cityMunicipality = trim((string) ($projectRow->city_municipality ?? ''));
+                            $locationLabel = implode(' | ', array_values(array_filter([$province, $cityMunicipality], function ($value) {
+                                return $value !== '';
+                            })));
+                            $missingItems = collect($projectRow->missing_requirements ?? []);
+                        @endphp
+                        <div
+                            class="missing-documents-item clickable-dashboard-card"
+                            @if ($projectCode !== '')
+                                data-card-url="{{ route('projects.locally-funded', ['project_code' => $projectCode]) }}"
+                            @endif
+                        >
+                            <div class="missing-documents-item-header">
+                                <div class="missing-documents-item-code">{{ $projectCode !== '' ? $projectCode : 'NO PROJECT CODE' }}</div>
+                                <div class="missing-documents-item-status">{{ $projectRow->status ?? '-' }}</div>
+                            </div>
+                            <div class="missing-documents-item-title">{{ $projectTitle !== '' ? $projectTitle : 'Untitled project' }}</div>
+                            <div class="missing-documents-item-meta">
+                                <span>{{ $projectRow->procurement_type ?: '-' }}</span>
+                                @if (trim((string) ($projectRow->procurement ?? '')) !== '')
+                                    <span>&bull;</span>
+                                    <span>{{ $projectRow->procurement }}</span>
+                                @endif
+                                @if ($locationLabel !== '')
+                                    <span>&bull;</span>
+                                    <span>{{ $locationLabel }}</span>
+                                @endif
+                            </div>
+                            <div class="missing-documents-tags">
+                                @foreach ($missingItems as $missingLabel)
+                                    <span class="missing-documents-tag">{{ $missingLabel }}</span>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+
+                <div class="missing-documents-actions">
+                    <button
+                        type="button"
+                        class="missing-documents-view-all-btn"
+                        onclick="openDashboardModal(document.getElementById('{{ $missingDocumentsModalId }}'))"
+                    >
+                        View all missing-document lapses
+                    </button>
+                </div>
+            @endif
         </div>
 
         <div class="dashboard-card status-subaybayan-card" style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
@@ -1404,6 +1483,10 @@
         $statusSubaybayanProjectsModalMap = $statusSubaybayanProjectsMap ?? [];
         $fundSourceProjectsModalMap = $fundSourceProjectsMap ?? [];
         $balanceProjectsModal = collect($projectsWithBalance ?? []);
+        $missingDocumentsProjectsModal = collect($missingDocumentsProjects ?? []);
+        $missingDocumentsModalId = 'missing-documents-modal';
+        $missingDocumentsModalTitleId = $missingDocumentsModalId . '-title';
+        $missingDocumentsModalSubtitle = 'Projects with missing required SubayBAYAN data based on procurement type, procurement mode, and project status. Proof of accomplishment and photos are evaluated using the available evidence-related SubayBAYAN fields in the current snapshot.';
         $balanceProjectsModalSubtitle = 'Projects with remaining balance from SubayBAYAN. Balance formula: Original Allocation - (Disbursement + Reverted Allocation). LGU Counterpart is shown as a separate column.';
         $projectAtRiskAgingModalSubtitles = [
             'High Risk' => 'Aging is greater than or equal to 60 days based on the latest Project at Risk extraction data.',
@@ -1641,6 +1724,69 @@
                     onclick="exportDashboardModalTableToExcel(this)"
                     data-export-filename="projects-with-balance.xls"
                     @disabled($balanceProjectsModal->isEmpty())
+                >
+                    Export Excel
+                </button>
+            </div>
+        </div>
+    </div>
+    <div id="{{ $missingDocumentsModalId }}" class="dashboard-modal" aria-hidden="true">
+        <div class="dashboard-modal-backdrop" data-close-modal></div>
+        <div class="dashboard-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="{{ $missingDocumentsModalTitleId }}">
+            <div class="dashboard-modal-header">
+                <h3 id="{{ $missingDocumentsModalTitleId }}">Projects With Missing Documents</h3>
+                <button type="button" class="dashboard-modal-close" data-close-modal aria-label="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <p class="dashboard-modal-subtitle">
+                {{ $missingDocumentsModalSubtitle }}
+            </p>
+            <div class="dashboard-modal-body">
+                @if ($missingDocumentsProjectsModal->isNotEmpty())
+                    <div class="dashboard-modal-table-wrap">
+                        <table class="dashboard-modal-table">
+                            <thead>
+                                <tr>
+                                    <th>Project Code</th>
+                                    <th>Project Title</th>
+                                    <th>Province</th>
+                                    <th>City/Municipality</th>
+                                    <th>Procurement Type</th>
+                                    <th>Procurement</th>
+                                    <th>Status</th>
+                                    <th>Missing Data</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($missingDocumentsProjectsModal as $projectRow)
+                                    <tr>
+                                        <td>{{ $projectRow->project_code ?? '-' }}</td>
+                                        <td>{{ $projectRow->project_title ?: '-' }}</td>
+                                        <td>{{ $projectRow->province ?: '-' }}</td>
+                                        <td>{{ $projectRow->city_municipality ?: '-' }}</td>
+                                        <td>{{ $projectRow->procurement_type ?: '-' }}</td>
+                                        <td>{{ $projectRow->procurement ?: '-' }}</td>
+                                        <td>{{ $projectRow->status ?: '-' }}</td>
+                                        <td>{{ $projectRow->missing_requirements_text ?: '-' }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @else
+                    <div class="dashboard-modal-empty-state">
+                        No missing-document lapses found for the current dashboard filters.
+                    </div>
+                @endif
+            </div>
+            <div class="dashboard-modal-footer">
+                <button
+                    type="button"
+                    class="dashboard-modal-export-btn"
+                    onclick="exportDashboardModalTableToExcel(this)"
+                    data-export-filename="projects-with-missing-documents.xls"
+                    @disabled($missingDocumentsProjectsModal->isEmpty())
                 >
                     Export Excel
                 </button>
@@ -2818,6 +2964,150 @@
             gap: 6px;
             font-size: 11px;
             color: #64748b;
+        }
+
+        .missing-documents-count-pill {
+            min-width: 54px;
+            min-height: 34px;
+            padding: 0 12px;
+            border-radius: 999px;
+            background: #fef2f2;
+            color: #b91c1c;
+            border: 1px solid #fecaca;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .missing-documents-empty-state {
+            padding: 14px;
+            border: 1px dashed #fca5a5;
+            border-radius: 8px;
+            background: #fff5f5;
+            color: #991b1b;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .missing-documents-list {
+            display: grid;
+            gap: 10px;
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        .missing-documents-item {
+            padding: 12px 14px;
+            border: 1px solid #fecaca;
+            border-radius: 10px;
+            background: linear-gradient(180deg, #fff7f7 0%, #ffffff 100%);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+        }
+
+        .missing-documents-item.clickable-dashboard-card:hover {
+            transform: translateY(-4px);
+            border-color: #f87171;
+            box-shadow: 0 10px 20px rgba(220, 38, 38, 0.12);
+            background: #ffffff;
+        }
+
+        .missing-documents-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .missing-documents-item-code {
+            font-size: 12px;
+            font-weight: 700;
+            color: #991b1b;
+            line-height: 1.25;
+        }
+
+        .missing-documents-item-status {
+            font-size: 11px;
+            font-weight: 700;
+            color: #7f1d1d;
+            background: #fee2e2;
+            border: 1px solid #fecaca;
+            border-radius: 999px;
+            padding: 3px 8px;
+            white-space: nowrap;
+        }
+
+        .missing-documents-item-title {
+            margin-top: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #111827;
+            line-height: 1.35;
+        }
+
+        .missing-documents-item-meta {
+            margin-top: 5px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            color: #6b7280;
+            line-height: 1.35;
+        }
+
+        .missing-documents-tags {
+            margin-top: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .missing-documents-tag {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 8px;
+            border-radius: 999px;
+            background: #fef2f2;
+            color: #b91c1c;
+            border: 1px solid #fecaca;
+            font-size: 10px;
+            font-weight: 700;
+            line-height: 1.2;
+            text-transform: uppercase;
+        }
+
+        .missing-documents-tag-more {
+            background: #eff6ff;
+            border-color: #bfdbfe;
+            color: #1d4ed8;
+        }
+
+        .missing-documents-actions {
+            margin-top: 12px;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .missing-documents-view-all-btn {
+            border: 1px solid #fca5a5;
+            border-radius: 8px;
+            background: #fff1f2;
+            color: #b91c1c;
+            font-size: 12px;
+            font-weight: 700;
+            padding: 8px 12px;
+            cursor: pointer;
+            transition: background-color 0.2s ease, border-color 0.2s ease;
+        }
+
+        .missing-documents-view-all-btn:hover {
+            background: #ffe4e6;
+            border-color: #f87171;
         }
 
         .financial-status-card .financial-metrics-layout {

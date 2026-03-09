@@ -367,7 +367,7 @@ Route::middleware(['auth'])->group(function () {
             };
 
             $totalProjects = 0;
-            $fundSourceOptions = ['SBDP', 'FALGU', 'CMGP', 'GEF', 'SAFPB'];
+            $fundSourceOptions = ['SBDP', 'FALGU', 'CMGP', 'GEF', 'SAFPB', 'SGLGIF'];
             $fundSourceCountsMap = [];
             $fundSourceProjectsMap = [];
             $totalObligationAmount = 0.0;
@@ -383,6 +383,7 @@ Route::middleware(['auth'])->group(function () {
             $currentMonthStart = now()->copy()->startOfMonth()->toDateString();
             $currentMonthEnd = now()->copy()->endOfMonth()->toDateString();
             $projectsExpectedCompletionThisMonth = collect();
+            $missingDocumentsProjects = collect();
             $projectAtRiskOrder = ['Ahead', 'No Risk', 'On Schedule', 'High Risk', 'Moderate Risk', 'Low Risk'];
             $projectAtRiskAgingOrder = ['High Risk', 'Low Risk', 'No Risk'];
             $projectUpdateStatusOrder = ['High Risk', 'Low Risk', 'No Risk'];
@@ -438,6 +439,467 @@ Route::middleware(['auth'])->group(function () {
                     return $statusLabels[$normalized];
                 }
                 return null;
+            };
+
+            $hasSubayValue = function ($value): bool {
+                if ($value === null) {
+                    return false;
+                }
+
+                return trim((string) $value) !== '';
+            };
+
+            $hasAnySubayValue = function (...$values) use ($hasSubayValue): bool {
+                foreach ($values as $value) {
+                    if ($hasSubayValue($value)) {
+                        return true;
+                    }
+                }
+
+                return false;
+            };
+
+            $normalizeMissingDocumentsProcurementType = function ($value): ?string {
+                $normalized = strtoupper(trim((string) $value));
+                if ($normalized === '') {
+                    return null;
+                }
+
+                $normalized = preg_replace('/\s+/', ' ', $normalized) ?? $normalized;
+                $aliases = [
+                    'INFRA' => 'INFRASTRUCTURE',
+                    'INFRASTRUCTURE' => 'INFRASTRUCTURE',
+                    'NON INFRASTRUCTURE' => 'NON-INFRASTRUCTURE',
+                    'NON-INFRASTRUCTURE' => 'NON-INFRASTRUCTURE',
+                    'NONINFRASTRUCTURE' => 'NON-INFRASTRUCTURE',
+                    'GOODS' => 'GOODS',
+                ];
+
+                return $aliases[$normalized] ?? $aliases[str_replace('-', ' ', $normalized)] ?? null;
+            };
+
+            $normalizeMissingDocumentsProcurement = function ($value): ?string {
+                $normalized = strtoupper(trim((string) $value));
+                if ($normalized === '') {
+                    return null;
+                }
+
+                $normalized = preg_replace('/\s+/', ' ', $normalized) ?? $normalized;
+                $aliases = [
+                    'WITH PROCUREMENT' => 'WITH PROCUREMENT',
+                    'WITHOUT PROCUREMENT' => 'WITHOUT PROCUREMENT',
+                ];
+
+                return $aliases[$normalized] ?? null;
+            };
+
+            $normalizeMissingDocumentsStatus = function ($value): ?string {
+                $normalized = strtoupper(trim((string) $value));
+                if ($normalized === '') {
+                    return null;
+                }
+
+                $normalized = preg_replace('/\s+/', ' ', $normalized) ?? $normalized;
+                $aliases = [
+                    'COMPLETED' => 'COMPLETED',
+                    'ON-GOING' => 'ON-GOING',
+                    'ONGOING' => 'ON-GOING',
+                    'NTP/PO ISSUANCE' => 'NTP/PO ISSUANCE',
+                    'NTP PO ISSUANCE' => 'NTP/PO ISSUANCE',
+                    'NOA ISSUANCE' => 'NOA ISSUANCE',
+                    'BID EVALUATION/OPENING' => 'BID EVALUATION/OPENING',
+                    'ITB/AD POSTED' => 'ITB/AD POSTED',
+                    'DED PREPARATION' => 'DED PREPARATION',
+                    'NOT YET STARTED' => 'NOT YET STARTED',
+                    'NOT STARTED' => 'NOT YET STARTED',
+                ];
+
+                return $aliases[$normalized] ?? null;
+            };
+
+            $requiredDataForProcuredProjects = [
+                'COMPLETED' => [
+                    'EXACT LOCATION',
+                    'BENEFECIARIES',
+                    'IMPLEMENTING UNIT',
+                    'MODE OF IMPLEMENTATION',
+                    'DATE OF NADAI',
+                    'DATE OF IB POSTED',
+                    'DATE OF BID OPEN/BID EVAL',
+                    'DATE OF NOA',
+                    'DATE OF NTP',
+                    'OBLIGATION AMOUNT',
+                    'DISBURSEMENT AMOUNT',
+                    'TOTAL ACCOMPLISHMENT',
+                    'PROOF OF ACCOMPLISHMENT',
+                    'PHOTOS',
+                    'ADMINISTRATIVE/CONTRACT DETAILS',
+                    'DATE OF DED PREPARATION',
+                ],
+                'ON-GOING' => [
+                    'EXACT LOCATION',
+                    'BENEFECIARIES',
+                    'IMPLEMENTING UNIT',
+                    'MODE OF IMPLEMENTATION',
+                    'DATE OF NADAI',
+                    'DATE OF IB POSTED',
+                    'DATE OF BID OPEN/BID EVAL',
+                    'DATE OF NOA',
+                    'DATE OF NTP',
+                    'OBLIGATION AMOUNT',
+                    'PHOTOS',
+                    'ADMINISTRATIVE/CONTRACT DETAILS',
+                    'DATE OF DED PREPARATION',
+                ],
+                'NTP/PO ISSUANCE' => [
+                    'EXACT LOCATION',
+                    'BENEFECIARIES',
+                    'IMPLEMENTING UNIT',
+                    'MODE OF IMPLEMENTATION',
+                    'DATE OF NADAI',
+                    'DATE OF IB POSTED',
+                    'DATE OF BID OPEN/BID EVAL',
+                    'DATE OF NOA',
+                    'DATE OF NTP',
+                    'PHOTOS',
+                    'DATE OF DED PREPARATION',
+                ],
+                'NOA ISSUANCE' => [
+                    'EXACT LOCATION',
+                    'BENEFECIARIES',
+                    'IMPLEMENTING UNIT',
+                    'MODE OF IMPLEMENTATION',
+                    'DATE OF NADAI',
+                    'DATE OF IB POSTED',
+                    'DATE OF BID OPEN/BID EVAL',
+                    'DATE OF NOA',
+                    'PHOTOS',
+                    'DATE OF DED PREPARATION',
+                ],
+                'BID EVALUATION/OPENING' => [
+                    'EXACT LOCATION',
+                    'BENEFECIARIES',
+                    'IMPLEMENTING UNIT',
+                    'MODE OF IMPLEMENTATION',
+                    'DATE OF NADAI',
+                    'DATE OF IB POSTED',
+                    'DATE OF BID OPEN/BID EVAL',
+                    'PHOTOS',
+                    'DATE OF DED PREPARATION',
+                ],
+                'ITB/AD POSTED' => [
+                    'EXACT LOCATION',
+                    'BENEFECIARIES',
+                    'IMPLEMENTING UNIT',
+                    'MODE OF IMPLEMENTATION',
+                    'DATE OF NADAI',
+                    'DATE OF IB POSTED',
+                    'PHOTOS',
+                    'DATE OF DED PREPARATION',
+                ],
+                'DED PREPARATION' => [
+                    'EXACT LOCATION',
+                    'BENEFECIARIES',
+                    'IMPLEMENTING UNIT',
+                    'MODE OF IMPLEMENTATION',
+                    'DATE OF NADAI',
+                    'PHOTOS',
+                    'DATE OF DED PREPARATION',
+                ],
+                'NOT YET STARTED' => [
+                    'EXACT LOCATION',
+                    'BENEFECIARIES',
+                    'IMPLEMENTING UNIT',
+                    'MODE OF IMPLEMENTATION',
+                    'DATE OF NADAI',
+                    'PHOTOS',
+                ],
+            ];
+
+            $requiredDataForNonInfrastructureWithoutProcurement = [
+                'COMPLETED' => [
+                    'EXACT LOCATION',
+                    'BENEFECIARIES',
+                    'IMPLEMENTING UNIT',
+                    'MODE OF IMPLEMENTATION',
+                    'OBLIGATION AMOUNT',
+                    'DISBURSEMENT AMOUNT',
+                    'PHOTOS',
+                    'ADMINISTRATIVE/CONTRACT DETAILS',
+                ],
+                'ON-GOING' => [
+                    'EXACT LOCATION',
+                    'BENEFECIARIES',
+                    'IMPLEMENTING UNIT',
+                    'MODE OF IMPLEMENTATION',
+                    'OBLIGATION AMOUNT',
+                    'PHOTOS',
+                    'ADMINISTRATIVE/CONTRACT DETAILS',
+                ],
+                'NTP/PO ISSUANCE' => [
+                    'EXACT LOCATION',
+                    'BENEFECIARIES',
+                    'IMPLEMENTING UNIT',
+                    'MODE OF IMPLEMENTATION',
+                    'PHOTOS',
+                ],
+                'NOA ISSUANCE' => [
+                    'EXACT LOCATION',
+                    'BENEFECIARIES',
+                    'IMPLEMENTING UNIT',
+                    'MODE OF IMPLEMENTATION',
+                    'PHOTOS',
+                ],
+                'BID EVALUATION/OPENING' => [
+                    'EXACT LOCATION',
+                    'BENEFECIARIES',
+                    'IMPLEMENTING UNIT',
+                    'MODE OF IMPLEMENTATION',
+                    'PHOTOS',
+                ],
+                'ITB/AD POSTED' => [
+                    'EXACT LOCATION',
+                    'BENEFECIARIES',
+                    'IMPLEMENTING UNIT',
+                    'MODE OF IMPLEMENTATION',
+                    'PHOTOS',
+                ],
+                'DED PREPARATION' => [
+                    'EXACT LOCATION',
+                    'BENEFECIARIES',
+                    'IMPLEMENTING UNIT',
+                    'MODE OF IMPLEMENTATION',
+                    'PHOTOS',
+                ],
+                'NOT YET STARTED' => [
+                    'EXACT LOCATION',
+                    'BENEFECIARIES',
+                    'IMPLEMENTING UNIT',
+                    'MODE OF IMPLEMENTATION',
+                    'PHOTOS',
+                ],
+            ];
+
+            $missingDocumentsRules = [
+                'INFRASTRUCTURE' => ['*' => $requiredDataForProcuredProjects],
+                'GOODS' => ['*' => $requiredDataForProcuredProjects],
+                'NON-INFRASTRUCTURE' => [
+                    'WITH PROCUREMENT' => $requiredDataForProcuredProjects,
+                    'WITHOUT PROCUREMENT' => $requiredDataForNonInfrastructureWithoutProcurement,
+                ],
+            ];
+
+            $missingDocumentPresenceChecks = [
+                'EXACT LOCATION' => function ($row) use ($hasAnySubayValue): bool {
+                    return $hasAnySubayValue($row->exact_location ?? null);
+                },
+                'BENEFECIARIES' => function ($row) use ($hasAnySubayValue): bool {
+                    return $hasAnySubayValue($row->beneficiaries ?? null);
+                },
+                'IMPLEMENTING UNIT' => function ($row) use ($hasAnySubayValue): bool {
+                    return $hasAnySubayValue($row->implementing_unit ?? null, $row->unit_implementing_the_project ?? null);
+                },
+                'MODE OF IMPLEMENTATION' => function ($row) use ($hasAnySubayValue): bool {
+                    return $hasAnySubayValue($row->moi ?? null);
+                },
+                'DATE OF NADAI' => function ($row) use ($hasAnySubayValue): bool {
+                    return $hasAnySubayValue($row->date_of_nadai ?? null);
+                },
+                'DATE OF IB POSTED' => function ($row) use ($hasAnySubayValue): bool {
+                    return $hasAnySubayValue($row->invitation_to_bid_ib_posted ?? null);
+                },
+                'DATE OF BID OPEN/BID EVAL' => function ($row) use ($hasAnySubayValue): bool {
+                    return $hasAnySubayValue($row->bid_opening_bid_evaluation ?? null, $row->bid_opening_evaluation ?? null);
+                },
+                'DATE OF NOA' => function ($row) use ($hasAnySubayValue): bool {
+                    return $hasAnySubayValue($row->noa_issuance ?? null);
+                },
+                'DATE OF NTP' => function ($row) use ($hasAnySubayValue): bool {
+                    return $hasAnySubayValue($row->date_of_receipt_of_ntp ?? null, $row->date_of_receipt_of_notice_to_proceed ?? null);
+                },
+                'OBLIGATION AMOUNT' => function ($row) use ($hasAnySubayValue): bool {
+                    return $hasAnySubayValue($row->obligation ?? null);
+                },
+                'DISBURSEMENT AMOUNT' => function ($row) use ($hasAnySubayValue): bool {
+                    return $hasAnySubayValue($row->disbursement ?? null);
+                },
+                'TOTAL ACCOMPLISHMENT' => function ($row) use ($hasAnySubayValue): bool {
+                    return $hasAnySubayValue($row->total_accomplishment ?? null);
+                },
+                'PROOF OF ACCOMPLISHMENT' => function ($row) use ($hasAnySubayValue): bool {
+                    return $hasAnySubayValue(
+                        $row->project_billboard ?? null,
+                        $row->installation_of_community_billboard ?? null,
+                        $row->installation_of_community_billboard_2 ?? null
+                    );
+                },
+                'PHOTOS' => function ($row) use ($hasAnySubayValue): bool {
+                    return $hasAnySubayValue(
+                        $row->project_billboard ?? null,
+                        $row->installation_of_community_billboard ?? null,
+                        $row->installation_of_community_billboard_2 ?? null
+                    );
+                },
+                'ADMINISTRATIVE/CONTRACT DETAILS' => function ($row) use ($hasAnySubayValue): bool {
+                    return $hasAnySubayValue(
+                        $row->name_of_contractor ?? null,
+                        $row->contract_price ?? null,
+                        $row->contract_duration ?? null,
+                        $row->date_of_perfection_of_contract ?? null,
+                        $row->date_of_expiration_of_contract ?? null
+                    );
+                },
+                'DATE OF DED PREPARATION' => function ($row) use ($hasAnySubayValue): bool {
+                    return $hasAnySubayValue(
+                        $row->ded_pow_preparation ?? null,
+                        $row->ded_pow_prep_notarized_lce_cert ?? null,
+                        $row->fs_technical_specification_and_ded_pow_preparation ?? null,
+                        $row->fs_technical_specification_preparation ?? null,
+                        $row->fs_technical_specification_and_ded_pow_review_approval ?? null,
+                        $row->ded_pow_review_and_approval ?? null,
+                        $row->ded_pow_review_and_approval_2 ?? null
+                    );
+                },
+            ];
+
+            $resolveMissingDocumentsRequirements = function (?string $procurementType, ?string $procurement, ?string $status) use ($missingDocumentsRules): array {
+                if ($procurementType === null || $status === null) {
+                    return [];
+                }
+
+                $rulesByProcurementType = $missingDocumentsRules[$procurementType] ?? null;
+                if (!is_array($rulesByProcurementType)) {
+                    return [];
+                }
+
+                if ($procurementType === 'NON-INFRASTRUCTURE') {
+                    if ($procurement === null) {
+                        return [];
+                    }
+
+                    return $rulesByProcurementType[$procurement][$status] ?? [];
+                }
+
+                return $rulesByProcurementType['*'][$status] ?? [];
+            };
+
+            $buildMissingDocumentsProjectsFromSubay = function ($subayQuery) use (
+                $normalizeMissingDocumentsProcurementType,
+                $normalizeMissingDocumentsProcurement,
+                $normalizeMissingDocumentsStatus,
+                $resolveMissingDocumentsRequirements,
+                $missingDocumentPresenceChecks,
+                $labelForStatus,
+                $normalizeStatus
+            ) {
+                $missingDocumentRows = (clone $subayQuery)
+                    ->selectRaw('UPPER(TRIM(spp.project_code)) as project_code')
+                    ->selectRaw('MAX(NULLIF(TRIM(COALESCE(spp.project_title, "")), "")) as project_title')
+                    ->selectRaw('MAX(NULLIF(TRIM(COALESCE(spp.province, "")), "")) as province')
+                    ->selectRaw('MAX(NULLIF(TRIM(COALESCE(spp.city_municipality, "")), "")) as city_municipality')
+                    ->selectRaw('MAX(NULLIF(TRIM(COALESCE(spp.funding_year, "")), "")) as funding_year')
+                    ->selectRaw('MAX(NULLIF(TRIM(COALESCE(spp.procurement_type, "")), "")) as procurement_type')
+                    ->selectRaw('MAX(NULLIF(TRIM(COALESCE(spp.procurement, "")), "")) as procurement')
+                    ->selectRaw('MAX(NULLIF(TRIM(COALESCE(spp.status, "")), "")) as status')
+                    ->selectRaw('MAX(NULLIF(TRIM(COALESCE(spp.exact_location, "")), "")) as exact_location')
+                    ->selectRaw('MAX(NULLIF(TRIM(COALESCE(spp.beneficiaries, "")), "")) as beneficiaries')
+                    ->selectRaw('MAX(NULLIF(TRIM(COALESCE(spp.implementing_unit, "")), "")) as implementing_unit')
+                    ->selectRaw('MAX(NULLIF(TRIM(COALESCE(spp.unit_implementing_the_project, "")), "")) as unit_implementing_the_project')
+                    ->selectRaw('MAX(NULLIF(TRIM(COALESCE(spp.moi, "")), "")) as moi')
+                    ->selectRaw('MAX(NULLIF(TRIM(COALESCE(spp.date_of_nadai, "")), "")) as date_of_nadai')
+                    ->selectRaw('MAX(NULLIF(TRIM(COALESCE(spp.invitation_to_bid_ib_posted, "")), "")) as invitation_to_bid_ib_posted')
+                    ->selectRaw('MAX(NULLIF(TRIM(COALESCE(spp.bid_opening_bid_evaluation, "")), "")) as bid_opening_bid_evaluation')
+                    ->selectRaw('MAX(NULLIF(TRIM(COALESCE(spp.bid_opening_evaluation, "")), "")) as bid_opening_evaluation')
+                    ->selectRaw('MAX(NULLIF(TRIM(COALESCE(spp.noa_issuance, "")), "")) as noa_issuance')
+                    ->selectRaw('MAX(NULLIF(TRIM(COALESCE(spp.date_of_receipt_of_ntp, "")), "")) as date_of_receipt_of_ntp')
+                    ->selectRaw('MAX(NULLIF(TRIM(COALESCE(spp.date_of_receipt_of_notice_to_proceed, "")), "")) as date_of_receipt_of_notice_to_proceed')
+                    ->selectRaw('MAX(NULLIF(TRIM(COALESCE(spp.obligation, "")), "")) as obligation')
+                    ->selectRaw('MAX(NULLIF(TRIM(COALESCE(spp.disbursement, "")), "")) as disbursement')
+                    ->selectRaw('MAX(NULLIF(TRIM(COALESCE(spp.total_accomplishment, "")), "")) as total_accomplishment')
+                    ->selectRaw('MAX(NULLIF(TRIM(COALESCE(spp.project_billboard, "")), "")) as project_billboard')
+                    ->selectRaw('MAX(NULLIF(TRIM(COALESCE(spp.installation_of_community_billboard, "")), "")) as installation_of_community_billboard')
+                    ->selectRaw('MAX(NULLIF(TRIM(COALESCE(spp.installation_of_community_billboard_2, "")), "")) as installation_of_community_billboard_2')
+                    ->selectRaw('MAX(NULLIF(TRIM(COALESCE(spp.name_of_contractor, "")), "")) as name_of_contractor')
+                    ->selectRaw('MAX(NULLIF(TRIM(COALESCE(spp.contract_price, "")), "")) as contract_price')
+                    ->selectRaw('MAX(NULLIF(TRIM(COALESCE(spp.contract_duration, "")), "")) as contract_duration')
+                    ->selectRaw('MAX(NULLIF(TRIM(COALESCE(spp.date_of_perfection_of_contract, "")), "")) as date_of_perfection_of_contract')
+                    ->selectRaw('MAX(NULLIF(TRIM(COALESCE(spp.date_of_expiration_of_contract, "")), "")) as date_of_expiration_of_contract')
+                    ->selectRaw('MAX(NULLIF(TRIM(COALESCE(spp.ded_pow_preparation, "")), "")) as ded_pow_preparation')
+                    ->selectRaw('MAX(NULLIF(TRIM(COALESCE(spp.ded_pow_prep_notarized_lce_cert, "")), "")) as ded_pow_prep_notarized_lce_cert')
+                    ->selectRaw('MAX(NULLIF(TRIM(COALESCE(spp.fs_technical_specification_and_ded_pow_preparation, "")), "")) as fs_technical_specification_and_ded_pow_preparation')
+                    ->selectRaw('MAX(NULLIF(TRIM(COALESCE(spp.fs_technical_specification_preparation, "")), "")) as fs_technical_specification_preparation')
+                    ->selectRaw('MAX(NULLIF(TRIM(COALESCE(spp.fs_technical_specification_and_ded_pow_review_approval, "")), "")) as fs_technical_specification_and_ded_pow_review_approval')
+                    ->selectRaw('MAX(NULLIF(TRIM(COALESCE(spp.ded_pow_review_and_approval, "")), "")) as ded_pow_review_and_approval')
+                    ->selectRaw('MAX(NULLIF(TRIM(COALESCE(spp.ded_pow_review_and_approval_2, "")), "")) as ded_pow_review_and_approval_2')
+                    ->groupBy(DB::raw('UPPER(TRIM(spp.project_code))'))
+                    ->orderByRaw('UPPER(TRIM(spp.project_code))')
+                    ->get();
+
+                $projects = [];
+
+                foreach ($missingDocumentRows as $row) {
+                    $procurementType = $normalizeMissingDocumentsProcurementType($row->procurement_type ?? null);
+                    $procurement = $normalizeMissingDocumentsProcurement($row->procurement ?? null);
+                    $statusKey = $normalizeMissingDocumentsStatus($row->status ?? null);
+                    $requiredItems = $resolveMissingDocumentsRequirements($procurementType, $procurement, $statusKey);
+
+                    if (empty($requiredItems)) {
+                        continue;
+                    }
+
+                    $missingItems = [];
+                    foreach ($requiredItems as $requiredItem) {
+                        $presenceCheck = $missingDocumentPresenceChecks[$requiredItem] ?? null;
+                        if (!$presenceCheck) {
+                            continue;
+                        }
+
+                        if (!$presenceCheck($row)) {
+                            $missingItems[] = $requiredItem;
+                        }
+                    }
+
+                    if (empty($missingItems)) {
+                        continue;
+                    }
+
+                    $displayStatus = $labelForStatus($normalizeStatus($row->status ?? null))
+                        ?? ($statusKey !== null ? ucwords(strtolower($statusKey)) : trim((string) ($row->status ?? '')));
+
+                    $projects[] = (object) [
+                        'project_code' => $row->project_code ?? null,
+                        'project_title' => $row->project_title ?? null,
+                        'province' => $row->province ?? null,
+                        'city_municipality' => $row->city_municipality ?? null,
+                        'funding_year' => $row->funding_year ?? null,
+                        'procurement_type' => $procurementType ?? trim((string) ($row->procurement_type ?? '')),
+                        'procurement' => $procurement ?? trim((string) ($row->procurement ?? '')),
+                        'status' => $displayStatus !== '' ? $displayStatus : '-',
+                        'missing_requirements' => $missingItems,
+                        'missing_requirements_text' => implode(', ', $missingItems),
+                        'missing_count' => count($missingItems),
+                    ];
+                }
+
+                return collect($projects)
+                    ->sort(function ($leftRow, $rightRow) {
+                        $leftMissing = (int) ($leftRow->missing_count ?? 0);
+                        $rightMissing = (int) ($rightRow->missing_count ?? 0);
+
+                        if ($leftMissing !== $rightMissing) {
+                            return $rightMissing <=> $leftMissing;
+                        }
+
+                        $leftCode = strtoupper(trim((string) ($leftRow->project_code ?? '')));
+                        $rightCode = strtoupper(trim((string) ($rightRow->project_code ?? '')));
+
+                        if ($leftCode === $rightCode) {
+                            return 0;
+                        }
+
+                        return $leftCode < $rightCode ? -1 : 1;
+                    })
+                    ->values();
             };
 
             $statusDisplayOrder = array_values($statusLabels);
@@ -1043,6 +1505,8 @@ Route::middleware(['auth'])->group(function () {
                     ->orderBy('due_projects.project_code')
                     ->get();
 
+                $missingDocumentsProjects = $buildMissingDocumentsProjectsFromSubay(clone $subayDashboardQuery);
+
                 $fundSourceFromProjectCodeExpr = "
                     CASE
                         WHEN UPPER(TRIM(spp.project_code)) LIKE 'SBDP%' THEN 'SBDP'
@@ -1517,6 +1981,7 @@ Route::middleware(['auth'])->group(function () {
                 'utilizationPercentage',
                 'expectedCompletionMonthLabel',
                 'projectsExpectedCompletionThisMonth',
+                'missingDocumentsProjects',
                 'projectAtRiskCounts',
                 'projectAtRiskAgingCounts',
                 'projectAtRiskAgingProjects',
