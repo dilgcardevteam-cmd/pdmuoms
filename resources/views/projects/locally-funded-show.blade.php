@@ -221,7 +221,14 @@
             <p>Full record for the selected locally funded project.</p>
         </div>
         <div style="display: flex; gap: 8px; align-items: center;">
-            <a href="{{ route('projects.locally-funded') }}" style="padding: 8px 16px; background-color: #002C76; color: white; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 13px;"><i class="fas fa-arrow-left"></i> Back to List</a>
+            <a href="{{ route('projects.locally-funded') }}" style="padding: 8px 16px; background-color: #002C76; color: white; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 13px;">
+                <i class="fas fa-arrow-left"></i>
+                Back to List
+            </a>
+            <button id="activityLogFab" type="button" aria-controls="activityLogSection" aria-expanded="false" data-state="closed">
+                <i class="fas fa-clipboard-list" aria-hidden="true"></i>
+                <span style="font-weight: 600; font-size: 13px;">Activity Logs</span>
+            </button>
         </div>
     </div>
 
@@ -254,6 +261,56 @@
     @endphp
 
     <div style="background: #f8fafc; padding: 24px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+        
+        <h1 style="font-weight: 700; color: #002C76;">{{ $project->project_name }}</h1>
+        <div style="
+            display: flex;
+            flex-direction: row;
+            width: 100%;
+            ">
+            <div style="display: flex; flex-direction: column;">
+                <span>
+                    <span class="form-label">
+                        Project Code:
+                    </span>
+                    {{ $project->subaybayan_project_code }}
+                </span>
+
+                <span>
+                    <span class="form-label">
+                        Funding Year:
+                    </span>
+                    {{ $project->funding_year }}
+                </span>
+                <span>
+                <span class="form-label">
+                        Funding Source:
+                    </span>
+                    {{ $project->fund_source }}
+                </span>
+            </div>
+        </div>
+
+        <!-- <br>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 24px;">
+            <div style="padding: 16px; border: 1px solid #002C76; border-radius: 8px;">
+                <div style="font-size: 12px; color: #002C76; font-weight: 700; text-transform: uppercase;">Project Code</div>
+                <div style="font-size: 16px; font-weight: 700; color: #111827; margin-top: 6px;">{{ $project->subaybayan_project_code }}</div>
+            </div>
+            <div style="padding: 16px; border: 1px solid #002C76; border-radius: 8px;">
+                <div style="font-size: 12px; color: #002C76; font-weight: 700; text-transform: uppercase;">Project Name</div>
+                <div style="font-size: 16px; font-weight: 700; color: #111827; margin-top: 6px;">{{ $project->project_name }}</div>
+            </div>
+            <div style="padding: 16px; border: 1px solid #002C76; border-radius: 8px;">
+                <div style="font-size: 12px; color: #002C76; font-weight: 700; text-transform: uppercase;">Funding</div>
+                <div style="font-size: 14px; color: #111827; margin-top: 6px;">Year: <strong>{{ $project->funding_year }}</strong></div>
+                <div style="font-size: 14px; color: #111827;">Source: <strong>{{ $project->fund_source }}</strong></div>
+            </div>
+        </div> -->
+
+        <hr style="margin: 10px">
+
+        <!-- <br>
         <div class="lfp-summary-card">
             <div class="lfp-summary-row">
                 <span class="lfp-summary-label">Project Code</span>
@@ -275,9 +332,18 @@
                     </div>
                 </div>
             </div>
+        </div> -->
+
+        <div class="project-tabs" role="tablist" aria-label="Project detail sections">
+            <button type="button" class="project-tab is-active" id="tab-project-profile" data-project-tab-target="projectProfileSection" role="tab" aria-controls="projectProfileSection" aria-selected="true">Profile</button>
+            <button type="button" class="project-tab" id="tab-contract-info" data-project-tab-target="contractInfoSection" role="tab" aria-controls="contractInfoSection" aria-selected="false">Contract</button>
+            <button type="button" class="project-tab" id="tab-physical-accomplishment" data-project-tab-target="physicalAccomplishmentSection" role="tab" aria-controls="physicalAccomplishmentSection" aria-selected="false">Physical Accomplishment</button>
+            <button type="button" class="project-tab" id="tab-financial-accomplishment" data-project-tab-target="financialAccomplishmentSection" role="tab" aria-controls="financialAccomplishmentSection" aria-selected="false">Financial Accomplishment</button>
+            <button type="button" class="project-tab" id="tab-monitoring-inspection" data-project-tab-target="monitoringInspectionSection" role="tab" aria-controls="monitoringInspectionSection" aria-selected="false">Monitoring</button>
+            <button type="button" class="project-tab" id="tab-post-implementation" data-project-tab-target="postImplementationSection" role="tab" aria-controls="postImplementationSection" aria-selected="false">Post Implementation</button>
         </div>
 
-        <div id="projectProfileSection" style="margin-bottom: 24px; padding: 20px; border: 1px solid #00267C; border-radius: 10px; background-color: #ffffff;">
+        <div id="projectProfileSection" class="project-tab-panel is-active" data-tab-key="profile" role="tabpanel" aria-labelledby="tab-project-profile" style="margin-bottom: 24px; padding: 20px; border: 1px solid #00267C; border-radius: 10px; background-color: #ffffff;">
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 2px solid #00267C; padding-bottom: 10px;">
                 <h3 style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Project Profile</h3>
                 @if(!$isLguAgencyUser)
@@ -489,7 +555,7 @@
             </div>
         </div>
 
-        <div id="contractInfoSection" style="margin-bottom: 24px; padding: 20px; border: 1px solid #00267C; border-radius: 10px; background-color: #ffffff;">
+        <div id="contractInfoSection" class="project-tab-panel" data-tab-key="contract" role="tabpanel" aria-labelledby="tab-contract-info" style="margin-bottom: 24px; padding: 20px; border: 1px solid #00267C; border-radius: 10px; background-color: #ffffff;">
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 2px solid #00267C; padding-bottom: 10px;">
                 <h3 style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Contract Information</h3>
                 @if(!$isLguAgencyUser)
@@ -703,7 +769,7 @@
         @endphp
 
         <div id="editPhysicalFormBackdrop" class="lfp-inline-modal-backdrop" aria-hidden="true"></div>
-        <div id="physicalAccomplishmentSection" class="lfp-inline-modal-section" data-inline-modal-section="true" data-inline-target="editPhysicalForm" style="margin-bottom: 24px; padding: 20px; border: 1px solid #00267C; border-radius: 10px; background-color: #ffffff;">
+        <div id="physicalAccomplishmentSection" class="project-tab-panel lfp-inline-modal-section" data-tab-key="physical" role="tabpanel" aria-labelledby="tab-physical-accomplishment" data-inline-modal-section="true" data-inline-target="editPhysicalForm" style="margin-bottom: 24px; padding: 20px; border: 1px solid #00267C; border-radius: 10px; background-color: #ffffff;">
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 2px solid #00267C; padding-bottom: 10px;">
                 <h3 style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Physical Accomplishment</h3>
                 <div style="display: flex; gap: 8px; align-items: center;">
@@ -1114,7 +1180,7 @@
         </div>
 
         <div id="editFinancialFormBackdrop" class="lfp-inline-modal-backdrop" aria-hidden="true"></div>
-        <div id="financialAccomplishmentSection" class="lfp-inline-modal-section" data-inline-modal-section="true" data-inline-target="editFinancialForm" style="margin-bottom: 24px; padding: 20px; border: 1px solid #00267C; border-radius: 10px; background-color: #ffffff;">
+        <div id="financialAccomplishmentSection" class="project-tab-panel lfp-inline-modal-section" data-inline-modal-section="true" data-inline-target="editFinancialForm" data-tab-key="financial" role="tabpanel" aria-labelledby="tab-financial-accomplishment" style="margin-bottom: 24px; padding: 20px; border: 1px solid #00267C; border-radius: 10px; background-color: #ffffff;">
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 2px solid #00267C; padding-bottom: 10px;">
                 <h3 style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Financial Accomplishment (based on Subaybayan)</h3>
                 <div style="display: flex; gap: 8px; align-items: center;">
@@ -1288,7 +1354,7 @@
         </div>
 
         <div id="editMonitoringFormBackdrop" class="lfp-inline-modal-backdrop" aria-hidden="true"></div>
-        <div id="monitoringInspectionSection" class="lfp-inline-modal-section" data-inline-modal-section="true" data-inline-target="editMonitoringForm" style="margin-bottom: 24px; padding: 20px; border: 1px solid #00267C; border-radius: 10px; background-color: #ffffff;">
+        <div id="monitoringInspectionSection" class="project-tab-panel lfp-inline-modal-section" data-inline-modal-section="true" data-inline-target="editMonitoringForm" data-tab-key="monitoring" role="tabpanel" aria-labelledby="tab-monitoring-inspection" style="margin-bottom: 24px; padding: 20px; border: 1px solid #00267C; border-radius: 10px; background-color: #ffffff;">
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 2px solid #00267C; padding-bottom: 10px;">
                 <h3 style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Monitoring/Inspection Activities</h3>
                 <div style="display: flex; gap: 8px; align-items: center;">
@@ -1419,7 +1485,7 @@
         </div>
 
         <div id="editPostImplementationFormBackdrop" class="lfp-inline-modal-backdrop" aria-hidden="true"></div>
-        <div id="postImplementationSection" class="lfp-inline-modal-section" data-inline-modal-section="true" data-inline-target="editPostImplementationForm" style="margin-bottom: 24px; padding: 20px; border: 1px solid #00267C; border-radius: 10px; background-color: #ffffff;">
+        <div id="postImplementationSection" class="project-tab-panel lfp-inline-modal-section" data-inline-modal-section="true" data-inline-target="editPostImplementationForm" data-tab-key="post-implementation" role="tabpanel" aria-labelledby="tab-post-implementation" style="margin-bottom: 24px; padding: 20px; border: 1px solid #00267C; border-radius: 10px; background-color: #ffffff;">
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 2px solid #00267C; padding-bottom: 10px;">
                 <h3 style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Post Implementation Requirements</h3>
                 <div style="display: flex; gap: 8px; align-items: center;">
@@ -1720,18 +1786,59 @@
 
         <div id="activityLogBackdrop" aria-hidden="true"></div>
 
-        <button id="activityLogFab" type="button" aria-controls="activityLogSection" aria-expanded="false" data-state="closed">
-            <i class="fas fa-clipboard-list" aria-hidden="true" style="font-size: 14px;"></i>
-            <span>Activity Logs</span>
-        </button>
-
     <style>
+        .form-label{
+            font-size: 12px; color: #002C76; font-weight: 700; text-transform: uppercase;
+        }
         .content-header {
             flex-wrap: wrap;
         }
 
         .content-header > div:last-child {
             flex-wrap: wrap;
+        }
+
+        .project-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+
+        .project-tab {
+            border: 1px solid #c8d8f0;
+            background-color: #ffffff;
+            color: #002c76;
+            border-radius: 999px;
+            padding: 8px 16px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            line-height: 1.1;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+            transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+        }
+
+        .project-tab:hover {
+            background-color: #eff6ff;
+            border-color: #9bb7e3;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 14px rgba(15, 23, 42, 0.12);
+        }
+
+        .project-tab.is-active {
+            background-color: #002c76;
+            border-color: #002c76;
+            color: #ffffff;
+            box-shadow: 0 8px 18px rgba(0, 44, 118, 0.28);
+        }
+
+        .project-tab-panel {
+            display: none;
+        }
+
+        .project-tab-panel.is-active {
+            display: block;
         }
 
         #projectProfileSection,
@@ -1783,22 +1890,18 @@
         }
 
         #activityLogFab {
-            position: fixed;
-            right: 24px;
-            bottom: 24px;
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            padding: 12px 16px;
+            padding: 8px 16px;
             background-color: #002C76;
             color: #ffffff;
             border: none;
-            border-radius: 999px;
+            border-radius: 8px;
             font-size: 13px;
             font-weight: 600;
             cursor: pointer;
             box-shadow: 0 10px 20px rgba(15, 23, 42, 0.18);
-            z-index: 1200;
             transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
         }
 
@@ -1889,6 +1992,16 @@
                 justify-content: flex-start;
             }
 
+            .project-tabs {
+                gap: 6px;
+            }
+
+            .project-tab {
+                border-radius: 999px;
+                padding: 8px 12px;
+                font-size: 11px;
+            }
+
             #financialAccomplishmentSection .monthly-details {
                 width: 100%;
                 min-width: 0;
@@ -1906,16 +2019,6 @@
 
             .content-header p {
                 font-size: 12px;
-            }
-
-            #activityLogFab {
-                right: 16px;
-                bottom: 16px;
-                padding: 10px 12px;
-            }
-
-            #activityLogFab span {
-                display: none;
             }
 
             #activityLogSection {
@@ -4114,6 +4217,52 @@ const locationData = {
         bindInlineAutoSave('[data-monitoring-edit="true"]');
         bindInlineAutoSave('[data-post-implementation-edit="true"]');
 
+        const projectTabs = Array.from(document.querySelectorAll('.project-tab'));
+        const projectPanels = Array.from(document.querySelectorAll('.project-tab-panel'));
+        const oldSectionKey = @json(old('section'));
+        const sectionKeyToPanelId = {
+            profile: 'projectProfileSection',
+            contract: 'contractInfoSection',
+            physical: 'physicalAccomplishmentSection',
+            financial: 'financialAccomplishmentSection',
+            monitoring: 'monitoringInspectionSection',
+            'post-implementation': 'postImplementationSection',
+        };
+
+        function setActiveProjectPanel(panelId) {
+            projectPanels.forEach((panel) => {
+                const isActive = panel.id === panelId;
+                panel.classList.toggle('is-active', isActive);
+                panel.setAttribute('aria-hidden', isActive ? 'false' : 'true');
+            });
+
+            projectTabs.forEach((tab) => {
+                const isActive = tab.dataset.projectTabTarget === panelId;
+                tab.classList.toggle('is-active', isActive);
+                tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
+            });
+        }
+
+        if (projectTabs.length > 0 && projectPanels.length > 0) {
+            projectTabs.forEach((tab) => {
+                tab.addEventListener('click', () => {
+                    const panelId = tab.dataset.projectTabTarget;
+                    if (panelId) {
+                        setActiveProjectPanel(panelId);
+                    }
+                });
+            });
+
+            const hashPanelId = window.location.hash ? window.location.hash.replace('#', '') : '';
+            const hasHashPanel = projectPanels.some((panel) => panel.id === hashPanelId);
+            const oldPanelId = oldSectionKey ? sectionKeyToPanelId[oldSectionKey] : '';
+            const initialPanelId = hasHashPanel
+                ? hashPanelId
+                : (oldPanelId || 'projectProfileSection');
+
+            setActiveProjectPanel(initialPanelId);
+        }
+
         const activityLogSection = document.getElementById('activityLogSection');
         const activityLogBackdrop = document.getElementById('activityLogBackdrop');
         const activityLogFab = document.getElementById('activityLogFab');
@@ -4134,7 +4283,7 @@ const locationData = {
 
             const labelSpan = activityLogFab.querySelector('span');
             if (labelSpan) {
-                labelSpan.textContent = isVisible ? 'Hide Activity Logs' : 'Activity Logs';
+                labelSpan.textContent = isVisible ? 'Activity Logs' : 'Activity Logs';
             }
 
             if (isVisible && activityLogClose) {
