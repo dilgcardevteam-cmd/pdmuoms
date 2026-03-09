@@ -179,24 +179,111 @@
         </div>
     </form>
 
-    <div class="dashboard-top-cards" style="display: grid; gap: 20px; margin-bottom: 24px;">
-        <div class="dashboard-card total-projects-card" style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; flex-direction: column;">
-            <h2 style="color: #002C76; font-size: 16px; margin: 0 0 16px; display: flex; align-items: center; gap: 8px;">
-                <span style="width: 22px; height: 22px; border-radius: 999px; background-color: #e0f2fe; color: #0ea5e9; display: inline-flex; align-items: center; justify-content: center; font-size: 11px;">
-                    <i class="fas fa-project-diagram"></i>
-                </span>
-                TOTAL PROJECTS
-            </h2>
-            <div class="dashboard-tile clickable-dashboard-card" data-card-url="{{ route('projects.locally-funded') }}" style="padding: 12px; border: 1px solid #e5e7eb; border-radius: 6px; background-color: #f9fafb; text-align: center; flex: 1; display: flex; flex-direction: column; justify-content: center;">
-                <div style="display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 13px; font-weight: 600; color: #6b7280; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.04em;">
-                    <span style="width: 20px; height: 20px; border-radius: 999px; background-color: #e5e7eb; color: #4b5563; display: inline-flex; align-items: center; justify-content: center; font-size: 10px;">
-                        <i class="fas fa-hashtag"></i>
+    <div class="dashboard-main-layout">
+        <div class="dashboard-top-cards" style="display: grid; gap: 20px; margin-bottom: 0;">
+            <div class="dashboard-card total-projects-card" style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; flex-direction: column;">
+                <h2 style="color: #002C76; font-size: 16px; margin: 0 0 16px; display: flex; align-items: center; gap: 8px;">
+                    <span style="width: 22px; height: 22px; border-radius: 999px; background-color: #e0f2fe; color: #0ea5e9; display: inline-flex; align-items: center; justify-content: center; font-size: 11px;">
+                        <i class="fas fa-project-diagram"></i>
                     </span>
-                    Total Number of Projects
+                    TOTAL PROJECTS
+                </h2>
+                <div class="dashboard-tile clickable-dashboard-card" data-card-url="{{ route('projects.locally-funded') }}" style="padding: 12px; border: 1px solid #e5e7eb; border-radius: 6px; background-color: #f9fafb; text-align: center; flex: 1; display: flex; flex-direction: column; justify-content: center;">
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 13px; font-weight: 600; color: #6b7280; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.04em;">
+                        <span style="width: 20px; height: 20px; border-radius: 999px; background-color: #e5e7eb; color: #4b5563; display: inline-flex; align-items: center; justify-content: center; font-size: 10px;">
+                            <i class="fas fa-hashtag"></i>
+                        </span>
+                        Total Number of Projects
+                    </div>
+                    <div style="font-size: 36px; font-weight: 700; color: #002C76; text-align: center;">{{ $totalProjects }}</div>
                 </div>
-                <div style="font-size: 36px; font-weight: 700; color: #002C76; text-align: center;">{{ $totalProjects }}</div>
             </div>
-        </div>
+        @if (!empty($fundSourceCounts) && $fundSourceCounts->count() > 0)
+            @php
+                $fundSourceColumns = max(1, (int) ceil($fundSourceCounts->count() / 2));
+            @endphp
+            <div class="dashboard-card fund-source-card" style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <h2 style="color: #002C76; font-size: 16px; margin: 0 0 16px; display: flex; align-items: center; gap: 8px;">
+                    <span style="width: 22px; height: 22px; border-radius: 999px; background-color: #e0f2fe; color: #0ea5e9; display: inline-flex; align-items: center; justify-content: center; font-size: 11px;">
+                        <i class="fas fa-layer-group"></i>
+                    </span>
+                    PROJECTS BY FUND SOURCE
+                </h2>
+                <div
+                    class="fund-source-grid"
+                    @style([
+                        'display: grid',
+                        'grid-template-columns: repeat(' . $fundSourceColumns . ', minmax(120px, 1fr))',
+                        'gap: 12px',
+                    ])
+                >
+                    @foreach ($fundSourceCounts as $fundSource => $count)
+                        @php
+                            $fundSourceIcon = $fundSourceIconMap[$fundSource] ?? 'fa-coins';
+                            $fundSourceStyles = $fundSourceStyleMap[$fundSource] ?? ['bg' => '#f9fafb', 'border' => '#e5e7eb', 'iconBg' => '#e5e7eb', 'iconColor' => '#4b5563', 'labelColor' => '#6b7280'];
+                            $fundSourceModalKey = trim((string) preg_replace('/[^a-z0-9]+/i', '-', (string) $fundSource), '-');
+                            $fundSourceModalId = 'fund-source-' . ($fundSourceModalKey !== '' ? $fundSourceModalKey : 'unspecified') . '-modal';
+                            $projectCodeKeyword = strtoupper(trim((string) $fundSource)) === 'FALGU'
+                                ? 'FA'
+                                : $fundSource;
+                            $fundSourceFilterUrl = route('projects.locally-funded', [
+                                'search' => $fundSource,
+                                'fund_source' => $fundSource,
+                                'project_code' => $projectCodeKeyword,
+                            ]);
+                        @endphp
+                        <div
+                            class="dashboard-tile fund-source-link-tile clickable-dashboard-card"
+                            data-card-url="{{ $fundSourceFilterUrl }}"
+                            data-modal-target="{{ $fundSourceModalId }}"
+                            @style([
+                                'padding: 12px',
+                                'border: 1px solid ' . $fundSourceStyles['border'],
+                                'border-radius: 6px',
+                                'background-color: ' . $fundSourceStyles['bg'],
+                                'text-align: center',
+                                'color: inherit',
+                                'display: block',
+                            ])
+                        >
+                            <div
+                                @style([
+                                    'display: flex',
+                                    'align-items: center',
+                                    'justify-content: center',
+                                    'gap: 8px',
+                                    'font-size: 13px',
+                                    'font-weight: 600',
+                                    'color: ' . $fundSourceStyles['labelColor'],
+                                    'margin-bottom: 6px',
+                                    'text-transform: uppercase',
+                                    'letter-spacing: 0.04em',
+                                ])
+                            >
+                                <span
+                                    @style([
+                                        'width: 20px',
+                                        'height: 20px',
+                                        'border-radius: 999px',
+                                        'background-color: ' . $fundSourceStyles['iconBg'],
+                                        'color: ' . $fundSourceStyles['iconColor'],
+                                        'display: inline-flex',
+                                        'align-items: center',
+                                        'justify-content: center',
+                                        'font-size: 10px',
+                                    ])
+                                >
+                                    <i class="fas {{ $fundSourceIcon }}"></i>
+                                </span>
+                                {{ $fundSource }}
+                            </div>
+                            <div style="font-size: 20px; font-weight: 700; color: #002C76;">{{ $count }}</div>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        @endif
+
         <div class="dashboard-card financial-status-card" style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
             <h2 style="color: #002C76; font-size: 16px; margin: 0 0 16px; display: flex; align-items: center; gap: 8px;">
                 <span style="width: 22px; height: 22px; border-radius: 999px; background-color: #e0f2fe; color: #0ea5e9; display: inline-flex; align-items: center; justify-content: center; font-size: 11px;">
@@ -492,6 +579,73 @@
             </div>
         </div>
 
+        <div class="dashboard-card expected-completion-card" style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); height: 583px; display: flex; flex-direction: column;">
+            @php
+                $dueProjects = $projectsExpectedCompletionThisMonth ?? collect();
+            @endphp
+            <h2 style="color: #002C76; font-size: 16px; margin: 0 0 12px; display: flex; align-items: center; gap: 8px;">
+                <span style="width: 22px; height: 22px; border-radius: 999px; background-color: #dbeafe; color: #2563eb; display: inline-flex; align-items: center; justify-content: center; font-size: 11px;">
+                    <i class="fas fa-calendar-check"></i>
+                </span>
+                PROJECTS EXPECTED TO BE COMPLETED ({{ strtoupper((string) ($expectedCompletionMonthLabel ?? now()->format('F Y'))) }})
+            </h2>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 8px;">
+            </div>
+
+            @if ($dueProjects->isEmpty())
+                <div style="padding: 14px; border: 1px dashed #bfdbfe; border-radius: 8px; background-color: #f8fbff; color: #1e3a8a; font-size: 13px;">
+                    No projects are scheduled for completion this month.
+                </div>
+            @else
+                <div class="expected-completion-list">
+                    @foreach ($dueProjects as $dueProject)
+                        @php
+                            $projectCode = trim((string) ($dueProject->project_code ?? ''));
+                            $projectTitle = trim((string) ($dueProject->project_title ?? ''));
+                            $province = trim((string) ($dueProject->province ?? ''));
+                            $cityMunicipality = trim((string) ($dueProject->city_municipality ?? ''));
+                            $locationLabel = implode(' | ', array_values(array_filter([$province, $cityMunicipality], function ($value) {
+                                return $value !== '';
+                            })));
+                            $completionDateLabel = 'N/A';
+
+                            if (!empty($dueProject->expected_completion_date)) {
+                                try {
+                                    $completionDateLabel = \Illuminate\Support\Carbon::parse($dueProject->expected_completion_date)->format('M d, Y');
+                                } catch (\Throwable $error) {
+                                    $completionDateLabel = (string) $dueProject->expected_completion_date;
+                                }
+                            }
+
+                            $searchTerm = $projectCode !== '' ? $projectCode : $projectTitle;
+                        @endphp
+                        <div
+                            @class([
+                                'expected-completion-item',
+                                'clickable-dashboard-card' => $searchTerm !== '',
+                            ])
+                            @if ($searchTerm !== '')
+                                data-card-url="{{ route('projects.locally-funded', ['search' => $searchTerm]) }}"
+                            @endif
+                        >
+                            <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+                                <div class="expected-completion-item-code">{{ $projectCode !== '' ? $projectCode : 'NO PROJECT CODE' }}</div>
+                                <div class="expected-completion-item-date">{{ $completionDateLabel }}</div>
+                            </div>
+                            <div class="expected-completion-item-title">{{ $projectTitle !== '' ? $projectTitle : 'Untitled project' }}</div>
+                            @if ($locationLabel !== '')
+                                <div class="expected-completion-item-location">
+                                    <i class="fas fa-location-dot" aria-hidden="true"></i>
+                                    <span>{{ $locationLabel }}</span>
+                                </div>
+                            @endif
+                        </div>
+                    @endforeach
+                </div>
+            @endif
+        </div>
+
         <div class="dashboard-card status-subaybayan-card" style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
             <h2 style="color: #002C76; font-size: 16px; margin: 0 0 16px; display: flex; align-items: center; gap: 8px;">
                 <span style="width: 22px; height: 22px; border-radius: 999px; background-color: #e0f2fe; color: #0ea5e9; display: inline-flex; align-items: center; justify-content: center; font-size: 11px;">
@@ -499,7 +653,7 @@
                 </span>
                 STATUS OF PROJECT (SUBAYBAYAN STATUS)
             </h2>
-            <div style="display: grid; grid-template-columns: repeat(3, minmax(140px, 1fr)); gap: 12px;">
+            <div class="status-subaybayan-grid" style="display: grid; grid-template-columns: repeat(3, minmax(140px, 1fr)); gap: 12px;">
                 @foreach($statusSubaybayanCounts as $status => $count)
                     @php
                         $iconConfig = $statusIconMap[$status] ?? ['icon' => 'fa-circle-info', 'color' => '#6b7280', 'bg' => '#f3f4f6', 'tileBg' => '#f9fafb', 'tileBorder' => '#e5e7eb', 'labelColor' => '#6b7280'];
@@ -557,91 +711,6 @@
             </div>
         </div>
 
-        @if (!empty($fundSourceCounts) && $fundSourceCounts->count() > 0)
-            @php
-                $fundSourceColumns = max(1, (int) ceil($fundSourceCounts->count() / 2));
-            @endphp
-            <div class="dashboard-card fund-source-card" style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                <h2 style="color: #002C76; font-size: 16px; margin: 0 0 16px; display: flex; align-items: center; gap: 8px;">
-                    <span style="width: 22px; height: 22px; border-radius: 999px; background-color: #e0f2fe; color: #0ea5e9; display: inline-flex; align-items: center; justify-content: center; font-size: 11px;">
-                        <i class="fas fa-layer-group"></i>
-                    </span>
-                    PROJECTS BY FUND SOURCE
-                </h2>
-                <div
-                    class="fund-source-grid"
-                    @style([
-                        'display: grid',
-                        'grid-template-columns: repeat(' . $fundSourceColumns . ', minmax(120px, 1fr))',
-                        'gap: 12px',
-                    ])
-                >
-                    @foreach ($fundSourceCounts as $fundSource => $count)
-                        @php
-                            $fundSourceIcon = $fundSourceIconMap[$fundSource] ?? 'fa-coins';
-                            $fundSourceStyles = $fundSourceStyleMap[$fundSource] ?? ['bg' => '#f9fafb', 'border' => '#e5e7eb', 'iconBg' => '#e5e7eb', 'iconColor' => '#4b5563', 'labelColor' => '#6b7280'];
-                            $fundSourceModalKey = trim((string) preg_replace('/[^a-z0-9]+/i', '-', (string) $fundSource), '-');
-                            $fundSourceModalId = 'fund-source-' . ($fundSourceModalKey !== '' ? $fundSourceModalKey : 'unspecified') . '-modal';
-                            $projectCodeKeyword = strtoupper(trim((string) $fundSource)) === 'FALGU'
-                                ? 'FA'
-                                : $fundSource;
-                            $fundSourceFilterUrl = route('projects.locally-funded', [
-                                'search' => $fundSource,
-                                'fund_source' => $fundSource,
-                                'project_code' => $projectCodeKeyword,
-                            ]);
-                        @endphp
-                        <div
-                            class="dashboard-tile fund-source-link-tile clickable-dashboard-card"
-                            data-card-url="{{ $fundSourceFilterUrl }}"
-                            data-modal-target="{{ $fundSourceModalId }}"
-                            @style([
-                                'padding: 12px',
-                                'border: 1px solid ' . $fundSourceStyles['border'],
-                                'border-radius: 6px',
-                                'background-color: ' . $fundSourceStyles['bg'],
-                                'text-align: center',
-                                'color: inherit',
-                                'display: block',
-                            ])
-                        >
-                            <div
-                                @style([
-                                    'display: flex',
-                                    'align-items: center',
-                                    'justify-content: center',
-                                    'gap: 8px',
-                                    'font-size: 13px',
-                                    'font-weight: 600',
-                                    'color: ' . $fundSourceStyles['labelColor'],
-                                    'margin-bottom: 6px',
-                                    'text-transform: uppercase',
-                                    'letter-spacing: 0.04em',
-                                ])
-                            >
-                                <span
-                                    @style([
-                                        'width: 20px',
-                                        'height: 20px',
-                                        'border-radius: 999px',
-                                        'background-color: ' . $fundSourceStyles['iconBg'],
-                                        'color: ' . $fundSourceStyles['iconColor'],
-                                        'display: inline-flex',
-                                        'align-items: center',
-                                        'justify-content: center',
-                                        'font-size: 10px',
-                                    ])
-                                >
-                                    <i class="fas {{ $fundSourceIcon }}"></i>
-                                </span>
-                                {{ $fundSource }}
-                            </div>
-                            <div style="font-size: 20px; font-weight: 700; color: #002C76;">{{ $count }}</div>
-                        </div>
-                    @endforeach
-                </div>
-            </div>
-        @endif
     </div>
 
     @php
@@ -735,6 +804,10 @@
                     @php
                         $projectUpdateStatusPieSegments = [];
                         $projectUpdateStatusGapPercent = 0.8;
+                        $projectUpdateStatusSweepDurationMs = 1400.0;
+                        $projectUpdateStatusMinSegmentDurationMs = 120.0;
+                        $projectUpdateStatusCalloutStepMs = 140.0;
+                        $projectUpdateStatusSweepEndMs = 0.0;
 
                         if ($projectUpdateStatusTotal > 0) {
                             $projectUpdateStatusBaseSegments = [];
@@ -766,18 +839,31 @@
                                 if ($segmentLength <= 0.01) {
                                     continue;
                                 }
+                                $segmentDelayMs = ($projectUpdateStatusRunningPercent / 100) * $projectUpdateStatusSweepDurationMs;
+                                $segmentDurationMs = max(
+                                    $projectUpdateStatusMinSegmentDurationMs,
+                                    ($segmentLength / 100) * $projectUpdateStatusSweepDurationMs
+                                );
+                                $projectUpdateStatusSweepEndMs = max(
+                                    $projectUpdateStatusSweepEndMs,
+                                    $segmentDelayMs + $segmentDurationMs
+                                );
 
                                 $projectUpdateStatusPieSegments[] = [
                                     'start' => $projectUpdateStatusRunningPercent,
                                     'length' => $segmentLength,
                                     'color' => $segment['color'],
                                     'label' => $segment['label'],
+                                    'count' => $segment['count'],
                                     'percentage' => $segmentRawPercent,
+                                    'segmentDelayMs' => $segmentDelayMs,
+                                    'segmentDurationMs' => $segmentDurationMs,
                                 ];
 
                                 $projectUpdateStatusRunningPercent += $segmentLength + $projectUpdateStatusGapPercent;
                             }
                         }
+                        $projectUpdateStatusCalloutStartDelayMs = $projectUpdateStatusSweepEndMs + 120.0;
                     @endphp
                     <div class="project-update-status-pie-layout">
                         <div
@@ -786,9 +872,24 @@
                             data-modal-target="{{ $projectUpdateAllStatusModalId }}"
                             aria-label="Open project update status project list"
                         >
-                            <svg class="project-update-status-pie" viewBox="0 0 100 100" aria-label="Project update status donut chart">
+                            <svg
+                                class="project-update-status-pie"
+                                viewBox="0 0 100 100"
+                                aria-label="Project update status donut chart"
+                                @style([
+                                    '--callout-start-delay: ' . number_format($projectUpdateStatusCalloutStartDelayMs, 2, '.', '') . 'ms',
+                                    '--callout-step-delay: ' . number_format($projectUpdateStatusCalloutStepMs, 2, '.', '') . 'ms',
+                                ])
+                            >
                                 <circle class="project-update-status-pie-track" cx="50" cy="50" r="36" pathLength="100"></circle>
                                 @foreach ($projectUpdateStatusPieSegments as $segment)
+                                    @php
+                                        $segmentMidAngle = (($segment['start'] + ($segment['length'] / 2)) * 3.6) - 90;
+                                        $segmentMidRadians = deg2rad($segmentMidAngle);
+                                        $segmentHoverOffset = 2.2;
+                                        $segmentHoverX = $segmentHoverOffset * cos($segmentMidRadians);
+                                        $segmentHoverY = $segmentHoverOffset * sin($segmentMidRadians);
+                                    @endphp
                                     <circle
                                         class="project-update-status-pie-segment"
                                         cx="50"
@@ -796,13 +897,52 @@
                                         r="36"
                                         pathLength="100"
                                         @style([
+                                            '--segment-length: ' . number_format($segment['length'], 4, '.', ''),
+                                            '--segment-delay: ' . number_format($segment['segmentDelayMs'], 2, '.', '') . 'ms',
+                                            '--segment-duration: ' . number_format($segment['segmentDurationMs'], 2, '.', '') . 'ms',
+                                            '--segment-hover-x: ' . number_format($segmentHoverX, 3, '.', '') . 'px',
+                                            '--segment-hover-y: ' . number_format($segmentHoverY, 3, '.', '') . 'px',
                                             'stroke: ' . $segment['color'],
-                                            'stroke-dasharray: ' . number_format($segment['length'], 4, '.', '') . ' 100',
                                             'stroke-dashoffset: -' . number_format($segment['start'], 4, '.', ''),
                                         ])
                                     >
                                         <title>{{ $segment['label'] }}: {{ number_format($segment['percentage'], 2) }}%</title>
                                     </circle>
+                                @endforeach
+                                @foreach ($projectUpdateStatusPieSegments as $segment)
+                                    @php
+                                        $calloutAngle = (($segment['start'] + ($segment['length'] / 2)) * 3.6) - 90;
+                                        $calloutRadians = deg2rad($calloutAngle);
+                                        $calloutStartX = 50 + (46 * cos($calloutRadians));
+                                        $calloutStartY = 50 + (46 * sin($calloutRadians));
+                                        $calloutBendX = 50 + (52 * cos($calloutRadians));
+                                        $calloutBendY = 50 + (52 * sin($calloutRadians));
+                                        $calloutIsRight = cos($calloutRadians) >= 0;
+                                        $calloutEndX = $calloutBendX + ($calloutIsRight ? 12 : -12);
+                                        $calloutTextX = $calloutEndX + ($calloutIsRight ? 2.6 : -2.6);
+                                        $calloutTextAnchor = $calloutIsRight ? 'start' : 'end';
+                                    @endphp
+                                    <g class="dashboard-donut-callout" aria-hidden="true" @style(['--callout-index: ' . $loop->index])>
+                                        <polyline
+                                            class="dashboard-donut-callout-line"
+                                            points="{{ number_format($calloutStartX, 3, '.', '') }},{{ number_format($calloutStartY, 3, '.', '') }} {{ number_format($calloutBendX, 3, '.', '') }},{{ number_format($calloutBendY, 3, '.', '') }} {{ number_format($calloutEndX, 3, '.', '') }},{{ number_format($calloutBendY, 3, '.', '') }}"
+                                        ></polyline>
+                                        <text
+                                            class="dashboard-donut-callout-text"
+                                            x="{{ number_format($calloutTextX, 3, '.', '') }}"
+                                            y="{{ number_format($calloutBendY, 3, '.', '') }}"
+                                            text-anchor="{{ $calloutTextAnchor }}"
+                                        >
+                                            <tspan class="dashboard-donut-callout-label">{{ $segment['label'] }}</tspan>
+                                            <tspan
+                                                class="dashboard-donut-callout-value"
+                                                x="{{ number_format($calloutTextX, 3, '.', '') }}"
+                                                dy="1.15em"
+                                            >
+                                                {{ number_format((int) ($segment['count'] ?? 0)) }} ({{ number_format((float) ($segment['percentage'] ?? 0), 2) }}%)
+                                            </tspan>
+                                        </text>
+                                    </g>
                                 @endforeach
                             </svg>
                         </div>
@@ -882,6 +1022,10 @@
                     }
 
                     $projectAtRiskDonutSegments = [];
+                    $projectAtRiskSweepDurationMs = 1400.0;
+                    $projectAtRiskMinSegmentDurationMs = 120.0;
+                    $projectAtRiskCalloutStepMs = 140.0;
+                    $projectAtRiskSweepEndMs = 0.0;
 
                     if ($projectAtRiskTotal > 0) {
                         $projectAtRiskBaseSegments = [];
@@ -910,23 +1054,51 @@
                             if ($segmentLength <= 0.01) {
                                 continue;
                             }
+                            $segmentDelayMs = ($projectAtRiskRunningPercent / 100) * $projectAtRiskSweepDurationMs;
+                            $segmentDurationMs = max(
+                                $projectAtRiskMinSegmentDurationMs,
+                                ($segmentLength / 100) * $projectAtRiskSweepDurationMs
+                            );
+                            $projectAtRiskSweepEndMs = max(
+                                $projectAtRiskSweepEndMs,
+                                $segmentDelayMs + $segmentDurationMs
+                            );
 
                             $projectAtRiskDonutSegments[] = [
                                 'start' => $projectAtRiskRunningPercent,
                                 'length' => $segmentLength,
                                 'color' => $segment['color'],
                                 'label' => $segment['label'],
+                                'count' => $segment['count'],
                                 'percentage' => $segmentRawPercent,
+                                'segmentDelayMs' => $segmentDelayMs,
+                                'segmentDurationMs' => $segmentDurationMs,
                             ];
 
                             $projectAtRiskRunningPercent += $segmentLength + $projectAtRiskGapPercent;
                         }
                     }
+                    $projectAtRiskCalloutStartDelayMs = $projectAtRiskSweepEndMs + 120.0;
                 @endphp
                 <div class="project-risk-donut-wrap">
-                    <svg class="project-risk-donut" viewBox="0 0 100 100" aria-label="Project at risk as to slippage donut chart">
+                    <svg
+                        class="project-risk-donut"
+                        viewBox="0 0 100 100"
+                        aria-label="Project at risk as to slippage donut chart"
+                        @style([
+                            '--callout-start-delay: ' . number_format($projectAtRiskCalloutStartDelayMs, 2, '.', '') . 'ms',
+                            '--callout-step-delay: ' . number_format($projectAtRiskCalloutStepMs, 2, '.', '') . 'ms',
+                        ])
+                    >
                         <circle class="project-risk-donut-track" cx="50" cy="50" r="36" pathLength="100"></circle>
                         @foreach ($projectAtRiskDonutSegments as $segment)
+                            @php
+                                $segmentMidAngle = (($segment['start'] + ($segment['length'] / 2)) * 3.6) - 90;
+                                $segmentMidRadians = deg2rad($segmentMidAngle);
+                                $segmentHoverOffset = 2.2;
+                                $segmentHoverX = $segmentHoverOffset * cos($segmentMidRadians);
+                                $segmentHoverY = $segmentHoverOffset * sin($segmentMidRadians);
+                            @endphp
                             <circle
                                 class="project-risk-donut-segment"
                                 cx="50"
@@ -934,13 +1106,52 @@
                                 r="36"
                                 pathLength="100"
                                 @style([
+                                    '--segment-length: ' . number_format($segment['length'], 4, '.', ''),
+                                    '--segment-delay: ' . number_format($segment['segmentDelayMs'], 2, '.', '') . 'ms',
+                                    '--segment-duration: ' . number_format($segment['segmentDurationMs'], 2, '.', '') . 'ms',
+                                    '--segment-hover-x: ' . number_format($segmentHoverX, 3, '.', '') . 'px',
+                                    '--segment-hover-y: ' . number_format($segmentHoverY, 3, '.', '') . 'px',
                                     'stroke: ' . $segment['color'],
-                                    'stroke-dasharray: ' . number_format($segment['length'], 4, '.', '') . ' 100',
                                     'stroke-dashoffset: -' . number_format($segment['start'], 4, '.', ''),
                                 ])
                             >
                                 <title>{{ $segment['label'] }}: {{ number_format($segment['percentage'], 2) }}%</title>
                             </circle>
+                        @endforeach
+                        @foreach ($projectAtRiskDonutSegments as $segment)
+                            @php
+                                $calloutAngle = (($segment['start'] + ($segment['length'] / 2)) * 3.6) - 90;
+                                $calloutRadians = deg2rad($calloutAngle);
+                                $calloutStartX = 50 + (46 * cos($calloutRadians));
+                                $calloutStartY = 50 + (46 * sin($calloutRadians));
+                                $calloutBendX = 50 + (52 * cos($calloutRadians));
+                                $calloutBendY = 50 + (52 * sin($calloutRadians));
+                                $calloutIsRight = cos($calloutRadians) >= 0;
+                                $calloutEndX = $calloutBendX + ($calloutIsRight ? 12 : -12);
+                                $calloutTextX = $calloutEndX + ($calloutIsRight ? 2.6 : -2.6);
+                                $calloutTextAnchor = $calloutIsRight ? 'start' : 'end';
+                            @endphp
+                            <g class="dashboard-donut-callout" aria-hidden="true" @style(['--callout-index: ' . $loop->index])>
+                                <polyline
+                                    class="dashboard-donut-callout-line"
+                                    points="{{ number_format($calloutStartX, 3, '.', '') }},{{ number_format($calloutStartY, 3, '.', '') }} {{ number_format($calloutBendX, 3, '.', '') }},{{ number_format($calloutBendY, 3, '.', '') }} {{ number_format($calloutEndX, 3, '.', '') }},{{ number_format($calloutBendY, 3, '.', '') }}"
+                                ></polyline>
+                                <text
+                                    class="dashboard-donut-callout-text"
+                                    x="{{ number_format($calloutTextX, 3, '.', '') }}"
+                                    y="{{ number_format($calloutBendY, 3, '.', '') }}"
+                                    text-anchor="{{ $calloutTextAnchor }}"
+                                >
+                                    <tspan class="dashboard-donut-callout-label">{{ $segment['label'] }}</tspan>
+                                    <tspan
+                                        class="dashboard-donut-callout-value"
+                                        x="{{ number_format($calloutTextX, 3, '.', '') }}"
+                                        dy="1.15em"
+                                    >
+                                        {{ number_format((int) ($segment['count'] ?? 0)) }} ({{ number_format((float) ($segment['percentage'] ?? 0), 2) }}%)
+                                    </tspan>
+                                </text>
+                            </g>
                         @endforeach
                     </svg>
                 </div>
@@ -1017,6 +1228,10 @@
                     }
 
                     $projectAtRiskAgingDonutSegments = [];
+                    $projectAtRiskAgingSweepDurationMs = 1400.0;
+                    $projectAtRiskAgingMinSegmentDurationMs = 120.0;
+                    $projectAtRiskAgingCalloutStepMs = 140.0;
+                    $projectAtRiskAgingSweepEndMs = 0.0;
                     if ($projectAtRiskAgingTotal > 0) {
                         $projectAtRiskAgingBaseSegments = [];
                         foreach ($projectAtRiskAgingChartOrder as $riskLabel) {
@@ -1044,23 +1259,51 @@
                             if ($segmentLength <= 0.01) {
                                 continue;
                             }
+                            $segmentDelayMs = ($projectAtRiskAgingRunningPercent / 100) * $projectAtRiskAgingSweepDurationMs;
+                            $segmentDurationMs = max(
+                                $projectAtRiskAgingMinSegmentDurationMs,
+                                ($segmentLength / 100) * $projectAtRiskAgingSweepDurationMs
+                            );
+                            $projectAtRiskAgingSweepEndMs = max(
+                                $projectAtRiskAgingSweepEndMs,
+                                $segmentDelayMs + $segmentDurationMs
+                            );
 
                             $projectAtRiskAgingDonutSegments[] = [
                                 'start' => $projectAtRiskAgingRunningPercent,
                                 'length' => $segmentLength,
                                 'color' => $segment['color'],
                                 'label' => $segment['label'],
+                                'count' => $segment['count'],
                                 'percentage' => $segmentRawPercent,
+                                'segmentDelayMs' => $segmentDelayMs,
+                                'segmentDurationMs' => $segmentDurationMs,
                             ];
 
                             $projectAtRiskAgingRunningPercent += $segmentLength + $projectAtRiskAgingGapPercent;
                         }
                     }
+                    $projectAtRiskAgingCalloutStartDelayMs = $projectAtRiskAgingSweepEndMs + 120.0;
                 @endphp
                 <div class="project-risk-donut-wrap">
-                    <svg class="project-risk-donut" viewBox="0 0 100 100" aria-label="Aging of the projects with slippage donut chart">
+                    <svg
+                        class="project-risk-donut"
+                        viewBox="0 0 100 100"
+                        aria-label="Aging of the projects with slippage donut chart"
+                        @style([
+                            '--callout-start-delay: ' . number_format($projectAtRiskAgingCalloutStartDelayMs, 2, '.', '') . 'ms',
+                            '--callout-step-delay: ' . number_format($projectAtRiskAgingCalloutStepMs, 2, '.', '') . 'ms',
+                        ])
+                    >
                         <circle class="project-risk-donut-track" cx="50" cy="50" r="36" pathLength="100"></circle>
                         @foreach ($projectAtRiskAgingDonutSegments as $segment)
+                            @php
+                                $segmentMidAngle = (($segment['start'] + ($segment['length'] / 2)) * 3.6) - 90;
+                                $segmentMidRadians = deg2rad($segmentMidAngle);
+                                $segmentHoverOffset = 2.2;
+                                $segmentHoverX = $segmentHoverOffset * cos($segmentMidRadians);
+                                $segmentHoverY = $segmentHoverOffset * sin($segmentMidRadians);
+                            @endphp
                             <circle
                                 class="project-risk-donut-segment"
                                 cx="50"
@@ -1068,13 +1311,52 @@
                                 r="36"
                                 pathLength="100"
                                 @style([
+                                    '--segment-length: ' . number_format($segment['length'], 4, '.', ''),
+                                    '--segment-delay: ' . number_format($segment['segmentDelayMs'], 2, '.', '') . 'ms',
+                                    '--segment-duration: ' . number_format($segment['segmentDurationMs'], 2, '.', '') . 'ms',
+                                    '--segment-hover-x: ' . number_format($segmentHoverX, 3, '.', '') . 'px',
+                                    '--segment-hover-y: ' . number_format($segmentHoverY, 3, '.', '') . 'px',
                                     'stroke: ' . $segment['color'],
-                                    'stroke-dasharray: ' . number_format($segment['length'], 4, '.', '') . ' 100',
                                     'stroke-dashoffset: -' . number_format($segment['start'], 4, '.', ''),
                                 ])
                             >
                                 <title>{{ $segment['label'] }}: {{ number_format($segment['percentage'], 2) }}%</title>
                             </circle>
+                        @endforeach
+                        @foreach ($projectAtRiskAgingDonutSegments as $segment)
+                            @php
+                                $calloutAngle = (($segment['start'] + ($segment['length'] / 2)) * 3.6) - 90;
+                                $calloutRadians = deg2rad($calloutAngle);
+                                $calloutStartX = 50 + (46 * cos($calloutRadians));
+                                $calloutStartY = 50 + (46 * sin($calloutRadians));
+                                $calloutBendX = 50 + (52 * cos($calloutRadians));
+                                $calloutBendY = 50 + (52 * sin($calloutRadians));
+                                $calloutIsRight = cos($calloutRadians) >= 0;
+                                $calloutEndX = $calloutBendX + ($calloutIsRight ? 12 : -12);
+                                $calloutTextX = $calloutEndX + ($calloutIsRight ? 2.6 : -2.6);
+                                $calloutTextAnchor = $calloutIsRight ? 'start' : 'end';
+                            @endphp
+                            <g class="dashboard-donut-callout" aria-hidden="true" @style(['--callout-index: ' . $loop->index])>
+                                <polyline
+                                    class="dashboard-donut-callout-line"
+                                    points="{{ number_format($calloutStartX, 3, '.', '') }},{{ number_format($calloutStartY, 3, '.', '') }} {{ number_format($calloutBendX, 3, '.', '') }},{{ number_format($calloutBendY, 3, '.', '') }} {{ number_format($calloutEndX, 3, '.', '') }},{{ number_format($calloutBendY, 3, '.', '') }}"
+                                ></polyline>
+                                <text
+                                    class="dashboard-donut-callout-text"
+                                    x="{{ number_format($calloutTextX, 3, '.', '') }}"
+                                    y="{{ number_format($calloutBendY, 3, '.', '') }}"
+                                    text-anchor="{{ $calloutTextAnchor }}"
+                                >
+                                    <tspan class="dashboard-donut-callout-label">{{ $segment['label'] }}</tspan>
+                                    <tspan
+                                        class="dashboard-donut-callout-value"
+                                        x="{{ number_format($calloutTextX, 3, '.', '') }}"
+                                        dy="1.15em"
+                                    >
+                                        {{ number_format((int) ($segment['count'] ?? 0)) }} ({{ number_format((float) ($segment['percentage'] ?? 0), 2) }}%)
+                                    </tspan>
+                                </text>
+                            </g>
                         @endforeach
                     </svg>
                 </div>
@@ -1111,6 +1393,7 @@
             </div>
 
         </div>
+    </div>
     </div>
 
     @php
@@ -1829,8 +2112,20 @@
             transform: rotate(180deg);
         }
 
+        .dashboard-main-layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1.8fr) minmax(320px, 1fr);
+            gap: 20px;
+            align-items: start;
+            margin-bottom: 24px;
+        }
+
+        .dashboard-main-layout > * {
+            min-width: 0;
+        }
+
         .dashboard-top-cards {
-            grid-template-columns: minmax(220px, 0.8fr) minmax(460px, 1.2fr);
+            grid-template-columns: 1fr;
         }
 
         .dashboard-top-cards .total-projects-card {
@@ -1842,15 +2137,25 @@
         }
 
         .dashboard-top-cards .financial-status-card {
-            order: 3;
-        }
-
-        .dashboard-top-cards .status-subaybayan-card {
             order: 4;
         }
 
+        .dashboard-top-cards .expected-completion-card {
+            order: 5;
+        }
+
+        .dashboard-top-cards .status-subaybayan-card {
+            order: 3;
+        }
+
         .dashboard-status-row {
-            grid-template-columns: repeat(3, minmax(0, 1fr));
+            grid-template-columns: 1fr;
+        }
+
+        .fund-source-grid,
+        .status-subaybayan-grid {
+            width: 100%;
+            min-width: 0;
         }
 
         .dashboard-status-stack {
@@ -1861,6 +2166,18 @@
 
         .dashboard-status-stack .project-update-status-card {
             order: 1;
+        }
+
+        .dashboard-status-row .project-risk-slippage-card {
+            order: 1;
+        }
+
+        .dashboard-status-row .project-risk-aging-card {
+            order: 2;
+        }
+
+        .dashboard-status-row .dashboard-status-stack {
+            order: 3;
         }
 
         .project-risk-card {
@@ -1972,7 +2289,7 @@
             display: block;
             border: 1px solid #e5e7eb;
             border-radius: 8px;
-            background-color: #f9fafb;
+            background-color: #ffffff;
             padding: 10px;
             margin-bottom: 8px;
         }
@@ -2006,8 +2323,9 @@
 
         .project-update-status-pie-wrap {
             position: relative;
-            width: 300px;
-            height: 300px;
+            width: min(300px, 100%);
+            height: auto;
+            aspect-ratio: 1 / 1;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -2017,13 +2335,15 @@
             width: 220px;
             height: 220px;
             display: block;
-            transform: rotate(-90deg);
+            overflow: visible;
         }
 
         .project-update-status-pie-track {
             fill: none;
             stroke: #ffffff;
             stroke-width: 20;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
         }
 
         .project-update-status-pie-segment {
@@ -2032,6 +2352,56 @@
             stroke-linecap: butt;
             shape-rendering: geometricPrecision;
             cursor: pointer;
+            filter: drop-shadow(0 1.4px 1.5px rgba(15, 23, 42, 0.24)) drop-shadow(0 0 3px rgba(15, 23, 42, 0.16));
+            stroke-dasharray: 0 100;
+            animation-name: dashboard-donut-sweep;
+            animation-timing-function: linear;
+            animation-fill-mode: forwards;
+            animation-duration: var(--segment-duration, 0ms);
+            animation-delay: var(--segment-delay, 0ms);
+            transition: transform 180ms ease-out, filter 180ms ease-out;
+            transform: translate(var(--segment-shift-x, 0px), var(--segment-shift-y, 0px)) rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+
+        .project-update-status-pie-segment:hover {
+            --segment-shift-x: var(--segment-hover-x, 0px);
+            --segment-shift-y: var(--segment-hover-y, 0px);
+            filter: drop-shadow(0 2.2px 2.4px rgba(15, 23, 42, 0.26)) drop-shadow(0 0 4.5px rgba(15, 23, 42, 0.18));
+        }
+
+        .dashboard-donut-callout {
+            pointer-events: none;
+            opacity: 0;
+            transform: translateY(1.2px);
+            transform-box: fill-box;
+            transform-origin: center;
+            animation-name: dashboard-donut-callout-reveal;
+            animation-duration: 220ms;
+            animation-timing-function: ease-out;
+            animation-fill-mode: forwards;
+            animation-delay: calc(var(--callout-start-delay, 1520ms) + (var(--callout-index, 0) * var(--callout-step-delay, 140ms)));
+        }
+
+        .dashboard-donut-callout-line {
+            fill: none;
+            stroke: #6b7280;
+            stroke-width: 0.9;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .dashboard-donut-callout-text {
+            fill: #374151;
+            font-size: 4.2px;
+            font-weight: 600;
+            letter-spacing: 0.01em;
+            dominant-baseline: middle;
+        }
+
+        .dashboard-donut-callout-value {
+            fill: #111827;
+            font-weight: 700;
         }
 
         .project-update-status-tile {
@@ -2159,14 +2529,15 @@
             align-items: center;
             border: 1px solid #e5e7eb;
             border-radius: 8px;
-            background-color: #f9fafb;
+            background-color: #ffffff;
             padding: 10px;
             margin-bottom: 8px;
         }
 
         .project-risk-donut-wrap {
-            width: 300px;
-            height: 300px;
+            width: min(300px, 100%);
+            height: auto;
+            aspect-ratio: 1 / 1;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -2176,13 +2547,53 @@
             width: 220px;
             height: 220px;
             display: block;
-            transform: rotate(-90deg);
+            overflow: visible;
+        }
+
+        @keyframes dashboard-donut-sweep {
+            from {
+                stroke-dasharray: 0 100;
+            }
+
+            to {
+                stroke-dasharray: var(--segment-length, 0) 100;
+            }
+        }
+
+        @keyframes dashboard-donut-callout-reveal {
+            from {
+                opacity: 0;
+                transform: translateY(1.2px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+
+            .project-update-status-pie-segment,
+            .project-risk-donut-segment {
+                animation: none;
+                stroke-dasharray: var(--segment-length, 0) 100;
+                transition: none;
+            }
+
+            .dashboard-donut-callout {
+                animation: none;
+                opacity: 1;
+                transform: none;
+            }
         }
 
         .project-risk-donut-track {
             fill: none;
             stroke: #ffffff;
             stroke-width: 20;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
         }
 
         .project-risk-donut-segment {
@@ -2191,6 +2602,22 @@
             stroke-linecap: butt;
             shape-rendering: geometricPrecision;
             cursor: pointer;
+            filter: drop-shadow(0 1.4px 1.5px rgba(15, 23, 42, 0.24)) drop-shadow(0 0 3px rgba(15, 23, 42, 0.16));
+            stroke-dasharray: 0 100;
+            animation-name: dashboard-donut-sweep;
+            animation-timing-function: linear;
+            animation-fill-mode: forwards;
+            animation-duration: var(--segment-duration, 0ms);
+            animation-delay: var(--segment-delay, 0ms);
+            transition: transform 180ms ease-out, filter 180ms ease-out;
+            transform: translate(var(--segment-shift-x, 0px), var(--segment-shift-y, 0px)) rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+
+        .project-risk-donut-segment:hover {
+            --segment-shift-x: var(--segment-hover-x, 0px);
+            --segment-shift-y: var(--segment-hover-y, 0px);
+            filter: drop-shadow(0 2.2px 2.4px rgba(15, 23, 42, 0.26)) drop-shadow(0 0 4.5px rgba(15, 23, 42, 0.18));
         }
 
         .project-risk-chart {
@@ -2329,6 +2756,53 @@
             margin-top: 5px;
         }
 
+        .expected-completion-list {
+            display: grid;
+            gap: 10px;
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        .expected-completion-item {
+            padding: 10px 12px;
+            border: 1px solid #dbeafe;
+            border-radius: 8px;
+            background-color: #f8fbff;
+        }
+
+        .expected-completion-item-code {
+            font-size: 12px;
+            font-weight: 700;
+            color: #1e3a8a;
+            line-height: 1.25;
+        }
+
+        .expected-completion-item-date {
+            font-size: 12px;
+            font-weight: 600;
+            color: #0f766e;
+            line-height: 1.25;
+        }
+
+        .expected-completion-item-title {
+            margin-top: 4px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #111827;
+            line-height: 1.35;
+        }
+
+        .expected-completion-item-location {
+            margin-top: 4px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            color: #64748b;
+        }
+
         .financial-status-card .financial-metrics-layout {
             grid-template-columns: repeat(6, minmax(0, 1fr));
             align-items: stretch;
@@ -2440,8 +2914,12 @@
         }
 
         @media (max-width: 1100px) {
+            .dashboard-main-layout {
+                grid-template-columns: 1fr;
+            }
+
             .dashboard-top-cards {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
+                grid-template-columns: 1fr;
             }
 
             .dashboard-info-tooltip {
@@ -2452,6 +2930,18 @@
 
             .dashboard-status-row {
                 grid-template-columns: 1fr;
+            }
+
+            .fund-source-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            }
+
+            .status-subaybayan-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            }
+
+            .project-update-status-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
             }
 
             .project-risk-card {
@@ -2475,11 +2965,7 @@
 
         @media (max-width: 1450px) and (min-width: 1101px) {
             .dashboard-status-row {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-            }
-
-            .dashboard-status-row > :first-child {
-                grid-column: 1 / -1;
+                grid-template-columns: 1fr;
             }
         }
 
@@ -2493,8 +2979,7 @@
             }
 
             .project-risk-donut-wrap {
-                width: 240px;
-                height: 240px;
+                width: min(240px, 100%);
             }
 
             .project-risk-donut {
@@ -2523,18 +3008,26 @@
                 grid-template-columns: 1fr;
             }
 
+            .fund-source-grid,
+            .status-subaybayan-grid {
+                grid-template-columns: 1fr !important;
+            }
+
             .project-update-status-pie-layout {
                 justify-content: center;
             }
 
             .project-update-status-pie-wrap {
-                width: 240px;
-                height: 240px;
+                width: min(240px, 100%);
             }
 
             .project-update-status-pie {
                 width: 170px;
                 height: 170px;
+            }
+
+            .dashboard-donut-callout-text {
+                font-size: 3.5px;
             }
 
             .financial-amount-value {
@@ -2957,15 +3450,19 @@
             const slippageCard = document.querySelector('.project-risk-slippage-card');
             const agingCard = document.querySelector('.project-risk-aging-card');
             const shouldSkipSync = window.matchMedia('(max-width: 1100px)').matches;
+            const statusRow = document.querySelector('.dashboard-status-row');
             const cardsToSync = [projectUpdateCard, slippageCard, agingCard].filter(Boolean);
             const minimumCardHeight = 465;
+            const hasSingleStatusColumn = statusRow
+                ? window.getComputedStyle(statusRow).gridTemplateColumns.trim().split(/\s+/).length <= 1
+                : true;
 
             cardsToSync.forEach((card) => {
                 card.style.height = '';
                 card.style.minHeight = '';
             });
 
-            if (cardsToSync.length < 3 || shouldSkipSync) {
+            if (cardsToSync.length < 3 || shouldSkipSync || hasSingleStatusColumn) {
                 return;
             }
 

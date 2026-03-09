@@ -5,18 +5,22 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class SystemManagementController extends Controller
 {
+    private const IMPORT_HISTORY_TABLE = 'subaybayan_import_histories';
+
     public function uploadSubaybayan()
     {
         if (!Schema::hasTable('subay_project_profiles')) {
             return view('system-management.upload-subaybayan', [
-                'columns' => [],
-                'rows' => collect(),
                 'tableMissing' => true,
                 'filters' => [],
                 'filterOptions' => [],
+                'importHistoryRows' => collect(),
+                'importHistoryTableMissing' => !Schema::hasTable(self::IMPORT_HISTORY_TABLE),
             ]);
         }
 
@@ -116,28 +120,21 @@ class SystemManagementController extends Controller
                 ->pluck('profile_approval_status'),
         ];
 
-        $columns = Schema::getColumnListing('subay_project_profiles');
-        $columns = array_values(array_filter($columns, function ($column) {
-            return strtolower((string) $column) !== 'id';
-        }));
-        $rows = $this->buildSubaybayanQuery(request())
-            ->orderByRaw("CASE WHEN status IS NULL OR TRIM(status) = '' THEN 1 ELSE 0 END")
-            ->orderBy('status')
-            ->orderByRaw('CAST(funding_year AS UNSIGNED) DESC')
-            ->orderByRaw("CASE WHEN city_municipality IS NULL OR TRIM(city_municipality) = '' THEN 1 ELSE 0 END")
-            ->orderBy('city_municipality')
-            ->orderByRaw("CASE WHEN province IS NULL OR TRIM(province) = '' THEN 1 ELSE 0 END")
-            ->orderBy('province')
-            ->orderBy('project_code')
-            ->paginate(15)
-            ->withQueryString();
+        $importHistoryTableMissing = !Schema::hasTable(self::IMPORT_HISTORY_TABLE);
+        $importHistoryRows = $importHistoryTableMissing
+            ? collect()
+            : DB::table(self::IMPORT_HISTORY_TABLE)
+                ->orderByDesc('imported_at')
+                ->orderByDesc('id')
+                ->paginate(15, ['*'], 'imports_page')
+                ->withQueryString();
 
         return view('system-management.upload-subaybayan', [
-            'columns' => $columns,
-            'rows' => $rows,
             'tableMissing' => false,
             'filters' => $filters,
             'filterOptions' => $filterOptions,
+            'importHistoryRows' => $importHistoryRows,
+            'importHistoryTableMissing' => $importHistoryTableMissing,
         ]);
     }
 
@@ -157,37 +154,180 @@ class SystemManagementController extends Controller
         );
 
         $file = $request->file('file');
-        $path = $file ? $file->getRealPath() : null;
-        if (!$path || !is_readable($path)) {
-            return back()->with('error', 'Unable to read the uploaded file.');
+        if (!$file) {
+            return back()->with('error', 'No file was uploaded.');
+        }
+
+        $originalFileName = (string) $file->getClientOriginalName();
+        $storageFileName = $this->generateImportStorageFileName($originalFileName);
+        $storedPath = $file->storeAs('subaybayan-imports', $storageFileName, 'local');
+        if (!$storedPath) {
+            return back()->with('error', 'Unable to store the uploaded file.');
+        }
+
+        if (!Schema::hasTable(self::IMPORT_HISTORY_TABLE)) {
+            Storage::disk('local')->delete($storedPath);
+            return back()->with('error', 'Import history table is not available yet. Please run migration first.');
+        }
+
+        $now = now();
+        DB::table(self::IMPORT_HISTORY_TABLE)->insert([
+            'original_file_name' => $originalFileName !== '' ? $originalFileName : basename($storedPath),
+            'stored_file_path' => $storedPath,
+            'file_size_bytes' => $file->getSize(),
+            'imported_at' => $now,
+            'last_loaded_at' => null,
+            'created_by' => auth()->id(),
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+
+        return back()->with('success', 'CSV file added to import history. Click Load to import it into SubayBAYAN data.');
+    }
+
+    public function loadSubaybayanImport($importId)
+    {
+        if (!Schema::hasTable('subay_project_profiles')) {
+            return back()->with('error', 'SubayBAYAN data table is not available yet.');
+        }
+
+        if (!Schema::hasTable(self::IMPORT_HISTORY_TABLE)) {
+            return back()->with('error', 'Import history table is not available yet. Please run migration first.');
+        }
+
+        $record = DB::table(self::IMPORT_HISTORY_TABLE)
+            ->where('id', (int) $importId)
+            ->first();
+
+        if (!$record) {
+            return back()->with('error', 'Selected import record was not found.');
+        }
+
+        $storedPath = (string) ($record->stored_file_path ?? '');
+        if ($storedPath === '' || !Storage::disk('local')->exists($storedPath)) {
+            return back()->with('error', 'The selected imported file is no longer available.');
+        }
+
+        $absolutePath = Storage::disk('local')->path($storedPath);
+        try {
+            $inserted = $this->importCsvSnapshot($absolutePath);
+        } catch (\RuntimeException $exception) {
+            return back()->with('error', $exception->getMessage());
+        }
+
+        if ($inserted === 0) {
+            return back()->with('error', 'No valid rows were loaded from the selected import file.');
+        }
+
+        DB::table(self::IMPORT_HISTORY_TABLE)
+            ->where('id', (int) $importId)
+            ->update([
+                'last_loaded_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+        $displayName = trim((string) ($record->original_file_name ?? ''));
+        if ($displayName === '') {
+            $displayName = basename($storedPath);
+        }
+
+        return back()->with('success', "Loaded {$inserted} rows from {$displayName}.");
+    }
+
+    public function deleteSubaybayanImport($importId)
+    {
+        if (!Schema::hasTable(self::IMPORT_HISTORY_TABLE)) {
+            return back()->with('error', 'Import history table is not available yet. Please run migration first.');
+        }
+
+        $record = DB::table(self::IMPORT_HISTORY_TABLE)
+            ->where('id', (int) $importId)
+            ->first();
+
+        if (!$record) {
+            return back()->with('error', 'Selected import record was not found.');
+        }
+
+        $storedPath = (string) ($record->stored_file_path ?? '');
+        if ($storedPath !== '' && Storage::disk('local')->exists($storedPath)) {
+            Storage::disk('local')->delete($storedPath);
+        }
+
+        DB::table(self::IMPORT_HISTORY_TABLE)
+            ->where('id', (int) $importId)
+            ->delete();
+
+        return back()->with('success', 'Imported file record deleted successfully.');
+    }
+
+    public function downloadSubaybayanImport($importId)
+    {
+        if (!Schema::hasTable(self::IMPORT_HISTORY_TABLE)) {
+            return back()->with('error', 'Import history table is not available yet. Please run migration first.');
+        }
+
+        $record = DB::table(self::IMPORT_HISTORY_TABLE)
+            ->where('id', (int) $importId)
+            ->first();
+
+        if (!$record) {
+            return back()->with('error', 'Selected import record was not found.');
+        }
+
+        $storedPath = (string) ($record->stored_file_path ?? '');
+        if ($storedPath === '' || !Storage::disk('local')->exists($storedPath)) {
+            return back()->with('error', 'The selected imported file is no longer available.');
+        }
+
+        $downloadName = trim((string) ($record->original_file_name ?? ''));
+        if ($downloadName === '') {
+            $downloadName = basename($storedPath);
+        }
+        $downloadName = basename($downloadName);
+
+        $extension = strtolower(pathinfo($downloadName, PATHINFO_EXTENSION));
+        $contentType = in_array($extension, ['csv', 'txt'], true)
+            ? 'text/csv; charset=UTF-8'
+            : 'application/octet-stream';
+
+        return response()->download(
+            Storage::disk('local')->path($storedPath),
+            $downloadName,
+            [
+                'Content-Type' => $contentType,
+            ]
+        );
+    }
+
+    private function importCsvSnapshot(string $path): int
+    {
+        if (!is_readable($path)) {
+            throw new \RuntimeException('Unable to read the selected file.');
         }
 
         $handle = fopen($path, 'r');
         if ($handle === false) {
-            return back()->with('error', 'Unable to open the uploaded file.');
-        }
-
-        $headers = fgetcsv($handle);
-        if ($headers === false) {
-            fclose($handle);
-            return back()->with('error', 'The uploaded file appears to be empty.');
-        }
-
-        $columns = Schema::getColumnListing('subay_project_profiles');
-        $headerMap = $this->buildHeaderMap($headers, $columns);
-
-        if (empty($headerMap)) {
-            fclose($handle);
-            return back()->with('error', 'No recognizable columns were found in the CSV file.');
+            throw new \RuntimeException('Unable to open the selected file.');
         }
 
         try {
-            $inserted = DB::transaction(function () use ($handle, $headerMap) {
+            $headers = fgetcsv($handle);
+            if ($headers === false) {
+                throw new \RuntimeException('The selected file appears to be empty.');
+            }
+
+            $columns = Schema::getColumnListing('subay_project_profiles');
+            $headerMap = $this->buildHeaderMap($headers, $columns);
+            if (empty($headerMap)) {
+                throw new \RuntimeException('No recognizable columns were found in the CSV file.');
+            }
+
+            return DB::transaction(function () use ($handle, $headerMap) {
                 $now = now();
                 $rows = [];
                 $inserted = 0;
 
-                // Treat each new upload as the latest full snapshot to avoid duplicates.
+                // Treat each load as the latest full snapshot to avoid duplicates.
                 DB::table('subay_project_profiles')->delete();
 
                 while (($data = fgetcsv($handle)) !== false) {
@@ -229,12 +369,22 @@ class SystemManagementController extends Controller
         } finally {
             fclose($handle);
         }
+    }
 
-        if ($inserted === 0) {
-            return back()->with('error', 'No valid rows were imported.');
+    private function generateImportStorageFileName(string $originalFileName): string
+    {
+        $extension = strtolower(pathinfo($originalFileName, PATHINFO_EXTENSION));
+        $baseName = pathinfo($originalFileName, PATHINFO_FILENAME);
+        $baseNameSlug = Str::slug($baseName);
+        if ($baseNameSlug === '') {
+            $baseNameSlug = 'subaybayan';
         }
 
-        return back()->with('success', "SubayBAYAN data refreshed successfully. Imported {$inserted} rows.");
+        $timestamp = now()->format('Ymd_His');
+        $randomSuffix = Str::lower(Str::random(8));
+        $fileName = $timestamp . '_' . $baseNameSlug . '_' . $randomSuffix;
+
+        return $fileName . ($extension !== '' ? '.' . $extension : '.csv');
     }
 
     private function buildHeaderMap(array $headers, array $columns): array

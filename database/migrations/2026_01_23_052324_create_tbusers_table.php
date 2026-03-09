@@ -13,7 +13,7 @@ return new class extends Migration
     {
         if (!Schema::hasTable('tbusers')) {
             Schema::create('tbusers', function (Blueprint $table) {
-                $table->id('idno');
+                $table->id();
                 $table->string('fname');
                 $table->string('lname');
                 $table->string('agency');

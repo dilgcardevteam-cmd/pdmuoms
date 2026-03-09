@@ -63,7 +63,7 @@
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 2px solid #00267C; padding-bottom: 10px;">
                 <h3 style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Project Profile</h3>
                 @if(!$isLguAgencyUser)
-                    <a href="#" data-toggle="inline-edit" data-target="editProfileForm" data-confirm-skip="true" style="padding: 6px 12px; background-color: #7c3aed; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 12px;"><i class="fas fa-edit" style="margin-right: 6px;"></i>Update</a>
+                    <a href="#" data-toggle="inline-edit" data-target="editProfileForm" style="padding: 6px 12px; background-color: #002C76; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 12px;"><i class="fas fa-edit" style="margin-right: 6px;"></i>Update</a>
                 @endif
             </div>
             <div style="display: grid; grid-template-columns: repeat(3, minmax(260px, 1fr)); gap: 14px;">
@@ -268,7 +268,7 @@
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 2px solid #00267C; padding-bottom: 10px;">
                 <h3 style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Contract Information</h3>
                 @if(!$isLguAgencyUser)
-                    <a href="#" data-toggle="inline-edit" data-target="editContractForm" data-confirm-skip="true" style="padding: 6px 12px; background-color: #7c3aed; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 12px;"><i class="fas fa-edit" style="margin-right: 6px;"></i>Update</a>
+                    <a href="#" data-toggle="inline-edit" data-target="editContractForm" style="padding: 6px 12px; background-color: #002C76; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 12px;"><i class="fas fa-edit" style="margin-right: 6px;"></i>Update</a>
                 @endif
             </div>
             <div style="display: grid; grid-template-columns: repeat(3, minmax(260px, 1fr)); gap: 14px;">
@@ -474,7 +474,7 @@
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 2px solid #00267C; padding-bottom: 10px;">
                 <h3 style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Physical Accomplishment</h3>
                 @if(!$isLguAgencyUser)
-                    <a href="#" data-toggle="inline-edit" data-target="editPhysicalForm" data-physical-toggle="true" data-confirm-skip="true" style="padding: 6px 12px; background-color: #7c3aed; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 12px;"><i class="fas fa-edit" style="margin-right: 6px;"></i>Update</a>
+                    <a href="#" data-toggle="inline-edit" data-target="editPhysicalForm" data-physical-toggle="true" style="padding: 6px 12px; background-color: #002C76; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 12px;"><i class="fas fa-edit" style="margin-right: 6px;"></i>Update</a>
                 @endif
             </div>
             <div style="display: grid; grid-template-columns: repeat(2, minmax(300px, 1fr)); gap: 16px;">
@@ -909,7 +909,7 @@
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 2px solid #00267C; padding-bottom: 10px;">
                 <h3 style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Financial Accomplishment (based on Subaybayan)</h3>
                 @if(!$isLguAgencyUser)
-                    <a href="#" data-toggle="inline-edit" data-target="editFinancialForm" data-financial-toggle="true" data-confirm-skip="true" style="padding: 6px 12px; background-color: #7c3aed; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 12px;"><i class="fas fa-edit" style="margin-right: 6px;"></i>Update</a>
+                    <a href="#" data-toggle="inline-edit" data-target="editFinancialForm" data-financial-toggle="true" style="padding: 6px 12px; background-color: #002C76; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 12px;"><i class="fas fa-edit" style="margin-right: 6px;"></i>Update</a>
                 @endif
             </div>
             <div style="display: grid; grid-template-columns: 1fr; gap: 16px;">
@@ -1079,7 +1079,7 @@
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 2px solid #00267C; padding-bottom: 10px;">
                 <h3 style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Monitoring/Inspection Activities</h3>
                 @if(!$isLguAgencyUser)
-                    <a href="#" data-toggle="inline-edit" data-target="editMonitoringForm" data-monitoring-toggle="true" data-confirm-skip="true" style="padding: 6px 12px; background-color: #7c3aed; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 12px;"><i class="fas fa-edit" style="margin-right: 6px;"></i>Update</a>
+                    <a href="#" data-toggle="inline-edit" data-target="editMonitoringForm" data-monitoring-toggle="true" style="padding: 6px 12px; background-color: #002C76; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 12px;"><i class="fas fa-edit" style="margin-right: 6px;"></i>Update</a>
                 @endif
             </div>
 
@@ -1206,7 +1206,7 @@
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 2px solid #00267C; padding-bottom: 10px;">
                 <h3 style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Post Implementation Requirements</h3>
                 @if(!$isLguAgencyUser)
-                    <a href="#" data-toggle="inline-edit" data-target="editPostImplementationForm" data-post-implementation-toggle="true" data-confirm-skip="true" style="padding: 6px 12px; background-color: #7c3aed; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 12px;"><i class="fas fa-edit" style="margin-right: 6px;"></i>Update</a>
+                    <a href="#" data-toggle="inline-edit" data-target="editPostImplementationForm" data-post-implementation-toggle="true" style="padding: 6px 12px; background-color: #002C76; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 12px;"><i class="fas fa-edit" style="margin-right: 6px;"></i>Update</a>
                 @endif
             </div>
 
@@ -3310,6 +3310,203 @@ const locationData = {
             }
         }
 
+        function disableAllEditableControlsOnLoad() {
+            const editableSelectors = [
+                '[data-physical-edit="true"]',
+                '[data-financial-edit="true"]',
+                '[data-monitoring-edit="true"]',
+                '[data-post-implementation-edit="true"]',
+            ];
+
+            document.querySelectorAll(editableSelectors.join(',')).forEach((input) => {
+                input.disabled = true;
+                input.style.backgroundColor = '#f3f4f6';
+            });
+
+            const saveSelectors = [
+                '[data-physical-save="true"]',
+                '[data-financial-save="true"]',
+                '[data-monitoring-save="true"]',
+                '[data-post-implementation-save="true"]',
+            ];
+
+            document.querySelectorAll(saveSelectors.join(',')).forEach((saveBtn) => {
+                saveBtn.style.display = 'none';
+            });
+        }
+
+        disableAllEditableControlsOnLoad();
+
+        function submitFieldChangeForm(field) {
+            if (!field) {
+                return false;
+            }
+
+            const form = field.closest('form');
+            if (!form) {
+                return false;
+            }
+
+            const submitterCandidates = Array.from(form.querySelectorAll(
+                '[data-physical-save="true"], [data-financial-save="true"], [data-monitoring-save="true"], [data-post-implementation-save="true"], button[type="submit"], input[type="submit"]'
+            ));
+            const submitter = submitterCandidates.find((button) => {
+                if (!button || button.disabled) {
+                    return false;
+                }
+                const style = window.getComputedStyle(button);
+                return style.display !== 'none' && style.visibility !== 'hidden' && button.offsetParent !== null;
+            }) || null;
+
+            if (!submitter) {
+                return false;
+            }
+
+            if (submitter && submitter.dataset) {
+                submitter.dataset.confirmSkip = 'true';
+                submitter.dataset.confirmed = 'true';
+            }
+
+            try {
+                if (typeof form.requestSubmit === 'function') {
+                    form.requestSubmit(submitter);
+                } else {
+                    form.submit();
+                }
+            } finally {
+                if (submitter && submitter.dataset) {
+                    setTimeout(() => {
+                        delete submitter.dataset.confirmSkip;
+                        delete submitter.dataset.confirmed;
+                    }, 0);
+                }
+            }
+
+            return true;
+        }
+
+        function handleFieldSubmitFailure(restoreCallback) {
+            if (typeof restoreCallback === 'function') {
+                restoreCallback();
+            }
+
+            if (typeof window.showSystemErrorModal === 'function') {
+                window.showSystemErrorModal('Unable to save this field change right now.');
+            }
+        }
+
+        function getEditableFieldValue(field) {
+            if (!field) {
+                return '';
+            }
+
+            if (field.type === 'checkbox' || field.type === 'radio') {
+                return field.checked ? '1' : '0';
+            }
+
+            return field.value;
+        }
+
+        function setEditableFieldValue(field, value) {
+            if (!field) {
+                return;
+            }
+
+            if (field.type === 'checkbox' || field.type === 'radio') {
+                field.checked = value === '1';
+                return;
+            }
+
+            field.value = value;
+        }
+
+        function initializeFieldChangeConfirmation() {
+            const editableFieldSelectors = [
+                'select[data-physical-edit="true"]',
+                'input[data-physical-edit="true"]:not([type="hidden"]):not([type="file"]):not([type="submit"]):not([type="button"]):not([type="reset"])',
+                'textarea[data-physical-edit="true"]',
+                'select[data-financial-edit="true"]',
+                'input[data-financial-edit="true"]:not([type="hidden"]):not([type="file"]):not([type="submit"]):not([type="button"]):not([type="reset"])',
+                'textarea[data-financial-edit="true"]',
+                'select[data-monitoring-edit="true"]',
+                'input[data-monitoring-edit="true"]:not([type="hidden"]):not([type="file"]):not([type="submit"]):not([type="button"]):not([type="reset"])',
+                'textarea[data-monitoring-edit="true"]',
+                'select[data-post-implementation-edit="true"]',
+                'input[data-post-implementation-edit="true"]:not([type="hidden"]):not([type="file"]):not([type="submit"]):not([type="button"]):not([type="reset"])',
+                'textarea[data-post-implementation-edit="true"]',
+            ];
+
+            document.querySelectorAll(editableFieldSelectors.join(',')).forEach((field) => {
+                const rememberCurrentValue = () => {
+                    field.dataset.previousValue = getEditableFieldValue(field);
+                };
+
+                rememberCurrentValue();
+
+                field.addEventListener('focus', rememberCurrentValue);
+                field.addEventListener('mousedown', rememberCurrentValue);
+                field.addEventListener('touchstart', rememberCurrentValue, { passive: true });
+                field.addEventListener('keydown', (event) => {
+                    if (event.key === 'Enter' || event.key === ' ' || event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                        rememberCurrentValue();
+                    }
+                });
+
+                field.addEventListener('change', () => {
+                    if (field.disabled) {
+                        field.dataset.previousValue = getEditableFieldValue(field);
+                        return;
+                    }
+
+                    const previousValue = Object.prototype.hasOwnProperty.call(field.dataset, 'previousValue')
+                        ? field.dataset.previousValue
+                        : '';
+                    const currentValue = getEditableFieldValue(field);
+
+                    if (previousValue === currentValue) {
+                        return;
+                    }
+
+                    const confirmMessage = field.tagName === 'SELECT'
+                        ? 'Dropdown value changed. Do you want to save this change?'
+                        : 'Field value changed. Do you want to save this change?';
+                    const restorePreviousValue = () => {
+                        setEditableFieldValue(field, previousValue);
+                        field.dataset.previousValue = previousValue;
+                    };
+
+                    if (typeof window.openConfirmationModal === 'function') {
+                        window.openConfirmationModal(
+                            confirmMessage,
+                            () => {
+                                field.dataset.previousValue = currentValue;
+                                const submitted = submitFieldChangeForm(field);
+                                if (!submitted) {
+                                    handleFieldSubmitFailure(restorePreviousValue);
+                                }
+                            },
+                            () => {
+                                restorePreviousValue();
+                            }
+                        );
+                        return;
+                    }
+
+                    if (window.confirm(confirmMessage)) {
+                        field.dataset.previousValue = currentValue;
+                        const submitted = submitFieldChangeForm(field);
+                        if (!submitted) {
+                            handleFieldSubmitFailure(restorePreviousValue);
+                        }
+                    } else {
+                        restorePreviousValue();
+                    }
+                });
+            });
+        }
+
+        initializeFieldChangeConfirmation();
+
         document.querySelectorAll('[data-toggle="inline-edit"]').forEach((button) => {
             const targetId = button.getAttribute('data-target');
             const wrapper = document.getElementById(targetId + 'Wrapper');
@@ -3574,7 +3771,6 @@ const locationData = {
             }
 
             form.dataset.autoSaveSubmitting = 'true';
-            form.dataset.confirmSkipOnce = 'true';
 
             if (submitter && typeof form.requestSubmit === 'function') {
                 form.requestSubmit(submitter);

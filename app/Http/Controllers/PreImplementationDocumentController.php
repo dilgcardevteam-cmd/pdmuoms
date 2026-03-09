@@ -297,9 +297,14 @@ class PreImplementationDocumentController extends Controller
                 $now
             );
 
-            if ($isRegionalOffice) {
-                $this->notifyLguUsersAfterRegionalApproval($project, $documentType);
-            }
+            $this->notifyLguUsersAfterRegionalApproval(
+                $project,
+                $documentType,
+                $fileRecord,
+                $action,
+                $isRegionalOffice,
+                null
+            );
 
             return back()->with('success', 'Document validated successfully.');
         }
@@ -332,6 +337,15 @@ class PreImplementationDocumentController extends Controller
             $now
         );
 
+        $this->notifyLguUsersAfterRegionalApproval(
+            $project,
+            $documentType,
+            $fileRecord,
+            $action,
+            $isRegionalOffice,
+            $remarks !== '' ? $remarks : null
+        );
+
         return back()->with('success', 'Document returned with remarks.');
     }
 
@@ -345,7 +359,14 @@ class PreImplementationDocumentController extends Controller
         return strtoupper(str_replace('_', ' ', $documentType));
     }
 
-    private function notifyLguUsersAfterRegionalApproval(object $project, string $documentType): void
+    private function notifyLguUsersAfterRegionalApproval(
+        object $project,
+        string $documentType,
+        PreImplementationDocumentFile $fileRecord,
+        string $action,
+        bool $isRegionalOffice,
+        ?string $remarks = null
+    ): void
     {
         try {
             if (!Schema::hasTable('tbnotifications')) {
@@ -354,12 +375,6 @@ class PreImplementationDocumentController extends Controller
 
             $actor = Auth::user();
             if (!$actor || strtoupper(trim((string) ($actor->agency ?? ''))) !== 'DILG') {
-                return;
-            }
-
-            $isRegionalOffice = strcasecmp(trim((string) ($actor->province ?? '')), 'Regional Office') === 0
-                || str_contains(strtolower(trim((string) ($actor->office ?? ''))), 'regional office');
-            if (!$isRegionalOffice) {
                 return;
             }
 
@@ -412,6 +427,28 @@ class PreImplementationDocumentController extends Controller
                 }
             }
 
+            $relatedUserIds = collect([
+                $fileRecord->uploaded_by,
+                $fileRecord->approved_by_dilg_po,
+                $fileRecord->approved_by_dilg_ro,
+                $fileRecord->approved_by,
+            ])->filter()->map(function ($value) {
+                return (int) $value;
+            });
+
+            $recipientIds = $recipients->pluck('idno')->merge($relatedUserIds);
+            if (!$isRegionalOffice) {
+                $regionalDilgIds = User::query()
+                    ->whereRaw('UPPER(TRIM(COALESCE(agency, ""))) = ?', ['DILG'])
+                    ->where('status', 'active')
+                    ->where(function ($query) {
+                        $query->whereRaw('LOWER(TRIM(COALESCE(province, ""))) = ?', ['regional office'])
+                            ->orWhereRaw('LOWER(TRIM(COALESCE(office, ""))) LIKE ?', ['%regional office%']);
+                    })
+                    ->pluck('idno');
+                $recipientIds = $recipientIds->merge($regionalDilgIds);
+            }
+
             $actorName = trim((string) ($actor->fname ?? '') . ' ' . (string) ($actor->lname ?? ''));
             if ($actorName === '') {
                 $actorName = 'DILG Regional Office';
@@ -424,14 +461,23 @@ class PreImplementationDocumentController extends Controller
                 $projectLabel .= ' (' . $projectTitle . ')';
             }
 
+            $actionLabel = $action === 'approve'
+                ? ($isRegionalOffice ? 'approved' : 'validated (DILG PO)')
+                : 'returned';
+
             $message = sprintf(
-                '%s approved %s for %s%s%s.',
+                '%s %s %s for %s%s%s.',
                 $actorName,
+                $actionLabel,
                 $this->formatDocumentLabel($documentType),
                 $projectLabel !== '' ? $projectLabel : 'an SBDP project',
                 $targetOffice !== '' ? ' - ' . $targetOffice : '',
                 $targetProvince !== '' ? ' - ' . $targetProvince : ''
             );
+
+            if ($action === 'return' && $remarks) {
+                $message .= ' Remarks: ' . $remarks;
+            }
 
             $now = now();
             $url = $projectCode !== ''
@@ -439,13 +485,18 @@ class PreImplementationDocumentController extends Controller
                 : route('pre-implementation-documents.sbdp');
             $actorId = (int) Auth::id();
 
-            $rows = $recipients
-                ->filter(function ($recipient) use ($actorId) {
-                    return (int) ($recipient->idno ?? 0) !== $actorId;
+            $rows = collect($recipientIds)
+                ->map(function ($id) {
+                    return (int) $id;
                 })
-                ->map(function ($recipient) use ($message, $url, $documentType, $now) {
+                ->filter(function ($id) use ($actorId) {
+                    return $id > 0 && $id !== $actorId;
+                })
+                ->unique()
+                ->values()
+                ->map(function ($recipientId) use ($message, $url, $documentType, $now) {
                     return [
-                        'user_id' => (int) $recipient->idno,
+                        'user_id' => $recipientId,
                         'message' => $message,
                         'url' => $url,
                         'document_type' => substr('pre-implementation-' . $documentType, 0, 100),
@@ -462,7 +513,7 @@ class PreImplementationDocumentController extends Controller
                 DB::table('tbnotifications')->insert($rows);
             }
         } catch (\Throwable $error) {
-            Log::warning('Failed to create LGU notifications after regional approval (Pre-Implementation).', [
+            Log::warning('Failed to create approval notifications (Pre-Implementation).', [
                 'project_code' => $project->project_code ?? null,
                 'document_type' => $documentType,
                 'error' => $error->getMessage(),

@@ -59,9 +59,8 @@ return [
             'strict' => true,
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? array_filter([
-                \PDO::ATTR_EMULATE_PREPARES => false,
                 (PHP_VERSION_ID >= 80500 ? \Pdo\Mysql::ATTR_SSL_CA : \PDO::MYSQL_ATTR_SSL_CA) => env('MYSQL_ATTR_SSL_CA'),
-            ], static fn ($value) => ! is_null($value)) : [],
+            ]) : [],
         ],
 
         'mariadb' => [
@@ -80,9 +79,8 @@ return [
             'strict' => true,
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? array_filter([
-                \PDO::ATTR_EMULATE_PREPARES => false,
                 (PHP_VERSION_ID >= 80500 ? \Pdo\Mysql::ATTR_SSL_CA : \PDO::MYSQL_ATTR_SSL_CA) => env('MYSQL_ATTR_SSL_CA'),
-            ], static fn ($value) => ! is_null($value)) : [],
+            ]) : [],
         ],
 
         'pgsql' => [

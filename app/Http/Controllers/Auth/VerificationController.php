@@ -26,7 +26,7 @@ class VerificationController extends Controller
      *
      * @var string
      */
-    protected $redirectTo = '/home';
+    protected $redirectTo = '/dashboard';
 
     /**
      * Create a new controller instance.
@@ -37,6 +37,7 @@ class VerificationController extends Controller
     {
         $this->middleware('auth')->except('verifyWithToken');
         $this->middleware('signed')->only('verify');
+        $this->middleware('throttle:6,1')->only('verify', 'resend');
     }
 
     /**

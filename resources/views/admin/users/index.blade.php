@@ -73,10 +73,10 @@
                                     <i class="fas fa-edit"></i> Edit
                                 </a>
                                 @if($user->idno !== Auth::id())
-                                    <form action="{{ route('users.destroy', $user->idno) }}" method="POST" style="display: inline;">
+                                    <form action="{{ route('users.destroy', $user->idno) }}" method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this user?');">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" data-confirm="Are you sure you want to delete this user?" style="padding: 6px 12px; background-color: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; transition: all 0.3s ease;">
+                                        <button type="submit" style="padding: 6px 12px; background-color: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; transition: all 0.3s ease;">
                                             <i class="fas fa-trash"></i> Delete
                                         </button>
                                     </form>

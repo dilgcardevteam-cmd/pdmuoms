@@ -38,7 +38,7 @@
     @else
         <div style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-top: 16px; overflow-x: auto;">
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px;">
-                <h2 style="color: #002C76; font-size: 18px; margin: 0;">SubayBAYAN Data</h2>
+                <h2 style="color: #002C76; font-size: 18px; margin: 0;">Imported SubayBAYAN Files</h2>
                 <button type="button" onclick="openImportModal()" style="padding: 8px 14px; background-color: #002C76; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12px;">
                     Import CSV
                 </button>
@@ -156,88 +156,99 @@
                     <a href="{{ route('system-management.upload-subaybayan') }}" style="padding: 8px 12px; background-color: #6b7280; color: white; border-radius: 6px; font-size: 12px; font-weight: 600; text-decoration: none; text-align: center;">Reset</a>
                 </div>
             </form>
-            @php
-                $sanitizeCell = function ($value) {
-                    if ($value === null) {
-                        return '-';
-                    }
-                    $string = (string) $value;
-                    if ($string === '') {
-                        return '-';
-                    }
-                    if (function_exists('mb_convert_encoding')) {
-                        $string = mb_convert_encoding($string, 'UTF-8', 'UTF-8,ISO-8859-1,WINDOWS-1252');
-                    } elseif (function_exists('utf8_encode')) {
-                        $string = utf8_encode($string);
-                    }
-                    if (function_exists('iconv')) {
-                        $clean = @iconv('UTF-8', 'UTF-8//IGNORE', $string);
-                        if ($clean !== false) {
-                            $string = $clean;
-                        }
-                    }
-                    return $string;
-                };
-            @endphp
-            <div style="max-height: 520px; overflow: auto; border: 1px solid #e5e7eb; border-radius: 8px;">
-                <table style="width: 100%; border-collapse: collapse; font-size: 12px; table-layout: auto;">
-                    <thead>
-                        <tr style="background-color: #f3f4f6; border-bottom: 2px solid #d1d5db;">
-                            @foreach($columns as $column)
-                                <th style="padding: 10px; text-align: left; font-weight: 600; color: #374151; position: sticky; top: 0; background-color: #f3f4f6; z-index: 1; white-space: normal; word-break: break-word; min-width: 160px;">
-                                    {{ \Illuminate\Support\Str::title(str_replace('_', ' ', $column)) }}
-                                </th>
-                            @endforeach
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($rows as $row)
-                            <tr style="border-bottom: 1px solid #e5e7eb;">
-                            @foreach($columns as $column)
-                                <td style="padding: 10px; color: #374151; vertical-align: top; word-break: break-word;">
-                                    {{ $sanitizeCell($row->$column ?? null) }}
-                                </td>
-                            @endforeach
-                        </tr>
-                        @empty
-                            <tr>
-                                <td colspan="{{ max(1, count($columns)) }}" style="padding: 20px; text-align: center; color: #6b7280;">
-                                    No data available.
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-
-            @if($rows->hasPages())
-                <div style="margin-top: 16px; display: flex; justify-content: space-between; gap: 12px; align-items: center; flex-wrap: wrap;">
-                    <div style="font-size: 12px; color: #6b7280;">
-                        Page {{ $rows->currentPage() }} of {{ $rows->lastPage() }} ·
-                        Showing {{ $rows->firstItem() ?? 0 }}–{{ $rows->lastItem() ?? 0 }} of {{ $rows->total() }}
-                    </div>
-                    <div style="display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap;">
-                        @if($rows->onFirstPage())
-                            <span style="padding: 8px 12px; background-color: #e5e7eb; color: #9ca3af; border-radius: 6px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
-                                <i class="fas fa-chevron-left"></i> Back
-                            </span>
-                        @else
-                            <a href="{{ $rows->previousPageUrl() }}" style="padding: 8px 12px; background-color: #ffffff; color: #374151; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; text-decoration: none;">
-                                <i class="fas fa-chevron-left"></i> Back
-                            </a>
-                        @endif
-
-                        @if($rows->hasMorePages())
-                            <a href="{{ $rows->nextPageUrl() }}" style="padding: 8px 12px; background-color: #002C76; color: white; border: 1px solid #002C76; border-radius: 6px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; text-decoration: none;">
-                                Next <i class="fas fa-chevron-right"></i>
-                            </a>
-                        @else
-                            <span style="padding: 8px 12px; background-color: #e5e7eb; color: #9ca3af; border-radius: 6px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
-                                Next <i class="fas fa-chevron-right"></i>
-                            </span>
-                        @endif
-                    </div>
+            @if($importHistoryTableMissing ?? false)
+                <div style="background-color: #fff7ed; border: 1px solid #fdba74; color: #9a3412; padding: 12px 14px; border-radius: 8px; margin-top: 16px; font-size: 12px;">
+                    Import history table is not available yet. Run migration to enable the Date/Time/File Name/Action list.
                 </div>
+            @else
+                <div style="max-height: 520px; overflow: auto; border: 1px solid #e5e7eb; border-radius: 8px;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 12px; table-layout: auto;">
+                        <thead>
+                            <tr style="background-color: #f3f4f6; border-bottom: 2px solid #d1d5db;">
+                                <th style="padding: 10px; text-align: left; font-weight: 600; color: #374151; position: sticky; top: 0; background-color: #f3f4f6; z-index: 1;">Date</th>
+                                <th style="padding: 10px; text-align: left; font-weight: 600; color: #374151; position: sticky; top: 0; background-color: #f3f4f6; z-index: 1;">Time</th>
+                                <th style="padding: 10px; text-align: left; font-weight: 600; color: #374151; position: sticky; top: 0; background-color: #f3f4f6; z-index: 1;">File Name</th>
+                                <th style="padding: 10px; text-align: center; font-weight: 600; color: #374151; position: sticky; top: 0; background-color: #f3f4f6; z-index: 1;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($importHistoryRows as $historyRow)
+                                @php
+                                    $importedAt = !empty($historyRow->imported_at)
+                                        ? \Carbon\Carbon::parse($historyRow->imported_at)->setTimezone(config('app.timezone'))
+                                        : null;
+                                @endphp
+                                <tr style="border-bottom: 1px solid #e5e7eb;">
+                                    <td style="padding: 10px; color: #374151; vertical-align: top; white-space: nowrap;">
+                                        {{ $importedAt ? $importedAt->format('M d, Y') : '-' }}
+                                    </td>
+                                    <td style="padding: 10px; color: #374151; vertical-align: top; white-space: nowrap;">
+                                        {{ $importedAt ? $importedAt->format('h:i A') : '-' }}
+                                    </td>
+                                    <td style="padding: 10px; color: #374151; vertical-align: top; word-break: break-word;">
+                                        {{ $historyRow->original_file_name ?: '-' }}
+                                    </td>
+                                    <td style="padding: 10px; color: #374151; vertical-align: top;">
+                                        <div style="display: flex; justify-content: center; gap: 8px; flex-wrap: wrap;">
+                                            <form method="POST" action="{{ route('system-management.upload-subaybayan.load', ['importId' => $historyRow->id]) }}">
+                                                @csrf
+                                                <button type="submit" style="padding: 6px 10px; background-color: #002C76; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 600;">
+                                                    Load
+                                                </button>
+                                            </form>
+                                            <a href="{{ route('system-management.upload-subaybayan.download', ['importId' => $historyRow->id]) }}" style="display: inline-flex; align-items: center; justify-content: center; padding: 6px 10px; background-color: #0f766e; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 600; text-decoration: none;">
+                                                Download CSV
+                                            </a>
+                                            <form method="POST" action="{{ route('system-management.upload-subaybayan.delete', ['importId' => $historyRow->id]) }}" onsubmit="return confirm('Delete this imported file record?');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" style="padding: 6px 10px; background-color: #dc2626; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 600;">
+                                                    Delete
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="4" style="padding: 20px; text-align: center; color: #6b7280;">
+                                        No imported files yet.
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+
+                @if(method_exists($importHistoryRows, 'hasPages') && $importHistoryRows->hasPages())
+                    <div style="margin-top: 16px; display: flex; justify-content: space-between; gap: 12px; align-items: center; flex-wrap: wrap;">
+                        <div style="font-size: 12px; color: #6b7280;">
+                            Page {{ $importHistoryRows->currentPage() }} of {{ $importHistoryRows->lastPage() }} ·
+                            Showing {{ $importHistoryRows->firstItem() ?? 0 }}–{{ $importHistoryRows->lastItem() ?? 0 }} of {{ $importHistoryRows->total() }}
+                        </div>
+                        <div style="display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap;">
+                            @if($importHistoryRows->onFirstPage())
+                                <span style="padding: 8px 12px; background-color: #e5e7eb; color: #9ca3af; border-radius: 6px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+                                    <i class="fas fa-chevron-left"></i> Back
+                                </span>
+                            @else
+                                <a href="{{ $importHistoryRows->previousPageUrl() }}" style="padding: 8px 12px; background-color: #ffffff; color: #374151; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; text-decoration: none;">
+                                    <i class="fas fa-chevron-left"></i> Back
+                                </a>
+                            @endif
+
+                            @if($importHistoryRows->hasMorePages())
+                                <a href="{{ $importHistoryRows->nextPageUrl() }}" style="padding: 8px 12px; background-color: #002C76; color: white; border: 1px solid #002C76; border-radius: 6px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; text-decoration: none;">
+                                    Next <i class="fas fa-chevron-right"></i>
+                                </a>
+                            @else
+                                <span style="padding: 8px 12px; background-color: #e5e7eb; color: #9ca3af; border-radius: 6px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+                                    Next <i class="fas fa-chevron-right"></i>
+                                </span>
+                            @endif
+                        </div>
+                    </div>
+                @endif
             @endif
         </div>
     @endif

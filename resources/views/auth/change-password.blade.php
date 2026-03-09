@@ -246,7 +246,7 @@
         }
 
         // Check if passwords match
-        document.getElementById('changePasswordForm').addEventListener('submit', async function(e) {
+        document.getElementById('changePasswordForm').addEventListener('submit', function(e) {
             const newPassword = document.getElementById('newPassword').value;
             const confirmPassword = document.getElementById('confirmPassword').value;
             
@@ -263,16 +263,11 @@
             }
 
             // Confirmation before saving changes
-            e.preventDefault();
-            const confirmChange = window.AppUI && typeof window.AppUI.confirm === 'function'
-                ? await window.AppUI.confirm('Are you sure you want to change your password? You will need to login again with your new password.')
-                : confirm('Are you sure you want to change your password? You will need to login again with your new password.');
+            const confirmChange = confirm('Are you sure you want to change your password? You will need to login again with your new password.');
             if (!confirmChange) {
+                e.preventDefault();
                 return false;
             }
-
-            this.dataset.confirmSkipOnce = 'true';
-            this.submit();
         });
     </script>
 @endsection

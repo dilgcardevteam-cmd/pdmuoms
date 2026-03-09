@@ -2206,11 +2206,8 @@
         }
 
         // Delete Document
-        async function deleteDocument(docType, quarter) {
-            const confirmed = window.AppUI && typeof window.AppUI.confirm === 'function'
-                ? await window.AppUI.confirm('Are you sure you want to delete this document? This action cannot be undone.')
-                : confirm('Are you sure you want to delete this document? This action cannot be undone.');
-            if (!confirmed) {
+        function deleteDocument(docType, quarter) {
+            if (!confirm('Are you sure you want to delete this document? This action cannot be undone.')) {
                 return;
             }
 
@@ -2238,12 +2235,9 @@
             });
         }
 
-        async function deleteProjectConfirm(projectCode) {
+        function deleteProjectConfirm(projectCode) {
             const message = `Are you sure you want to delete this project and ALL its associated data and logs?\n\nProject Code: ${projectCode}\n\nThis action CANNOT be undone.`;
-            const confirmed = window.AppUI && typeof window.AppUI.confirm === 'function'
-                ? await window.AppUI.confirm(message)
-                : confirm(message);
-            if (!confirmed) {
+            if (!confirm(message)) {
                 return;
             }
 

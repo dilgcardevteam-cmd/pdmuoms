@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\RoadMaintenanceStatusDocument;
+use App\Models\PdNoPbbmMonthlyDocument;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
-class RoadMaintenanceStatusReportController extends Controller
+class PdNoPbbmMonthlyReportController extends Controller
 {
     private function getOffices(): array
     {
@@ -47,9 +47,27 @@ class RoadMaintenanceStatusReportController extends Controller
         ];
     }
 
-    private function quarterlyDocType(): string
+    private function monthOptions(): array
     {
-        return 'road_maintenance_status';
+        return [
+            'JAN' => 'January',
+            'FEB' => 'February',
+            'MAR' => 'March',
+            'APR' => 'April',
+            'MAY' => 'May',
+            'JUN' => 'June',
+            'JUL' => 'July',
+            'AUG' => 'August',
+            'SEP' => 'September',
+            'OCT' => 'October',
+            'NOV' => 'November',
+            'DEC' => 'December',
+        ];
+    }
+
+    private function reportDocType(): string
+    {
+        return 'pd_no_pbbm_2025_1572_1573';
     }
 
     private function resolveReportingYear(Request $request): int
@@ -64,17 +82,17 @@ class RoadMaintenanceStatusReportController extends Controller
 
     private function buildOfficeRows(array $offices): array
     {
-        $officeRows = [];
+        $rows = [];
         foreach ($offices as $province => $municipalities) {
             foreach ($municipalities as $office) {
-                $officeRows[] = [
+                $rows[] = [
                     'province' => $province,
                     'city_municipality' => $office,
                 ];
             }
         }
 
-        return $officeRows;
+        return $rows;
     }
 
     private function findProvinceByOffice(string $officeName): ?string
@@ -88,29 +106,57 @@ class RoadMaintenanceStatusReportController extends Controller
         return null;
     }
 
+    private function canAccessOffice(string $officeName, string $province): bool
+    {
+        $user = auth()->user();
+        if (!$user) {
+            return false;
+        }
+
+        $agency = strtoupper(trim((string) $user->agency));
+        $userProvince = trim((string) $user->province);
+        $userOffice = trim((string) $user->office);
+
+        if ($agency === 'LGU') {
+            return $userOffice !== '' && $userOffice === $officeName;
+        }
+
+        if ($agency === 'DILG') {
+            if ($userProvince === '' || $userProvince === 'Regional Office') {
+                return true;
+            }
+
+            return $userProvince === $province;
+        }
+
+        return true;
+    }
+
     private function indexDocumentsByKey($documents): array
     {
         $indexed = [];
         foreach ($documents as $doc) {
-            $key = $doc->doc_type . '|' . ($doc->year ?? '') . '|' . ($doc->quarter ?? '');
+            $key = $doc->doc_type . '|' . ($doc->year ?? '') . '|' . ($doc->month ?? '');
             $indexed[$key] = $doc;
         }
 
         return $indexed;
     }
 
-    private function formatDocumentLabel(RoadMaintenanceStatusDocument $document): string
+    private function formatDocumentLabel(PdNoPbbmMonthlyDocument $document): string
     {
         $suffixParts = [];
         if (!empty($document->year)) {
             $suffixParts[] = 'CY ' . $document->year;
         }
-        if (!empty($document->quarter)) {
-            $suffixParts[] = $document->quarter;
+        if (!empty($document->month)) {
+            $monthLabel = $this->monthOptions()[$document->month] ?? $document->month;
+            $suffixParts[] = $monthLabel;
         }
+
         $suffix = empty($suffixParts) ? '' : ' (' . implode(' ', $suffixParts) . ')';
 
-        return 'Road Maintenance Status Report' . $suffix;
+        return 'Report on PD No. PBBM-2025-1572-1573' . $suffix;
     }
 
     private function buildCurrentActivityLogs($documents): array
@@ -179,7 +225,7 @@ class RoadMaintenanceStatusReportController extends Controller
             return null;
         }
 
-        if (($context['module'] ?? null) !== 'road_maintenance') {
+        if (($context['module'] ?? null) !== 'pd_no_pbbm_monthly') {
             return null;
         }
 
@@ -197,7 +243,7 @@ class RoadMaintenanceStatusReportController extends Controller
         return [
             'timestamp' => $timestamp,
             'action' => $context['action_label'] ?? 'Updated',
-            'document' => $context['document_label'] ?? 'Road Maintenance Status Report',
+            'document' => $context['document_label'] ?? 'Report on PD No. PBBM-2025-1572-1573',
             'user_id' => $context['user_id'] ?? null,
             'remarks' => $context['remarks'] ?? null,
         ];
@@ -222,7 +268,7 @@ class RoadMaintenanceStatusReportController extends Controller
             $logEntries = preg_split('/(?=\[\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}\])/', $content, -1, PREG_SPLIT_NO_EMPTY);
             foreach ($logEntries as $logEntry) {
                 $logEntry = trim($logEntry);
-                if ($logEntry === '' || strpos($logEntry, '"module":"road_maintenance"') === false) {
+                if ($logEntry === '' || strpos($logEntry, '"module":"pd_no_pbbm_monthly"') === false) {
                     continue;
                 }
 
@@ -244,10 +290,7 @@ class RoadMaintenanceStatusReportController extends Controller
         if (empty($persistedLogs)) {
             $logs = $currentLogs;
         } else {
-            // Persisted logs are append-only history; keep all of them.
-            // Add current-state fallback entries only when they are not yet in persisted history.
             $logs = $persistedLogs;
-
             foreach ($currentLogs as $currentLog) {
                 $existsInPersisted = false;
                 foreach ($persistedLogs as $persistedLog) {
@@ -286,18 +329,18 @@ class RoadMaintenanceStatusReportController extends Controller
         string $officeName,
         string $action,
         string $actionLabel,
-        RoadMaintenanceStatusDocument $document,
+        PdNoPbbmMonthlyDocument $document,
         ?string $remarks = null,
         ?Carbon $timestamp = null
     ): void {
         $timestamp = $timestamp ?: now();
 
         Log::channel('upload_timestamps')->info('Document action', [
-            'module' => 'road_maintenance',
+            'module' => 'pd_no_pbbm_monthly',
             'office' => $officeName,
             'doc_type' => $document->doc_type,
             'year' => $document->year,
-            'quarter' => $document->quarter,
+            'month' => $document->month,
             'document_label' => $this->formatDocumentLabel($document),
             'action' => $action,
             'action_label' => $actionLabel,
@@ -307,8 +350,96 @@ class RoadMaintenanceStatusReportController extends Controller
         ]);
     }
 
+    private function notifyProvincialDilgUsersOnUpload(PdNoPbbmMonthlyDocument $document): void
+    {
+        try {
+            if (!Schema::hasTable('tbnotifications')) {
+                return;
+            }
+
+            $actor = auth()->user();
+            if (!$actor || strtoupper(trim((string) ($actor->agency ?? ''))) !== 'LGU') {
+                return;
+            }
+
+            $targetOffice = trim((string) ($document->office ?? ''));
+            $targetProvince = trim((string) ($document->province ?? ''));
+            if ($targetProvince === '' && $targetOffice !== '') {
+                $targetProvince = trim((string) ($this->findProvinceByOffice($targetOffice) ?? ''));
+            }
+
+            if ($targetOffice === '' && $targetProvince === '') {
+                return;
+            }
+
+            $provincialDilgIds = User::query()
+                ->whereRaw('UPPER(TRIM(COALESCE(agency, ""))) = ?', ['DILG'])
+                ->where('status', 'active')
+                ->whereRaw('LOWER(TRIM(COALESCE(province, ""))) = ?', [strtolower($targetProvince)])
+                ->whereRaw('LOWER(TRIM(COALESCE(province, ""))) <> ?', ['regional office'])
+                ->pluck('idno');
+
+            if ($provincialDilgIds->isEmpty()) {
+                return;
+            }
+
+            $actorName = trim((string) ($actor->fname ?? '') . ' ' . (string) ($actor->lname ?? ''));
+            if ($actorName === '') {
+                $actorName = 'LGU User';
+            }
+
+            $message = sprintf(
+                '%s uploaded %s for %s%s and is awaiting DILG Provincial Office validation.',
+                $actorName,
+                $this->formatDocumentLabel($document),
+                $targetOffice !== '' ? $targetOffice : 'the LGU',
+                $targetProvince !== '' ? ' - ' . $targetProvince : ''
+            );
+
+            $now = now();
+            $url = $targetOffice !== ''
+                ? route('reports.monthly.pd-no-pbbm-2025-1572-1573.edit', ['office' => $targetOffice, 'year' => $document->year ?: now()->year])
+                : route('reports.monthly.pd-no-pbbm-2025-1572-1573');
+            $actorId = (int) auth()->id();
+
+            $rows = $provincialDilgIds
+                ->map(function ($id) {
+                    return (int) $id;
+                })
+                ->filter(function ($id) use ($actorId) {
+                    return $id > 0 && $id !== $actorId;
+                })
+                ->unique()
+                ->values()
+                ->map(function ($recipientId) use ($message, $url, $document, $now) {
+                    return [
+                        'user_id' => $recipientId,
+                        'message' => $message,
+                        'url' => $url,
+                        'document_type' => 'pd-no-pbbm-2025-1572-1573',
+                        'quarter' => $document->month ?? null,
+                        'read_at' => null,
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ];
+                })
+                ->values()
+                ->all();
+
+            if (!empty($rows)) {
+                DB::table('tbnotifications')->insert($rows);
+            }
+        } catch (\Throwable $error) {
+            Log::warning('Failed to create upload notifications for DILG Provincial Office (PD No. PBBM-2025-1572-1573).', [
+                'document_id' => $document->id ?? null,
+                'office' => $document->office ?? null,
+                'error' => $error->getMessage(),
+            ]);
+        }
+    }
+
     private function notifyLguUsersAfterRegionalApproval(
-        RoadMaintenanceStatusDocument $document,
+        PdNoPbbmMonthlyDocument $document,
         string $action,
         bool $isRegionalOffice,
         ?string $remarks = null
@@ -357,12 +488,8 @@ class RoadMaintenanceStatusReportController extends Controller
             }
 
             $provinceRecipients = $recipientQuery->get(['idno', 'office']);
-            if ($provinceRecipients->isEmpty()) {
-                return;
-            }
-
             $recipients = $provinceRecipients;
-            if (!empty($candidateOfficeNames)) {
+            if ($provinceRecipients->isNotEmpty() && !empty($candidateOfficeNames)) {
                 $filteredRecipients = $provinceRecipients->filter(function ($lguUser) use ($candidateOfficeNames) {
                     $office = strtolower(trim((string) ($lguUser->office ?? '')));
                     $officeWithoutPrefix = trim((string) preg_replace('/^(municipality|city)\s+of\s+/i', '', $office));
@@ -370,7 +497,6 @@ class RoadMaintenanceStatusReportController extends Controller
                         || in_array($officeWithoutPrefix, $candidateOfficeNames, true);
                 })->values();
 
-                // Fallback to province-level recipients when office normalization does not match.
                 if ($filteredRecipients->isNotEmpty()) {
                     $recipients = $filteredRecipients;
                 }
@@ -385,7 +511,15 @@ class RoadMaintenanceStatusReportController extends Controller
             });
 
             $recipientIds = $recipients->pluck('idno')->merge($relatedUserIds);
-            if (!$isRegionalOffice) {
+            if ($isRegionalOffice && $targetProvince !== '') {
+                $provincialDilgIds = User::query()
+                    ->whereRaw('UPPER(TRIM(COALESCE(agency, ""))) = ?', ['DILG'])
+                    ->where('status', 'active')
+                    ->whereRaw('LOWER(TRIM(COALESCE(province, ""))) = ?', [strtolower($targetProvince)])
+                    ->whereRaw('LOWER(TRIM(COALESCE(province, ""))) <> ?', ['regional office'])
+                    ->pluck('idno');
+                $recipientIds = $recipientIds->merge($provincialDilgIds);
+            } elseif (!$isRegionalOffice) {
                 $regionalDilgIds = User::query()
                     ->whereRaw('UPPER(TRIM(COALESCE(agency, ""))) = ?', ['DILG'])
                     ->where('status', 'active')
@@ -421,8 +555,8 @@ class RoadMaintenanceStatusReportController extends Controller
 
             $now = now();
             $url = $targetOffice !== ''
-                ? route('road-maintenance-status.edit', ['roadMaintenance' => $targetOffice, 'year' => $document->year ?: now()->year])
-                : route('road-maintenance-status.index');
+                ? route('reports.monthly.pd-no-pbbm-2025-1572-1573.edit', ['office' => $targetOffice, 'year' => $document->year ?: now()->year])
+                : route('reports.monthly.pd-no-pbbm-2025-1572-1573');
             $actorId = (int) auth()->id();
 
             $rows = collect($recipientIds)
@@ -439,8 +573,8 @@ class RoadMaintenanceStatusReportController extends Controller
                         'user_id' => $recipientId,
                         'message' => $message,
                         'url' => $url,
-                        'document_type' => 'road-maintenance-status',
-                        'quarter' => $document->quarter ?? null,
+                        'document_type' => 'pd-no-pbbm-2025-1572-1573',
+                        'quarter' => $document->month ?? null,
                         'read_at' => null,
                         'created_at' => $now,
                         'updated_at' => $now,
@@ -453,7 +587,7 @@ class RoadMaintenanceStatusReportController extends Controller
                 DB::table('tbnotifications')->insert($rows);
             }
         } catch (\Throwable $error) {
-            Log::warning('Failed to create approval notifications (Road Maintenance).', [
+            Log::warning('Failed to create approval notifications (PD No. PBBM-2025-1572-1573).', [
                 'document_id' => $document->id ?? null,
                 'office' => $document->office ?? null,
                 'error' => $error->getMessage(),
@@ -464,6 +598,7 @@ class RoadMaintenanceStatusReportController extends Controller
     public function index(Request $request)
     {
         $reportingYear = $this->resolveReportingYear($request);
+        $months = $this->monthOptions();
         $officeRows = $this->buildOfficeRows($this->getOffices());
 
         $user = auth()->user();
@@ -487,56 +622,46 @@ class RoadMaintenanceStatusReportController extends Controller
 
         $documentsByOffice = [];
         if (!empty($officeNames)) {
-            $documents = RoadMaintenanceStatusDocument::whereIn('office', $officeNames)
-                ->where('doc_type', $this->quarterlyDocType())
+            $documents = PdNoPbbmMonthlyDocument::query()
+                ->whereIn('office', $officeNames)
+                ->where('doc_type', $this->reportDocType())
                 ->where('year', $reportingYear)
                 ->get();
 
             foreach ($documents as $doc) {
-                $key = $doc->doc_type . '|' . ($doc->year ?? '') . '|' . ($doc->quarter ?? '');
+                $key = $doc->doc_type . '|' . ($doc->year ?? '') . '|' . ($doc->month ?? '');
                 $documentsByOffice[$doc->office][$key] = $doc;
             }
         }
 
-        return view('reports.road-maintenance-status.index', compact('officeRows', 'documentsByOffice', 'reportingYear'));
+        return view('reports.monthly.pd-no-pbbm-2025-1572-1573.index', compact(
+            'officeRows',
+            'documentsByOffice',
+            'reportingYear',
+            'months'
+        ));
     }
 
-    public function create()
-    {
-        return redirect()->route('road-maintenance-status.index');
-    }
-
-    public function store(Request $request)
-    {
-        return redirect()->route('road-maintenance-status.index');
-    }
-
-    public function show(Request $request, $id)
+    public function edit(Request $request, $office)
     {
         $reportingYear = $this->resolveReportingYear($request);
-        $officeName = $id;
+        $months = $this->monthOptions();
+        $officeName = (string) $office;
         $province = $this->findProvinceByOffice($officeName);
-        $documents = RoadMaintenanceStatusDocument::where('office', $officeName)
-            ->where('doc_type', $this->quarterlyDocType())
-            ->where('year', $reportingYear)
-            ->orderBy('quarter')
-            ->get();
-        $documentsByKey = $this->indexDocumentsByKey($documents);
+        if (!$province) {
+            abort(404);
+        }
 
-        return view('reports.road-maintenance-status.show', compact('officeName', 'province', 'documents', 'documentsByKey', 'reportingYear'));
-    }
+        if (!$this->canAccessOffice($officeName, $province)) {
+            abort(403);
+        }
 
-    public function edit(Request $request, $id)
-    {
-        $reportingYear = $this->resolveReportingYear($request);
-        $officeName = $id;
-        $province = $this->findProvinceByOffice($officeName);
-        $documents = RoadMaintenanceStatusDocument::where('office', $officeName)
-            ->where('doc_type', $this->quarterlyDocType())
+        $documents = PdNoPbbmMonthlyDocument::query()
+            ->where('office', $officeName)
+            ->where('doc_type', $this->reportDocType())
             ->where('year', $reportingYear)
             ->get();
         $documentsByKey = $this->indexDocumentsByKey($documents);
-
         $activityLogs = $this->buildActivityLogs($documents, $officeName);
 
         $uploaderIds = $documents->pluck('uploaded_by')->filter()->unique()->values()->all();
@@ -552,57 +677,69 @@ class RoadMaintenanceStatusReportController extends Controller
             ? User::whereIn('idno', $userIds)->get()->keyBy('idno')
             : collect();
 
-        return view('reports.road-maintenance-status.edit', compact(
+        return view('reports.monthly.pd-no-pbbm-2025-1572-1573.edit', compact(
             'officeName',
             'province',
             'documentsByKey',
             'usersById',
             'activityLogs',
-            'reportingYear'
+            'reportingYear',
+            'months'
         ));
     }
 
-    public function update(Request $request, $id)
+    public function upload(Request $request, $office)
     {
-        return redirect()->route('road-maintenance-status.edit', ['roadMaintenance' => $id]);
-    }
+        $officeName = (string) $office;
+        $province = $this->findProvinceByOffice($officeName);
+        if (!$province) {
+            abort(404);
+        }
 
-    public function upload(Request $request, $id)
-    {
-        $officeName = $id;
+        if (!$this->canAccessOffice($officeName, $province)) {
+            abort(403);
+        }
+
+        $user = auth()->user();
+        if ($user && strtoupper(trim((string) $user->agency)) === 'DILG' && trim((string) $user->province) === 'Regional Office') {
+            return back()->withErrors([
+                'document' => 'Regional Office cannot upload files.',
+            ]);
+        }
+
+        $validMonths = implode(',', array_keys($this->monthOptions()));
         $request->validate([
-            'document' => ['required', 'file', 'mimes:pdf', 'max:10240'],
+            'document' => ['required', 'file', 'mimes:pdf', 'max:15360'],
             'year' => ['required', 'integer', 'between:2000,2100'],
-            'quarter' => ['required', 'in:Q1,Q2,Q3,Q4'],
+            'month' => ['required', 'in:' . $validMonths],
         ]);
 
-        $province = $this->findProvinceByOffice($officeName) ?? 'Unknown';
         $year = (int) $request->input('year');
-        $quarter = $request->input('quarter');
-        $docType = $this->quarterlyDocType();
+        $month = (string) $request->input('month');
+        $docType = $this->reportDocType();
 
-        $existingDocument = RoadMaintenanceStatusDocument::where('office', $officeName)
+        $existingDocument = PdNoPbbmMonthlyDocument::query()
+            ->where('office', $officeName)
             ->where('doc_type', $docType)
             ->where('year', $year)
-            ->where('quarter', $quarter)
+            ->where('month', $month)
             ->first();
         $oldFilePath = $existingDocument?->file_path;
 
         $file = $request->file('document');
         $officeSlug = Str::slug($officeName, '_');
-        $path = $file->store('road-maintenance-status/' . $officeSlug, 'public');
+        $path = $file->store('pd-no-pbbm-2025-1572-1573/' . $officeSlug, 'public');
         $uploadedAt = now();
-        $user = auth()->user();
         $isMountainProvinceDilgUploader = $user
             && strtoupper(trim((string) $user->agency)) === 'DILG'
             && strtolower(trim((string) $user->province)) === 'mountain province';
 
-        $document = RoadMaintenanceStatusDocument::updateOrCreate(
+        $document = PdNoPbbmMonthlyDocument::updateOrCreate(
             [
                 'office' => $officeName,
                 'doc_type' => $docType,
                 'year' => $year,
-                'quarter' => $quarter,
+                'month' => $month,
             ],
             [
                 'province' => $province,
@@ -625,22 +762,26 @@ class RoadMaintenanceStatusReportController extends Controller
         }
 
         $this->logActivity($officeName, 'upload', 'Uploaded', $document, null, $uploadedAt);
+        $this->notifyProvincialDilgUsersOnUpload($document);
         if ($isMountainProvinceDilgUploader) {
             $this->logActivity($officeName, 'validate_po', 'Validated (DILG PO)', $document, null, $uploadedAt);
         }
 
-        return redirect()
-            ->back()
-            ->with('success', 'Quarterly road maintenance status report uploaded successfully.');
+        return back()->with('success', 'Monthly report uploaded successfully.');
     }
 
-    public function viewDocument($id, $docId)
+    public function viewDocument($office, $docId)
     {
-        $officeName = $id;
-        $document = RoadMaintenanceStatusDocument::where('office', $officeName)
+        $officeName = (string) $office;
+        $document = PdNoPbbmMonthlyDocument::query()
+            ->where('office', $officeName)
             ->where('id', $docId)
-            ->where('doc_type', $this->quarterlyDocType())
+            ->where('doc_type', $this->reportDocType())
             ->firstOrFail();
+
+        if (!$this->canAccessOffice($officeName, (string) $document->province)) {
+            abort(403);
+        }
 
         if (!$document->file_path || !Storage::disk('public')->exists($document->file_path)) {
             abort(404);
@@ -663,11 +804,11 @@ class RoadMaintenanceStatusReportController extends Controller
         return response()->file($filePath, $headers);
     }
 
-    public function approveDocument(Request $request, $id, $docId)
+    public function approveDocument(Request $request, $office, $docId)
     {
-        $officeName = $id;
+        $officeName = (string) $office;
         $user = auth()->user();
-        if (!$user || $user->agency !== 'DILG') {
+        if (!$user || strtoupper(trim((string) $user->agency)) !== 'DILG') {
             abort(403);
         }
 
@@ -676,16 +817,21 @@ class RoadMaintenanceStatusReportController extends Controller
             'remarks' => ['required_if:action,return', 'nullable', 'string'],
         ]);
 
-        $document = RoadMaintenanceStatusDocument::where('office', $officeName)
+        $document = PdNoPbbmMonthlyDocument::query()
+            ->where('office', $officeName)
             ->where('id', $docId)
-            ->where('doc_type', $this->quarterlyDocType())
+            ->where('doc_type', $this->reportDocType())
             ->firstOrFail();
+
+        if (!$this->canAccessOffice($officeName, (string) $document->province)) {
+            abort(403);
+        }
 
         $now = now();
         $action = $request->input('action');
         $remarks = $request->input('remarks');
 
-        $isRegionalOffice = $user->province === 'Regional Office';
+        $isRegionalOffice = trim((string) $user->province) === 'Regional Office';
         $isProvincialOffice = !$isRegionalOffice;
 
         $updates = [
@@ -717,8 +863,8 @@ class RoadMaintenanceStatusReportController extends Controller
         }
 
         $document->update($updates);
-
         $document->refresh();
+
         if ($action === 'approve') {
             if ($isProvincialOffice) {
                 $this->logActivity($officeName, 'validate_po', 'Validated (DILG PO)', $document, null, $now);
@@ -733,10 +879,4 @@ class RoadMaintenanceStatusReportController extends Controller
 
         return back()->with('success', $action === 'approve' ? 'Document validated.' : 'Document returned.');
     }
-
-    public function destroy($id)
-    {
-        return redirect()->route('road-maintenance-status.index');
-    }
 }
-

@@ -159,7 +159,6 @@
     </div>
 
     <div id="toast" class="toast"></div>
-    @include('partials.global-error-confirm')
 
     <script>
         function showToast(message, type = 'success') {

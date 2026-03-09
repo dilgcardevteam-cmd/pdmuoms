@@ -346,7 +346,13 @@ class RbisAnnualCertificationController extends Controller
         ]);
     }
 
-    private function notifyLguUsersAfterRegionalApproval(RbisAnnualCertificationDocument $document, string $officeName): void
+    private function notifyLguUsersAfterRegionalApproval(
+        RbisAnnualCertificationDocument $document,
+        string $officeName,
+        string $action,
+        bool $isRegionalOffice,
+        ?string $remarks = null
+    ): void
     {
         try {
             if (!Schema::hasTable('tbnotifications')) {
@@ -355,12 +361,6 @@ class RbisAnnualCertificationController extends Controller
 
             $actor = auth()->user();
             if (!$actor || strtoupper(trim((string) ($actor->agency ?? ''))) !== 'DILG') {
-                return;
-            }
-
-            $isRegionalOffice = strcasecmp(trim((string) ($actor->province ?? '')), 'Regional Office') === 0
-                || str_contains(strtolower(trim((string) ($actor->office ?? ''))), 'regional office');
-            if (!$isRegionalOffice) {
                 return;
             }
 
@@ -416,32 +416,67 @@ class RbisAnnualCertificationController extends Controller
                 }
             }
 
+            $relatedUserIds = collect([
+                $document->uploaded_by,
+                $document->approved_by_dilg_po,
+                $document->approved_by_dilg_ro,
+            ])->filter()->map(function ($value) {
+                return (int) $value;
+            });
+
+            $recipientIds = $recipients->pluck('idno')->merge($relatedUserIds);
+            if (!$isRegionalOffice) {
+                $regionalDilgIds = User::query()
+                    ->whereRaw('UPPER(TRIM(COALESCE(agency, ""))) = ?', ['DILG'])
+                    ->where('status', 'active')
+                    ->where(function ($query) {
+                        $query->whereRaw('LOWER(TRIM(COALESCE(province, ""))) = ?', ['regional office'])
+                            ->orWhereRaw('LOWER(TRIM(COALESCE(office, ""))) LIKE ?', ['%regional office%']);
+                    })
+                    ->pluck('idno');
+                $recipientIds = $recipientIds->merge($regionalDilgIds);
+            }
+
             $actorName = trim((string) ($actor->fname ?? '') . ' ' . (string) ($actor->lname ?? ''));
             if ($actorName === '') {
                 $actorName = 'DILG Regional Office';
             }
 
+            $actionLabel = $action === 'approve'
+                ? ($isRegionalOffice ? 'approved' : 'validated (DILG PO)')
+                : 'returned';
+
             $message = sprintf(
-                '%s approved %s for %s%s.',
+                '%s %s %s for %s%s.',
                 $actorName,
+                $actionLabel,
                 $this->formatDocumentLabel($document),
                 $targetOffice !== '' ? $targetOffice : 'the LGU',
                 $targetProvince !== '' ? ' - ' . $targetProvince : ''
             );
 
+            if ($action === 'return' && $remarks) {
+                $message .= ' Remarks: ' . $remarks;
+            }
+
             $now = now();
             $url = $targetOffice !== ''
-                ? route('rbis-annual-certification.edit', ['office' => $targetOffice])
+                ? route('rbis-annual-certification.edit', ['office' => $targetOffice, 'year' => $document->document_year ?: now()->year])
                 : route('rbis-annual-certification.index');
             $actorId = (int) auth()->id();
 
-            $rows = $recipients
-                ->filter(function ($recipient) use ($actorId) {
-                    return (int) ($recipient->idno ?? 0) !== $actorId;
+            $rows = collect($recipientIds)
+                ->map(function ($id) {
+                    return (int) $id;
                 })
-                ->map(function ($recipient) use ($message, $url, $now) {
+                ->filter(function ($id) use ($actorId) {
+                    return $id > 0 && $id !== $actorId;
+                })
+                ->unique()
+                ->values()
+                ->map(function ($recipientId) use ($message, $url, $now) {
                     return [
-                        'user_id' => (int) $recipient->idno,
+                        'user_id' => $recipientId,
                         'message' => $message,
                         'url' => $url,
                         'document_type' => 'rbis-annual-certification',
@@ -458,7 +493,7 @@ class RbisAnnualCertificationController extends Controller
                 DB::table('tbnotifications')->insert($rows);
             }
         } catch (\Throwable $error) {
-            Log::warning('Failed to create LGU notifications after regional approval (RBIS).', [
+            Log::warning('Failed to create approval notifications (RBIS).', [
                 'document_id' => $document->id ?? null,
                 'office' => $officeName,
                 'error' => $error->getMessage(),
@@ -642,7 +677,21 @@ class RbisAnnualCertificationController extends Controller
             abort(404);
         }
 
-        return response()->file(Storage::disk('public')->path($document->file_path));
+        $filePath = Storage::disk('public')->path($document->file_path);
+        $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+        $inlineExtensions = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'];
+        $mimeType = @mime_content_type($filePath) ?: 'application/octet-stream';
+        $headers = [
+            'Content-Type' => $mimeType,
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+            'Pragma' => 'no-cache',
+        ];
+
+        if (!in_array($extension, $inlineExtensions, true)) {
+            return response()->download($filePath, basename($filePath), $headers);
+        }
+
+        return response()->file($filePath, $headers);
     }
 
     public function approveDocument(Request $request, $id, $docId)
@@ -715,9 +764,7 @@ class RbisAnnualCertificationController extends Controller
             $this->logActivity($officeName, 'return', 'Returned', $document, $remarks, $now);
         }
 
-        if ($action === 'approve' && $isRegionalOffice) {
-            $this->notifyLguUsersAfterRegionalApproval($document, $officeName);
-        }
+        $this->notifyLguUsersAfterRegionalApproval($document, $officeName, $action, $isRegionalOffice, $remarks);
 
         return back()->with('success', $action === 'approve' ? 'Document validated.' : 'Document returned.');
     }

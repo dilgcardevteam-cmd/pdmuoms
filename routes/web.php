@@ -11,40 +11,182 @@ Auth::routes(['reset' => false, 'register' => false]); // Disable default regist
 
 // Custom register routes
 Route::get('register', [App\Http\Controllers\Auth\RegisterController::class, 'showRegistrationForm'])->name('register');
-Route::post('register', [App\Http\Controllers\Auth\RegisterController::class, 'register'])
-    ->middleware('throttle:register');
+Route::post('register', [App\Http\Controllers\Auth\RegisterController::class, 'register']);
 
 // Email verification routes - Token route FIRST (more specific)
 Route::get('/email/verify/token/{token}', [App\Http\Controllers\Auth\VerificationController::class, 'verifyWithToken'])->name('verification.verify.token');
 // Then general verification routes
 Route::get('/email/verify', [App\Http\Controllers\Auth\VerificationController::class, 'show'])->name('verification.notice');
 Route::get('/email/verify/{id}/{hash}', [App\Http\Controllers\Auth\VerificationController::class, 'verify'])->middleware(['signed'])->name('verification.verify');
-Route::post('/email/resend', [App\Http\Controllers\Auth\VerificationController::class, 'resend'])
-    ->middleware(['throttle:verification-resend'])
-    ->name('verification.resend');
+Route::post('/email/resend', [App\Http\Controllers\Auth\VerificationController::class, 'resend'])->middleware(['throttle:6,1'])->name('verification.resend');
 
 Route::get('/forgot-password', [App\Http\Controllers\Auth\ForgotPasswordController::class, 'showLinkRequestForm'])->name('forgot-password');
-Route::post('/forgot-password', [App\Http\Controllers\Auth\ForgotPasswordController::class, 'sendOtp'])
-    ->middleware('throttle:password-reset')
-    ->name('forgot-password.send-otp');
+Route::post('/forgot-password', [App\Http\Controllers\Auth\ForgotPasswordController::class, 'sendOtp'])->name('forgot-password.send-otp');
 Route::get('/verify-otp', [App\Http\Controllers\Auth\ForgotPasswordController::class, 'showVerifyOtpForm'])->name('forgot-password.verify');
-Route::post('/verify-otp', [App\Http\Controllers\Auth\ForgotPasswordController::class, 'verifyOtp'])
-    ->middleware('throttle:otp-verify')
-    ->name('forgot-password.verify-otp');
+Route::post('/verify-otp', [App\Http\Controllers\Auth\ForgotPasswordController::class, 'verifyOtp'])->name('forgot-password.verify-otp');
 Route::get('/reset-password', [App\Http\Controllers\Auth\ForgotPasswordController::class, 'showResetForm'])->name('forgot-password.reset');
-Route::post('/reset-password', [App\Http\Controllers\Auth\ForgotPasswordController::class, 'resetPassword'])
-    ->middleware('throttle:password-reset')
-    ->name('forgot-password.reset-submit');
+Route::post('/reset-password', [App\Http\Controllers\Auth\ForgotPasswordController::class, 'resetPassword'])->name('forgot-password.reset-submit');
 
 Route::get('/', function () {
-    return redirect('/login');
+    return Auth::check()
+        ? redirect()->route('dashboard')
+        : redirect()->route('login');
 });
+
+// Public API endpoint for municipality projects
+Route::get('/api/municipality-projects', function () {
+    try {
+        if (!Schema::hasTable('subay_project_profiles')) {
+            return response()->json(['features' => [], 'maxCount' => 0]);
+        }
+
+        $municipalityCoords = [
+            // Abra
+            'Bangued' => ['lat' => 17.0667, 'lng' => 120.6167],
+            'Boliney' => ['lat' => 17.0833, 'lng' => 120.65],
+            'Bucay' => ['lat' => 16.85, 'lng' => 120.6],
+            'Daguioman' => ['lat' => 16.9, 'lng' => 120.7167],
+            'Danglas' => ['lat' => 16.9667, 'lng' => 120.8],
+            'Dolores' => ['lat' => 17.1667, 'lng' => 120.75],
+            'La Paz' => ['lat' => 17.0, 'lng' => 120.5],
+            'Lacub' => ['lat' => 17.05, 'lng' => 120.8],
+            'Lagangilang' => ['lat' => 16.8667, 'lng' => 120.75],
+            'Lagayan' => ['lat' => 16.9167, 'lng' => 120.65],
+            'Langiden' => ['lat' => 17.0833, 'lng' => 120.9],
+            'Licuan-Baay' => ['lat' => 17.0, 'lng' => 120.85],
+            'Malibcong' => ['lat' => 16.95, 'lng' => 120.6333],
+            'Manabo' => ['lat' => 16.8833, 'lng' => 120.65],
+            'Peñarrubia' => ['lat' => 16.9333, 'lng' => 120.5333],
+            'Pidcal' => ['lat' => 17.0167, 'lng' => 120.7333],
+            'Pilar' => ['lat' => 16.9667, 'lng' => 120.5667],
+            'Sallapadan' => ['lat' => 16.95, 'lng' => 120.85],
+            'San Isidro' => ['lat' => 17.0667, 'lng' => 120.6833],
+            'San Juan' => ['lat' => 17.1333, 'lng' => 120.7833],
+            'San Quintin' => ['lat' => 17.1167, 'lng' => 120.6667],
+            'Tayum' => ['lat' => 17.1083, 'lng' => 120.8333],
+            // Apayao
+            'Calanasan' => ['lat' => 17.95, 'lng' => 121.1667],
+            'Conner' => ['lat' => 17.75, 'lng' => 121.05],
+            'Flora' => ['lat' => 17.95, 'lng' => 121.0],
+            'Kabugao' => ['lat' => 17.8333, 'lng' => 120.95],
+            'Pudtol' => ['lat' => 17.85, 'lng' => 121.1667],
+            'Santa Marcela' => ['lat' => 18.0333, 'lng' => 121.2167],
+            // Benguet
+            'Atok' => ['lat' => 16.4167, 'lng' => 120.6],
+            'Bakun' => ['lat' => 16.35, 'lng' => 120.9],
+            'Bokod' => ['lat' => 16.3833, 'lng' => 120.8167],
+            'Buguias' => ['lat' => 16.5167, 'lng' => 120.8],
+            'City Of Baguio' => ['lat' => 16.408, 'lng' => 120.594],
+            'Itogon' => ['lat' => 16.4833, 'lng' => 120.85],
+            'Kabayan' => ['lat' => 16.3833, 'lng' => 120.7],
+            'Kapangan' => ['lat' => 16.45, 'lng' => 120.7667],
+            'Kibungan' => ['lat' => 16.4833, 'lng' => 120.7667],
+            'La Trinidad' => ['lat' => 16.3667, 'lng' => 120.55],
+            'Mankayan' => ['lat' => 16.5333, 'lng' => 120.65],
+            'Sablan' => ['lat' => 16.35, 'lng' => 120.65],
+            'Tuba' => ['lat' => 16.3333, 'lng' => 120.5333],
+            'Tublay' => ['lat' => 16.3667, 'lng' => 120.6667],
+            'Tubo' => ['lat' => 16.4, 'lng' => 120.6],
+            // Ifugao
+            'Aguinaldo' => ['lat' => 16.95, 'lng' => 121.3],
+            'Alfonso Lista' => ['lat' => 17.0333, 'lng' => 121.3833],
+            'Asipulo' => ['lat' => 16.85, 'lng' => 121.2667],
+            'Banaue' => ['lat' => 16.95, 'lng' => 121.1667],
+            'Hingyon' => ['lat' => 16.8667, 'lng' => 121.3333],
+            'Hungduan' => ['lat' => 16.8333, 'lng' => 121.2],
+            'Kiangan' => ['lat' => 16.9833, 'lng' => 121.2667],
+            'Lagawe' => ['lat' => 16.9333, 'lng' => 121.2167],
+            'Mayoyao' => ['lat' => 16.85, 'lng' => 121.45],
+            'Tinoc' => ['lat' => 16.9, 'lng' => 121.4167],
+            // Kalinga
+            'Balbalan' => ['lat' => 17.4333, 'lng' => 121.45],
+            'City Of Tabuk' => ['lat' => 17.3667, 'lng' => 121.4167],
+            'Dagupagsan' => ['lat' => 17.35, 'lng' => 121.3833],
+            'Lubuagan' => ['lat' => 17.3833, 'lng' => 121.3167],
+            'Luna' => ['lat' => 17.2, 'lng' => 121.2167],
+            'Mabunguran' => ['lat' => 17.3667, 'lng' => 121.5167],
+            'Pasil' => ['lat' => 17.2333, 'lng' => 121.3667],
+            'Pinukpuk' => ['lat' => 17.2667, 'lng' => 121.45],
+            'Rizal' => ['lat' => 17.2833, 'lng' => 121.2333],
+            'Tanudan' => ['lat' => 17.2333, 'lng' => 121.2667],
+            'Tinglayan' => ['lat' => 17.2167, 'lng' => 121.5333],
+            // Mountain Province
+            'Amlang' => ['lat' => 16.65, 'lng' => 121.3333],
+            'Amtan' => ['lat' => 16.7, 'lng' => 121.2667],
+            'Barlig' => ['lat' => 16.75, 'lng' => 121.1667],
+            'Bauko' => ['lat' => 16.8, 'lng' => 121.1833],
+            'Besao' => ['lat' => 16.7167, 'lng' => 121.2667],
+            'Bontoc' => ['lat' => 16.7667, 'lng' => 121.3],
+            'Bucloc' => ['lat' => 16.6667, 'lng' => 121.4],
+            'Cervantes' => ['lat' => 16.7667, 'lng' => 121.35],
+            'Luba' => ['lat' => 16.8333, 'lng' => 121.25],
+            'Natonin' => ['lat' => 16.6667, 'lng' => 121.2667],
+            'Paracelis' => ['lat' => 16.7833, 'lng' => 121.4833],
+            'Sabangan' => ['lat' => 16.8167, 'lng' => 121.35],
+            'Sadanga' => ['lat' => 16.7, 'lng' => 121.3167],
+            'Sagada' => ['lat' => 16.7333, 'lng' => 121.2167],
+            'Tadian' => ['lat' => 16.7667, 'lng' => 121.3167],
+            'Tineg' => ['lat' => 16.7333, 'lng' => 121.35]
+        ];
+
+        // Get all municipalities with subay project counts
+        $municipalityProjects = DB::table('subay_project_profiles')
+            ->select(
+                DB::raw('UPPER(TRIM(city_municipality)) as municipality'),
+                DB::raw('count(*) as project_count')
+            )
+            ->whereNotNull('city_municipality')
+            ->where('city_municipality', '<>', '')
+            ->groupBy(DB::raw('UPPER(TRIM(city_municipality))'))
+            ->get();
+
+        $maxCount = 0;
+        $features = [];
+        
+        // Create a lowercase version of coords for matching
+        $coordsLowercase = [];
+        foreach ($municipalityCoords as $name => $coord) {
+            $coordsLowercase[strtolower($name)] = ['name' => $name, 'coord' => $coord];
+        }
+
+        foreach ($municipalityProjects as $row) {
+            $municipality = $row->municipality;
+            // Remove anything in parentheses and lowercase for matching
+            $municipalityKey = strtolower(trim(preg_replace('/\s*\([^)]*\)\s*/', '', $municipality)));
+            $count = $row->project_count;
+            $maxCount = max($maxCount, $count);
+
+            if (isset($coordsLowercase[$municipalityKey])) {
+                $matchedData = $coordsLowercase[$municipalityKey];
+                $coords = $matchedData['coord'];
+                $displayName = $matchedData['name'];
+                $features[] = [
+                    'type' => 'Feature',
+                    'properties' => [
+                        'name' => $displayName,
+                        'project_count' => $count
+                    ],
+                    'geometry' => [
+                        'type' => 'Point',
+                        'coordinates' => [$coords['lng'], $coords['lat']]
+                    ]
+                ];
+            }
+        }
+
+        return response()->json([
+            'type' => 'FeatureCollection',
+            'features' => $features,
+            'maxCount' => $maxCount
+        ]);
+    } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
+    }
+})->name('api.municipality-projects');
 
 Route::middleware(['auth'])->group(function () {
     // PAGASA time endpoint for live clock display
-    Route::get('/api/pagasa-time/current', [App\Http\Controllers\PagasaTimeController::class, 'current'])
-        ->middleware('throttle:pagasa-time')
-        ->name('pagasa-time.current');
+    Route::get('/api/pagasa-time/current', [App\Http\Controllers\PagasaTimeController::class, 'current'])->name('pagasa-time.current');
 
     Route::get('/notifications/{id}/read', function ($id) {
         $notification = \Illuminate\Support\Facades\DB::table('tbnotifications')
@@ -61,7 +203,7 @@ Route::middleware(['auth'])->group(function () {
             ->update(['read_at' => now(), 'updated_at' => now()]);
 
         return redirect($notification->url ?: route('fund-utilization.index'));
-    })->middleware('throttle:notifications')->name('notifications.read');
+    })->name('notifications.read');
 
     Route::post('/notifications/clear', function () {
         \Illuminate\Support\Facades\DB::table('tbnotifications')
@@ -70,9 +212,10 @@ Route::middleware(['auth'])->group(function () {
             ->delete();
 
         return redirect()->back();
-    })->middleware('throttle:notifications')->name('notifications.clear');
+    })->name('notifications.clear');
 
     Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
+
     Route::get('/dashboard', function () {
         try {
             $subayUploadDateLabel = 'No SubayBAYAN upload yet';
@@ -234,6 +377,12 @@ Route::middleware(['auth'])->group(function () {
             $projectsWithBalance = collect();
             $financialStatusProjects = collect();
             $utilizationPercentage = 0.0;
+            $expectedCompletionMonthLabel = now()->format('F Y');
+            $currentYear = now()->year;
+            $currentMonth = now()->month;
+            $currentMonthStart = now()->copy()->startOfMonth()->toDateString();
+            $currentMonthEnd = now()->copy()->endOfMonth()->toDateString();
+            $projectsExpectedCompletionThisMonth = collect();
             $projectAtRiskOrder = ['Ahead', 'No Risk', 'On Schedule', 'High Risk', 'Moderate Risk', 'Low Risk'];
             $projectAtRiskAgingOrder = ['High Risk', 'Low Risk', 'No Risk'];
             $projectUpdateStatusOrder = ['High Risk', 'Low Risk', 'No Risk'];
@@ -299,6 +448,46 @@ Route::middleware(['auth'])->group(function () {
             foreach ($statusDisplayOrder as $statusLabel) {
                 $statusSubaybayanProjectsMap[$statusLabel] = [];
             }
+
+            $carProvinceDisplayOrder = [
+                'Abra',
+                'Apayao',
+                'Benguet',
+                'Ifugao',
+                'Kalinga',
+                'Mountain Province',
+            ];
+            $carProvinceProjectCounts = array_fill_keys($carProvinceDisplayOrder, 0);
+            $carProvinceProjectMaxCount = 0;
+
+            $normalizeCarProvince = function ($province) {
+                $raw = trim((string) $province);
+                if ($raw === '') {
+                    return null;
+                }
+
+                $compact = preg_replace('/[^A-Z]/', '', strtoupper($raw)) ?? '';
+                if ($compact === '') {
+                    return null;
+                }
+
+                $provinceAliases = [
+                    'ABRA' => 'Abra',
+                    'APAYAO' => 'Apayao',
+                    'BENGUET' => 'Benguet',
+                    'IFUGAO' => 'Ifugao',
+                    'KALINGA' => 'Kalinga',
+                    'MOUNTAINPROVINCE' => 'Mountain Province',
+                    'MOUNTAINPROV' => 'Mountain Province',
+                    'MTPROVINCE' => 'Mountain Province',
+                ];
+
+                if (array_key_exists($compact, $provinceAliases)) {
+                    return $provinceAliases[$compact];
+                }
+
+                return null;
+            };
 
             $normalizeRiskLevel = function ($riskLevel) {
                 $raw = strtoupper(trim((string) $riskLevel));
@@ -605,6 +794,28 @@ Route::middleware(['auth'])->group(function () {
                 )
             ";
 
+            $expectedCompletionParsedDateExpression = "
+                COALESCE(
+                    IF(
+                        TRIM(COALESCE(spp.intended_completion_date_2, '')) REGEXP '^[0-9]+(\\.[0-9]+)?$',
+                        DATE_ADD('1899-12-30', INTERVAL FLOOR(CAST(TRIM(COALESCE(spp.intended_completion_date_2, '')) AS DECIMAL(12,4))) DAY),
+                        NULL
+                    ),
+                    STR_TO_DATE(TRIM(COALESCE(spp.intended_completion_date_2, '')), '%Y-%m-%d'),
+                    STR_TO_DATE(TRIM(COALESCE(spp.intended_completion_date_2, '')), '%Y-%m-%d %H:%i:%s'),
+                    STR_TO_DATE(TRIM(COALESCE(spp.intended_completion_date_2, '')), '%m/%d/%Y'),
+                    STR_TO_DATE(TRIM(COALESCE(spp.intended_completion_date_2, '')), '%m/%d/%Y %H:%i'),
+                    STR_TO_DATE(TRIM(COALESCE(spp.intended_completion_date_2, '')), '%m/%d/%Y %H:%i:%s'),
+                    STR_TO_DATE(TRIM(COALESCE(spp.intended_completion_date_2, '')), '%m/%d/%Y %h:%i:%s %p'),
+                    STR_TO_DATE(TRIM(COALESCE(spp.intended_completion_date_2, '')), '%m/%d/%y'),
+                    STR_TO_DATE(TRIM(COALESCE(spp.intended_completion_date_2, '')), '%d/%m/%Y'),
+                    STR_TO_DATE(TRIM(COALESCE(spp.intended_completion_date_2, '')), '%d-%m-%Y'),
+                    STR_TO_DATE(TRIM(COALESCE(spp.intended_completion_date_2, '')), '%d-%b-%Y'),
+                    STR_TO_DATE(TRIM(COALESCE(spp.intended_completion_date_2, '')), '%b %e, %Y'),
+                    STR_TO_DATE(TRIM(COALESCE(spp.intended_completion_date_2, '')), '%M %e, %Y')
+                )
+            ";
+
             $computeProjectUpdateStatusCountsFromSubay = function ($subayQuery, array &$targetCounts) use ($projectUpdateStatusParsedDateExpression) {
 
                 $latestProjectDatesQuery = (clone $subayQuery)
@@ -744,6 +955,21 @@ Route::middleware(['auth'])->group(function () {
                     ->selectRaw('COUNT(DISTINCT UPPER(TRIM(spp.project_code))) as total_projects')
                     ->value('total_projects') ?? 0);
 
+                $subayProvinceProjectRows = (clone $subayDashboardQuery)
+                    ->selectRaw('TRIM(COALESCE(spp.province, "")) as province')
+                    ->selectRaw('COUNT(DISTINCT UPPER(TRIM(spp.project_code))) as total')
+                    ->groupBy(DB::raw('TRIM(COALESCE(spp.province, ""))'))
+                    ->get();
+
+                foreach ($subayProvinceProjectRows as $row) {
+                    $normalizedProvince = $normalizeCarProvince($row->province ?? null);
+                    if ($normalizedProvince === null || !array_key_exists($normalizedProvince, $carProvinceProjectCounts)) {
+                        continue;
+                    }
+
+                    $carProvinceProjectCounts[$normalizedProvince] += (int) ($row->total ?? 0);
+                }
+
                 $balanceByProjectQuery = (clone $subayDashboardQuery)
                     ->selectRaw('UPPER(TRIM(spp.project_code)) as project_code')
                     ->selectRaw('MAX(TRIM(COALESCE(spp.project_title, ""))) as project_title')
@@ -799,6 +1025,23 @@ Route::middleware(['auth'])->group(function () {
                 $utilizationPercentage = $totalObligationAmount > 0
                     ? (($totalDisbursementAmount / $totalObligationAmount) * 100)
                     : 0.0;
+
+                $projectsExpectedCompletionBaseQuery = (clone $subayDashboardQuery)
+                    ->selectRaw('UPPER(TRIM(spp.project_code)) as project_code')
+                    ->selectRaw('MAX(TRIM(COALESCE(spp.project_title, ""))) as project_title')
+                    ->selectRaw('MAX(TRIM(COALESCE(spp.province, ""))) as province')
+                    ->selectRaw('MAX(TRIM(COALESCE(spp.city_municipality, ""))) as city_municipality')
+                    ->selectRaw("MAX({$expectedCompletionParsedDateExpression}) as expected_completion_date")
+                    ->groupBy(DB::raw('UPPER(TRIM(spp.project_code))'));
+
+                $projectsExpectedCompletionThisMonth = DB::query()
+                    ->fromSub($projectsExpectedCompletionBaseQuery, 'due_projects')
+                    ->whereNotNull('due_projects.expected_completion_date')
+                    ->whereYear('due_projects.expected_completion_date', $currentYear)
+                    ->whereMonth('due_projects.expected_completion_date', $currentMonth)
+                    ->orderBy('due_projects.expected_completion_date')
+                    ->orderBy('due_projects.project_code')
+                    ->get();
 
                 $fundSourceFromProjectCodeExpr = "
                     CASE
@@ -1085,6 +1328,28 @@ Route::middleware(['auth'])->group(function () {
                 }
 
                 $totalProjects = (int) (clone $fallbackQuery)->count();
+
+                $fallbackProvinceProjectRows = (clone $fallbackQuery)
+                    ->selectRaw('TRIM(COALESCE(province, "")) as province')
+                    ->selectRaw('COUNT(DISTINCT NULLIF(UPPER(TRIM(COALESCE(subaybayan_project_code, ""))), "")) as code_total')
+                    ->selectRaw('COUNT(*) as row_total')
+                    ->groupBy(DB::raw('TRIM(COALESCE(province, ""))'))
+                    ->get();
+
+                foreach ($fallbackProvinceProjectRows as $row) {
+                    $normalizedProvince = $normalizeCarProvince($row->province ?? null);
+                    if ($normalizedProvince === null || !array_key_exists($normalizedProvince, $carProvinceProjectCounts)) {
+                        continue;
+                    }
+
+                    $countValue = (int) ($row->code_total ?? 0);
+                    if ($countValue < 1) {
+                        $countValue = (int) ($row->row_total ?? 0);
+                    }
+
+                    $carProvinceProjectCounts[$normalizedProvince] += $countValue;
+                }
+
                 $financialTotals = (clone $fallbackQuery)
                     ->selectRaw('COALESCE(SUM(COALESCE(obligation, 0)), 0) as total_obligation')
                     ->selectRaw('COALESCE(SUM(COALESCE(disbursed_amount, 0)), 0) as total_disbursement')
@@ -1103,6 +1368,18 @@ Route::middleware(['auth'])->group(function () {
                 $utilizationPercentage = $totalObligationAmount > 0
                     ? (($totalDisbursementAmount / $totalObligationAmount) * 100)
                     : 0.0;
+
+                $projectsExpectedCompletionThisMonth = (clone $fallbackQuery)
+                    ->selectRaw('UPPER(TRIM(COALESCE(subaybayan_project_code, ""))) as project_code')
+                    ->selectRaw('MAX(TRIM(COALESCE(project_name, ""))) as project_title')
+                    ->selectRaw('MAX(TRIM(COALESCE(province, ""))) as province')
+                    ->selectRaw('MAX(TRIM(COALESCE(city_municipality, ""))) as city_municipality')
+                    ->selectRaw('MAX(target_date_completion) as expected_completion_date')
+                    ->groupBy(DB::raw('UPPER(TRIM(COALESCE(subaybayan_project_code, "")))'))
+                    ->havingRaw('MAX(target_date_completion) BETWEEN ? AND ?', [$currentMonthStart, $currentMonthEnd])
+                    ->orderByRaw('MAX(target_date_completion) ASC')
+                    ->orderByRaw('UPPER(TRIM(COALESCE(subaybayan_project_code, "")))')
+                    ->get();
 
                 $financialStatusProjects = (clone $fallbackQuery)
                     ->selectRaw('UPPER(TRIM(COALESCE(subaybayan_project_code, ""))) as project_code')
@@ -1218,6 +1495,10 @@ Route::middleware(['auth'])->group(function () {
                     ->values();
             }
 
+            $carProvinceProjectMaxCount = !empty($carProvinceProjectCounts)
+                ? (int) max($carProvinceProjectCounts)
+                : 0;
+
             return view('dashboard.index', compact(
                 'totalProjects',
                 'statusActualCounts',
@@ -1234,6 +1515,8 @@ Route::middleware(['auth'])->group(function () {
                 'totalDisbursementAmount',
                 'totalBalanceAmount',
                 'utilizationPercentage',
+                'expectedCompletionMonthLabel',
+                'projectsExpectedCompletionThisMonth',
                 'projectAtRiskCounts',
                 'projectAtRiskAgingCounts',
                 'projectAtRiskAgingProjects',
@@ -1241,7 +1524,9 @@ Route::middleware(['auth'])->group(function () {
                 'projectUpdateRiskProjects',
                 'projectsWithBalance',
                 'financialStatusProjects',
-                'fundSourceProjectsMap'
+                'fundSourceProjectsMap',
+                'carProvinceProjectCounts',
+                'carProvinceProjectMaxCount'
             ));
         } catch (\Exception $e) {
             return response()->json([
@@ -1331,6 +1616,12 @@ Route::middleware(['auth'])->group(function () {
             ->name('system-management.upload-subaybayan');
         Route::post('/system-management/upload-subaybayan/import', [SystemManagementController::class, 'importSubaybayan'])
             ->name('system-management.upload-subaybayan.import');
+        Route::post('/system-management/upload-subaybayan/import/{importId}/load', [SystemManagementController::class, 'loadSubaybayanImport'])
+            ->name('system-management.upload-subaybayan.load');
+        Route::get('/system-management/upload-subaybayan/import/{importId}/download', [SystemManagementController::class, 'downloadSubaybayanImport'])
+            ->name('system-management.upload-subaybayan.download');
+        Route::delete('/system-management/upload-subaybayan/import/{importId}', [SystemManagementController::class, 'deleteSubaybayanImport'])
+            ->name('system-management.upload-subaybayan.delete');
     });
 
     // Local Project Monitoring Committee routes
@@ -1353,6 +1644,17 @@ Route::middleware(['auth'])->group(function () {
     Route::resource('road-maintenance-status', App\Http\Controllers\RoadMaintenanceStatusReportController::class)
         ->parameters(['road-maintenance-status' => 'roadMaintenance']);
 
+    Route::get('/reports/monthly/pd-no-pbbm-2025-1572-1573', [App\Http\Controllers\PdNoPbbmMonthlyReportController::class, 'index'])
+        ->name('reports.monthly.pd-no-pbbm-2025-1572-1573');
+    Route::get('/reports/monthly/pd-no-pbbm-2025-1572-1573/{office}/edit', [App\Http\Controllers\PdNoPbbmMonthlyReportController::class, 'edit'])
+        ->name('reports.monthly.pd-no-pbbm-2025-1572-1573.edit');
+    Route::post('/reports/monthly/pd-no-pbbm-2025-1572-1573/{office}/upload', [App\Http\Controllers\PdNoPbbmMonthlyReportController::class, 'upload'])
+        ->name('reports.monthly.pd-no-pbbm-2025-1572-1573.upload');
+    Route::post('/reports/monthly/pd-no-pbbm-2025-1572-1573/{office}/approve/{docId}', [App\Http\Controllers\PdNoPbbmMonthlyReportController::class, 'approveDocument'])
+        ->name('reports.monthly.pd-no-pbbm-2025-1572-1573.approve');
+    Route::get('/reports/monthly/pd-no-pbbm-2025-1572-1573/{office}/document/{docId}', [App\Http\Controllers\PdNoPbbmMonthlyReportController::class, 'viewDocument'])
+        ->name('reports.monthly.pd-no-pbbm-2025-1572-1573.document');
+
     Route::get('/reports/rbis-annual-certification', [App\Http\Controllers\RbisAnnualCertificationController::class, 'index'])
         ->name('rbis-annual-certification.index');
     Route::get('/reports/rbis-annual-certification/{office}/edit', [App\Http\Controllers\RbisAnnualCertificationController::class, 'edit'])
@@ -1364,4 +1666,3 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/reports/rbis-annual-certification/{office}/document/{docId}', [App\Http\Controllers\RbisAnnualCertificationController::class, 'viewDocument'])
         ->name('rbis-annual-certification.document');
 });
-

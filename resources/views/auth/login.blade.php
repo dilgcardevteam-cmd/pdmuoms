@@ -120,29 +120,12 @@
         button:hover {
             background-color: #001f59;
         }
-        button:disabled {
-            background-color: #9ca3af;
-            cursor: not-allowed;
-        }
         .forgot-row { text-align: right; margin-bottom: 8px; font-size: 13px; }
         .forgot-row a { color: #6b7280; text-decoration: none; }
         .forgot-row a:hover { text-decoration: underline; }
         .create-row { text-align: center; margin-top: 12px; font-size: 13px; }
         .create-row a { color: #002C76; font-weight: 600; text-decoration: none; }
         .create-row a:hover { text-decoration: underline; }
-
-        .login-alert {
-            margin-bottom: 16px;
-            border-radius: 10px;
-            border: 1px solid #fecaca;
-            background: #fef2f2;
-            color: #991b1b;
-            padding: 12px 14px;
-            font-size: 13px;
-            line-height: 1.45;
-            text-align: center;
-        }
-
 
         /* Responsive tweaks */
         @media (max-width: 768px) {
@@ -247,6 +230,24 @@
             }
         }
 
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            z-index: 1000;
+            display: none;
+            max-width: 300px;
+        }
+        .toast.error {
+            background-color: #dc2626;
+        }
+        .toast.info {
+            background-color: #2563eb;
+        }
     </style>
 </head>
 <body>
@@ -256,10 +257,8 @@
         <h3>Operations Management System (PDMUOMS)</h3>
         
         @if ($errors->any())
-            <div class="login-alert" id="loginErrorAlert">
-                @if(session('lockout_seconds'))
-                    Too many login attempts. Please try again in <strong><span id="lockoutCountdown">0:00</span> time remaining</strong>.
-                @elseif ($errors->has('login_error'))
+            <div style="background-color: #fee; border: 1px solid #fcc; color: #c33; padding: 12px; border-radius: 6px; margin-bottom: 16px; font-size: 14px;">
+                @if ($errors->has('login_error'))
                     {{ $errors->first('login_error') }}
                 @else
                     {{ $errors->first() }}
@@ -285,24 +284,24 @@
             <div class="forgot-row">
                 <a href="{{ route('forgot-password') }}">Forgot password?</a>
             </div>
-            <button type="submit" id="loginSubmitBtn">Login</button>
+            <button type="submit">Login</button>
             <div class="create-row">
                 <a href="{{ route('register') }}" class="create-account">No account? Create one!</a>
             </div>
         </form>
     </div>
 
-    @include('partials.global-error-confirm')
+    <div id="toast" class="toast"></div>
 
     <script>
         function showToast(message, type = 'info') {
-            if (window.AppUI && typeof window.AppUI.toast === 'function') {
-                const mappedType = type === 'error' ? 'error' : 'info';
-                window.AppUI.toast(message, mappedType, type === 'error' ? 6000 : 4000);
-                return;
-            }
-
-            alert(message);
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type}`;
+            toast.style.display = 'block';
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 5000);
         }
 
         document.addEventListener('DOMContentLoaded', function(){
@@ -324,48 +323,9 @@
         document.addEventListener('DOMContentLoaded', function () {
             const form = document.querySelector('form[action*="login"]');
             if(!form) return;
-            const loginSubmitBtn = document.getElementById('loginSubmitBtn');
             const username = form.querySelector('#username');
             const password = form.querySelector('#password');
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            const lockoutSeconds = Number(@json((int) session('lockout_seconds', 0)));
-
-            if (lockoutSeconds > 0) {
-                const lockoutCountdown = document.getElementById('lockoutCountdown');
-                let remaining = lockoutSeconds;
-
-                const formatTime = (totalSeconds) => {
-                    const minutes = Math.floor(totalSeconds / 60);
-                    const seconds = totalSeconds % 60;
-                    return `${minutes}:${String(seconds).padStart(2, '0')}`;
-                };
-
-                const updateLockoutState = () => {
-                    if (lockoutCountdown) {
-                        lockoutCountdown.textContent = formatTime(Math.max(remaining, 0));
-                    }
-
-                    if (loginSubmitBtn) {
-                        if (remaining > 0) {
-                            loginSubmitBtn.disabled = true;
-                            loginSubmitBtn.textContent = `Login (${formatTime(remaining)})`;
-                        } else {
-                            loginSubmitBtn.disabled = false;
-                            loginSubmitBtn.textContent = 'Login';
-                        }
-                    }
-                };
-
-                updateLockoutState();
-
-                const timer = setInterval(() => {
-                    remaining -= 1;
-                    updateLockoutState();
-                    if (remaining <= 0) {
-                        clearInterval(timer);
-                    }
-                }, 1000);
-            }
 
             function setFieldError(el, msg){
                 if(!el) return;
@@ -419,10 +379,6 @@
             form.addEventListener('submit', function(e){
                 let msgs = [];
                 clearFieldError(username); clearFieldError(password);
-                if (loginSubmitBtn && loginSubmitBtn.disabled) {
-                    e.preventDefault();
-                    return false;
-                }
                 if(username){ const v = username.value.trim(); if(!v) { msgs.push('Enter username or email'); setFieldError(username,'Please enter your username or email.'); } else if(v.includes('@') && !emailRegex.test(v)) { msgs.push('Invalid email'); setFieldError(username,'Please enter a valid email address.'); } }
                 if(password){ if(password.value.length < 1){ msgs.push('Enter password'); setFieldError(password,'Please enter your password.'); } }
                 if(msgs.length){ e.preventDefault(); alert(msgs.join('\n')); const first = form.querySelector('.invalid'); if(first) first.focus(); return false; }
@@ -431,9 +387,11 @@
 
         // Check for error or success message from server and show toast
         @if(session('toast_message'))
-            document.addEventListener('DOMContentLoaded', function() {
-                showToast(@json(session('toast_message')), 'error');
-            });
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    showToast('{{ session('toast_message') }}', 'error');
+                });
+            </script>
         @endif
 
 

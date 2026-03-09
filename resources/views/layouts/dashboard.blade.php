@@ -40,7 +40,7 @@
             background: linear-gradient(135deg, #002C76 0%, #003d99 100%);
             padding: 20px;
             overflow-y: auto;
-            transition: transform 0.25s ease, box-shadow 0.25s ease;
+            transition: transform 280ms cubic-bezier(0.2, 0.8, 0.2, 1), width 280ms cubic-bezier(0.2, 0.8, 0.2, 1), padding 280ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 280ms cubic-bezier(0.2, 0.8, 0.2, 1);
             will-change: transform;
             z-index: 1000;
             box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
@@ -52,6 +52,14 @@
             box-shadow: none;
             pointer-events: none;
         }
+
+        .sidebar.icon-collapsed {
+            width: 78px;
+            padding: 20px 10px;
+            transform: translateX(0);
+            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
+            pointer-events: auto;
+        }
         
         .sidebar-header {
             display: flex;
@@ -60,12 +68,28 @@
             padding-bottom: 20px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.2);
             position: relative;
+            transition: margin-bottom 220ms ease, padding-bottom 220ms ease;
+        }
+
+        .sidebar-brand-link {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+            min-width: 0;
+            width: 100%;
+            padding-right: 0;
+            color: inherit;
+            text-decoration: none;
+            transition: padding-right 220ms ease;
         }
         
         .sidebar-logo {
-            width: 50px;
-            height: 50px;
-            margin-right: 12px;
+            width: 100%;
+            max-width: 195px;
+            height: auto;
+            margin-right: 0;
+            transition: width 220ms ease, max-width 220ms ease, height 220ms ease, margin-right 220ms ease;
         }
         
         .sidebar-title {
@@ -73,6 +97,9 @@
             font-size: 16px;
             font-weight: 700;
             line-height: 1.2;
+            max-width: 220px;
+            overflow: hidden;
+            transition: opacity 200ms ease, max-width 220ms ease, transform 220ms ease;
         }
         
         .sidebar-title small {
@@ -97,7 +124,7 @@
             color: rgba(255, 255, 255, 0.8);
             text-decoration: none;
             border-radius: 6px;
-            transition: all 0.3s ease;
+            transition: background-color 0.22s ease, color 0.22s ease, padding-left 0.22s ease;
             font-size: 14px;
         }
         
@@ -108,15 +135,26 @@
         }
         
         .sidebar-menu a.active {
-            background-color: rgba(255, 255, 255, 0.25);
-            color: white;
-            font-weight: 600;
+            background-color: #ffffff;
+            color: #002C76;
+            font-weight: 700;
+            box-shadow: none;
         }
         
         .sidebar-menu i {
             width: 20px;
             margin-right: 12px;
             text-align: center;
+            transition: margin-right 220ms ease, transform 220ms ease;
+        }
+
+        .sidebar-menu a span {
+            display: inline-block;
+            overflow: hidden;
+            max-width: 1000px;
+            opacity: 1;
+            transform: translateX(0);
+            transition: opacity 180ms ease, max-width 220ms ease, transform 220ms ease;
         }
 
         /* Submenu Styles */
@@ -149,9 +187,45 @@
         }
 
         .submenu a.active {
-            background-color: rgba(255, 255, 255, 0.25);
-            color: white;
-            font-weight: 600;
+            background-color: #ffffff;
+            color: #002C76;
+            font-weight: 700;
+            box-shadow: none;
+        }
+
+        .submenu .submenu {
+            margin-top: 0;
+            border-radius: 0;
+            background-color: rgba(0, 0, 0, 0.15);
+        }
+
+        .submenu .submenu a {
+            padding-left: 64px !important;
+            font-size: 12px;
+        }
+
+        .submenu .submenu a:hover {
+            padding-left: 68px !important;
+        }
+
+        .submenu-empty {
+            display: block;
+            padding: 10px 16px 10px 64px;
+            color: rgba(255, 255, 255, 0.65);
+            font-size: 12px;
+            font-style: italic;
+        }
+
+        .sidebar-menu a.submenu-toggle {
+            cursor: pointer;
+        }
+
+        .submenu-chevron {
+            transition: transform 0.2s ease;
+        }
+
+        .sidebar-menu a.submenu-toggle[aria-expanded="true"] .submenu-chevron {
+            transform: rotate(180deg);
         }
         
         /* Topbar Styles */
@@ -169,11 +243,15 @@
             padding: 0 30px;
             z-index: 999;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-            transition: none;
+            transition: padding-left 280ms cubic-bezier(0.2, 0.8, 0.2, 1);
         }
         
         .topbar.with-sidebar {
             padding-left: 280px;
+        }
+
+        .sidebar.icon-collapsed ~ .topbar {
+            padding-left: 108px;
         }
         
         .topbar-left {
@@ -368,33 +446,18 @@
         .notification-menu-item {
             display: block;
             text-decoration: none;
-            color: #1f2937;
+            color: inherit;
             padding: 10px 14px;
             border-bottom: 1px solid #f1f5f9;
-            transition: background-color 0.16s ease, color 0.16s ease;
-        }
-
-        .notification-menu-item:visited {
-            color: #1f2937;
+            transition: background-color 0.16s ease;
         }
 
         .notification-menu-item:hover {
-            background: #e5edf9;
-            color: #0f172a;
+            background: #f8fafc;
         }
 
         .notification-menu-item.unread {
-            background: #dbeafe;
-            color: #0f172a;
-        }
-
-        .notification-menu-item.unread:visited {
-            color: #0f172a;
-        }
-
-        .notification-menu-item.unread:hover {
-            background: #bfdbfe;
-            color: #0f172a;
+            background: #eff6ff;
         }
 
         .notification-menu-item:last-child {
@@ -424,18 +487,12 @@
         }
 
         .notification-menu-item.unread .notification-menu-message {
-            color: #0b1f4a;
             font-weight: 600;
         }
 
         .notification-menu-time {
             font-size: 11px;
             color: #64748b;
-        }
-
-        .notification-menu-item:hover .notification-menu-time,
-        .notification-menu-item.unread:hover .notification-menu-time {
-            color: #334155;
         }
 
         .profile-menu {
@@ -522,7 +579,7 @@
             margin-left: 250px;
             padding: 30px;
             min-height: calc(100vh - 70px);
-            transition: none;
+            transition: margin-left 280ms cubic-bezier(0.2, 0.8, 0.2, 1);
         }
         
         .main-content.with-sidebar {
@@ -531,6 +588,62 @@
         
         .main-content:not(.with-sidebar) {
             margin-left: 0;
+        }
+
+        .sidebar.icon-collapsed ~ .main-content {
+            margin-left: 78px;
+        }
+
+        .sidebar.icon-collapsed .sidebar-header {
+            justify-content: center;
+            margin-bottom: 18px;
+            padding-bottom: 16px;
+        }
+
+        .sidebar.icon-collapsed .sidebar-brand-link {
+            justify-content: center;
+            padding-right: 0;
+        }
+
+        .sidebar.icon-collapsed .sidebar-logo {
+            width: 56px;
+            max-width: 56px;
+            height: auto;
+            margin-right: 0;
+        }
+
+        .sidebar.icon-collapsed .submenu,
+        .sidebar.icon-collapsed .submenu-empty,
+        .sidebar.icon-collapsed .submenu-chevron {
+            display: none !important;
+        }
+
+        .sidebar.icon-collapsed .sidebar-menu a {
+            justify-content: center;
+            padding: 11px 0 !important;
+        }
+
+        .sidebar.icon-collapsed .sidebar-menu a:hover {
+            padding-left: 0 !important;
+        }
+
+        .sidebar.icon-collapsed .sidebar-menu a span {
+            opacity: 0;
+            max-width: 0;
+            transform: translateX(-6px);
+            white-space: nowrap;
+        }
+
+        .sidebar.icon-collapsed .sidebar-menu i {
+            margin-right: 0;
+            transform: translateX(0);
+        }
+
+        .sidebar.icon-collapsed .sidebar-title {
+            opacity: 0;
+            max-width: 0;
+            transform: translateX(-8px);
+            margin-right: 0;
         }
         
         .content-header {
@@ -552,10 +665,18 @@
         @media (max-width: 768px) {
             .sidebar {
                 width: 220px;
+                transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1), opacity 220ms ease, box-shadow 320ms ease;
+                opacity: 1;
             }
             
             .sidebar.collapsed {
                 transform: translateX(-100%);
+                opacity: 0;
+            }
+
+            .sidebar.icon-collapsed {
+                width: 220px;
+                padding: 20px;
             }
             
             .topbar {
@@ -617,16 +738,36 @@
                 grid-template-columns: 1fr !important;
             }
         }
+
+        @media (prefers-reduced-motion: reduce) {
+            .sidebar,
+            .topbar,
+            .main-content,
+            .sidebar-title,
+            .sidebar-logo,
+            .sidebar-menu i,
+            .sidebar-menu a span {
+                transition: none !important;
+            }
+        }
         
         @media (max-width: 480px) {
             .sidebar {
                 width: 80%;
                 z-index: 1100;
                 max-width: 320px;
+                transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1), opacity 220ms ease, box-shadow 320ms ease;
             }
             
             .sidebar.collapsed {
                 transform: translateX(-100%);
+                opacity: 0;
+            }
+
+            .sidebar.icon-collapsed {
+                width: 80%;
+                max-width: 320px;
+                padding: 20px;
             }
             
             .topbar {
@@ -690,9 +831,10 @@
             }
             
             .sidebar-logo {
-                width: 40px;
-                height: 40px;
-                margin-right: 8px;
+                width: 100%;
+                max-width: 165px;
+                height: auto;
+                margin-right: 0;
             }
             
             .sidebar-title {
@@ -747,6 +889,91 @@
                 font-size: 11px;
             }
         }
+
+        .system-dialog-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 3000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .system-dialog-modal.is-open {
+            display: flex;
+        }
+
+        .system-dialog-backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.55);
+        }
+
+        .system-dialog-card {
+            position: relative;
+            z-index: 1;
+            width: min(460px, 100%);
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 24px 60px rgba(15, 23, 42, 0.25);
+            border: 1px solid #e5e7eb;
+            overflow: hidden;
+        }
+
+        .system-dialog-header {
+            padding: 16px 18px 10px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .system-dialog-title {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .system-dialog-body {
+            padding: 14px 18px;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #334155;
+        }
+
+        .system-dialog-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            padding: 12px 18px 18px;
+        }
+
+        .system-dialog-btn {
+            border: none;
+            border-radius: 8px;
+            padding: 9px 16px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .system-dialog-btn.cancel {
+            background: #e5e7eb;
+            color: #1f2937;
+        }
+
+        .system-dialog-btn.confirm {
+            background: #002c76;
+            color: #ffffff;
+        }
+
+        .system-dialog-btn.error-ok {
+            background: #dc2626;
+            color: #ffffff;
+        }
+
+        body.system-dialog-open {
+            overflow: hidden;
+        }
     </style>
     
     @yield('styles')
@@ -755,15 +982,9 @@
     <!-- Sidebar Navigation -->
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
-            <img src="{{ asset('DILG-Logo.png') }}" alt="DILG Logo" class="sidebar-logo">
-            <div class="sidebar-title">
-                DILG-CAR
-                <small>PDMU OPERATIONS MANAGEMENT SYSTEM (PDMUOMS)</small>
-            </div>
-            <!-- Close Button for Mobile -->
-            <button id="closeSidebarBtn" style="display: none; position: absolute; right: 15px; top: 20px; background: none; border: none; color: white; font-size: 24px; cursor: pointer; width: 40px; height: 40px; padding: 0; border-radius: 6px; transition: all 0.3s ease;" title="Close Menu">
-                <i class="fas fa-bars"></i>
-            </button>
+            <a href="{{ route('dashboard') }}" class="sidebar-brand-link" aria-label="Go to dashboard">
+                <img src="{{ asset('PDMUOMS.png') }}" alt="PDMUOMS" class="sidebar-logo">
+            </a>
         </div>
         
         <ul class="sidebar-menu">
@@ -774,12 +995,15 @@
                 </a>
             </li>
             <li>
-                <a href="#" class="@if(Route::currentRouteName() == 'projects') active @endif" onclick="toggleSubmenu(event, 'projectsMenu')">
+                @php
+                    $projectsMenuActive = request()->routeIs('projects.*') || request()->routeIs('projects.at-risk');
+                @endphp
+                <a href="#" class="@if($projectsMenuActive) active @endif submenu-toggle" onclick="toggleSubmenu(event, 'projectsMenu')">
                     <i class="fas fa-project-diagram"></i>
-                    <span>Projects</span>
-                    <i class="fas fa-chevron-down" style="margin-left: auto; font-size: 12px;"></i>
+                    <span>Project Monitoring</span>
+                    <i class="fas fa-chevron-down submenu-chevron" style="margin-left: auto; font-size: 12px;"></i>
                 </a>
-                <ul id="projectsMenu" class="submenu" style="display: none;">
+                <ul id="projectsMenu" class="submenu" style="display: {{ $projectsMenuActive ? 'block' : 'none' }};">
                     <li>
                         <a href="{{ route('projects.locally-funded') }}" class="@if(Route::currentRouteName() == 'projects.locally-funded') active @endif">
                             <i class="fas fa-hand-holding-usd"></i>
@@ -801,35 +1025,79 @@
                 </ul>
             </li>
             <li>
-                <a href="#" class="@if(Route::currentRouteName() == 'reports') active @endif" onclick="toggleSubmenu(event, 'reportsMenu')">
+                @php
+                    $reportsAnnualActive = request()->routeIs('rbis-annual-certification.*');
+                    $reportsQuarterlyActive = request()->routeIs('fund-utilization.*')
+                        || request()->routeIs('local-project-monitoring-committee.*')
+                        || request()->routeIs('road-maintenance-status.*');
+                    $reportsMonthlyActive = request()->routeIs('reports.monthly.pd-no-pbbm-2025-1572-1573*');
+                    $reportsMenuActive = Route::currentRouteName() == 'reports'
+                        || $reportsAnnualActive
+                        || $reportsQuarterlyActive
+                        || $reportsMonthlyActive;
+                @endphp
+                <a href="#" class="@if($reportsMenuActive) active @endif submenu-toggle" onclick="toggleSubmenu(event, 'reportsMenu')">
                     <i class="fas fa-file-alt"></i>
-                    <span>Reportorial Requirements</span>
-                    <i class="fas fa-chevron-down" style="margin-left: auto; font-size: 12px;"></i>
+                    <span>LGU Reportorial Requirements</span>
+                    <i class="fas fa-chevron-down submenu-chevron" style="margin-left: auto; font-size: 12px;"></i>
                 </a>
-                <ul id="reportsMenu" class="submenu" style="display: none;">
+                <ul id="reportsMenu" class="submenu" style="display: {{ $reportsMenuActive ? 'block' : 'none' }};">
                     <li>
-                        <a href="{{ route('fund-utilization.index') }}" class="@if(Route::currentRouteName() == 'fund-utilization.index') active @endif">
-                            <i class="fas fa-coins"></i>
-                            <span>Fund Utilization Report</span>
+                        <a href="#" class="@if($reportsAnnualActive) active @endif submenu-toggle" onclick="toggleSubmenu(event, 'reportsAnnualMenu')">
+                            <i class="fas fa-calendar-alt"></i>
+                            <span>Annual</span>
+                            <i class="fas fa-chevron-down submenu-chevron" style="margin-left: auto; font-size: 11px;"></i>
                         </a>
+                        <ul id="reportsAnnualMenu" class="submenu" style="display: {{ $reportsAnnualActive ? 'block' : 'none' }};">
+                            <li>
+                                <a href="{{ route('rbis-annual-certification.index') }}" class="@if(request()->routeIs('rbis-annual-certification.*')) active @endif">
+                                    <i class="fas fa-bridge"></i>
+                                    <span>RBIS Annual Certification</span>
+                                </a>
+                            </li>
+                        </ul>
                     </li>
                     <li>
-                        <a href="{{ route('local-project-monitoring-committee.index') }}" class="@if(Route::currentRouteName() == 'local-project-monitoring-committee.index') active @endif">
-                            <i class="fas fa-users-cog"></i>
-                            <span>Local Project Monitoring Committee</span>
+                        <a href="#" class="@if($reportsQuarterlyActive) active @endif submenu-toggle" onclick="toggleSubmenu(event, 'reportsQuarterlyMenu')">
+                            <i class="fas fa-calendar-check"></i>
+                            <span>Quarterly</span>
+                            <i class="fas fa-chevron-down submenu-chevron" style="margin-left: auto; font-size: 11px;"></i>
                         </a>
+                        <ul id="reportsQuarterlyMenu" class="submenu" style="display: {{ $reportsQuarterlyActive ? 'block' : 'none' }};">
+                            <li>
+                                <a href="{{ route('fund-utilization.index') }}" class="@if(request()->routeIs('fund-utilization.*')) active @endif">
+                                    <i class="fas fa-coins"></i>
+                                    <span>Fund Utilization Report</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{{ route('local-project-monitoring-committee.index') }}" class="@if(request()->routeIs('local-project-monitoring-committee.*')) active @endif">
+                                    <i class="fas fa-users-cog"></i>
+                                    <span>Local Project Monitoring Committee</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{{ route('road-maintenance-status.index') }}" class="@if(request()->routeIs('road-maintenance-status.*')) active @endif">
+                                    <i class="fas fa-road"></i>
+                                    <span>Road Maintenance Status Report</span>
+                                </a>
+                            </li>
+                        </ul>
                     </li>
                     <li>
-                        <a href="{{ route('road-maintenance-status.index') }}" class="@if(request()->routeIs('road-maintenance-status.*')) active @endif">
-                            <i class="fas fa-road"></i>
-                            <span>Road Maintenance Status Report</span>
+                        <a href="#" class="@if($reportsMonthlyActive) active @endif submenu-toggle" onclick="toggleSubmenu(event, 'reportsMonthlyMenu')">
+                            <i class="fas fa-calendar-day"></i>
+                            <span>Monthly</span>
+                            <i class="fas fa-chevron-down submenu-chevron" style="margin-left: auto; font-size: 11px;"></i>
                         </a>
-                    </li>
-                    <li>
-                        <a href="{{ route('rbis-annual-certification.index') }}" class="@if(request()->routeIs('rbis-annual-certification.*')) active @endif">
-                            <i class="fas fa-bridge"></i>
-                            <span>RBIS Annual Certification</span>
-                        </a>
+                        <ul id="reportsMonthlyMenu" class="submenu" style="display: {{ $reportsMonthlyActive ? 'block' : 'none' }};">
+                            <li>
+                                <a href="{{ route('reports.monthly.pd-no-pbbm-2025-1572-1573') }}" class="@if(request()->routeIs('reports.monthly.pd-no-pbbm-2025-1572-1573*')) active @endif">
+                                    <i class="fas fa-file-alt"></i>
+                                    <span>Report on PD No. PBBM-2025-1572-1573</span>
+                                </a>
+                            </li>
+                        </ul>
                     </li>
                 </ul>
             </li>
@@ -845,12 +1113,15 @@
             @endphp
             @if($isRegionalDilg)
                 <li>
-                    <a href="#" class="@if(Route::currentRouteName() == 'system-management.index' || Route::currentRouteName() == 'system-management.upload-subaybayan') active @endif" onclick="toggleSubmenu(event, 'systemManagementMenu')">
+                    @php
+                        $systemManagementActive = request()->routeIs('system-management.*');
+                    @endphp
+                    <a href="#" class="@if($systemManagementActive) active @endif submenu-toggle" onclick="toggleSubmenu(event, 'systemManagementMenu')">
                         <i class="fas fa-cogs"></i>
                         <span>System Management</span>
-                        <i class="fas fa-chevron-down" style="margin-left: auto; font-size: 12px;"></i>
+                        <i class="fas fa-chevron-down submenu-chevron" style="margin-left: auto; font-size: 12px;"></i>
                     </a>
-                    <ul id="systemManagementMenu" class="submenu" style="display: none;">
+                    <ul id="systemManagementMenu" class="submenu" style="display: {{ $systemManagementActive ? 'block' : 'none' }};">
                         <li>
                             <a href="{{ route('system-management.upload-subaybayan') }}" class="@if(Route::currentRouteName() == 'system-management.upload-subaybayan') active @endif">
                                 <i class="fas fa-upload"></i>
@@ -877,7 +1148,12 @@
             <button class="toggle-btn" id="toggleBtn" title="Toggle Sidebar">
                 <i class="fas fa-bars"></i>
             </button>
-            <h1 class="topbar-title" id="pageTitle">@yield('page-title', 'Dashboard')</h1>
+            @php
+                $topbarPageTitle = trim((string) $__env->yieldContent('page-title', 'Dashboard'));
+            @endphp
+            @if ($topbarPageTitle !== 'Locally Funded Projects')
+                <h1 class="topbar-title" id="pageTitle">{{ $topbarPageTitle }}</h1>
+            @endif
         </div>
         
         <div class="topbar-right">
@@ -901,7 +1177,6 @@
                         class="notification-bell"
                         id="notificationBell"
                         title="Notifications"
-                        data-confirm-skip="true"
                         aria-haspopup="true"
                         aria-expanded="false"
                         aria-controls="notificationMenu"
@@ -928,7 +1203,6 @@
                                 <a
                                     href="{{ route('notifications.read', ['id' => $notificationItem->id]) }}"
                                     class="notification-menu-item {{ is_null($notificationItem->read_at) ? 'unread' : '' }}"
-                                    data-confirm-skip="true"
                                 >
                                     <div class="notification-menu-message-row">
                                         @if(is_null($notificationItem->read_at))
@@ -974,12 +1248,36 @@
         @yield('content')
     </main>
 
-    @include('partials.global-error-confirm')
+    <div id="globalConfirmModal" class="system-dialog-modal" aria-hidden="true">
+        <div class="system-dialog-backdrop" data-confirm-dismiss></div>
+        <div class="system-dialog-card" role="dialog" aria-modal="true" aria-labelledby="globalConfirmModalTitle">
+            <div class="system-dialog-header">
+                <h3 id="globalConfirmModalTitle" class="system-dialog-title">Please Confirm</h3>
+            </div>
+            <div class="system-dialog-body" id="globalConfirmModalMessage"></div>
+            <div class="system-dialog-actions">
+                <button type="button" class="system-dialog-btn cancel" id="globalConfirmCancelBtn">Cancel</button>
+                <button type="button" class="system-dialog-btn confirm" id="globalConfirmOkBtn">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="globalErrorModal" class="system-dialog-modal" aria-hidden="true">
+        <div class="system-dialog-backdrop" data-error-dismiss></div>
+        <div class="system-dialog-card" role="dialog" aria-modal="true" aria-labelledby="globalErrorModalTitle">
+            <div class="system-dialog-header">
+                <h3 id="globalErrorModalTitle" class="system-dialog-title">System Error</h3>
+            </div>
+            <div class="system-dialog-body" id="globalErrorModalMessage">An unexpected error occurred.</div>
+            <div class="system-dialog-actions">
+                <button type="button" class="system-dialog-btn error-ok" id="globalErrorOkBtn">OK</button>
+            </div>
+        </div>
+    </div>
     
     <script>
         // Sidebar Toggle
         const toggleBtn = document.getElementById('toggleBtn');
-        const closeSidebarBtn = document.getElementById('closeSidebarBtn');
         const sidebar = document.getElementById('sidebar');
         const mainContent = document.getElementById('mainContent');
         const topbar = document.getElementById('topbar');
@@ -990,33 +1288,33 @@
         
         // Check if mobile
         function isMobile() {
-            return window.innerWidth <= 480;
+            return window.innerWidth <= 768;
         }
         
         // Initialize sidebar state
         function updateSidebarState() {
+            const mobileView = isMobile();
+            sidebar.classList.remove('collapsed', 'icon-collapsed');
+
             if (sidebarExpanded) {
-                sidebar.classList.remove('collapsed');
                 mainContent.classList.add('with-sidebar');
                 topbar.classList.add('with-sidebar');
                 
-                // Show close button on mobile
-                if (isMobile() && closeSidebarBtn) {
-                    closeSidebarBtn.style.display = 'block';
-                }
-                
-                if (isMobile()) {
+                if (mobileView) {
                     body.classList.add('sidebar-open');
+                } else {
+                    body.classList.remove('sidebar-open');
                 }
             } else {
-                sidebar.classList.add('collapsed');
                 mainContent.classList.remove('with-sidebar');
                 topbar.classList.remove('with-sidebar');
-                
-                // Hide close button when sidebar is collapsed
-                if (closeSidebarBtn) {
-                    closeSidebarBtn.style.display = 'none';
+
+                if (mobileView) {
+                    sidebar.classList.add('collapsed');
+                } else {
+                    sidebar.classList.add('icon-collapsed');
                 }
+
                 body.classList.remove('sidebar-open');
             }
             localStorage.setItem('sidebarExpanded', sidebarExpanded);
@@ -1032,52 +1330,18 @@
             updateSidebarState();
         });
 
-        // Close sidebar button click handler
-        if (closeSidebarBtn) {
-            closeSidebarBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
+        // Close sidebar when clicking on content area on mobile
+        mainContent.addEventListener('click', function() {
+            if (isMobile() && sidebarExpanded) {
                 sidebarExpanded = false;
                 updateSidebarState();
-            });
+            }
+        });
 
-            // Also on hover for better UX
-            closeSidebarBtn.addEventListener('mouseenter', function() {
-                this.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
-            });
-
-            closeSidebarBtn.addEventListener('mouseleave', function() {
-                this.style.backgroundColor = 'transparent';
-            });
-        }
-
-        // Close sidebar when clicking on content area on mobile
-        if (isMobile()) {
-            mainContent.addEventListener('click', function() {
-                if (sidebarExpanded) {
-                    sidebarExpanded = false;
-                    updateSidebarState();
-                }
-            });
-
-            // Close sidebar on window resize if opening desktop size
-            window.addEventListener('resize', function() {
-                if (window.innerWidth > 480) {
-                    if (!sidebarExpanded) {
-                        sidebarExpanded = true;
-                        updateSidebarState();
-                    }
-                    if (closeSidebarBtn) {
-                        closeSidebarBtn.style.display = 'none';
-                    }
-                } else {
-                    // On mobile, update close button visibility
-                    if (sidebarExpanded && closeSidebarBtn) {
-                        closeSidebarBtn.style.display = 'block';
-                    }
-                }
-            });
-        }
+        // Recompute sidebar mode when viewport changes
+        window.addEventListener('resize', function() {
+            updateSidebarState();
+        });
         
         // Profile Dropdown Toggle
         const profileIcon = document.getElementById('profileIcon');
@@ -1085,12 +1349,215 @@
         const notificationBell = document.getElementById('notificationBell');
         const notificationMenu = document.getElementById('notificationMenu');
         
+        const SIDEBAR_SUBMENU_STORAGE_KEY = 'pdmuoms.sidebar.openSubmenus';
+
+        function findDirectSubmenu(listItem) {
+            if (!listItem || !listItem.children) {
+                return null;
+            }
+
+            return Array.from(listItem.children).find((child) => child.classList && child.classList.contains('submenu')) || null;
+        }
+
+        function getSubmenuToggle(submenuId) {
+            if (!submenuId) {
+                return null;
+            }
+
+            return document.querySelector(`.sidebar-menu a.submenu-toggle[data-submenu-id="${submenuId}"]`);
+        }
+
+        function isSubmenuOpen(submenu) {
+            return !!submenu && window.getComputedStyle(submenu).display !== 'none';
+        }
+
+        function setSubmenuState(submenu, shouldOpen) {
+            if (!submenu) {
+                return;
+            }
+
+            submenu.style.display = shouldOpen ? 'block' : 'none';
+            submenu.setAttribute('data-open', shouldOpen ? 'true' : 'false');
+
+            const toggle = getSubmenuToggle(submenu.id);
+            if (toggle) {
+                toggle.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+            }
+        }
+
+        function closeSubmenuRecursively(submenu) {
+            if (!submenu) {
+                return;
+            }
+
+            const nestedSubmenus = submenu.querySelectorAll('.submenu');
+            nestedSubmenus.forEach((nestedSubmenu) => {
+                setSubmenuState(nestedSubmenu, false);
+            });
+
+            setSubmenuState(submenu, false);
+        }
+
+        function closeSiblingSubmenus(submenu) {
+            if (!submenu) {
+                return;
+            }
+
+            const submenuListItem = submenu.closest('li');
+            if (!submenuListItem || !submenuListItem.parentElement) {
+                return;
+            }
+
+            const siblingListItems = Array.from(submenuListItem.parentElement.children || []);
+            siblingListItems.forEach((siblingListItem) => {
+                if (siblingListItem === submenuListItem) {
+                    return;
+                }
+
+                const siblingSubmenu = findDirectSubmenu(siblingListItem);
+                if (siblingSubmenu) {
+                    closeSubmenuRecursively(siblingSubmenu);
+                }
+            });
+        }
+
+        function openAncestorSubmenus(submenu) {
+            if (!submenu) {
+                return;
+            }
+
+            let currentSubmenu = submenu;
+            while (currentSubmenu) {
+                const parentListItem = currentSubmenu.parentElement ? currentSubmenu.parentElement.closest('li') : null;
+                if (!parentListItem || !parentListItem.parentElement) {
+                    break;
+                }
+
+                const parentSubmenu = parentListItem.parentElement.classList.contains('submenu')
+                    ? parentListItem.parentElement
+                    : null;
+
+                if (!parentSubmenu) {
+                    break;
+                }
+
+                setSubmenuState(parentSubmenu, true);
+                currentSubmenu = parentSubmenu;
+            }
+        }
+
+        function readStoredOpenSubmenus() {
+            try {
+                const raw = localStorage.getItem(SIDEBAR_SUBMENU_STORAGE_KEY);
+                if (!raw) {
+                    return new Set();
+                }
+
+                const ids = JSON.parse(raw);
+                if (!Array.isArray(ids)) {
+                    return new Set();
+                }
+
+                return new Set(ids.filter((id) => typeof id === 'string' && id !== ''));
+            } catch (error) {
+                return new Set();
+            }
+        }
+
+        function saveOpenSubmenus() {
+            try {
+                const openSubmenuIds = Array.from(document.querySelectorAll('.sidebar-menu .submenu[id]'))
+                    .filter((submenu) => isSubmenuOpen(submenu))
+                    .map((submenu) => submenu.id);
+                localStorage.setItem(SIDEBAR_SUBMENU_STORAGE_KEY, JSON.stringify(openSubmenuIds));
+            } catch (error) {
+                // Ignore storage errors.
+            }
+        }
+
+        function initializeSidebarSubmenus() {
+            const submenuToggles = document.querySelectorAll('.sidebar-menu a.submenu-toggle[onclick*="toggleSubmenu"]');
+            const storedOpenSubmenus = readStoredOpenSubmenus();
+            const hasActiveMenuSelection = !!document.querySelector('.sidebar-menu a.active');
+
+            submenuToggles.forEach((submenuToggle) => {
+                const onclickExpression = submenuToggle.getAttribute('onclick') || '';
+                const match = onclickExpression.match(/toggleSubmenu\(event,\s*'([^']+)'\)/);
+                if (!match || !match[1]) {
+                    return;
+                }
+
+                const submenuId = match[1];
+                submenuToggle.dataset.submenuId = submenuId;
+                submenuToggle.setAttribute('aria-controls', submenuId);
+                submenuToggle.setAttribute('aria-expanded', 'false');
+
+                if (submenuToggle.dataset.keyToggleAttached !== '1') {
+                    submenuToggle.dataset.keyToggleAttached = '1';
+                    submenuToggle.addEventListener('keydown', function (keyboardEvent) {
+                        if (keyboardEvent.key === 'Enter' || keyboardEvent.key === ' ') {
+                            toggleSubmenu(keyboardEvent, submenuId);
+                        }
+                    });
+                }
+            });
+
+            const allSubmenus = document.querySelectorAll('.sidebar-menu .submenu[id]');
+            allSubmenus.forEach((submenu) => {
+                const hasInlineOpenState = submenu.style.display === 'block';
+                const hasActiveDescendant = !!submenu.querySelector('a.active');
+                const hasStoredOpenState = storedOpenSubmenus.has(submenu.id);
+                const shouldOpen = hasInlineOpenState
+                    || hasActiveDescendant
+                    || (!hasActiveMenuSelection && hasStoredOpenState);
+
+                setSubmenuState(submenu, shouldOpen);
+                if (shouldOpen) {
+                    openAncestorSubmenus(submenu);
+                }
+            });
+
+            // Keep only the active path expanded, including top-level menus.
+            if (hasActiveMenuSelection) {
+                const activePathSubmenus = Array.from(allSubmenus).filter((submenu) => submenu.querySelector('a.active'));
+                activePathSubmenus.forEach((submenu) => {
+                    setSubmenuState(submenu, true);
+                    openAncestorSubmenus(submenu);
+                    closeSiblingSubmenus(submenu);
+                });
+            }
+
+            saveOpenSubmenus();
+        }
+
         // Toggle submenu function
         function toggleSubmenu(event, submenuId) {
             event.preventDefault();
+            event.stopPropagation();
+
+            if (!isMobile() && sidebar.classList.contains('icon-collapsed')) {
+                sidebarExpanded = true;
+                updateSidebarState();
+            }
+
             const submenu = document.getElementById(submenuId);
-            submenu.style.display = submenu.style.display === 'none' ? 'block' : 'none';
+            if (!submenu) {
+                return;
+            }
+
+            const shouldOpen = !isSubmenuOpen(submenu);
+            if (shouldOpen) {
+                closeSiblingSubmenus(submenu);
+                setSubmenuState(submenu, true);
+                openAncestorSubmenus(submenu);
+            } else {
+                closeSubmenuRecursively(submenu);
+            }
+
+            saveOpenSubmenus();
         }
+
+        initializeSidebarSubmenus();
 
         if (profileIcon && profileMenu) {
             profileIcon.addEventListener('click', function(e) {
@@ -1127,6 +1594,283 @@
                 notificationBell.setAttribute('aria-expanded', 'false');
             }
         });
+
+        (function initializeSystemDialogs() {
+            const confirmModal = document.getElementById('globalConfirmModal');
+            const confirmMessage = document.getElementById('globalConfirmModalMessage');
+            const confirmOkBtn = document.getElementById('globalConfirmOkBtn');
+            const confirmCancelBtn = document.getElementById('globalConfirmCancelBtn');
+            const confirmDismissTargets = document.querySelectorAll('[data-confirm-dismiss]');
+            const errorModal = document.getElementById('globalErrorModal');
+            const errorMessage = document.getElementById('globalErrorModalMessage');
+            const errorOkBtn = document.getElementById('globalErrorOkBtn');
+            const errorDismissTargets = document.querySelectorAll('[data-error-dismiss]');
+            const nativeConfirm = window.confirm.bind(window);
+            let nativeConfirmBypassCount = 0;
+            let confirmCallback = null;
+            let confirmCancelCallback = null;
+
+            function openModal(modal) {
+                if (!modal) return;
+                modal.classList.add('is-open');
+                modal.setAttribute('aria-hidden', 'false');
+                document.body.classList.add('system-dialog-open');
+            }
+
+            function closeModal(modal) {
+                if (!modal) return;
+                modal.classList.remove('is-open');
+                modal.setAttribute('aria-hidden', 'true');
+                if (!document.querySelector('.system-dialog-modal.is-open')) {
+                    document.body.classList.remove('system-dialog-open');
+                }
+            }
+
+            function closeConfirmModal(runCancelCallback) {
+                const shouldRunCancel = runCancelCallback === true;
+                const pendingCancel = confirmCancelCallback;
+                confirmCallback = null;
+                confirmCancelCallback = null;
+                closeModal(confirmModal);
+                if (shouldRunCancel && pendingCancel) {
+                    pendingCancel();
+                }
+            }
+
+            window.openConfirmationModal = function(message, onConfirm, onCancel) {
+                if (!confirmModal || !confirmMessage) return;
+                if (confirmModal.classList.contains('is-open')) {
+                    return;
+                }
+                confirmCallback = typeof onConfirm === 'function' ? onConfirm : null;
+                confirmCancelCallback = typeof onCancel === 'function' ? onCancel : null;
+                confirmMessage.textContent = message || 'Please confirm this action.';
+                openModal(confirmModal);
+                if (confirmOkBtn) {
+                    confirmOkBtn.focus();
+                }
+            };
+
+            window.showSystemErrorModal = function(message) {
+                if (!errorModal || !errorMessage) return;
+                errorMessage.textContent = message || 'An unexpected system error occurred. Please try again.';
+                openModal(errorModal);
+                if (errorOkBtn) {
+                    errorOkBtn.focus();
+                }
+            };
+
+            window.withNativeConfirmBypass = function(callback) {
+                nativeConfirmBypassCount += 1;
+                try {
+                    return callback();
+                } finally {
+                    setTimeout(function() {
+                        nativeConfirmBypassCount = Math.max(nativeConfirmBypassCount - 1, 0);
+                    }, 0);
+                }
+            };
+
+            window.confirm = function(message) {
+                if (nativeConfirmBypassCount > 0) {
+                    nativeConfirmBypassCount -= 1;
+                    return true;
+                }
+                return nativeConfirm(message);
+            };
+
+            if (confirmOkBtn) {
+                confirmOkBtn.addEventListener('click', function() {
+                    const pending = confirmCallback;
+                    closeConfirmModal(false);
+                    if (pending) pending();
+                });
+            }
+
+            if (confirmCancelBtn) {
+                confirmCancelBtn.addEventListener('click', function() {
+                    closeConfirmModal(true);
+                });
+            }
+
+            confirmDismissTargets.forEach((el) => {
+                el.addEventListener('click', function() {
+                    closeConfirmModal(true);
+                });
+            });
+
+            if (errorOkBtn) {
+                errorOkBtn.addEventListener('click', function() {
+                    closeModal(errorModal);
+                });
+            }
+
+            errorDismissTargets.forEach((el) => {
+                el.addEventListener('click', function() {
+                    closeModal(errorModal);
+                });
+            });
+
+            document.addEventListener('keydown', function(event) {
+                if (event.key !== 'Escape') return;
+                if (confirmModal && confirmModal.classList.contains('is-open')) {
+                    closeConfirmModal(true);
+                    return;
+                }
+                if (errorModal && errorModal.classList.contains('is-open')) {
+                    closeModal(errorModal);
+                }
+            });
+
+            const initialError = @json(session('error'));
+            if (initialError) {
+                window.showSystemErrorModal(initialError);
+            }
+
+            window.addEventListener('error', function(event) {
+                const message = (event && event.message) ? event.message : '';
+                if (!message || message === 'Script error.') return;
+                const source = event && typeof event.filename === 'string' ? event.filename : '';
+                const sameOriginSource = !source || source.startsWith(window.location.origin) || source.startsWith('/');
+                if (!sameOriginSource) return;
+                window.showSystemErrorModal(message);
+            });
+
+            window.addEventListener('unhandledrejection', function(event) {
+                const reason = event ? event.reason : null;
+                const message = typeof reason === 'string' ? reason : (reason && reason.message ? reason.message : '');
+                window.showSystemErrorModal(message || 'A background process failed. Please try again.');
+            });
+        })();
+
+        // Confirmation for save/update/delete actions
+        (function attachActionConfirms() {
+            const defaultMessages = {
+                save: 'Are you sure you want to save these changes?',
+                delete: 'Are you sure you want to delete this item? This action cannot be undone.'
+            };
+
+            function getActionText(el) {
+                const text = (el.textContent || el.value || '').trim().toLowerCase();
+                return text;
+            }
+
+            function extractInlineConfirmMessage(code) {
+                if (!code) return '';
+                const match = code.match(/confirm\s*\(\s*(['"])(.*?)\1\s*\)/i);
+                return match && match[2] ? match[2] : '';
+            }
+
+            function normalizeInlineConfirmHandlers() {
+                document.querySelectorAll('form[onsubmit*="confirm("]').forEach((form) => {
+                    const inlineCode = form.getAttribute('onsubmit') || '';
+                    const message = extractInlineConfirmMessage(inlineCode);
+                    if (message && !form.dataset.confirm) {
+                        form.dataset.confirm = message;
+                    }
+                    form.removeAttribute('onsubmit');
+                });
+            }
+
+            function needsAutoConfirm(el, form) {
+                if (!el || el.disabled) return false;
+                if (el.dataset && el.dataset.confirmSkip === 'true') return false;
+                if (el.dataset && el.dataset.confirm) return true;
+                if (form && form.dataset && form.dataset.confirm) return true;
+                const text = getActionText(el);
+                if (!text) return false;
+                const isSave = text.includes('save');
+                const isDelete = text.includes('delete');
+                return isSave || isDelete;
+            }
+
+            function resolveMessage(el, form) {
+                if (el.dataset && el.dataset.confirm) return el.dataset.confirm;
+                if (form && form.dataset && form.dataset.confirm) return form.dataset.confirm;
+                const text = getActionText(el);
+                return text.includes('delete') ? defaultMessages.delete : defaultMessages.save;
+            }
+
+            normalizeInlineConfirmHandlers();
+
+            document.addEventListener('click', function(e) {
+                const target = e.target.closest('button, input[type="submit"], input[type="button"], a');
+                if (!target) return;
+                const form = target.closest('form');
+
+                if (target.dataset && target.dataset.confirmed === 'true') {
+                    delete target.dataset.confirmed;
+                    return;
+                }
+
+                if (!needsAutoConfirm(target, form)) return;
+
+                e.preventDefault();
+                e.stopPropagation();
+                const message = resolveMessage(target, form);
+                window.openConfirmationModal(message, function() {
+                    target.dataset.confirmed = 'true';
+                    if (form && (target.type === 'submit' || target.getAttribute('type') === 'submit' || target.tagName === 'BUTTON')) {
+                        window.withNativeConfirmBypass(function() {
+                            if (typeof form.requestSubmit === 'function') {
+                                form.requestSubmit(target);
+                            } else {
+                                form.submit();
+                            }
+                        });
+                        return;
+                    }
+
+                    window.withNativeConfirmBypass(function() {
+                        target.click();
+                    });
+                });
+            }, true);
+
+            document.addEventListener('submit', function(e) {
+                const submitter = e.submitter;
+                const form = e.target;
+
+                if (form && form.dataset && form.dataset.confirmed === 'true') {
+                    delete form.dataset.confirmed;
+                    return;
+                }
+
+                if (!submitter) {
+                    if (!form || !form.dataset || !form.dataset.confirm) return;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    window.openConfirmationModal(form.dataset.confirm, function() {
+                        form.dataset.confirmed = 'true';
+                        window.withNativeConfirmBypass(function() {
+                            form.submit();
+                        });
+                    });
+                    return;
+                }
+
+                if (submitter.dataset && submitter.dataset.confirmed === 'true') {
+                    delete submitter.dataset.confirmed;
+                    return;
+                }
+
+                if (!needsAutoConfirm(submitter, form)) return;
+
+                e.preventDefault();
+                e.stopPropagation();
+                const message = resolveMessage(submitter, form);
+                window.openConfirmationModal(message, function() {
+                    submitter.dataset.confirmed = 'true';
+                    window.withNativeConfirmBypass(function() {
+                        if (typeof form.requestSubmit === 'function') {
+                            form.requestSubmit(submitter);
+                        } else {
+                            form.submit();
+                        }
+                    });
+                });
+            }, true);
+        })();
 
         (function initializeGlobalPagasaClock() {
             const endpoint = @json(route('pagasa-time.current'));

@@ -1970,7 +1970,20 @@ class LocallyFundedProjectController extends Controller
             abort(404, 'PCR MOV file not found on disk');
         }
 
-        return response()->file($filePath);
+        $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+        $inlineExtensions = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'];
+        $mimeType = @mime_content_type($filePath) ?: 'application/octet-stream';
+        $headers = [
+            'Content-Type' => $mimeType,
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+            'Pragma' => 'no-cache',
+        ];
+
+        if (!in_array($extension, $inlineExtensions, true)) {
+            return response()->download($filePath, basename($filePath), $headers);
+        }
+
+        return response()->file($filePath, $headers);
     }
 
     /**

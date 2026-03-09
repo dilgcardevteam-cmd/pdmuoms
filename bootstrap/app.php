@@ -11,10 +11,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->web(
-            prepend: [\App\Http\Middleware\SecurityHeaders::class],
-            append: ['throttle:web-traffic']
-        );
+        $middleware->redirectUsersTo('/dashboard');
 
         $middleware->alias([
             'superadmin' => \App\Http\Middleware\SuperAdminMiddleware::class,

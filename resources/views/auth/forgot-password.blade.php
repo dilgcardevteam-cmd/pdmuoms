@@ -291,7 +291,6 @@
 
     <!-- Toast Notification -->
     <div id="toast" class="toast"></div>
-    @include('partials.global-error-confirm')
 
     <script>
         // Toast notification function

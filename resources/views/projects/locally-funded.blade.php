@@ -154,7 +154,7 @@
                     return route('projects.locally-funded', $query);
                 };
             @endphp
-            <div style="overflow-x: hidden; overflow-y: hidden;">
+            <div class="lfp-table-wrap" role="region" aria-label="Locally Funded Projects table" tabindex="0">
                 <table id="lfp-table" style="width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed;">
                     <thead>
                         <tr style="background-color: #f3f4f6; border-bottom: 2px solid #d1d5db;">
@@ -402,20 +402,45 @@
         @endif
     </div>
     <style>
-                        table td {
-                            vertical-align: top;
-                        }
+        table td {
+            vertical-align: top;
+        }
+
+        .lfp-table-wrap {
+            width: 100%;
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            background: #ffffff;
+        }
+
+        #lfp-table {
+            width: max-content !important;
+            min-width: 2000px;
+            table-layout: auto !important;
+        }
 
         #lfp-table th,
         #lfp-table td {
-            white-space: normal !important;
-            word-break: break-word;
-            overflow-wrap: anywhere;
-            min-width: 0 !important;
+            white-space: nowrap !important;
+            word-break: normal !important;
+            overflow-wrap: normal !important;
             padding: 8px !important;
         }
 
-        #lfp-table .wrap-text {
+        #lfp-table th:nth-child(2),
+        #lfp-table td:nth-child(2),
+        #lfp-table th:nth-child(3),
+        #lfp-table td:nth-child(3) {
+            min-width: 320px;
+            max-width: 420px;
+            white-space: normal !important;
+        }
+
+        #lfp-table .wrap-text,
+        #lfp-table td:nth-child(3) .wrap-text {
             white-space: normal;
         }
 
@@ -454,9 +479,39 @@
         }
 
         @media (max-width: 768px) {
-            th, td {
-                padding: 6px !important;
+            #lfp-filters-form > div {
+                width: 100%;
+                min-width: 0 !important;
+                flex: 1 1 100%;
+            }
+
+            #lfp-filters-form > a {
+                width: 100%;
+                text-align: center;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .lfp-table-wrap {
+                margin: 0 -8px;
+                border-left: 0;
+                border-right: 0;
+                border-radius: 0;
+            }
+
+            #lfp-table {
+                min-width: 1900px;
+            }
+
+            #lfp-table th,
+            #lfp-table td {
+                padding: 7px !important;
                 font-size: 11px;
+            }
+
+            #lfp-table td .wrap-text {
+                min-width: 260px;
             }
         }
 
@@ -467,6 +522,10 @@
 
             .content-header p {
                 font-size: 12px;
+            }
+
+            #lfp-table {
+                min-width: 1800px;
             }
         }
     </style>
