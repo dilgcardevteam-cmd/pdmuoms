@@ -1045,7 +1045,7 @@
                     @endphp
                     <a href="#" class="@if($systemManagementActive) active @endif submenu-toggle" onclick="toggleSubmenu(event, 'systemManagementMenu')">
                         <i class="fas fa-cogs"></i>
-                        <span>System Management</span>
+                        <span>Data Management</span>
                         <i class="fas fa-chevron-down submenu-chevron" style="margin-left: auto; font-size: 12px;"></i>
                     </a>
                     <ul id="systemManagementMenu" class="submenu" style="display: {{ $systemManagementActive ? 'block' : 'none' }};">
