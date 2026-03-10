@@ -298,13 +298,6 @@
             transform: scale(0.95);
         }
         
-        .topbar-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: #002C76;
-            margin: 0;
-        }
-        
         .topbar-right {
             display: flex;
             align-items: center;
@@ -591,6 +584,7 @@
             padding: 30px;
             min-height: calc(100vh - 70px);
             transition: margin-left 280ms cubic-bezier(0.2, 0.8, 0.2, 1);
+            will-change: margin-left, transform, opacity;
         }
         
         .main-content.with-sidebar {
@@ -603,6 +597,36 @@
 
         .sidebar.icon-collapsed ~ .main-content {
             margin-left: 78px;
+        }
+
+        .main-content.is-shifting-left {
+            animation: mainContentShiftLeft 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        .main-content.is-shifting-right {
+            animation: mainContentShiftRight 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        @keyframes mainContentShiftLeft {
+            from {
+                transform: translateX(16px);
+                opacity: 0.94;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes mainContentShiftRight {
+            from {
+                transform: translateX(-16px);
+                opacity: 0.94;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
         }
 
         .sidebar.icon-collapsed .sidebar-header {
@@ -707,10 +731,6 @@
                 margin-left: 220px;
             }
             
-            .topbar-title {
-                font-size: 16px;
-            }
-            
             .sidebar-title {
                 font-size: 14px;
             }
@@ -798,10 +818,6 @@
                 width: 40px;
                 height: 40px;
                 font-size: 20px;
-            }
-            
-            .topbar-title {
-                display: none;
             }
             
             .topbar-right {
@@ -898,6 +914,24 @@
             
             .profile-menu-email {
                 font-size: 11px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main-content.is-shifting-left,
+            .main-content.is-shifting-right {
+                animation: none;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .main-content {
+                transition: none;
+            }
+
+            .main-content.is-shifting-left,
+            .main-content.is-shifting-right {
+                animation: none;
             }
         }
 
@@ -1076,18 +1110,12 @@
     </aside>
     
     <!-- Top Navigation Bar -->
-    <div class="topbar" id="topbar">
-        <div class="topbar-left">
-            <button class="toggle-btn" id="toggleBtn" title="Toggle Sidebar">
-                <i class="fas fa-bars"></i>
-            </button>
-            @php
-                $topbarPageTitle = trim((string) $__env->yieldContent('page-title', 'Dashboard'));
-            @endphp
-            @if ($topbarPageTitle !== 'Locally Funded Projects')
-                <h1 class="topbar-title" id="pageTitle">{{ $topbarPageTitle }}</h1>
-            @endif
-        </div>
+        <div class="topbar" id="topbar">
+            <div class="topbar-left">
+                <button class="toggle-btn" id="toggleBtn" title="Toggle Sidebar">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
         
         <div class="topbar-right">
             <div class="profile-dropdown">
@@ -1206,14 +1234,58 @@
         
         // Check if sidebar should start collapsed (from localStorage)
         let sidebarExpanded = localStorage.getItem('sidebarExpanded') !== 'false';
+        let mainContentShiftTimer = null;
+        let mainContentShiftAnimation = null;
         
         // Check if mobile
         function isMobile() {
             return window.innerWidth <= 768;
         }
+
+        function animateMainContentShift(direction) {
+            if (!mainContent || isMobile()) {
+                return;
+            }
+
+            if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                return;
+            }
+
+            const animationClass = direction === 'expand'
+                ? 'is-shifting-right'
+                : 'is-shifting-left';
+
+            mainContent.classList.remove('is-shifting-left', 'is-shifting-right');
+            void mainContent.offsetWidth;
+            mainContent.classList.add(animationClass);
+
+            window.clearTimeout(mainContentShiftTimer);
+            mainContentShiftTimer = window.setTimeout(() => {
+                mainContent.classList.remove(animationClass);
+            }, 360);
+
+            if (typeof mainContent.animate === 'function') {
+                if (mainContentShiftAnimation) {
+                    mainContentShiftAnimation.cancel();
+                }
+
+                const fromX = direction === 'expand' ? -28 : 28;
+                mainContentShiftAnimation = mainContent.animate(
+                    [
+                        { transform: `translateX(${fromX}px)`, opacity: 0.9 },
+                        { transform: 'translateX(0)', opacity: 1 }
+                    ],
+                    {
+                        duration: 360,
+                        easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)'
+                    }
+                );
+            }
+        }
         
         // Initialize sidebar state
-        function updateSidebarState() {
+        function updateSidebarState(options = {}) {
+            const { animate = false } = options;
             const mobileView = isMobile();
             sidebar.classList.remove('collapsed', 'icon-collapsed');
 
@@ -1238,6 +1310,11 @@
 
                 body.classList.remove('sidebar-open');
             }
+
+            if (animate && !mobileView) {
+                animateMainContentShift(sidebarExpanded ? 'expand' : 'collapse');
+            }
+
             localStorage.setItem('sidebarExpanded', sidebarExpanded);
         }
         
@@ -1248,7 +1325,7 @@
         toggleBtn.addEventListener('click', function(e) {
             e.preventDefault();
             sidebarExpanded = !sidebarExpanded;
-            updateSidebarState();
+            updateSidebarState({ animate: true });
         });
 
         // Close sidebar when clicking on content area on mobile

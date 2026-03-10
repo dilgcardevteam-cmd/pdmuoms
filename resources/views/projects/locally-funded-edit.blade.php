@@ -866,6 +866,33 @@
                 width: 100%;
                 justify-content: center;
             }
+
+            #physical_update_button,
+            #monitoring_update_button,
+            #update_button,
+            #save_button,
+            .physical-save,
+            .monitoring-save {
+                width: 40px !important;
+                min-width: 40px;
+                height: 40px !important;
+                padding: 0 !important;
+                border-radius: 999px !important;
+                justify-content: center !important;
+                font-size: 0 !important;
+                line-height: 1;
+                overflow: hidden;
+            }
+
+            #physical_update_button i,
+            #monitoring_update_button i,
+            #update_button i,
+            #save_button i,
+            .physical-save i,
+            .monitoring-save i {
+                margin-right: 0 !important;
+                font-size: 14px !important;
+            }
         }
 
     </style>

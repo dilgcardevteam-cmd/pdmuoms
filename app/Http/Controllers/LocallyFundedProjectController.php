@@ -2188,6 +2188,16 @@ class LocallyFundedProjectController extends Controller
     public function update(Request $request, LocallyFundedProject $project)
     {
         $section = $request->input('section');
+        $user = Auth::user();
+        $canEditProjectProfile = $user
+            && strtoupper(trim((string) ($user->agency ?? ''))) === 'DILG'
+            && trim((string) ($user->province ?? '')) === 'Regional Office'
+            && strtolower(trim((string) ($user->role ?? ''))) === 'superadmin';
+
+        if ($section === 'profile' && !$canEditProjectProfile) {
+            abort(403, 'Unauthorized');
+        }
+
         $currencyFields = ['lgsf_allocation', 'lgu_counterpart', 'contract_amount', 'disbursed_amount', 'obligation', 'reverted_amount', 'balance'];
         $cleaned = [];
 

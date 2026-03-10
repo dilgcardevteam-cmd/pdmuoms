@@ -73,26 +73,55 @@
         }
 
         .lfp-inline-modal-backdrop {
-            display: none !important;
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.56);
+            z-index: 1290;
+        }
+
+        .lfp-inline-modal-backdrop.is-visible {
+            display: block;
         }
 
         .lfp-inline-modal {
             display: none;
-            margin-top: 16px;
-            border-radius: 10px;
-            background-color: #e7f1ff;
-            border: 1px solid #cfe3ff;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            width: min(1180px, calc(100vw - 32px));
+            max-height: min(90vh, 960px);
+            transform: translate(-50%, -50%);
+            border-radius: 16px;
+            background-color: #ffffff;
+            border: 1px solid #dbeafe;
+            box-shadow: 0 24px 48px rgba(15, 23, 42, 0.24);
+            z-index: 1300;
+        }
+
+        .lfp-inline-modal.is-visible {
+            display: flex !important;
+            flex-direction: column;
+            overflow: hidden;
         }
 
         .lfp-inline-modal-header {
-            display: none;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 14px 16px;
+            border-bottom: 1px solid #e5e7eb;
+            background: linear-gradient(180deg, #eff6ff 0%, #ffffff 100%);
         }
 
         .lfp-inline-modal-body {
+            flex: 1 1 auto;
+            min-height: 0;
             max-height: none;
-            overflow: visible;
-            padding: 16px;
-            background-color: transparent;
+            overflow-y: auto;
+            padding: 20px;
+            background-color: #ffffff;
         }
 
         .lfp-inline-modal-close {
@@ -136,6 +165,126 @@
                 padding: 16px;
             }
 
+            .lfp-mobile-canvas .lfp-inline-modal-backdrop.is-visible {
+                display: block !important;
+                position: fixed;
+                inset: 0;
+                background: rgba(15, 23, 42, 0.56);
+                z-index: 1290;
+            }
+
+            #editProfileFormBackdrop.is-visible,
+            #editContractFormBackdrop.is-visible {
+                display: block !important;
+                position: fixed;
+                inset: 0;
+                background: rgba(15, 23, 42, 0.56);
+                z-index: 1290;
+            }
+
+            .lfp-mobile-canvas .lfp-inline-modal {
+                margin-top: 0;
+                top: auto;
+                left: auto;
+                width: auto;
+                max-height: none;
+                transform: none;
+                background-color: #ffffff;
+                border: 1px solid #dbeafe;
+                border-radius: 16px;
+                box-shadow: 0 24px 48px rgba(15, 23, 42, 0.24);
+            }
+
+            #editProfileFormWrapper,
+            #editContractFormWrapper {
+                margin-top: 0;
+                top: auto;
+                left: auto;
+                width: auto;
+                max-height: none;
+                transform: none;
+                background-color: #ffffff;
+                border: 1px solid #dbeafe;
+                border-radius: 16px;
+                box-shadow: 0 24px 48px rgba(15, 23, 42, 0.24);
+            }
+
+            .lfp-mobile-canvas .lfp-inline-modal.is-visible {
+                position: fixed;
+                top: max(12px, env(safe-area-inset-top));
+                right: 12px;
+                bottom: max(12px, env(safe-area-inset-bottom));
+                left: 12px;
+                display: flex !important;
+                flex-direction: column;
+                min-height: 0;
+                overflow: hidden;
+                z-index: 1300;
+            }
+
+            #editProfileFormWrapper.is-visible,
+            #editContractFormWrapper.is-visible {
+                position: fixed;
+                top: max(12px, env(safe-area-inset-top));
+                right: 12px;
+                bottom: max(12px, env(safe-area-inset-bottom));
+                left: 12px;
+                display: flex !important;
+                flex-direction: column;
+                min-height: 0;
+                overflow: hidden;
+                z-index: 1300;
+            }
+
+            .lfp-mobile-canvas .lfp-inline-modal-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 12px;
+                padding: 14px 16px;
+                border-bottom: 1px solid #e5e7eb;
+                background: linear-gradient(180deg, #eff6ff 0%, #ffffff 100%);
+            }
+
+            #editProfileFormWrapper .lfp-inline-modal-header,
+            #editContractFormWrapper .lfp-inline-modal-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 12px;
+                padding: 14px 16px;
+                border-bottom: 1px solid #e5e7eb;
+                background: linear-gradient(180deg, #eff6ff 0%, #ffffff 100%);
+            }
+
+            .lfp-mobile-canvas .lfp-inline-modal-body {
+                flex: 1 1 auto;
+                min-height: 0;
+                max-height: none;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+                background-color: #ffffff;
+            }
+
+            .lfp-mobile-canvas .lfp-inline-modal-body form {
+                min-height: 100%;
+            }
+
+            #editProfileFormWrapper .lfp-inline-modal-body,
+            #editContractFormWrapper .lfp-inline-modal-body {
+                flex: 1 1 auto;
+                min-height: 0;
+                max-height: none;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+                background-color: #ffffff;
+            }
+
+            #editProfileFormWrapper .lfp-inline-modal-body form,
+            #editContractFormWrapper .lfp-inline-modal-body form {
+                min-height: 100%;
+            }
+
             #editProfileForm > div:first-of-type,
             #editContractForm > div:first-of-type {
                 grid-template-columns: 1fr !important;
@@ -146,9 +295,11 @@
 @endsection
 
 @section('content')
+    <div class="lfp-mobile-shell">
+        <div class="lfp-mobile-canvas">
     <div class="content-header" style="display: flex; justify-content: space-between; align-items: center; gap: 12px;">
         <div>
-            <h1>Project Details</h1>
+            <h1 style="font-weight: 700; color: #002C76; font-size: 32px;">Project Details</h1>
             <p>Full record for the selected locally funded project.</p>
         </div>
         <div style="display: flex; gap: 8px; align-items: center;">
@@ -188,33 +339,44 @@
     @endif
 
     @php
-        $isLguAgencyUser = strtoupper(trim((string) (Auth::user()->agency ?? ''))) === 'LGU';
+        $userAgency = strtoupper(trim((string) (Auth::user()->agency ?? '')));
+        $userProvince = trim((string) (Auth::user()->province ?? ''));
+        $userRole = strtolower(trim((string) (Auth::user()->role ?? '')));
+        $isLguAgencyUser = $userAgency === 'LGU';
+        $canEditProjectProfile = $userAgency === 'DILG'
+            && $userProvince === 'Regional Office'
+            && $userRole === 'superadmin';
     @endphp
 
     <div style="background: #f8fafc; padding: 24px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
         
-        <h1 style="font-weight: 700; color: #002C76;">{{ $project->project_name }}</h1>
+        <h1 class="project-main-title" style="font-weight: 700; color: #002C76; font-size: 32px;">{{ $project->project_name }}</h1>
         <div style="
             display: flex;
             flex-direction: row;
             width: 100%;
             ">
-            <div style="display: flex; flex-direction: column;">
-                <span>
-                    <span class="form-label">
+            <div style="display: flex; flex-direction: column; gap: 6px; color: #374151; font-family: 'Facebook Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+                <span style="display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <span>
+                    <span style="font-weight: 700; color: #000000;">
                         Project Code:
                     </span>
                     {{ $project->subaybayan_project_code }}
+                    </span>
+                    <button type="button" class="project-copy-button" data-copy-text="{{ $project->subaybayan_project_code }}" aria-label="Copy project code" title="Copy project code">
+                        <i class="fas fa-copy" aria-hidden="true"></i>
+                    </button>
                 </span>
 
                 <span>
-                    <span class="form-label">
+                    <span style="font-weight: 700; color: #000000;">
                         Funding Year:
                     </span>
                     {{ $project->funding_year }}
                 </span>
                 <span>
-                <span class="form-label">
+                <span style="font-weight: 700; color: #000000;">
                         Funding Source:
                     </span>
                     {{ $project->fund_source }}
@@ -265,41 +427,31 @@
             </div>
         </div> -->
 
-        <div class="project-tabs" role="tablist" aria-label="Project detail sections">
-            <button type="button" class="project-tab is-active" id="tab-project-profile" data-project-tab-target="projectProfileSection" role="tab" aria-controls="projectProfileSection" aria-selected="true">Profile</button>
-            <button type="button" class="project-tab" id="tab-contract-info" data-project-tab-target="contractInfoSection" role="tab" aria-controls="contractInfoSection" aria-selected="false">Contract</button>
+        <div class="project-tabs" role="tablist" aria-label="Project detail sections" style="margin-top: 40px;">
+            <button type="button" class="project-tab is-active" id="tab-project-profile" data-project-tab-target="projectProfileSection" role="tab" aria-controls="projectProfileSection" aria-selected="true">Project Profile</button>
+            <button type="button" class="project-tab" id="tab-contract-info" data-project-tab-target="contractInfoSection" role="tab" aria-controls="contractInfoSection" aria-selected="false">Contract Information</button>
             <button type="button" class="project-tab" id="tab-physical-accomplishment" data-project-tab-target="physicalAccomplishmentSection" role="tab" aria-controls="physicalAccomplishmentSection" aria-selected="false">Physical Accomplishment</button>
             <button type="button" class="project-tab" id="tab-financial-accomplishment" data-project-tab-target="financialAccomplishmentSection" role="tab" aria-controls="financialAccomplishmentSection" aria-selected="false">Financial Accomplishment</button>
-            <button type="button" class="project-tab" id="tab-monitoring-inspection" data-project-tab-target="monitoringInspectionSection" role="tab" aria-controls="monitoringInspectionSection" aria-selected="false">Monitoring</button>
+            <button type="button" class="project-tab" id="tab-monitoring-inspection" data-project-tab-target="monitoringInspectionSection" role="tab" aria-controls="monitoringInspectionSection" aria-selected="false">Monitoring/Inspection Activities</button>
             <button type="button" class="project-tab" id="tab-post-implementation" data-project-tab-target="postImplementationSection" role="tab" aria-controls="postImplementationSection" aria-selected="false">Post Implementation</button>
         </div>
 
         <div id="projectProfileSection" class="project-tab-panel is-active" data-tab-key="profile" role="tabpanel" aria-labelledby="tab-project-profile" style="margin-bottom: 24px; padding: 20px; border: 1px solid #00267C; border-radius: 10px; background-color: #ffffff;">
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 2px solid #00267C; padding-bottom: 10px;">
                 <h3 style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Project Profile</h3>
-                @if(!$isLguAgencyUser)
+                @if($canEditProjectProfile)
                     <a href="#" data-toggle="inline-edit" data-target="editProfileForm" style="padding: 6px 12px; background-color: #002C76; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 12px;"><i class="fas fa-edit" style="margin-right: 6px;"></i>Update</a>
                 @endif
             </div>
-            <div style="display: grid; grid-template-columns: repeat(2, minmax(260px, 1fr)); gap: 14px;">
+            <div class="project-profile-grid" style="display: grid; grid-template-columns: repeat(2, minmax(260px, 1fr)); gap: 14px;">
                 <div style="grid-column: 1 / -1;">
-                    <span class="font-bold text-[#374151]">Project Description:</span>
+                    <span style="font-weight: 700; color: #000000;">Project Description:</span>
                     </br>
                     <span class="text-[#374151]" style="margin-top: 6px; color: #374151;">{!! nl2br(e($project->project_description)) !!}</span>
                 </div>
 
-                    <!-- OTHER INFO -->
-                    <div class="flex flex-col text-[#374151]">
-                        <span><strong>Project Type:</strong> {{ $project->project_type }}</span>
-                        <span><strong>Date of NADAI:</strong> {{ $project->date_nadai ? $project->date_nadai->format('F j, Y') : '' }}</span>
-                        <span><strong>No. of Beneficiaries:</strong> {{ number_format($project->no_of_beneficiaries) }}</span>
-                        <span><strong>Rainwater Collection System:</strong> {{ $project->rainwater_collection_system }}</span>
-                        <span><strong>Date of Confirmation Fund Receipt:</strong> {{ $project->date_confirmation_fund_receipt ? $project->date_confirmation_fund_receipt->format('F j, Y') : '' }}</span>
-                        <span><strong>LGSF Allocation:</strong> ₱ {{ number_format($project->lgsf_allocation, 2) }}</span>
-                        <span><strong>LGU Counterpart:</strong> ₱ {{ number_format($project->lgu_counterpart, 2) }}</span>
-                    </div>    
                     <!-- SITE / LOCATION -->
-                    <div class="flex flex-col text-[#374151]">
+                    <div class="flex flex-col text-[#374151]" style="gap: 8px;">
                         <span class=""><strong>Province:</strong> {{ $project->province }}</span>
                         <span class=""><strong>City/Municipality:</strong> {{ $project->city_municipality }}</span>
                         @php
@@ -315,8 +467,20 @@
                                 </ul>
                             @endif
                         </span>
+                        <span><strong>LGSF Allocation:</strong> ₱ {{ number_format($project->lgsf_allocation, 2) }}</span>
+                        <span><strong>LGU Counterpart:</strong> ₱ {{ number_format($project->lgu_counterpart, 2) }}</span>
+                    </div>
+
+                    <!-- OTHER INFO -->
+                    <div class="flex flex-col text-[#374151]" style="gap: 8px;">
+                        <span><strong>Project Type:</strong> {{ $project->project_type }}</span>
+                        <span><strong>Date of NADAI:</strong> {{ $project->date_nadai ? $project->date_nadai->format('F j, Y') : '' }}</span>
+                        <span><strong>No. of Beneficiaries:</strong> {{ number_format($project->no_of_beneficiaries) }}</span>
+                        <span><strong>Rainwater Collection System:</strong> {{ $project->rainwater_collection_system }}</span>
+                        <span><strong>Date of Confirmation Fund Receipt:</strong> {{ $project->date_confirmation_fund_receipt ? $project->date_confirmation_fund_receipt->format('F j, Y') : '' }}</span>
                     </div>
             </div>
+            @if($canEditProjectProfile)
             <div id="editProfileFormBackdrop" class="lfp-inline-modal-backdrop{{ old('section') === 'profile' ? ' is-visible' : '' }}" aria-hidden="{{ old('section') === 'profile' ? 'false' : 'true' }}"></div>
             <div id="editProfileFormWrapper" class="lfp-inline-modal{{ old('section') === 'profile' ? ' is-visible' : '' }}" data-inline-modal="true" role="dialog" aria-modal="true" aria-labelledby="editProfileModalTitle" aria-hidden="{{ old('section') === 'profile' ? 'false' : 'true' }}" style="display: {{ old('section') === 'profile' ? 'block' : 'none' }};">
                 <div class="lfp-inline-modal-header">
@@ -329,7 +493,7 @@
                 @method('PUT')
                 <input type="hidden" name="section" value="profile">
 
-                <div style="display: grid; grid-template-columns: repeat(3, minmax(260px, 1fr)); gap: 20px;">
+                <div class="project-profile-form-grid" style="display: grid; grid-template-columns: repeat(3, minmax(260px, 1fr)); gap: 20px; padding: 20px; border: 1px solid #cbd5e1; border-radius: 10px; background-color: white;">
                     @php
                         $selectedProvince = old('province', $project->province);
                         $selectedProvinceNorm = strtolower(trim((string) $selectedProvince));
@@ -374,25 +538,18 @@
                                 style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; box-sizing: border-box; background-color: white;">
                             <option value="">-- Select Province First --</option>
                         </select>
-                        <small style="color: #9ca3af; font-size: 12px; margin-top: 4px; display: block;">Select a province above to see available cities/municipalities</small>
                     </div>
 
                     <div>
                         <label for="barangay" style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Barangay <span class="asterisk">*</span></label>
                         <div style="position: relative;">
-                            <div id="barangay_badges" style="display: flex; flex-wrap: wrap; gap: 6px; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; min-height: 44px; background-color: white; margin-bottom: 8px; align-content: flex-start;">
-                                <span style="color: #9ca3af; font-size: 14px; align-self: center;">Click dropdown to add barangays</span>
+                            <div id="barangay_badges" role="button" tabindex="0" aria-controls="barangay" aria-expanded="false" style="display: flex; flex-wrap: wrap; gap: 6px; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; min-height: 44px; background-color: white; margin-bottom: 8px; align-content: flex-start; cursor: pointer;">
+                                <span style="color: #9ca3af; font-size: 14px; align-self: center;">Click here or dropdown to add barangays</span>
                             </div>
-                            <details style="border: 1px solid #d1d5db; border-radius: 6px; background-color: white;">
-                                <summary style="cursor: pointer; padding: 10px 12px; font-size: 13px; font-weight: 600; color: #374151; user-select: none;">Show barangay choices</summary>
-                                <div style="padding: 0 12px 12px;">
-                                    <select id="barangay" name="barangay[]" multiple
-                                            style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; box-sizing: border-box; background-color: white; min-height: 120px;">
-                                    </select>
-                                </div>
-                            </details>
+                            <select id="barangay" name="barangay[]" multiple hidden
+                                    style="width: 100%; margin-top: 8px; padding: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; box-sizing: border-box; background-color: white; min-height: 120px;">
+                            </select>
                         </div>
-                        <small style="color: #9ca3af; font-size: 12px; margin-top: 4px; display: block;">Select city/municipality first, then click items to add as badges. Click badge X to remove.</small>
                         <input type="hidden" id="barangay_hidden" name="barangay_json" value="{{ old('barangay_json', json_encode(array_values(array_filter(array_map('trim', explode(',', $project->barangay)))))) }}">
                     </div>
 
@@ -490,13 +647,14 @@
 
                 </div>
 
-                <div style="margin-top: 16px; display: flex; gap: 8px;">
+                <div style="margin-top: 16px; display: flex; justify-content: flex-end; gap: 8px;">
                     <button type="submit" style="padding: 8px 16px; background-color: #16a34a; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;"><i class="fas fa-check" style="margin-right: 8px;"></i>Save Changes</button>
                     <button type="button" data-toggle="inline-cancel" data-target="editProfileForm" style="padding: 8px 16px; background-color: #6b7280; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;"><i class="fas fa-times" style="margin-right: 8px;"></i>Cancel</button>
                 </div>
             </form>
                 </div>
             </div>
+            @endif
         </div>
 
         <div id="contractInfoSection" class="project-tab-panel" data-tab-key="contract" role="tabpanel" aria-labelledby="tab-contract-info" style="margin-bottom: 24px; padding: 20px; border: 1px solid #00267C; border-radius: 10px; background-color: #ffffff;">
@@ -506,7 +664,7 @@
                     <a href="#" data-toggle="inline-edit" data-target="editContractForm" style="padding: 6px 12px; background-color: #002C76; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 12px;"><i class="fas fa-edit" style="margin-right: 6px;"></i>Update</a>
                 @endif
             </div>
-            <div style="display: grid; grid-template-columns: repeat(3, minmax(260px, 1fr)); gap: 14px;">
+            <div class="contract-info-grid" style="display: grid; grid-template-columns: repeat(3, minmax(260px, 1fr)); gap: 14px;">
                 <div><strong>Mode of Procurement:</strong> {{ $project->mode_of_procurement }}</div>
                 <div><strong>Implementing Unit:</strong> {{ $project->implementing_unit }}</div>
                 <div><strong>Date of Posting (ITB):</strong> {{ $project->date_posting_itb ? $project->date_posting_itb->format('F j, Y') : '' }}</div>
@@ -532,7 +690,7 @@
                 @method('PUT')
                 <input type="hidden" name="section" value="contract">
 
-                <div style="display: grid; grid-template-columns: repeat(3, minmax(260px, 1fr)); gap: 20px;">
+                <div class="contract-form-grid" style="display: grid; grid-template-columns: repeat(3, minmax(260px, 1fr)); gap: 20px;">
                     @php
                         $selectedModeOfProcurement = old('mode_of_procurement', $project->mode_of_procurement);
                         $selectedModeOfProcurementNorm = strtolower(trim((string) $selectedModeOfProcurement));
@@ -638,7 +796,7 @@
                     </div>
                 </div>
 
-                <div style="margin-top: 16px; display: flex; gap: 8px;">
+                <div style="margin-top: 16px; display: flex; justify-content: flex-end; gap: 8px;">
                     <button type="submit" style="padding: 8px 16px; background-color: #16a34a; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;"><i class="fas fa-check" style="margin-right: 8px;"></i>Save Changes</button>
                     <button type="button" data-toggle="inline-cancel" data-target="editContractForm" style="padding: 8px 16px; background-color: #6b7280; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;"><i class="fas fa-times" style="margin-right: 8px;"></i>Cancel</button>
                 </div>
@@ -1687,6 +1845,8 @@
             </div>
         </div>
 
+        </div>
+    </div>
         <div id="activityLogSection" role="dialog" aria-modal="true" aria-labelledby="activityLogTitle" aria-hidden="true" style="margin-bottom: 24px; padding: 20px; border: 1px solid #e5e7eb; border-radius: 10px; background-color: #f9fafb;">
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 2px solid #00267C; padding-bottom: 10px; position: relative;">
                 <h3 id="activityLogTitle" style="color: #002C76; font-size: 15px; font-weight: 700; margin: 0;">Activity Logs</h3>
@@ -1736,6 +1896,39 @@
         }
         .form-label{
             font-size: 12px; color: #002C76; font-weight: 700; text-transform: uppercase;
+        }
+        .project-copy-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            padding: 0;
+            border: 1px solid #bfdbfe;
+            border-radius: 999px;
+            background: #eff6ff;
+            color: #002C76;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 12px;
+            font-weight: 700;
+            line-height: 1;
+            transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+        }
+
+        .project-copy-button:hover {
+            background: #dbeafe;
+            border-color: #93c5fd;
+        }
+
+        .project-copy-button.is-copied {
+            background: #dcfce7;
+            border-color: #86efac;
+            color: #166534;
+        }
+
+        .project-copy-button i {
+            font-size: 11px;
         }
         .content-header {
             flex-wrap: wrap;
@@ -1972,6 +2165,240 @@
                 width: 94vw;
                 max-height: 85vh;
             }
+        }
+
+        @media (max-width: 1024px) {
+            .lfp-mobile-shell {
+                width: 100%;
+                overflow-x: hidden;
+                overflow-y: visible;
+                padding-bottom: 0;
+            }
+
+            .lfp-mobile-canvas {
+                min-width: 100%;
+                font-size: 11px;
+            }
+
+            .lfp-mobile-canvas .content-header {
+                flex-direction: row;
+                align-items: center;
+                flex-wrap: wrap;
+            }
+
+            .lfp-mobile-canvas .content-header h1 {
+                font-size: 22px;
+            }
+
+            .lfp-mobile-canvas .project-main-title {
+                font-size: 20px !important;
+            }
+
+            .lfp-mobile-canvas .content-header > div:last-child {
+                width: 100%;
+                justify-content: flex-start;
+                flex-wrap: wrap;
+            }
+
+            .lfp-mobile-canvas .project-tabs {
+                flex-wrap: nowrap;
+                gap: 6px;
+                overflow-x: auto;
+                overflow-y: hidden;
+                width: 100%;
+                padding-bottom: 4px;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+                scroll-snap-type: x proximity;
+            }
+
+            .lfp-mobile-canvas .project-tabs::-webkit-scrollbar {
+                display: none;
+            }
+
+            .lfp-mobile-canvas .project-tab {
+                flex: 0 0 auto;
+                padding: 6px 10px;
+                font-size: 10px;
+                white-space: nowrap;
+                text-align: center;
+                scroll-snap-align: start;
+            }
+
+            .lfp-mobile-canvas div[style*="grid-template-columns: repeat(3"] {
+                grid-template-columns: repeat(3, minmax(110px, 1fr)) !important;
+                gap: 10px !important;
+            }
+
+            .lfp-mobile-canvas div[style*="grid-template-columns: repeat(2, minmax(260px, 1fr))"] {
+                grid-template-columns: repeat(2, minmax(150px, 1fr)) !important;
+                gap: 10px !important;
+            }
+
+            .lfp-mobile-canvas div[style*="grid-template-columns: repeat(2, minmax(300px, 1fr))"] {
+                grid-template-columns: repeat(2, minmax(150px, 1fr)) !important;
+                gap: 10px !important;
+            }
+
+            .lfp-mobile-canvas div[style*="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr))"] {
+                grid-template-columns: repeat(2, minmax(150px, 1fr)) !important;
+                gap: 12px !important;
+            }
+
+            .lfp-mobile-canvas div[style*="grid-template-columns: 120px 1fr 180px 140px"] {
+                grid-template-columns: 46px minmax(72px, 1fr) 62px 54px !important;
+                gap: 4px !important;
+                font-size: 10px !important;
+            }
+
+            .lfp-mobile-canvas #editProfileForm > div:first-of-type,
+            .lfp-mobile-canvas #editContractForm > div:first-of-type {
+                grid-template-columns: repeat(3, minmax(110px, 1fr)) !important;
+                gap: 10px !important;
+            }
+
+            .lfp-mobile-canvas #financialAccomplishmentSection .monthly-details {
+                width: 100%;
+                min-width: 0;
+            }
+
+            .lfp-mobile-canvas #projectProfileSection,
+            .lfp-mobile-canvas #contractInfoSection,
+            .lfp-mobile-canvas #physicalAccomplishmentSection,
+            .lfp-mobile-canvas #financialAccomplishmentSection,
+            .lfp-mobile-canvas #monitoringInspectionSection,
+            .lfp-mobile-canvas #postImplementationSection {
+                font-size: 0.78em;
+            }
+
+            .lfp-mobile-canvas > div[style*="background: #f8fafc; padding: 24px"] {
+                padding: 14px !important;
+            }
+
+            .lfp-mobile-canvas table {
+                min-width: 100% !important;
+                font-size: 10px !important;
+            }
+
+            .lfp-mobile-canvas th,
+            .lfp-mobile-canvas td {
+                white-space: normal;
+                word-break: break-word;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .lfp-mobile-canvas #projectProfileSection {
+                padding: 16px !important;
+                font-size: 0.95em;
+            }
+
+            .lfp-mobile-canvas .project-tab-panel > div:first-child {
+                flex-direction: row !important;
+                align-items: flex-start !important;
+            }
+
+            .lfp-mobile-canvas .project-tab-panel > div:first-child a[data-toggle="inline-edit"] {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: 36px !important;
+                min-width: 36px;
+                height: 36px !important;
+                padding: 0 !important;
+                border-radius: 999px !important;
+                font-size: 0 !important;
+                line-height: 1;
+                flex: 0 0 auto;
+                overflow: hidden;
+            }
+
+            .lfp-mobile-canvas .project-tab-panel > div:first-child a[data-toggle="inline-edit"] i {
+                margin-right: 0 !important;
+                font-size: 14px !important;
+            }
+
+            .lfp-mobile-canvas .project-profile-grid {
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 14px !important;
+            }
+
+            .lfp-mobile-canvas .project-profile-form-grid {
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 12px !important;
+            }
+
+            #editProfileFormWrapper .project-profile-form-grid {
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 12px !important;
+            }
+
+            .lfp-mobile-canvas .project-profile-grid > div,
+            .lfp-mobile-canvas .project-profile-form-grid > div {
+                min-width: 0;
+                width: 100%;
+            }
+
+            #editProfileFormWrapper .project-profile-form-grid > div {
+                min-width: 0;
+                width: 100%;
+            }
+
+            .lfp-mobile-canvas #editProfileForm > div:last-child {
+                flex-direction: column;
+            }
+
+            .lfp-mobile-canvas #editProfileForm > div:last-child button {
+                width: 100%;
+            }
+
+            #editProfileForm > div:last-child {
+                flex-direction: column;
+            }
+
+            #editProfileForm > div:last-child button {
+                width: 100%;
+            }
+
+            .lfp-mobile-canvas #contractInfoSection {
+                padding: 16px !important;
+                font-size: 0.95em;
+            }
+
+            .lfp-mobile-canvas #contractInfoSection .contract-info-grid {
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 12px !important;
+            }
+
+            #editContractFormWrapper .contract-form-grid {
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 12px !important;
+            }
+
+            .lfp-mobile-canvas .contract-info-grid > div,
+            .lfp-mobile-canvas .contract-form-grid > div,
+            #editContractFormWrapper .contract-form-grid > div {
+                min-width: 0;
+            }
+
+            .lfp-mobile-canvas .contract-info-grid > div {
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+                box-sizing: border-box;
+                overflow-wrap: anywhere;
+                word-break: break-word;
+            }
+
+            .lfp-mobile-canvas .contract-info-grid > div strong {
+                display: block;
+            }
+
         }
 
     </style>
@@ -3393,11 +3820,82 @@ const locationData = {
             };
         }
 
+        function isInlineSectionTarget(targetId, inlineElements) {
+            const elements = inlineElements || getInlineEditElements(targetId);
+
+            return !elements.wrapper
+                && Object.prototype.hasOwnProperty.call(inlineSectionTargetMap, targetId)
+                && !!elements.target;
+        }
+
+        function isInlineEditOpen(targetId) {
+            const inlineElements = getInlineEditElements(targetId);
+
+            if (inlineElements.wrapper) {
+                return inlineElements.wrapper.style.display !== 'none'
+                    && inlineElements.wrapper.getAttribute('aria-hidden') !== 'true';
+            }
+
+            if (isInlineSectionTarget(targetId, inlineElements)) {
+                return inlineElements.target.classList.contains('is-inline-editing');
+            }
+
+            return false;
+        }
+
         function syncBodyModalState() {
             const activityLogModal = document.getElementById('activityLogSection');
             const hasActivityLogModal = activityLogModal ? activityLogModal.classList.contains('is-visible') : false;
+            const hasInlineModal = Array.from(document.querySelectorAll('.lfp-inline-modal[data-inline-modal="true"]')).some((modal) => {
+                return modal.style.display !== 'none' && modal.getAttribute('aria-hidden') !== 'true';
+            });
 
-            document.body.classList.toggle('modal-open', hasActivityLogModal);
+            document.body.classList.toggle('modal-open', hasActivityLogModal || hasInlineModal);
+        }
+
+        function initializeMobileInlineModalPortal(wrapperId, backdropId) {
+            const wrapper = document.getElementById(wrapperId);
+            const backdrop = document.getElementById(backdropId);
+
+            if (!wrapper || !backdrop || !wrapper.parentNode) {
+                return;
+            }
+
+            const originalParent = wrapper.parentNode;
+            const anchor = document.createElement('span');
+            anchor.hidden = true;
+            originalParent.insertBefore(anchor, backdrop);
+
+            const syncPortal = () => {
+                const isMobile = window.matchMedia('(max-width: 768px)').matches;
+
+                if (isMobile) {
+                    if (backdrop.parentNode !== document.body) {
+                        document.body.appendChild(backdrop);
+                    }
+
+                    if (wrapper.parentNode !== document.body) {
+                        document.body.appendChild(wrapper);
+                    }
+                } else {
+                    if (backdrop.parentNode !== originalParent) {
+                        originalParent.insertBefore(backdrop, anchor.nextSibling);
+                    }
+
+                    if (wrapper.parentNode !== originalParent) {
+                        originalParent.insertBefore(wrapper, backdrop.nextSibling);
+                    }
+                }
+
+                syncBodyModalState();
+            };
+
+            syncPortal();
+            window.addEventListener('resize', syncPortal);
+        }
+
+        function getInlineToggleMarkup(label, iconClass) {
+            return '<i class="' + iconClass + '" style="margin-right: 6px;" aria-hidden="true"></i>' + label;
         }
 
         function setInlineToggleState(button, isEditing) {
@@ -3405,19 +3903,31 @@ const locationData = {
             if (!button.dataset.originalText) {
                 button.dataset.originalText = button.textContent.trim();
             }
+            if (!button.dataset.originalHtml) {
+                button.dataset.originalHtml = button.innerHTML;
+            }
             if (!button.dataset.originalBg) {
                 button.dataset.originalBg = button.style.backgroundColor;
             }
-            button.textContent = isEditing ? 'Cancel' : button.dataset.originalText;
+            if (!button.dataset.originalColor) {
+                button.dataset.originalColor = button.style.color;
+            }
+            button.innerHTML = isEditing
+                ? getInlineToggleMarkup('Cancel', 'fas fa-times')
+                : (button.dataset.originalHtml || getInlineToggleMarkup(button.dataset.originalText || 'Update', 'fas fa-edit'));
             button.dataset.inlineState = isEditing ? 'editing' : 'idle';
             button.style.backgroundColor = isEditing ? '#dc2626' : (button.dataset.originalBg || '');
+            button.style.color = isEditing ? '#ffffff' : (button.dataset.originalColor || '#ffffff');
+            button.setAttribute('aria-label', isEditing ? 'Cancel editing' : (button.dataset.originalText || 'Update'));
         }
 
         function openInlineEdit(button) {
             const targetId = button.getAttribute('data-target');
-            const { wrapper } = getInlineEditElements(targetId);
+            const inlineElements = getInlineEditElements(targetId);
+            const { target, wrapper, backdrop } = inlineElements;
             if (wrapper) {
                 wrapper.style.display = 'block';
+                wrapper.classList.add('is-visible');
                 wrapper.setAttribute('aria-hidden', 'false');
 
                 const focusTarget = wrapper.querySelector('button, input, select, textarea');
@@ -3425,6 +3935,17 @@ const locationData = {
                     setTimeout(() => focusTarget.focus(), 0);
                 }
             }
+
+            if (isInlineSectionTarget(targetId, inlineElements)) {
+                target.classList.add('is-inline-editing');
+            }
+
+            if (backdrop && wrapper) {
+                backdrop.classList.add('is-visible');
+                backdrop.setAttribute('aria-hidden', 'false');
+            }
+
+            syncBodyModalState();
 
             if (button.hasAttribute('data-physical-toggle')) {
                 const currentMonth = {{ $currentMonth }};
@@ -3549,11 +4070,25 @@ const locationData = {
             }
         }
 
+        initializeMobileInlineModalPortal('editProfileFormWrapper', 'editProfileFormBackdrop');
+        initializeMobileInlineModalPortal('editContractFormWrapper', 'editContractFormBackdrop');
+
         function closeInlineEdit(targetId) {
-            const { wrapper } = getInlineEditElements(targetId);
+            const inlineElements = getInlineEditElements(targetId);
+            const { target, wrapper, backdrop } = inlineElements;
             if (wrapper) {
                 wrapper.style.display = 'none';
+                wrapper.classList.remove('is-visible');
                 wrapper.setAttribute('aria-hidden', 'true');
+            }
+
+            if (isInlineSectionTarget(targetId, inlineElements)) {
+                target.classList.remove('is-inline-editing');
+            }
+
+            if (backdrop) {
+                backdrop.classList.remove('is-visible');
+                backdrop.setAttribute('aria-hidden', 'true');
             }
 
             if (targetId === 'editPhysicalForm') {
@@ -3592,6 +4127,8 @@ const locationData = {
                     saveBtn.style.display = 'none';
                 });
             }
+
+            syncBodyModalState();
         }
 
         function disableAllEditableControlsOnLoad() {
@@ -3794,11 +4331,7 @@ const locationData = {
 
         document.querySelectorAll('[data-toggle="inline-edit"]').forEach((button) => {
             const targetId = button.getAttribute('data-target');
-            const { wrapper } = getInlineEditElements(targetId);
-            const isVisible = wrapper
-                ? wrapper.style.display !== 'none'
-                : false;
-            setInlineToggleState(button, isVisible);
+            setInlineToggleState(button, isInlineEditOpen(targetId));
 
             button.addEventListener('click', (event) => {
                 event.preventDefault();
@@ -3823,6 +4356,17 @@ const locationData = {
                 setInlineToggleState(editButton, false);
             });
         });
+
+        document.querySelectorAll('.lfp-inline-modal-backdrop').forEach((backdrop) => {
+            backdrop.addEventListener('click', () => {
+                const targetId = backdrop.id.replace(/Backdrop$/, '');
+                closeInlineEdit(targetId);
+                const editButton = document.querySelector('[data-toggle="inline-edit"][data-target="' + targetId + '"]');
+                setInlineToggleState(editButton, false);
+            });
+        });
+
+        window.addEventListener('resize', syncBodyModalState);
 
         document.addEventListener('submit', (event) => {
             const submitter = event.submitter;
@@ -3849,6 +4393,80 @@ const locationData = {
         const barangaySelect = document.getElementById('barangay');
         const barangayBadges = document.getElementById('barangay_badges');
         const barangayHidden = document.getElementById('barangay_hidden');
+        let availableBarangays = [];
+
+        function normalizeBarangayList(items) {
+            return Array.from(new Set((items || [])
+                .map((item) => (item || '').toString().trim())
+                .filter(Boolean)));
+        }
+
+        function renderBarangayOptions() {
+            if (!barangaySelect) {
+                return;
+            }
+
+            const remainingBarangays = availableBarangays.filter((barangay) => !selectedBarangays[barangay]);
+            barangaySelect.innerHTML = '';
+
+            remainingBarangays.forEach((barangay) => {
+                const option = document.createElement('option');
+                option.value = barangay;
+                option.textContent = barangay;
+                barangaySelect.appendChild(option);
+            });
+        }
+
+        function syncBarangayPickerState() {
+            if (!barangayBadges || !barangaySelect) {
+                return;
+            }
+
+            barangayBadges.setAttribute('aria-expanded', barangaySelect.hidden ? 'false' : 'true');
+        }
+
+        function openBarangayPicker() {
+            if (!barangaySelect) {
+                return;
+            }
+
+            renderBarangayOptions();
+            barangaySelect.hidden = false;
+            syncBarangayPickerState();
+
+            setTimeout(() => barangaySelect.focus(), 0);
+        }
+
+        function closeBarangayPicker() {
+            if (!barangaySelect) {
+                return;
+            }
+
+            barangaySelect.hidden = true;
+            syncBarangayPickerState();
+        }
+
+        function isWithinBarangayPicker(target) {
+            if (!target || !barangayBadges || !barangaySelect) {
+                return false;
+            }
+
+            return barangayBadges.contains(target) || barangaySelect.contains(target);
+        }
+
+        function hideBarangayPickerIfFocusLeaves() {
+            setTimeout(() => {
+                if (!barangaySelect || barangaySelect.hidden) {
+                    return;
+                }
+
+                if (isWithinBarangayPicker(document.activeElement)) {
+                    return;
+                }
+
+                closeBarangayPicker();
+            }, 0);
+        }
 
         function updateBadges() {
             if (!barangayBadges || !barangayHidden) {
@@ -3857,8 +4475,9 @@ const locationData = {
 
             const selectedList = Object.keys(selectedBarangays);
             if (selectedList.length === 0) {
-                barangayBadges.innerHTML = '<span style="color: #9ca3af; font-size: 14px; align-self: center;">Click dropdown to add barangays</span>';
+                barangayBadges.innerHTML = '<span style="color: #9ca3af; font-size: 14px; align-self: center;">Click here or dropdown to add barangays</span>';
                 barangayHidden.value = '';
+                renderBarangayOptions();
                 return;
             }
 
@@ -3874,29 +4493,63 @@ const locationData = {
 
             barangayBadges.innerHTML = badgesHTML;
             barangayHidden.value = JSON.stringify(selectedList);
+            renderBarangayOptions();
         }
 
         window.removeBarangay = function(barangay) {
             delete selectedBarangays[barangay];
             updateBadges();
+            if (barangaySelect) {
+                setTimeout(() => {
+                    openBarangayPicker();
+                }, 0);
+            }
         };
 
         function resetBarangaySelection() {
             selectedBarangays = {};
             if (barangayBadges) {
-                barangayBadges.innerHTML = '<span style="color: #9ca3af; font-size: 14px; align-self: center;">Click dropdown to add barangays</span>';
+                barangayBadges.innerHTML = '<span style="color: #9ca3af; font-size: 14px; align-self: center;">Click here or dropdown to add barangays</span>';
             }
             if (barangayHidden) {
                 barangayHidden.value = '';
             }
+            renderBarangayOptions();
         }
 
         if (provinceSelect && citySelect && barangaySelect && barangayBadges && barangayHidden) {
+            syncBarangayPickerState();
+
+            barangayBadges.addEventListener('click', function(event) {
+                if (event.target.closest('button')) {
+                    return;
+                }
+
+                openBarangayPicker();
+            });
+
+            barangayBadges.addEventListener('keydown', function(event) {
+                if (event.key !== 'Enter' && event.key !== ' ') {
+                    return;
+                }
+
+                if (event.target.closest('button')) {
+                    return;
+                }
+
+                event.preventDefault();
+                openBarangayPicker();
+            });
+
+            barangayBadges.addEventListener('focusout', hideBarangayPickerIfFocusLeaves);
+            barangaySelect.addEventListener('blur', hideBarangayPickerIfFocusLeaves);
+
             provinceSelect.addEventListener('change', function() {
                 const selectedProvince = this.value;
                 citySelect.innerHTML = '<option value="">-- Select City/Municipality --</option>';
-                barangaySelect.innerHTML = '';
+                availableBarangays = [];
                 resetBarangaySelection();
+                closeBarangayPicker();
 
                 if (selectedProvince && locationData[selectedProvince]) {
                     Object.keys(locationData[selectedProvince]).forEach((city) => {
@@ -3911,26 +4564,49 @@ const locationData = {
             citySelect.addEventListener('change', function() {
                 const selectedProvince = provinceSelect.value;
                 const selectedCity = this.value;
-                barangaySelect.innerHTML = '';
+                availableBarangays = [];
                 resetBarangaySelection();
+                closeBarangayPicker();
 
                 if (selectedProvince && selectedCity && locationData[selectedProvince] && locationData[selectedProvince][selectedCity]) {
-                    locationData[selectedProvince][selectedCity].forEach((barangay) => {
-                        const option = document.createElement('option');
-                        option.value = barangay;
-                        option.textContent = barangay;
-                        barangaySelect.appendChild(option);
-                    });
+                    availableBarangays = normalizeBarangayList(locationData[selectedProvince][selectedCity]);
                 }
+                renderBarangayOptions();
             });
 
             barangaySelect.addEventListener('change', function() {
-                const selectedValue = this.value;
-                if (selectedValue && !selectedBarangays[selectedValue]) {
-                    selectedBarangays[selectedValue] = true;
-                    updateBadges();
-                }
+                Array.from(this.selectedOptions).forEach((option) => {
+                    const selectedValue = option.value;
+                    if (selectedValue && !selectedBarangays[selectedValue]) {
+                        selectedBarangays[selectedValue] = true;
+                    }
+                });
+                updateBadges();
                 this.value = '';
+            });
+
+            document.addEventListener('pointerdown', function(event) {
+                if (barangaySelect.hidden) {
+                    return;
+                }
+
+                if (isWithinBarangayPicker(event.target)) {
+                    return;
+                }
+
+                closeBarangayPicker();
+            });
+
+            document.addEventListener('focusin', function(event) {
+                if (barangaySelect.hidden) {
+                    return;
+                }
+
+                if (isWithinBarangayPicker(event.target)) {
+                    return;
+                }
+
+                closeBarangayPicker();
             });
 
             // Initialize city and barangay lists based on current values
@@ -3983,27 +4659,12 @@ const locationData = {
                     return city.toLowerCase() === resolvedCity.toLowerCase();
                 });
                 if (matchedCityKey && locationData[initialProvince][matchedCityKey]) {
-                    barangaySelect.innerHTML = '';
-                    locationData[initialProvince][matchedCityKey].forEach((barangay) => {
-                        const option = document.createElement('option');
-                        option.value = barangay;
-                        option.textContent = barangay;
-                        barangaySelect.appendChild(option);
-                    });
+                    availableBarangays = normalizeBarangayList(locationData[initialProvince][matchedCityKey]);
                 }
             }
 
-            if (!barangaySelect.options.length && initialBarangays.length) {
-                barangaySelect.innerHTML = '';
-                initialBarangays.forEach((barangay) => {
-                    if (!barangay) {
-                        return;
-                    }
-                    const option = document.createElement('option');
-                    option.value = barangay;
-                    option.textContent = barangay;
-                    barangaySelect.appendChild(option);
-                });
+            if (!availableBarangays.length && initialBarangays.length) {
+                availableBarangays = normalizeBarangayList(initialBarangays);
             }
 
             selectedBarangays = {};
@@ -4013,6 +4674,7 @@ const locationData = {
                 }
             });
             updateBadges();
+            closeBarangayPicker();
         }
 
         const profileForm = document.getElementById('editProfileForm');
@@ -4103,6 +4765,54 @@ const locationData = {
         bindInlineAutoSave('[data-financial-edit="true"]');
         bindInlineAutoSave('[data-monitoring-edit="true"]');
         bindInlineAutoSave('[data-post-implementation-edit="true"]');
+
+        async function copyTextToClipboard(text) {
+            if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+                await navigator.clipboard.writeText(text);
+                return;
+            }
+
+            const fallbackField = document.createElement('textarea');
+            fallbackField.value = text;
+            fallbackField.setAttribute('readonly', '');
+            fallbackField.style.position = 'absolute';
+            fallbackField.style.left = '-9999px';
+            document.body.appendChild(fallbackField);
+            fallbackField.select();
+            document.execCommand('copy');
+            document.body.removeChild(fallbackField);
+        }
+
+        document.querySelectorAll('.project-copy-button').forEach((button) => {
+            let resetTimer;
+
+            button.addEventListener('click', async () => {
+                const label = button.querySelector('[data-copy-label="true"]');
+                const originalLabel = label ? label.textContent : 'Copy';
+
+                try {
+                    await copyTextToClipboard(button.dataset.copyText || '');
+                    button.classList.add('is-copied');
+                    if (label) {
+                        label.textContent = 'Copied';
+                    }
+
+                    window.clearTimeout(resetTimer);
+                    resetTimer = window.setTimeout(() => {
+                        button.classList.remove('is-copied');
+                        if (label) {
+                            label.textContent = originalLabel;
+                        }
+                    }, 1800);
+                } catch (error) {
+                    if (typeof window.showSystemErrorModal === 'function') {
+                        window.showSystemErrorModal('Unable to copy the project code.');
+                    } else {
+                        alert('Unable to copy the project code.');
+                    }
+                }
+            });
+        });
 
         const projectTabs = Array.from(document.querySelectorAll('.project-tab'));
         const projectPanels = Array.from(document.querySelectorAll('.project-tab-panel'));
