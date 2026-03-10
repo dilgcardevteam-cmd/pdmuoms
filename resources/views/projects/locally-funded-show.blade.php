@@ -143,6 +143,13 @@
             display: none;
         }
 
+        .lfp-physical-section-title {
+            flex: 0 1 75%;
+            max-width: 75%;
+            min-width: 0;
+            line-height: 1.2;
+        }
+
         @media (max-width: 768px) {
             .lfp-summary-card {
                 padding: 16px;
@@ -873,7 +880,7 @@
         <div id="editPhysicalFormBackdrop" class="lfp-inline-modal-backdrop" aria-hidden="true"></div>
         <div id="physicalAccomplishmentSection" class="project-tab-panel lfp-inline-modal-section" data-tab-key="physical" role="tabpanel" aria-labelledby="tab-physical-accomplishment" data-inline-modal-section="true" data-inline-target="editPhysicalForm" style="margin-bottom: 24px; padding: 20px; border: 1px solid #00267C; border-radius: 10px; background-color: #ffffff;">
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 2px solid #00267C; padding-bottom: 10px;">
-                <h3 style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Physical Accomplishment</h3>
+                <h3 class="lfp-physical-section-title" style="color: #00267C; font-size: clamp(14px, 4vw, 18px); font-weight: 700; margin: 0;">Physical Accomplishment</h3>
                 <div style="display: flex; gap: 8px; align-items: center;">
                     @if(!$isLguAgencyUser)
                         <a href="#" data-toggle="inline-edit" data-target="editPhysicalForm" data-physical-toggle="true" style="padding: 6px 12px; background-color: #002C76; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 12px;"><i class="fas fa-edit" style="margin-right: 6px;"></i>Update</a>
@@ -1284,8 +1291,8 @@
         <div id="editFinancialFormBackdrop" class="lfp-inline-modal-backdrop" aria-hidden="true"></div>
         <div id="financialAccomplishmentSection" class="project-tab-panel lfp-inline-modal-section" data-inline-modal-section="true" data-inline-target="editFinancialForm" data-tab-key="financial" role="tabpanel" aria-labelledby="tab-financial-accomplishment" style="margin-bottom: 24px; padding: 20px; border: 1px solid #00267C; border-radius: 10px; background-color: #ffffff;">
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 2px solid #00267C; padding-bottom: 10px;">
-                <h3 style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Financial Accomplishment (based on Subaybayan)</h3>
-                <div style="display: flex; gap: 8px; align-items: center;">
+                <h3 class="lfp-financial-section-title" style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Financial Accomplishment (based on Subaybayan)</h3>
+                <div class="lfp-financial-section-actions" style="display: flex; gap: 8px; align-items: center;">
                     @if(!$isLguAgencyUser)
                         <a href="#" data-toggle="inline-edit" data-target="editFinancialForm" data-financial-toggle="true" style="padding: 6px 12px; background-color: #002C76; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 12px;"><i class="fas fa-edit" style="margin-right: 6px;"></i>Update</a>
                     @endif
@@ -2025,6 +2032,23 @@
             transform: translate(-50%, -50%) scale(1);
         }
 
+        #financialAccomplishmentSection.is-inline-editing {
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            width: min(1180px, calc(100vw - 32px));
+            max-height: min(90vh, 960px);
+            margin-bottom: 0 !important;
+            overflow: auto;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 24px 48px rgba(15, 23, 42, 0.24);
+            z-index: 1300;
+        }
+
+        #financialAccomplishmentSection.is-inline-editing .lfp-inline-modal-section-close {
+            display: inline-flex;
+        }
+
         body.modal-open {
             overflow: hidden;
         }
@@ -2145,6 +2169,16 @@
             #financialAccomplishmentSection .monthly-details {
                 width: 100%;
                 min-width: 0;
+            }
+
+            #financialAccomplishmentSection.is-inline-editing {
+                top: max(12px, env(safe-area-inset-top));
+                right: 12px;
+                bottom: max(12px, env(safe-area-inset-bottom));
+                left: 12px;
+                width: auto;
+                max-height: none;
+                transform: none;
             }
 
             table {
@@ -2316,6 +2350,90 @@
             .lfp-mobile-canvas .project-tab-panel > div:first-child a[data-toggle="inline-edit"] i {
                 margin-right: 0 !important;
                 font-size: 14px !important;
+            }
+
+            .lfp-mobile-canvas #physicalAccomplishmentSection a[data-toggle="inline-edit"][data-target="editPhysicalForm"] {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: 36px !important;
+                min-width: 36px;
+                height: 36px !important;
+                padding: 0 !important;
+                border-radius: 999px !important;
+                font-size: 0 !important;
+                line-height: 1;
+                flex: 0 0 auto;
+                overflow: hidden;
+            }
+
+            .lfp-mobile-canvas #physicalAccomplishmentSection a[data-toggle="inline-edit"][data-target="editPhysicalForm"] i {
+                margin-right: 0 !important;
+                font-size: 14px !important;
+            }
+
+            .lfp-mobile-canvas .lfp-physical-section-title {
+                font-size: clamp(12px, 5vw, 16px) !important;
+                white-space: normal;
+                overflow: visible;
+                text-overflow: clip;
+            }
+
+            .lfp-mobile-canvas #financialAccomplishmentSection > div:first-child {
+                justify-content: flex-start !important;
+            }
+
+            .lfp-mobile-canvas #financialAccomplishmentSection > div:first-child > h3 {
+                flex: 1 1 auto;
+                min-width: 0;
+            }
+
+            .lfp-mobile-canvas #postImplementationSection > div:first-child {
+                justify-content: space-between !important;
+            }
+
+            .lfp-mobile-canvas #postImplementationSection > div:first-child > h3 {
+                flex: 0 1 auto;
+            }
+
+            .lfp-mobile-canvas #postImplementationSection > div:first-child > div {
+                margin-left: auto;
+            }
+
+            .lfp-mobile-canvas .lfp-financial-section-title {
+                font-size: 11px !important;
+                line-height: 1.15;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            .lfp-mobile-canvas .lfp-financial-section-actions {
+                margin-left: auto;
+                flex: 0 0 auto;
+                justify-content: flex-end;
+            }
+
+            .lfp-mobile-canvas #physicalAccomplishmentSection > div[style*="grid-template-columns: repeat(2, minmax(300px, 1fr))"] {
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 12px !important;
+            }
+
+            .lfp-mobile-canvas #physicalAccomplishmentSection > div[style*="grid-template-columns: repeat(2, minmax(300px, 1fr))"] > div {
+                width: 100%;
+                min-width: 0;
+            }
+
+            .lfp-mobile-canvas #monitoringInspectionSection > div[style*="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr))"] {
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 12px !important;
+            }
+
+            .lfp-mobile-canvas #monitoringInspectionSection > div[style*="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr))"] > div {
+                width: 100%;
+                min-width: 0;
             }
 
             .lfp-mobile-canvas .project-profile-grid {
@@ -3849,8 +3967,12 @@ const locationData = {
             const hasInlineModal = Array.from(document.querySelectorAll('.lfp-inline-modal[data-inline-modal="true"]')).some((modal) => {
                 return modal.style.display !== 'none' && modal.getAttribute('aria-hidden') !== 'true';
             });
+            const financialInlineModal = document.getElementById('financialAccomplishmentSection');
+            const hasFinancialInlineModal = financialInlineModal
+                ? financialInlineModal.classList.contains('is-inline-editing')
+                : false;
 
-            document.body.classList.toggle('modal-open', hasActivityLogModal || hasInlineModal);
+            document.body.classList.toggle('modal-open', hasActivityLogModal || hasInlineModal || hasFinancialInlineModal);
         }
 
         function initializeMobileInlineModalPortal(wrapperId, backdropId) {
@@ -3940,7 +4062,7 @@ const locationData = {
                 target.classList.add('is-inline-editing');
             }
 
-            if (backdrop && wrapper) {
+            if (backdrop && (wrapper || targetId === 'editFinancialForm')) {
                 backdrop.classList.add('is-visible');
                 backdrop.setAttribute('aria-hidden', 'false');
             }
@@ -4179,7 +4301,13 @@ const locationData = {
             }) || null;
 
             if (!submitter) {
-                return false;
+                if (typeof form.requestSubmit === 'function') {
+                    form.requestSubmit();
+                } else {
+                    form.submit();
+                }
+
+                return true;
             }
 
             if (submitter && submitter.dataset) {
@@ -4715,56 +4843,6 @@ const locationData = {
                 }
             });
         }
-
-        function submitFormWithAutoSave(form, submitter) {
-            if (!form || form.dataset.autoSaveSubmitting === 'true') {
-                return;
-            }
-
-            if (typeof form.reportValidity === 'function' && !form.reportValidity()) {
-                return;
-            }
-
-            form.dataset.autoSaveSubmitting = 'true';
-
-            if (submitter && typeof form.requestSubmit === 'function') {
-                form.requestSubmit(submitter);
-                return;
-            }
-
-            if (typeof form.requestSubmit === 'function') {
-                form.requestSubmit();
-                return;
-            }
-
-            form.submit();
-        }
-
-        function bindInlineAutoSave(selector) {
-            document.querySelectorAll(selector).forEach((field) => {
-                field.addEventListener('change', () => {
-                    if (field.disabled) {
-                        return;
-                    }
-
-                    const form = field.closest('form');
-                    if (!form) {
-                        return;
-                    }
-
-                    const saveButton = form.querySelector(
-                        '[data-financial-save="true"], [data-monitoring-save="true"], [data-post-implementation-save="true"]'
-                    );
-
-                    submitFormWithAutoSave(form, saveButton);
-                });
-            });
-        }
-
-        bindInlineAutoSave('[data-physical-edit="true"]');
-        bindInlineAutoSave('[data-financial-edit="true"]');
-        bindInlineAutoSave('[data-monitoring-edit="true"]');
-        bindInlineAutoSave('[data-post-implementation-edit="true"]');
 
         async function copyTextToClipboard(text) {
             if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
