@@ -1295,6 +1295,12 @@
                     'CANCELLED' => ['#fecaca', '#7f1d1d'],
                     'TERMINATED/CANCEL' => ['#fee2e2', '#991b1b'],
                     'PROCUREMENT' => ['#e0f2fe', '#0369a1'],
+                    'Ahead' => ['#dcfce7', '#166534'],
+                    'On Schedule' => ['#dbeafe', '#1d4ed8'],
+                    'No Risk' => ['#ecfccb', '#3f6212'],
+                    'Low Risk' => ['#fef3c7', '#92400e'],
+                    'Moderate Risk' => ['#fed7aa', '#9a3412'],
+                    'High Risk' => ['#fee2e2', '#991b1b'],
                 ];
                 $color = $colors[$value] ?? ['#e5e7eb', '#374151'];
                 return '<span style="display: inline-block; padding: 3px 8px; border-radius: 999px; background-color: ' . $color[0] . '; color: ' . $color[1] . '; font-size: 11px; font-weight: 600;">' . e($statusLabel($value)) . '</span>';
