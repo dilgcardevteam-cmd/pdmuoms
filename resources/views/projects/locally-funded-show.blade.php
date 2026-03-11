@@ -379,6 +379,49 @@
             gap: 12px;
         }
 
+        .lfp-physical-timeline-columns {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+        }
+
+        .lfp-physical-compare-toggle {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            margin: 0 0 12px;
+            padding: 8px 12px;
+            border: 1px solid #bfdbfe;
+            border-radius: 999px;
+            background: #eff6ff;
+            color: #1d4ed8;
+            font-size: 12px;
+            font-weight: 700;
+            line-height: 1.2;
+            cursor: pointer;
+        }
+
+        .lfp-physical-compare-modal-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .lfp-physical-compare-modal-column {
+            display: grid;
+            gap: 12px;
+        }
+
+        .lfp-physical-compare-modal-heading {
+            margin: 0;
+            color: #002c76;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
         .lfp-physical-timeline-metric {
             padding: 12px;
             border-radius: 12px;
@@ -498,6 +541,12 @@
             background: #f8fafc;
         }
 
+        .lfp-physical-modal-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(300px, 1fr));
+            gap: 16px;
+        }
+
         .lfp-financial-view-stack {
             display: grid;
             gap: 18px;
@@ -579,13 +628,112 @@
 
             .lfp-physical-summary-grid,
             .lfp-physical-timeline-metrics,
+            .lfp-physical-modal-grid,
             .lfp-physical-footer-meta {
                 grid-template-columns: 1fr;
                 margin-bottom: 4px;
             }
 
+            .lfp-physical-compare-toggle {
+                display: inline-flex;
+            }
+
+            .lfp-physical-timeline-columns {
+                display: none;
+            }
+
             .lfp-physical-timeline-card-header {
                 flex-direction: column;
+            }
+
+            .lfp-physical-timeline::before {
+                left: 15px;
+            }
+
+            .lfp-physical-timeline-item {
+                grid-template-columns: 32px minmax(0, 1fr);
+                gap: 12px;
+            }
+
+            .lfp-physical-timeline-node {
+                width: 32px;
+                height: 32px;
+                font-size: 10px;
+            }
+
+            .lfp-physical-timeline-card {
+                padding: 14px;
+            }
+
+            .lfp-physical-trend {
+                align-items: flex-start;
+                flex-wrap: wrap;
+            }
+
+            #editPhysicalFormWrapper .monthly-details {
+                width: 100%;
+                min-width: 0;
+            }
+
+            #editPhysicalFormWrapper .monthly-summary {
+                width: 100%;
+                justify-content: space-between;
+                flex-wrap: wrap;
+            }
+
+            #editPhysicalFormWrapper .monthly-details > div[style*="margin-top: 10px;"] {
+                overflow-x: auto;
+                overflow-y: hidden;
+                padding-bottom: 6px;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            #editPhysicalFormWrapper div[style*="grid-template-columns: 120px 1fr 180px 140px"] {
+                min-width: 640px;
+                grid-template-columns: 110px minmax(220px, 1fr) 170px 130px !important;
+                gap: 8px !important;
+            }
+
+            #editPhysicalFormWrapper input[type="date"],
+            #editPhysicalFormWrapper input[type="number"],
+            #editPhysicalFormWrapper select,
+            #editPhysicalFormWrapper textarea {
+                max-width: 100%;
+            }
+
+            #physicalCompareModalWrapper {
+                margin-top: 0;
+                top: auto;
+                left: auto;
+                width: auto;
+                max-height: none;
+                transform: none;
+                background-color: #ffffff;
+                border: 1px solid #dbeafe;
+                border-radius: 16px;
+                box-shadow: 0 24px 48px rgba(15, 23, 42, 0.24);
+            }
+
+            #physicalCompareModalWrapper.is-visible {
+                position: fixed;
+                top: max(12px, env(safe-area-inset-top));
+                right: 12px;
+                bottom: max(12px, env(safe-area-inset-bottom));
+                left: 12px;
+                display: flex !important;
+                flex-direction: column;
+                min-height: 0;
+                overflow: hidden;
+                z-index: 1300;
+            }
+
+            #physicalCompareModalWrapper .lfp-inline-modal-body {
+                padding: 16px;
+            }
+
+            .lfp-physical-compare-modal-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 10px;
             }
 
             .lfp-mobile-canvas .lfp-inline-modal-backdrop.is-visible {
@@ -1531,6 +1679,12 @@
                                     </div>
                                     <span class="lfp-physical-timeline-month">{{ str_pad((string) $entry['month_number'], 2, '0', STR_PAD_LEFT) }}</span>
                                 </div>
+                                <button type="button"
+                                        class="lfp-physical-compare-toggle"
+                                        data-physical-compare-trigger="true"
+                                        data-physical-compare-title="{{ $entry['month_label'] }} comparison">
+                                    Compare FOU vs RO
+                                </button>
                                 <div class="lfp-physical-timeline-metrics">
                                     <div class="">
                                         <div class="lfp-physical-timeline-metric !mb-4">
@@ -1543,7 +1697,7 @@
                                         </div>
                                     </div>
 
-                                    <div class="grid grid-cols-2 gap-4">
+                                    <div class="lfp-physical-timeline-columns">
                                         <div class="flex flex-col gap-4">
                                             <div class="lfp-physical-timeline-metric">
                                                 <span>FOU Status</span>
@@ -1606,6 +1760,17 @@
             </details>
         </div>
 
+        <div id="physicalCompareModalBackdrop" class="lfp-inline-modal-backdrop" aria-hidden="true"></div>
+        <div id="physicalCompareModalWrapper" class="lfp-inline-modal" role="dialog" aria-modal="true" aria-labelledby="physicalCompareModalTitle" aria-hidden="true" style="display: none;">
+            <div class="lfp-inline-modal-header">
+                <h3 id="physicalCompareModalTitle" style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">FOU vs RO Comparison</h3>
+                <button type="button" class="lfp-inline-modal-close" id="physicalCompareModalClose" aria-label="Close physical comparison modal">&times;</button>
+            </div>
+            <div class="lfp-inline-modal-body">
+                <div id="physicalCompareModalContent"></div>
+            </div>
+        </div>
+
         <div id="editPhysicalFormBackdrop" class="lfp-inline-modal-backdrop{{ old('section') === 'physical' ? ' is-visible' : '' }}" aria-hidden="{{ old('section') === 'physical' ? 'false' : 'true' }}"></div>
         <div id="editPhysicalFormWrapper" class="lfp-inline-modal{{ old('section') === 'physical' ? ' is-visible' : '' }}" data-inline-modal="true" role="dialog" aria-modal="true" aria-labelledby="editPhysicalModalTitle" aria-hidden="{{ old('section') === 'physical' ? 'false' : 'true' }}" style="display: {{ old('section') === 'physical' ? 'block' : 'none' }};">
             <div class="lfp-inline-modal-header">
@@ -1613,7 +1778,7 @@
                 <button type="button" class="lfp-inline-modal-close" data-toggle="inline-cancel" data-target="editPhysicalForm" aria-label="Close physical accomplishment editor">&times;</button>
             </div>
             <div class="lfp-inline-modal-body">
-            <div style="display: grid; grid-template-columns: repeat(2, minmax(300px, 1fr)); gap: 16px;">
+            <div class="lfp-physical-modal-grid">
                 <div>
                     <strong>STATUS OF PROJECT (for FOU updating):</strong>
                     {!! $statusBadge($currentPhysical['status_project_fou'] ?? null) !!}
@@ -3377,6 +3542,12 @@
                 min-width: 0;
             }
 
+            #editPhysicalFormWrapper > .lfp-inline-modal-body > .lfp-physical-modal-grid {
+                display: grid !important;
+                grid-template-columns: 1fr !important;
+                gap: 12px !important;
+            }
+
             .lfp-mobile-canvas #monitoringInspectionSection > div[style*="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr))"] {
                 display: flex !important;
                 flex-direction: column !important;
@@ -3598,6 +3769,10 @@
         function syncBodyModalState() {
             const activityLogModal = document.getElementById('activityLogSection');
             const hasActivityLogModal = activityLogModal ? activityLogModal.classList.contains('is-visible') : false;
+            const physicalCompareModal = document.getElementById('physicalCompareModalWrapper');
+            const hasPhysicalCompareModal = physicalCompareModal
+                ? physicalCompareModal.classList.contains('is-visible') && physicalCompareModal.getAttribute('aria-hidden') !== 'true'
+                : false;
             const hasInlineModal = Array.from(document.querySelectorAll('.lfp-inline-modal[data-inline-modal="true"]')).some((modal) => {
                 return modal.style.display !== 'none' && modal.getAttribute('aria-hidden') !== 'true';
             });
@@ -3605,7 +3780,7 @@
                 return section.classList.contains('is-inline-editing');
             });
 
-            document.body.classList.toggle('modal-open', hasActivityLogModal || hasInlineModal || hasInlineSectionModal);
+            document.body.classList.toggle('modal-open', hasActivityLogModal || hasPhysicalCompareModal || hasInlineModal || hasInlineSectionModal);
         }
 
         function registerInlinePortal(targetId) {
@@ -4698,6 +4873,86 @@
             setActiveProjectPanel(initialPanelId);
         }
 
+        const physicalCompareModalWrapper = document.getElementById('physicalCompareModalWrapper');
+        const physicalCompareModalBackdrop = document.getElementById('physicalCompareModalBackdrop');
+        const physicalCompareModalClose = document.getElementById('physicalCompareModalClose');
+        const physicalCompareModalTitle = document.getElementById('physicalCompareModalTitle');
+        const physicalCompareModalContent = document.getElementById('physicalCompareModalContent');
+
+        function closePhysicalCompareModal() {
+            if (!physicalCompareModalWrapper || !physicalCompareModalBackdrop || !physicalCompareModalContent) {
+                return;
+            }
+
+            physicalCompareModalWrapper.classList.remove('is-visible');
+            physicalCompareModalWrapper.style.display = 'none';
+            physicalCompareModalWrapper.setAttribute('aria-hidden', 'true');
+            physicalCompareModalBackdrop.classList.remove('is-visible');
+            physicalCompareModalBackdrop.setAttribute('aria-hidden', 'true');
+            physicalCompareModalContent.innerHTML = '';
+            syncBodyModalState();
+        }
+
+        function openPhysicalCompareModal(button) {
+            if (!physicalCompareModalWrapper || !physicalCompareModalBackdrop || !physicalCompareModalTitle || !physicalCompareModalContent) {
+                return;
+            }
+
+            const timelineCard = button.closest('.lfp-physical-timeline-card');
+            const comparisonSource = timelineCard ? timelineCard.querySelector('.lfp-physical-timeline-columns') : null;
+            if (!comparisonSource) {
+                return;
+            }
+
+            const comparisonClone = comparisonSource.cloneNode(true);
+            comparisonClone.classList.remove('lfp-physical-timeline-columns');
+            comparisonClone.classList.add('lfp-physical-compare-modal-grid');
+
+            const columns = Array.from(comparisonClone.children);
+            columns.forEach((column, index) => {
+                column.classList.remove('flex', 'flex-col', 'gap-4');
+                column.classList.add('lfp-physical-compare-modal-column');
+
+                const heading = document.createElement('h4');
+                heading.className = 'lfp-physical-compare-modal-heading';
+                heading.textContent = index === 0 ? 'FOU' : 'RO';
+                column.insertBefore(heading, column.firstChild);
+            });
+
+            physicalCompareModalTitle.textContent = button.getAttribute('data-physical-compare-title') || 'FOU vs RO Comparison';
+            physicalCompareModalContent.innerHTML = '';
+            physicalCompareModalContent.appendChild(comparisonClone);
+
+            physicalCompareModalWrapper.style.display = 'flex';
+            physicalCompareModalWrapper.classList.add('is-visible');
+            physicalCompareModalWrapper.setAttribute('aria-hidden', 'false');
+            physicalCompareModalBackdrop.classList.add('is-visible');
+            physicalCompareModalBackdrop.setAttribute('aria-hidden', 'false');
+            syncBodyModalState();
+
+            if (physicalCompareModalClose) {
+                physicalCompareModalClose.focus();
+            }
+        }
+
+        document.querySelectorAll('[data-physical-compare-trigger="true"]').forEach((button) => {
+            button.addEventListener('click', () => {
+                openPhysicalCompareModal(button);
+            });
+        });
+
+        if (physicalCompareModalBackdrop) {
+            physicalCompareModalBackdrop.addEventListener('click', () => {
+                closePhysicalCompareModal();
+            });
+        }
+
+        if (physicalCompareModalClose) {
+            physicalCompareModalClose.addEventListener('click', () => {
+                closePhysicalCompareModal();
+            });
+        }
+
         const activityLogSection = document.getElementById('activityLogSection');
         const activityLogBackdrop = document.getElementById('activityLogBackdrop');
         const activityLogFab = document.getElementById('activityLogFab');
@@ -4744,6 +4999,11 @@
 
             document.addEventListener('keydown', (event) => {
                 if (event.key !== 'Escape') {
+                    return;
+                }
+
+                if (physicalCompareModalWrapper && physicalCompareModalWrapper.classList.contains('is-visible')) {
+                    closePhysicalCompareModal();
                     return;
                 }
 
