@@ -6,9 +6,15 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class ProjectAtRiskController extends Controller
 {
+    private const IMPORT_HISTORY_TABLE = 'project_at_risk_import_histories';
+    private const IMPORT_STORAGE_DIRECTORY = 'project-at-risk-imports';
+
     public function index(Request $request)
     {
         $filters = [
@@ -83,11 +89,34 @@ class ProjectAtRiskController extends Controller
         return view('projects.at-risk', compact('records', 'filters', 'filterOptions'));
     }
 
+    public function uploadManager()
+    {
+        $tableMissing = !Schema::hasTable('project_at_risks');
+        $importHistoryTableMissing = !Schema::hasTable(self::IMPORT_HISTORY_TABLE);
+
+        $importHistoryRows = $importHistoryTableMissing
+            ? collect()
+            : DB::table(self::IMPORT_HISTORY_TABLE)
+                ->orderByDesc('imported_at')
+                ->orderByDesc('id')
+                ->paginate(15);
+
+        return view('system-management.upload-project-at-risk', [
+            'tableMissing' => $tableMissing,
+            'importHistoryRows' => $importHistoryRows,
+            'importHistoryTableMissing' => $importHistoryTableMissing,
+        ]);
+    }
+
     public function import(Request $request)
     {
+        if (!Schema::hasTable('project_at_risks')) {
+            return back()->with('error', 'Project At Risk data table is not available yet.');
+        }
+
         $request->validate(
             [
-                'file' => ['required', 'file', 'mimes:csv,txt', 'max:10240'],
+                'file' => ['required', 'file', 'mimes:csv,txt', 'max:51200'],
             ],
             [
                 'file.mimes' => 'Please upload a CSV file. If your data is in Excel, save it as CSV first.',
@@ -95,66 +124,146 @@ class ProjectAtRiskController extends Controller
         );
 
         $file = $request->file('file');
-        $path = $file ? $file->getRealPath() : null;
-
-        if (!$path || !is_readable($path)) {
-            return back()->with('error', 'Unable to read the uploaded file.');
+        if (!$file) {
+            return back()->with('error', 'No file was uploaded.');
         }
 
-        $handle = fopen($path, 'r');
-        if ($handle === false) {
-            return back()->with('error', 'Unable to open the uploaded file.');
+        $originalFileName = (string) $file->getClientOriginalName();
+        $storageFileName = $this->generateImportStorageFileName($originalFileName);
+        $storedPath = $file->storeAs(self::IMPORT_STORAGE_DIRECTORY, $storageFileName, 'local');
+        if (!$storedPath) {
+            return back()->with('error', 'Unable to store the uploaded file.');
         }
 
-        $header = fgetcsv($handle);
-        if ($header === false) {
-            fclose($handle);
-            return back()->with('error', 'The uploaded file appears to be empty.');
-        }
-
-        $headerMap = $this->buildHeaderMap($header);
-        if (empty($headerMap)) {
-            fclose($handle);
-            return back()->with('error', 'No recognizable columns were found in the CSV file.');
+        if (!Schema::hasTable(self::IMPORT_HISTORY_TABLE)) {
+            Storage::disk('local')->delete($storedPath);
+            return back()->with('error', 'Import history table is not available yet. Please run migration first.');
         }
 
         $now = now();
-        $rows = [];
-        $inserted = 0;
+        DB::table(self::IMPORT_HISTORY_TABLE)->insert([
+            'original_file_name' => $originalFileName !== '' ? $originalFileName : basename($storedPath),
+            'stored_file_path' => $storedPath,
+            'file_size_bytes' => $file->getSize(),
+            'imported_at' => $now,
+            'last_loaded_at' => null,
+            'created_by' => auth()->id(),
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
 
-        while (($data = fgetcsv($handle)) !== false) {
-            if ($this->rowIsEmpty($data)) {
-                continue;
-            }
+        return redirect()
+            ->route('system-management.upload-project-at-risk')
+            ->with('success', 'CSV file added to import history. Click Load to replace the current Project At Risk data.');
+    }
 
-            $row = $this->mapRow($data, $headerMap);
-            if (empty($row)) {
-                continue;
-            }
-
-            $row['created_at'] = $now;
-            $row['updated_at'] = $now;
-            $rows[] = $row;
-
-            if (count($rows) >= 500) {
-                DB::table('project_at_risks')->insert($rows);
-                $inserted += count($rows);
-                $rows = [];
-            }
+    public function loadImport($importId)
+    {
+        if (!Schema::hasTable('project_at_risks')) {
+            return back()->with('error', 'Project At Risk data table is not available yet.');
         }
 
-        fclose($handle);
-
-        if (!empty($rows)) {
-            DB::table('project_at_risks')->insert($rows);
-            $inserted += count($rows);
+        if (!Schema::hasTable(self::IMPORT_HISTORY_TABLE)) {
+            return back()->with('error', 'Import history table is not available yet. Please run migration first.');
         }
 
-        if ($inserted === 0) {
-            return back()->with('error', 'No valid rows were imported.');
+        $record = DB::table(self::IMPORT_HISTORY_TABLE)
+            ->where('id', (int) $importId)
+            ->first();
+
+        if (!$record) {
+            return back()->with('error', 'Selected import record was not found.');
         }
 
-        return back()->with('success', "Imported {$inserted} rows successfully.");
+        $storedPath = trim((string) ($record->stored_file_path ?? ''));
+        if ($storedPath === '' || !Storage::disk('local')->exists($storedPath)) {
+            return back()->with('error', 'The selected imported file is no longer available.');
+        }
+
+        try {
+            $inserted = $this->loadCsvSnapshot(Storage::disk('local')->path($storedPath));
+        } catch (\RuntimeException $exception) {
+            return back()->with('error', $exception->getMessage());
+        }
+
+        DB::table(self::IMPORT_HISTORY_TABLE)
+            ->where('id', (int) $importId)
+            ->update([
+                'last_loaded_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+        $displayName = trim((string) ($record->original_file_name ?? ''));
+        if ($displayName === '') {
+            $displayName = basename($storedPath);
+        }
+
+        return back()->with('success', "Loaded {$inserted} rows from {$displayName}.");
+    }
+
+    public function deleteImport($importId)
+    {
+        if (!Schema::hasTable(self::IMPORT_HISTORY_TABLE)) {
+            return back()->with('error', 'Import history table is not available yet. Please run migration first.');
+        }
+
+        $record = DB::table(self::IMPORT_HISTORY_TABLE)
+            ->where('id', (int) $importId)
+            ->first();
+
+        if (!$record) {
+            return back()->with('error', 'Selected import record was not found.');
+        }
+
+        $storedPath = trim((string) ($record->stored_file_path ?? ''));
+        if ($storedPath !== '' && Storage::disk('local')->exists($storedPath)) {
+            Storage::disk('local')->delete($storedPath);
+        }
+
+        DB::table(self::IMPORT_HISTORY_TABLE)
+            ->where('id', (int) $importId)
+            ->delete();
+
+        return back()->with('success', 'Imported file record deleted successfully.');
+    }
+
+    public function downloadImport($importId)
+    {
+        if (!Schema::hasTable(self::IMPORT_HISTORY_TABLE)) {
+            return back()->with('error', 'Import history table is not available yet. Please run migration first.');
+        }
+
+        $record = DB::table(self::IMPORT_HISTORY_TABLE)
+            ->where('id', (int) $importId)
+            ->first();
+
+        if (!$record) {
+            return back()->with('error', 'Selected import record was not found.');
+        }
+
+        $storedPath = trim((string) ($record->stored_file_path ?? ''));
+        if ($storedPath === '' || !Storage::disk('local')->exists($storedPath)) {
+            return back()->with('error', 'The selected imported file is no longer available.');
+        }
+
+        $downloadName = trim((string) ($record->original_file_name ?? ''));
+        if ($downloadName === '') {
+            $downloadName = basename($storedPath);
+        }
+        $downloadName = basename($downloadName);
+
+        $extension = strtolower(pathinfo($downloadName, PATHINFO_EXTENSION));
+        $contentType = in_array($extension, ['csv', 'txt'], true)
+            ? 'text/csv; charset=UTF-8'
+            : 'application/octet-stream';
+
+        return response()->download(
+            Storage::disk('local')->path($storedPath),
+            $downloadName,
+            [
+                'Content-Type' => $contentType,
+            ]
+        );
     }
 
     public function export(Request $request)
@@ -305,6 +414,88 @@ class ProjectAtRiskController extends Controller
         }
 
         return $map;
+    }
+
+    private function loadCsvSnapshot(string $path): int
+    {
+        if (!is_readable($path)) {
+            throw new \RuntimeException('Unable to read the selected file.');
+        }
+
+        $handle = fopen($path, 'r');
+        if ($handle === false) {
+            throw new \RuntimeException('Unable to open the selected file.');
+        }
+
+        try {
+            $header = fgetcsv($handle);
+            if ($header === false) {
+                throw new \RuntimeException('The selected file appears to be empty.');
+            }
+
+            $headerMap = $this->buildHeaderMap($header);
+            if (empty($headerMap)) {
+                throw new \RuntimeException('No recognizable columns were found in the CSV file.');
+            }
+
+            return DB::transaction(function () use ($handle, $headerMap) {
+                $now = now();
+                $rows = [];
+                $inserted = 0;
+
+                DB::table('project_at_risks')->delete();
+
+                while (($data = fgetcsv($handle)) !== false) {
+                    if ($this->rowIsEmpty($data)) {
+                        continue;
+                    }
+
+                    $row = $this->mapRow($data, $headerMap);
+                    if (empty($row)) {
+                        continue;
+                    }
+
+                    $row['created_at'] = $now;
+                    $row['updated_at'] = $now;
+                    $rows[] = $row;
+
+                    if (count($rows) >= 500) {
+                        DB::table('project_at_risks')->insert($rows);
+                        $inserted += count($rows);
+                        $rows = [];
+                    }
+                }
+
+                if (!empty($rows)) {
+                    DB::table('project_at_risks')->insert($rows);
+                    $inserted += count($rows);
+                }
+
+                if ($inserted === 0) {
+                    throw new \RuntimeException('No valid rows were found in the selected import file.');
+                }
+
+                return $inserted;
+            });
+        } finally {
+            fclose($handle);
+        }
+    }
+
+    private function generateImportStorageFileName(string $originalFileName): string
+    {
+        $extension = strtolower(pathinfo($originalFileName, PATHINFO_EXTENSION));
+        $baseName = pathinfo($originalFileName, PATHINFO_FILENAME);
+        $baseNameSlug = Str::slug($baseName);
+        if ($baseNameSlug === '') {
+            $baseNameSlug = 'project-at-risk';
+        }
+
+        $timestamp = now()->format('Ymd_His');
+        $randomSuffix = Str::lower(Str::random(8));
+        $fileName = $timestamp . '_' . $baseNameSlug . '_' . $randomSuffix;
+
+        return $fileName . ($extension !== '' ? '.' . $extension : '.csv');
     }
 
     private function normalizeHeader($value): string

@@ -37,12 +37,21 @@
         
         /* Sidebar Styles */
         .sidebar {
+            --sidebar-base: #002C76;
+            --sidebar-deep: #00163f;
+            --sidebar-mid: #003d99;
+            --sidebar-glow: rgba(125, 211, 252, 0.16);
+            --sidebar-highlight: rgba(255, 255, 255, 0.14);
             position: fixed;
             left: 0;
             top: 0;
             height: 100vh;
             width: 250px;
-            background: linear-gradient(135deg, #002C76 0%, #003d99 100%);
+            background-color: var(--sidebar-base);
+            background-image:
+                radial-gradient(circle at top left, var(--sidebar-highlight) 0%, transparent 34%),
+                radial-gradient(circle at bottom right, var(--sidebar-glow) 0%, transparent 30%),
+                linear-gradient(180deg, var(--sidebar-deep) 0%, var(--sidebar-base) 42%, var(--sidebar-mid) 100%);
             padding: 20px;
             overflow-y: auto;
             transition: transform 280ms cubic-bezier(0.2, 0.8, 0.2, 1), width 280ms cubic-bezier(0.2, 0.8, 0.2, 1), padding 280ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 280ms cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -169,7 +178,8 @@
         /* Submenu Styles */
         .submenu {
             list-style: none;
-            background-color: rgba(0, 0, 0, 0.2);
+            background: linear-gradient(180deg, rgba(0, 20, 58, 0.46) 0%, rgba(0, 44, 118, 0.28) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 6px;
             overflow: hidden;
             margin-top: 8px;
@@ -207,7 +217,7 @@
         .submenu .submenu {
             margin-top: 0;
             border-radius: 0;
-            background-color: rgba(0, 0, 0, 0.15);
+            background: linear-gradient(180deg, rgba(0, 16, 46, 0.4) 0%, rgba(0, 35, 92, 0.24) 100%);
         }
 
         .submenu .submenu a {
@@ -1093,6 +1103,12 @@
                             <a href="{{ route('system-management.upload-rlip-lime') }}" class="@if(Route::currentRouteName() == 'system-management.upload-rlip-lime') active @endif">
                                 <i class="fas fa-file-import"></i>
                                 <span>Upload RLIP/LIME-20 Data</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ route('system-management.upload-project-at-risk') }}" class="@if(request()->routeIs('system-management.upload-project-at-risk*')) active @endif">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <span>Upload Project-at-Risk</span>
                             </a>
                         </li>
                     </ul>

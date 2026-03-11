@@ -216,7 +216,7 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
 
-    Route::get('/dashboard', function () {
+    $renderProjectDashboard = function (string $activeProjectTab = 'locally-funded') {
         try {
             $subayUploadDateLabel = 'No SubayBAYAN upload yet';
             if (Schema::hasTable('subay_project_profiles') && Schema::hasColumn('subay_project_profiles', 'created_at')) {
@@ -1526,7 +1526,8 @@ Route::middleware(['auth'])->group(function () {
                 'financialStatusProjects',
                 'fundSourceProjectsMap',
                 'carProvinceProjectCounts',
-                'carProvinceProjectMaxCount'
+                'carProvinceProjectMaxCount',
+                'activeProjectTab'
             ));
         } catch (\Exception $e) {
             return response()->json([
@@ -1536,6 +1537,10 @@ Route::middleware(['auth'])->group(function () {
                 'line' => $e->getLine()
             ], 500);
         }
+    };
+
+    Route::get('/dashboard', function () use ($renderProjectDashboard) {
+        return $renderProjectDashboard(request()->query('tab', 'locally-funded'));
     })->name('dashboard');
     
     // Profile routes
@@ -1602,10 +1607,19 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/project-at-risk/export', [App\Http\Controllers\ProjectAtRiskController::class, 'export'])
         ->name('projects.at-risk.export');
     Route::post('/project-at-risk/import', [App\Http\Controllers\ProjectAtRiskController::class, 'import'])
+        ->middleware('regional_dilg')
         ->name('projects.at-risk.import');
 
-    Route::get('/projects/rlip-lime', function () {
-        return view('projects.rlip-lime');
+    Route::get('/projects/rssa', function () use ($renderProjectDashboard) {
+        return $renderProjectDashboard('rssa');
+    })->name('projects.rssa');
+
+    Route::get('/projects/sglgif', function () use ($renderProjectDashboard) {
+        return $renderProjectDashboard('sglgif');
+    })->name('projects.sglgif');
+
+    Route::get('/projects/rlip-lime', function () use ($renderProjectDashboard) {
+        return $renderProjectDashboard('rlip-lime');
     })->name('projects.rlip-lime');
 
     Route::middleware('regional_dilg')->group(function () {
@@ -1616,6 +1630,16 @@ Route::middleware(['auth'])->group(function () {
             ->name('system-management.upload-subaybayan');
         Route::view('/system-management/upload-rlip-lime', 'system-management.upload-rlip-lime')
             ->name('system-management.upload-rlip-lime');
+        Route::get('/system-management/upload-project-at-risk', [App\Http\Controllers\ProjectAtRiskController::class, 'uploadManager'])
+            ->name('system-management.upload-project-at-risk');
+        Route::post('/system-management/upload-project-at-risk/import', [App\Http\Controllers\ProjectAtRiskController::class, 'import'])
+            ->name('system-management.upload-project-at-risk.import');
+        Route::post('/system-management/upload-project-at-risk/import/{importId}/load', [App\Http\Controllers\ProjectAtRiskController::class, 'loadImport'])
+            ->name('system-management.upload-project-at-risk.load');
+        Route::get('/system-management/upload-project-at-risk/import/{importId}/download', [App\Http\Controllers\ProjectAtRiskController::class, 'downloadImport'])
+            ->name('system-management.upload-project-at-risk.download');
+        Route::delete('/system-management/upload-project-at-risk/import/{importId}', [App\Http\Controllers\ProjectAtRiskController::class, 'deleteImport'])
+            ->name('system-management.upload-project-at-risk.delete');
         Route::post('/system-management/upload-subaybayan/import', [SystemManagementController::class, 'importSubaybayan'])
             ->name('system-management.upload-subaybayan.import');
         Route::post('/system-management/upload-subaybayan/import/{importId}/load', [SystemManagementController::class, 'loadSubaybayanImport'])

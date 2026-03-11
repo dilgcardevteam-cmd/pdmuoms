@@ -179,6 +179,8 @@
         </div>
     </form>
 
+    @include('projects.partials.project-section-tabs', ['activeTab' => $activeProjectTab ?? 'locally-funded'])
+
     <div class="dashboard-main-layout">
         <div class="dashboard-top-cards" style="display: grid; gap: 20px; margin-bottom: 0;">
             <div class="dashboard-card total-projects-card" style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; flex-direction: column;">
@@ -2117,6 +2119,11 @@
             grid-template-columns: minmax(0, 1.8fr) minmax(320px, 1fr);
             gap: 20px;
             align-items: start;
+            padding: 24px;
+            border: 1px solid #dbe4ff;
+            border-radius: 16px;
+            background: linear-gradient(180deg, #fbfdff 0%, #f3f7fb 100%);
+            box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
             margin-bottom: 24px;
         }
 
@@ -2926,6 +2933,7 @@
         @media (max-width: 1100px) {
             .dashboard-main-layout {
                 grid-template-columns: 1fr;
+                padding: 20px;
             }
 
             .dashboard-top-cards {
@@ -2980,6 +2988,11 @@
         }
 
         @media (max-width: 700px) {
+            .dashboard-main-layout {
+                padding: 16px;
+                border-radius: 12px;
+            }
+
             .dashboard-top-cards {
                 grid-template-columns: 1fr;
             }

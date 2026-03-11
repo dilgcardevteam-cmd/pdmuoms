@@ -4,6 +4,11 @@
 @section('page-title', 'Project At Risk')
 
 @section('content')
+    @php
+        $isRegionalDilg = strtoupper(trim((string) (Auth::user()->agency ?? ''))) === 'DILG'
+            && strtolower(trim((string) (Auth::user()->province ?? ''))) === 'regional office';
+    @endphp
+
     <div class="content-header">
         <h1>Project At Risk</h1>
         <p>Monitor projects flagged as at risk.</p>
@@ -169,9 +174,11 @@
                             <a id="risk-export" href="{{ route('projects.at-risk.export', request()->query()) }}" style="padding: 6px 10px; background-color: #15803d; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 11px; text-decoration: none;">
                                 Export Excel
                             </a>
-                            <button type="button" onclick="openImportModal()" style="padding: 6px 10px; background-color: #002C76; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 11px;">
-                                Import CSV
-                            </button>
+                            @if($isRegionalDilg)
+                                <a href="{{ route('system-management.upload-project-at-risk') }}" style="padding: 6px 10px; background-color: #002C76; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 11px; text-decoration: none;">
+                                    Manage Uploads
+                                </a>
+                            @endif
                         </div>
                         <div style="display: flex; gap: 8px; align-items: center;">
                             <button type="submit" style="padding: 8px 12px; background-color: #002C76; color: white; border: none; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer;">Apply</button>
@@ -355,39 +362,4 @@
             }
         }
     </style>
-    <div id="importModal" style="display: none; position: fixed; inset: 0; background-color: rgba(0,0,0,0.45); z-index: 1000; align-items: center; justify-content: center;">
-        <div style="background: white; padding: 24px; border-radius: 10px; width: 100%; max-width: 480px; box-shadow: 0 10px 30px rgba(0,0,0,0.15);">
-            <h3 style="margin: 0 0 12px 0; color: #111827; font-size: 18px; font-weight: 600;">Import Project At Risk (CSV)</h3>
-            <form method="POST" action="{{ route('projects.at-risk.import') }}" enctype="multipart/form-data">
-                @csrf
-                <div style="margin-bottom: 16px;">
-                    <label for="import-file" style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 6px;">Upload CSV File</label>
-                    <input id="import-file" type="file" name="file" accept=".csv" required style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px; background-color: #f9fafb;">
-                    <div style="margin-top: 6px; font-size: 11px; color: #6b7280;">Excel users: Save As CSV first.</div>
-                </div>
-                <div style="display: flex; justify-content: flex-end; gap: 10px;">
-                    <button type="button" onclick="closeImportModal()" style="padding: 8px 14px; background-color: #6b7280; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12px;">Cancel</button>
-                    <button type="submit" style="padding: 8px 14px; background-color: #002C76; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12px;">Upload</button>
-                </div>
-            </form>
-        </div>
-    </div>
-    <script>
-        function openImportModal() {
-            const modal = document.getElementById('importModal');
-            if (modal) {
-                modal.style.display = 'flex';
-            }
-        }
-
-        function closeImportModal() {
-            const modal = document.getElementById('importModal');
-            if (modal) {
-                modal.style.display = 'none';
-            }
-        }
-
-        window.openImportModal = openImportModal;
-        window.closeImportModal = closeImportModal;
-    </script>
 @endsection

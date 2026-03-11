@@ -9,6 +9,8 @@
         <p>Track projects funded under RLIP/LIME-20% Development Fund.</p>
     </div>
 
+    @include('projects.partials.project-section-tabs', ['activeTab' => 'rlip-lime'])
+
     <div style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
         <!-- Header with Create Button -->
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
