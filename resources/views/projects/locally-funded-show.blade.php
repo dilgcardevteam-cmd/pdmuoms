@@ -2790,6 +2790,13 @@
             color: #ffffff;
         }
 
+        .lfp-inline-section-save:disabled,
+        .lfp-inline-modal button[type="submit"]:disabled,
+        .lfp-inline-modal input[type="submit"]:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
         .lfp-inline-section-cancel {
             background-color: #6b7280;
             color: #ffffff;
@@ -3422,7 +3429,6 @@
             const targetId = button.getAttribute('data-target');
             const inlineElements = getInlineEditElements(targetId);
             const { target, wrapper, backdrop } = inlineElements;
-            snapshotInlineSectionFields(targetId);
             if (wrapper) {
                 wrapper.style.display = 'block';
                 wrapper.classList.add('is-visible');
@@ -3444,6 +3450,8 @@
                 backdrop.setAttribute('aria-hidden', 'false');
             }
 
+            snapshotInlineEditFields(targetId);
+            syncInlineEditSaveState(targetId);
             syncInlinePortalState(targetId);
             syncBodyModalState();
 
@@ -3600,6 +3608,9 @@
         function closeInlineEdit(targetId) {
             const inlineElements = getInlineEditElements(targetId);
             const { target, wrapper, backdrop } = inlineElements;
+
+            restoreInlineEditFields(targetId);
+
             if (wrapper) {
                 wrapper.style.display = 'none';
                 wrapper.classList.remove('is-visible');
@@ -3617,7 +3628,6 @@
             }
 
             if (targetId === 'editPhysicalForm') {
-                restoreInlineSectionFields(targetId);
                 document.querySelectorAll('[data-physical-edit="true"]').forEach((input) => {
                     input.disabled = true;
                     input.style.backgroundColor = '#f3f4f6';
@@ -3625,7 +3635,6 @@
             }
 
             if (targetId === 'editFinancialForm') {
-                restoreInlineSectionFields(targetId);
                 document.querySelectorAll('[data-financial-edit="true"]').forEach((input) => {
                     input.disabled = true;
                     input.style.backgroundColor = '#f3f4f6';
@@ -3639,7 +3648,6 @@
             }
 
             if (targetId === 'editMonitoringForm') {
-                restoreInlineSectionFields(targetId);
                 document.querySelectorAll('[data-monitoring-edit="true"]').forEach((input) => {
                     input.disabled = true;
                     input.style.backgroundColor = '#f3f4f6';
@@ -3653,7 +3661,6 @@
             }
 
             if (targetId === 'editPostImplementationForm') {
-                restoreInlineSectionFields(targetId);
                 document.querySelectorAll('[data-post-implementation-edit="true"]').forEach((input) => {
                     input.disabled = true;
                     input.style.backgroundColor = '#f3f4f6';
@@ -3666,6 +3673,7 @@
                 });
             }
 
+            syncInlineEditSaveState(targetId);
             syncInlinePortalState(targetId);
             syncBodyModalState();
         }
@@ -3700,27 +3708,45 @@
 
         disableAllEditableControlsOnLoad();
 
-        const inlineSectionConfigs = {
+        const inlineEditConfigs = {
+            editProfileForm: {
+                selector: 'input, select, textarea',
+                scope: 'form',
+                submitMode: 'native',
+            },
+            editContractForm: {
+                selector: 'input, select, textarea',
+                scope: 'form',
+                submitMode: 'native',
+            },
             editPhysicalForm: {
                 selector: '[data-physical-edit="true"]',
+                scope: 'section',
+                submitMode: 'ajax',
                 fallbackSection: 'physical',
             },
             editFinancialForm: {
                 selector: '[data-financial-edit="true"]',
+                scope: 'section',
+                submitMode: 'ajax',
                 fallbackSection: 'financial',
             },
             editMonitoringForm: {
                 selector: '[data-monitoring-edit="true"]',
+                scope: 'section',
+                submitMode: 'ajax',
                 fallbackSection: 'monitoring',
             },
             editPostImplementationForm: {
                 selector: '[data-post-implementation-edit="true"]',
+                scope: 'section',
+                submitMode: 'ajax',
                 fallbackSection: 'monitoring',
             },
         };
 
-        function getInlineSectionConfig(targetId) {
-            return inlineSectionConfigs[targetId] || null;
+        function getInlineEditConfig(targetId) {
+            return inlineEditConfigs[targetId] || null;
         }
 
         function getInlineSectionElement(targetId) {
@@ -3728,29 +3754,76 @@
                 || document.getElementById(targetId + 'Wrapper');
         }
 
-        function getInlineSectionEditableFields(targetId) {
-            const config = getInlineSectionConfig(targetId);
-            const section = getInlineSectionElement(targetId);
-            if (!config || !section) {
+        function getInlineEditScopeElement(targetId) {
+            const config = getInlineEditConfig(targetId);
+            if (!config) {
+                return null;
+            }
+
+            if (config.scope === 'section') {
+                return getInlineSectionElement(targetId);
+            }
+
+            return document.getElementById(targetId);
+        }
+
+        function isTrackedInlineEditField(field) {
+            if (!field || !field.name) {
+                return false;
+            }
+
+            if (field.matches('button, input[type="submit"], input[type="button"], input[type="reset"], input[type="image"]')) {
+                return false;
+            }
+
+            if (field.type === 'hidden' && ['_token', '_method', 'section'].includes(field.name)) {
+                return false;
+            }
+
+            return true;
+        }
+
+        function getTrackedInlineEditValue(field) {
+            if (!field) {
+                return '';
+            }
+
+            if (field.type === 'file') {
+                return Array.from(field.files || []).map((file) => {
+                    return [file.name, file.size, file.lastModified].join(':');
+                }).join('|');
+            }
+
+            if (field.tagName === 'SELECT' && field.multiple) {
+                return Array.from(field.selectedOptions || []).map((option) => option.value).join('|');
+            }
+
+            return getEditableFieldValue(field);
+        }
+
+        function getInlineEditFields(targetId) {
+            const config = getInlineEditConfig(targetId);
+            const scopeElement = getInlineEditScopeElement(targetId);
+            if (!config || !scopeElement) {
                 return [];
             }
 
-            return Array.from(section.querySelectorAll(config.selector));
+            return Array.from(scopeElement.querySelectorAll(config.selector)).filter(isTrackedInlineEditField);
         }
 
-        function snapshotInlineSectionFields(targetId) {
-            getInlineSectionEditableFields(targetId).forEach((field) => {
-                if (field.type === 'file') {
-                    field.dataset.inlineOriginalValue = '';
-                    return;
-                }
+        function snapshotInlineEditFields(targetId) {
+            const scopeElement = getInlineEditScopeElement(targetId);
+            if (scopeElement) {
+                delete scopeElement.dataset.forceInlineDirty;
+            }
 
-                field.dataset.inlineOriginalValue = getEditableFieldValue(field);
+            getInlineEditFields(targetId).forEach((field) => {
+                field.dataset.inlineOriginalValue = getTrackedInlineEditValue(field);
             });
         }
 
-        function restoreInlineSectionFields(targetId) {
-            getInlineSectionEditableFields(targetId).forEach((field) => {
+        function restoreInlineEditFields(targetId) {
+            getInlineEditFields(targetId).forEach((field) => {
                 if (!Object.prototype.hasOwnProperty.call(field.dataset, 'inlineOriginalValue')) {
                     return;
                 }
@@ -3762,6 +3835,81 @@
 
                 setEditableFieldValue(field, field.dataset.inlineOriginalValue);
             });
+
+            if (targetId === 'editProfileForm' && typeof window.syncProjectBarangayPicker === 'function') {
+                window.syncProjectBarangayPicker();
+            }
+        }
+
+        function hasInlineEditChanges(targetId) {
+            const scopeElement = getInlineEditScopeElement(targetId);
+            if (scopeElement && scopeElement.dataset.forceInlineDirty === 'true') {
+                return true;
+            }
+
+            return getInlineEditFields(targetId).some((field) => {
+                const originalValue = Object.prototype.hasOwnProperty.call(field.dataset, 'inlineOriginalValue')
+                    ? field.dataset.inlineOriginalValue
+                    : getTrackedInlineEditValue(field);
+
+                return getTrackedInlineEditValue(field) !== originalValue;
+            });
+        }
+
+        function getInlineEditSaveButtons(targetId) {
+            const config = getInlineEditConfig(targetId);
+            const scopeElement = getInlineEditScopeElement(targetId);
+            if (!config || !scopeElement) {
+                return [];
+            }
+
+            if (config.submitMode === 'ajax') {
+                return Array.from(scopeElement.querySelectorAll('[data-inline-section-save="' + targetId + '"]'));
+            }
+
+            return Array.from(scopeElement.querySelectorAll('button[type="submit"], input[type="submit"]'));
+        }
+
+        function syncInlineEditSaveState(targetId) {
+            const hasChanges = hasInlineEditChanges(targetId);
+            getInlineEditSaveButtons(targetId).forEach((button) => {
+                button.disabled = !hasChanges;
+                button.setAttribute('aria-disabled', hasChanges ? 'false' : 'true');
+            });
+        }
+
+        function finalizeInlineEditClose(targetId) {
+            closeInlineEdit(targetId);
+            const editButton = document.querySelector('[data-toggle="inline-edit"][data-target="' + targetId + '"]');
+            setInlineToggleState(editButton, false);
+        }
+
+        function requestInlineEditClose(targetId) {
+            if (!hasInlineEditChanges(targetId)) {
+                finalizeInlineEditClose(targetId);
+                return;
+            }
+
+            openReusableConfirmation(
+                'You have unsaved changes. Discard them?',
+                () => {
+                    finalizeInlineEditClose(targetId);
+                }
+            );
+        }
+
+        function requestInlineSectionSave(targetId) {
+            if (!hasInlineEditChanges(targetId)) {
+                syncInlineEditSaveState(targetId);
+                return;
+            }
+
+            openReusableConfirmation(
+                'Save the changes in this section?',
+                () => {
+                    submitInlineSection(targetId);
+                }
+            );
         }
 
         function initializeInlineSectionFooters() {
@@ -3786,34 +3934,20 @@
         }
 
         async function submitInlineSection(targetId) {
-            const section = getInlineSectionElement(targetId);
-            const config = getInlineSectionConfig(targetId);
+            const section = getInlineEditScopeElement(targetId);
+            const config = getInlineEditConfig(targetId);
             if (!section || !config) {
                 return;
             }
 
-            const fields = getInlineSectionEditableFields(targetId).filter((field) => !field.disabled && field.name);
+            const fields = getInlineEditFields(targetId).filter((field) => !field.disabled && field.name);
             const referenceForm = section.querySelector('form[action]');
             if (!referenceForm) {
                 return;
             }
 
-            const hasChanges = fields.some((field) => {
-                if (field.type === 'file') {
-                    return (field.files || []).length > 0;
-                }
-
-                const originalValue = Object.prototype.hasOwnProperty.call(field.dataset, 'inlineOriginalValue')
-                    ? field.dataset.inlineOriginalValue
-                    : getEditableFieldValue(field);
-
-                return getEditableFieldValue(field) !== originalValue;
-            });
-
-            if (!hasChanges) {
-                closeInlineEdit(targetId);
-                const editButton = document.querySelector('[data-toggle="inline-edit"][data-target="' + targetId + '"]');
-                setInlineToggleState(editButton, false);
+            if (!hasInlineEditChanges(targetId)) {
+                syncInlineEditSaveState(targetId);
                 return;
             }
 
@@ -3877,6 +4011,28 @@
         }
 
         initializeInlineSectionFooters();
+        Object.keys(inlineEditConfigs).forEach((targetId) => {
+            syncInlineEditSaveState(targetId);
+        });
+        const initialInlineDirtySectionKey = @json($errors->any() ? old('section') : '');
+        const initialInlineDirtyTargetId = initialInlineDirtySectionKey
+            ? ({
+                profile: 'editProfileForm',
+                contract: 'editContractForm',
+                physical: 'editPhysicalForm',
+                financial: 'editFinancialForm',
+                monitoring: 'editMonitoringForm',
+                'post-implementation': 'editPostImplementationForm',
+            }[initialInlineDirtySectionKey] || '')
+            : '';
+        if (initialInlineDirtyTargetId) {
+            const scopeElement = getInlineEditScopeElement(initialInlineDirtyTargetId);
+            if (scopeElement) {
+                scopeElement.dataset.forceInlineDirty = 'true';
+                syncInlineEditSaveState(initialInlineDirtyTargetId);
+            }
+        }
+        
 
         function submitFieldChangeForm(field) {
             if (!field) {
@@ -4061,8 +4217,7 @@
             button.addEventListener('click', (event) => {
                 event.preventDefault();
                 if (button.dataset.inlineState === 'editing') {
-                    closeInlineEdit(targetId);
-                    setInlineToggleState(button, false);
+                    requestInlineEditClose(targetId);
                     return;
                 }
 
@@ -4076,34 +4231,75 @@
         document.querySelectorAll('[data-inline-section-save]').forEach((button) => {
             button.addEventListener('click', () => {
                 const targetId = button.getAttribute('data-inline-section-save');
-                submitInlineSection(targetId);
+                requestInlineSectionSave(targetId);
             });
         });
 
         document.querySelectorAll('[data-inline-section-cancel]').forEach((button) => {
             button.addEventListener('click', () => {
                 const targetId = button.getAttribute('data-inline-section-cancel');
-                closeInlineEdit(targetId);
-                const editButton = document.querySelector('[data-toggle="inline-edit"][data-target="' + targetId + '"]');
-                setInlineToggleState(editButton, false);
+                requestInlineEditClose(targetId);
             });
         });
 
         document.querySelectorAll('[data-toggle="inline-cancel"]').forEach((button) => {
             button.addEventListener('click', () => {
                 const targetId = button.getAttribute('data-target');
-                closeInlineEdit(targetId);
-                const editButton = document.querySelector('[data-toggle="inline-edit"][data-target="' + targetId + '"]');
-                setInlineToggleState(editButton, false);
+                requestInlineEditClose(targetId);
             });
         });
 
         document.querySelectorAll('.lfp-inline-modal-backdrop').forEach((backdrop) => {
             backdrop.addEventListener('click', () => {
                 const targetId = backdrop.id.replace(/Backdrop$/, '');
-                closeInlineEdit(targetId);
-                const editButton = document.querySelector('[data-toggle="inline-edit"][data-target="' + targetId + '"]');
-                setInlineToggleState(editButton, false);
+                requestInlineEditClose(targetId);
+            });
+        });
+
+        Object.keys(inlineEditConfigs).forEach((targetId) => {
+            getInlineEditFields(targetId).forEach((field) => {
+                const updateState = () => {
+                    syncInlineEditSaveState(targetId);
+                };
+
+                field.addEventListener('input', updateState);
+                field.addEventListener('change', updateState);
+            });
+        });
+
+        ['editProfileForm', 'editContractForm'].forEach((targetId) => {
+            const form = document.getElementById(targetId);
+            if (!form) {
+                return;
+            }
+
+            form.addEventListener('submit', (event) => {
+                if (form.dataset.inlineSubmitConfirmed === 'true') {
+                    delete form.dataset.inlineSubmitConfirmed;
+                    return;
+                }
+
+                event.preventDefault();
+                syncInlineEditSaveState(targetId);
+
+                if (!hasInlineEditChanges(targetId)) {
+                    return;
+                }
+
+                const submitter = event.submitter || form.querySelector('button[type="submit"], input[type="submit"]');
+                openReusableConfirmation(
+                    'Save the changes in this section?',
+                    () => {
+                        form.dataset.inlineSubmitConfirmed = 'true';
+
+                        if (submitter && typeof form.requestSubmit === 'function') {
+                            form.requestSubmit(submitter);
+                            return;
+                        }
+
+                        form.submit();
+                    }
+                );
             });
         });
 
