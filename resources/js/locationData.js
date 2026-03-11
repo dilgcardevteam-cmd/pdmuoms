@@ -1434,6 +1434,8 @@ function updateBadges() {
     if (selectedList.length === 0) {
         barangayBadges.innerHTML = '<span style="color: #9ca3af; font-size: 14px; align-self: center;">Click here or dropdown to add barangays</span>';
         barangayHidden.value = '';
+        barangayHidden.dispatchEvent(new Event('input', { bubbles: true }));
+        barangayHidden.dispatchEvent(new Event('change', { bubbles: true }));
         renderBarangayOptions();
         return;
     }
@@ -1450,6 +1452,8 @@ function updateBadges() {
 
     barangayBadges.innerHTML = badgesHTML;
     barangayHidden.value = JSON.stringify(selectedList);
+    barangayHidden.dispatchEvent(new Event('input', { bubbles: true }));
+    barangayHidden.dispatchEvent(new Event('change', { bubbles: true }));
     renderBarangayOptions();
 }
 
@@ -1473,6 +1477,68 @@ function resetBarangaySelection() {
     }
     renderBarangayOptions();
 }
+
+function syncBarangayStateFromFields() {
+    if (!provinceSelect || !citySelect || !barangaySelect || !barangayBadges || !barangayHidden) {
+        return;
+    }
+
+    const selectedProvince = provinceSelect.value;
+    const selectedCity = citySelect.value;
+    let parsedBarangays = [];
+
+    try {
+        parsedBarangays = JSON.parse(barangayHidden.value || '[]');
+        if (!Array.isArray(parsedBarangays)) {
+            parsedBarangays = [];
+        }
+    } catch (error) {
+        parsedBarangays = [];
+    }
+
+    citySelect.innerHTML = '<option value="">-- Select City/Municipality --</option>';
+
+    if (selectedProvince && locationData[selectedProvince]) {
+        Object.keys(locationData[selectedProvince]).forEach((city) => {
+            const option = document.createElement('option');
+            option.value = city;
+            option.textContent = city;
+            citySelect.appendChild(option);
+        });
+    }
+
+    if (selectedCity) {
+        const hasSelectedCity = Array.from(citySelect.options).some((option) => option.value === selectedCity);
+        if (!hasSelectedCity) {
+            const customCityOption = document.createElement('option');
+            customCityOption.value = selectedCity;
+            customCityOption.textContent = selectedCity;
+            citySelect.appendChild(customCityOption);
+        }
+        citySelect.value = selectedCity;
+    }
+
+    availableBarangays = [];
+    if (selectedProvince && selectedCity && locationData[selectedProvince] && locationData[selectedProvince][selectedCity]) {
+        availableBarangays = normalizeBarangayList(locationData[selectedProvince][selectedCity]);
+    }
+
+    if (!availableBarangays.length && parsedBarangays.length) {
+        availableBarangays = normalizeBarangayList(parsedBarangays);
+    }
+
+    selectedBarangays = {};
+    parsedBarangays.forEach((barangay) => {
+        if (barangay) {
+            selectedBarangays[barangay] = true;
+        }
+    });
+
+    updateBadges();
+    closeBarangayPicker();
+}
+
+window.syncProjectBarangayPicker = syncBarangayStateFromFields;
 
 if (provinceSelect && citySelect && barangaySelect && barangayBadges && barangayHidden) {
     syncBarangayPickerState();
@@ -1566,72 +1632,11 @@ if (provinceSelect && citySelect && barangaySelect && barangayBadges && barangay
         closeBarangayPicker();
     });
 
-    // Initialize city and barangay lists based on current values
-    const initialProvince = provinceSelect.value;
-    const initialCity = citySelect.dataset.selected || citySelect.value;
-    let initialBarangays = [];
-    try {
-        initialBarangays = JSON.parse(barangayHidden.value || '[]');
-        if (!Array.isArray(initialBarangays)) {
-            initialBarangays = [];
-        }
-    } catch (err) {
-        initialBarangays = [];
+    if (citySelect.dataset.selected && !citySelect.value) {
+        citySelect.value = citySelect.dataset.selected;
     }
 
-    if (initialProvince && locationData[initialProvince]) {
-        citySelect.innerHTML = '<option value="">-- Select City/Municipality --</option>';
-        Object.keys(locationData[initialProvince]).forEach((city) => {
-            const option = document.createElement('option');
-            option.value = city;
-            option.textContent = city;
-            citySelect.appendChild(option);
-        });
-        if (initialCity) {
-            const matchedCity = Object.keys(locationData[initialProvince]).find((city) => {
-                return city.toLowerCase() === initialCity.toLowerCase();
-            });
-            if (matchedCity) {
-                citySelect.value = matchedCity;
-            } else {
-                const customCityOption = document.createElement('option');
-                customCityOption.value = initialCity;
-                customCityOption.textContent = initialCity;
-                citySelect.appendChild(customCityOption);
-                citySelect.value = initialCity;
-            }
-        }
-    } else if (initialCity) {
-        citySelect.innerHTML = '<option value="">-- Select City/Municipality --</option>';
-        const customCityOption = document.createElement('option');
-        customCityOption.value = initialCity;
-        customCityOption.textContent = initialCity;
-        citySelect.appendChild(customCityOption);
-        citySelect.value = initialCity;
-    }
-
-    const resolvedCity = citySelect.value || initialCity;
-    if (initialProvince && resolvedCity && locationData[initialProvince]) {
-        const matchedCityKey = Object.keys(locationData[initialProvince]).find((city) => {
-            return city.toLowerCase() === resolvedCity.toLowerCase();
-        });
-        if (matchedCityKey && locationData[initialProvince][matchedCityKey]) {
-            availableBarangays = normalizeBarangayList(locationData[initialProvince][matchedCityKey]);
-        }
-    }
-
-    if (!availableBarangays.length && initialBarangays.length) {
-        availableBarangays = normalizeBarangayList(initialBarangays);
-    }
-
-    selectedBarangays = {};
-    initialBarangays.forEach((barangay) => {
-        if (barangay) {
-            selectedBarangays[barangay] = true;
-        }
-    });
-    updateBadges();
-    closeBarangayPicker();
+    syncBarangayStateFromFields();
 }
 
 const profileForm = document.getElementById('editProfileForm');

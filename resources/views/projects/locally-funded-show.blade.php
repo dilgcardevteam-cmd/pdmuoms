@@ -144,11 +144,460 @@
             display: none;
         }
 
+        .lfp-inline-edit-trigger {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background-color: #002C76;
+            color: #ffffff;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 12px;
+            font-weight: 600;
+            line-height: 1.2;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+
+        .lfp-inline-edit-trigger i {
+            margin-right: 0 !important;
+        }
+
         .lfp-physical-section-title {
             flex: 0 1 75%;
             max-width: 75%;
             min-width: 0;
             line-height: 1.2;
+        }
+
+        .lfp-physical-hero {
+            display: grid;
+            grid-template-columns: minmax(240px, 1.2fr) minmax(320px, 1fr);
+            gap: 18px;
+            margin-bottom: 18px;
+            padding: 18px;
+            border: 1px solid #dbeafe;
+            border-radius: 14px;
+            background: linear-gradient(135deg, #eff6ff 0%, #ffffff 58%, #f8fafc 100%);
+        }
+
+        .lfp-physical-eyebrow {
+            display: inline-block;
+            margin-bottom: 10px;
+            color: #1d4ed8;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+
+        .lfp-physical-hero-title {
+            margin: 0 0 8px;
+            color: #0f172a;
+            font-size: 24px;
+            line-height: 1.1;
+        }
+
+        .lfp-physical-hero-text {
+            margin: 0;
+            color: #475569;
+            font-size: 13px;
+            line-height: 1.6;
+            max-width: 58ch;
+        }
+
+        .lfp-physical-summary-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .lfp-physical-summary-card {
+            padding: 14px;
+            border: 1px solid #dbeafe;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.88);
+            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+        }
+
+        .lfp-physical-summary-label {
+            display: block;
+            margin-bottom: 8px;
+            color: #64748b;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        .lfp-physical-summary-value {
+            color: #0f172a;
+            font-size: 16px;
+            font-weight: 700;
+            line-height: 1.3;
+        }
+
+        .lfp-physical-timeline {
+            position: relative;
+            display: grid;
+            gap: 18px;
+            margin-bottom: 18px;
+        }
+
+        .lfp-physical-timeline-details {
+            margin-bottom: 18px;
+            padding: 12px 14px;
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+        }
+
+        .lfp-physical-timeline-details[open] {
+            border-color: #bfdbfe;
+            background-color: #eff6ff;
+            box-shadow: 0 10px 24px rgba(29, 78, 216, 0.1);
+        }
+
+        .lfp-physical-timeline-details > summary {
+            list-style: none;
+        }
+
+        .lfp-physical-timeline-summary::marker {
+            content: '';
+        }
+
+        .lfp-physical-timeline-summary {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            color: #1d4ed8;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .lfp-physical-timeline-summary::after {
+            content: '+';
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 18px;
+            height: 18px;
+            border-radius: 999px;
+            background-color: #dbeafe;
+            color: #1d4ed8;
+            font-size: 13px;
+            line-height: 1;
+            transition: transform 0.2s ease;
+        }
+
+        .lfp-physical-timeline-details[open] > .lfp-physical-timeline-summary::after {
+            transform: rotate(45deg);
+        }
+
+        .lfp-physical-timeline::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 19px;
+            width: 2px;
+            background: linear-gradient(180deg, #93c5fd 0%, #1d4ed8 100%);
+        }
+
+        .lfp-physical-timeline-item {
+            position: relative;
+            display: grid;
+            grid-template-columns: 40px minmax(0, 1fr);
+            gap: 16px;
+            align-items: start;
+        }
+
+        .lfp-physical-timeline-node {
+            position: relative;
+            z-index: 1;
+            width: 40px;
+            height: 40px;
+            border-radius: 999px;
+            background: #002c76;
+            color: #ffffff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 800;
+            box-shadow: 0 10px 24px rgba(0, 44, 118, 0.22);
+        }
+
+        .lfp-physical-timeline-card {
+            padding: 16px;
+            border: 1px solid #dbeafe;
+            border-radius: 14px;
+            background: #ffffff;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+        }
+
+        .lfp-physical-timeline-card-header {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            align-items: start;
+            margin-bottom: 14px;
+        }
+
+        .lfp-physical-timeline-card-header h4 {
+            margin: 0;
+            color: #0f172a;
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .lfp-physical-timeline-kicker {
+            margin: 0 0 4px;
+            color: #64748b;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .lfp-physical-timeline-month {
+            padding: 5px 9px;
+            border-radius: 999px;
+            background: #dbeafe;
+            color: #1d4ed8;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .lfp-physical-timeline-metrics {
+            display: grid;
+            grid-template-columns: minmax(0, 30%) minmax(0, 70%);
+            gap: 12px;
+        }
+
+        .lfp-physical-timeline-columns {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+        }
+
+        .lfp-physical-compare-toggle {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            margin: 0 0 12px;
+            padding: 8px 12px;
+            border: 1px solid #bfdbfe;
+            border-radius: 999px;
+            background: #eff6ff;
+            color: #1d4ed8;
+            font-size: 12px;
+            font-weight: 700;
+            line-height: 1.2;
+            cursor: pointer;
+        }
+
+        .lfp-physical-compare-modal-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .lfp-physical-compare-modal-column {
+            display: grid;
+            gap: 12px;
+        }
+
+        .lfp-physical-compare-modal-heading {
+            margin: 0;
+            color: #002c76;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .lfp-physical-timeline-metric {
+            padding: 12px;
+            border-radius: 12px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+        }
+
+        .lfp-physical-timeline-metric span {
+            display: block;
+            margin-bottom: 8px;
+            color: #64748b;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .lfp-physical-timeline-metric strong {
+            color: #0f172a;
+            font-size: 14px;
+            font-weight: 700;
+            line-height: 1.35;
+        }
+
+        .lfp-physical-trend {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: nowrap;
+        }
+
+        .lfp-physical-trend-indicator {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 34px;
+            height: 34px;
+            padding: 0 10px;
+            border-radius: 999px;
+            font-size: 26px;
+            font-weight: 800;
+            line-height: 1;
+            cursor: help;
+            flex: 0 0 auto;
+        }
+
+        .lfp-physical-trend-indicator.is-up {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .lfp-physical-trend-indicator.is-down {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .lfp-physical-timeline-remarks {
+            margin-top: 14px;
+            padding-top: 14px;
+            border-top: 1px dashed #cbd5e1;
+        }
+
+        .lfp-physical-timeline-remarks span {
+            display: block;
+            margin-bottom: 6px;
+            color: #64748b;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .lfp-physical-timeline-remarks p {
+            margin: 0;
+            color: #334155;
+            font-size: 13px;
+            line-height: 1.6;
+            white-space: pre-line;
+        }
+
+        .lfp-physical-footer-meta {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+
+        .lfp-physical-footer-meta div {
+            padding: 14px;
+            border-radius: 12px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+        }
+
+        .lfp-physical-footer-meta span {
+            display: block;
+            margin-bottom: 6px;
+            color: #64748b;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        .lfp-physical-footer-meta strong {
+            color: #0f172a;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .lfp-physical-empty-state {
+            padding: 18px;
+            border: 1px dashed #cbd5e1;
+            border-radius: 12px;
+            text-align: center;
+            color: #64748b;
+            font-size: 13px;
+            background: #f8fafc;
+        }
+
+        .lfp-physical-modal-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(300px, 1fr));
+            gap: 16px;
+        }
+
+        .lfp-financial-view-stack {
+            display: grid;
+            gap: 18px;
+            margin-bottom: 20px;
+        }
+
+        .lfp-financial-edit-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 16px;
+        }
+
+        .lfp-financial-edit-card {
+            padding: 16px;
+            border: 1px solid #dbeafe;
+            border-radius: 14px;
+            background: #ffffff;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+        }
+
+        .lfp-financial-edit-card--full {
+            grid-column: 1 / -1;
+        }
+
+        .lfp-financial-edit-summary {
+            margin: 0 0 8px;
+            color: #0f172a;
+            font-size: 15px;
+            font-weight: 700;
+        }
+
+        .lfp-financial-edit-summary span {
+            color: #1d4ed8;
+        }
+
+        .lfp-financial-timeline-metrics {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        @media (max-width: 1200px) {
+            .lfp-financial-timeline-metrics {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 768px) {
+            .lfp-financial-timeline-metrics {
+                grid-template-columns: 1fr;
+            }
         }
 
         @media (max-width: 768px) {
@@ -173,6 +622,120 @@
                 padding: 16px;
             }
 
+            .lfp-physical-hero {
+                grid-template-columns: 1fr;
+            }
+
+            .lfp-physical-summary-grid,
+            .lfp-physical-timeline-metrics,
+            .lfp-physical-modal-grid,
+            .lfp-physical-footer-meta {
+                grid-template-columns: 1fr;
+                margin-bottom: 4px;
+            }
+
+            .lfp-physical-compare-toggle {
+                display: inline-flex;
+            }
+
+            .lfp-physical-timeline-columns {
+                display: none;
+            }
+
+            .lfp-physical-timeline-card-header {
+                flex-direction: column;
+            }
+
+            .lfp-physical-timeline::before {
+                left: 15px;
+            }
+
+            .lfp-physical-timeline-item {
+                grid-template-columns: 32px minmax(0, 1fr);
+                gap: 12px;
+            }
+
+            .lfp-physical-timeline-node {
+                width: 32px;
+                height: 32px;
+                font-size: 10px;
+            }
+
+            .lfp-physical-timeline-card {
+                padding: 14px;
+            }
+
+            .lfp-physical-trend {
+                align-items: flex-start;
+                flex-wrap: wrap;
+            }
+
+            #editPhysicalFormWrapper .monthly-details {
+                width: 100%;
+                min-width: 0;
+            }
+
+            #editPhysicalFormWrapper .monthly-summary {
+                width: 100%;
+                justify-content: space-between;
+                flex-wrap: wrap;
+            }
+
+            #editPhysicalFormWrapper .monthly-details > div[style*="margin-top: 10px;"] {
+                overflow-x: auto;
+                overflow-y: hidden;
+                padding-bottom: 6px;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            #editPhysicalFormWrapper div[style*="grid-template-columns: 120px 1fr 180px 140px"] {
+                min-width: 640px;
+                grid-template-columns: 110px minmax(220px, 1fr) 170px 130px !important;
+                gap: 8px !important;
+            }
+
+            #editPhysicalFormWrapper input[type="date"],
+            #editPhysicalFormWrapper input[type="number"],
+            #editPhysicalFormWrapper select,
+            #editPhysicalFormWrapper textarea {
+                max-width: 100%;
+            }
+
+            #physicalCompareModalWrapper {
+                margin-top: 0;
+                top: auto;
+                left: auto;
+                width: auto;
+                max-height: none;
+                transform: none;
+                background-color: #ffffff;
+                border: 1px solid #dbeafe;
+                border-radius: 16px;
+                box-shadow: 0 24px 48px rgba(15, 23, 42, 0.24);
+            }
+
+            #physicalCompareModalWrapper.is-visible {
+                position: fixed;
+                top: max(12px, env(safe-area-inset-top));
+                right: 12px;
+                bottom: max(12px, env(safe-area-inset-bottom));
+                left: 12px;
+                display: flex !important;
+                flex-direction: column;
+                min-height: 0;
+                overflow: hidden;
+                z-index: 1300;
+            }
+
+            #physicalCompareModalWrapper .lfp-inline-modal-body {
+                padding: 16px;
+            }
+
+            .lfp-physical-compare-modal-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 10px;
+            }
+
             .lfp-mobile-canvas .lfp-inline-modal-backdrop.is-visible {
                 display: block !important;
                 position: fixed;
@@ -182,7 +745,8 @@
             }
 
             #editProfileFormBackdrop.is-visible,
-            #editContractFormBackdrop.is-visible {
+            #editContractFormBackdrop.is-visible,
+            #editPhysicalFormBackdrop.is-visible {
                 display: block !important;
                 position: fixed;
                 inset: 0;
@@ -204,7 +768,8 @@
             }
 
             #editProfileFormWrapper,
-            #editContractFormWrapper {
+            #editContractFormWrapper,
+            #editPhysicalFormWrapper {
                 margin-top: 0;
                 top: auto;
                 left: auto;
@@ -231,7 +796,8 @@
             }
 
             #editProfileFormWrapper.is-visible,
-            #editContractFormWrapper.is-visible {
+            #editContractFormWrapper.is-visible,
+            #editPhysicalFormWrapper.is-visible {
                 position: fixed;
                 top: max(12px, env(safe-area-inset-top));
                 right: 12px;
@@ -255,7 +821,8 @@
             }
 
             #editProfileFormWrapper .lfp-inline-modal-header,
-            #editContractFormWrapper .lfp-inline-modal-header {
+            #editContractFormWrapper .lfp-inline-modal-header,
+            #editPhysicalFormWrapper .lfp-inline-modal-header {
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
@@ -279,7 +846,8 @@
             }
 
             #editProfileFormWrapper .lfp-inline-modal-body,
-            #editContractFormWrapper .lfp-inline-modal-body {
+            #editContractFormWrapper .lfp-inline-modal-body,
+            #editPhysicalFormWrapper .lfp-inline-modal-body {
                 flex: 1 1 auto;
                 min-height: 0;
                 max-height: none;
@@ -289,7 +857,8 @@
             }
 
             #editProfileFormWrapper .lfp-inline-modal-body form,
-            #editContractFormWrapper .lfp-inline-modal-body form {
+            #editContractFormWrapper .lfp-inline-modal-body form,
+            #editPhysicalFormWrapper .lfp-inline-modal-body form {
                 min-height: 100%;
             }
 
@@ -449,7 +1018,7 @@
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 2px solid #00267C; padding-bottom: 10px;">
                 <h3 style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Project Profile</h3>
                 @if($canEditProjectProfile)
-                    <a href="#" data-toggle="inline-edit" data-target="editProfileForm" style="padding: 6px 12px; background-color: #002C76; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 12px;"><i class="fas fa-edit" style="margin-right: 6px;"></i>Update</a>
+                    <a href="#" class="lfp-inline-edit-trigger" data-toggle="inline-edit" data-target="editProfileForm"><i class="fas fa-edit" aria-hidden="true"></i>Update</a>
                 @endif
             </div>
             <div class="project-profile-grid" style="display: grid; grid-template-columns: repeat(2, minmax(260px, 1fr)); gap: 14px;">
@@ -671,7 +1240,7 @@
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 2px solid #00267C; padding-bottom: 10px;">
                 <h3 style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Contract Information</h3>
                 @if(!$isLguAgencyUser)
-                    <a href="#" data-toggle="inline-edit" data-target="editContractForm" style="padding: 6px 12px; background-color: #002C76; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 12px;"><i class="fas fa-edit" style="margin-right: 6px;"></i>Update</a>
+                    <a href="#" class="lfp-inline-edit-trigger" data-toggle="inline-edit" data-target="editContractForm"><i class="fas fa-edit" aria-hidden="true"></i>Update</a>
                 @endif
             </div>
             <div class="contract-info-grid" style="display: grid; grid-template-columns: repeat(3, minmax(260px, 1fr)); gap: 14px;">
@@ -874,24 +1443,342 @@
                     'CANCELLED' => ['#fecaca', '#7f1d1d'],
                     'TERMINATED/CANCEL' => ['#fee2e2', '#991b1b'],
                     'PROCUREMENT' => ['#e0f2fe', '#0369a1'],
+                    'Ahead' => ['#dcfce7', '#166534'],
+                    'On Schedule' => ['#dbeafe', '#1d4ed8'],
+                    'No Risk' => ['#ecfccb', '#3f6212'],
+                    'Low Risk' => ['#fef3c7', '#92400e'],
+                    'Moderate Risk' => ['#fed7aa', '#9a3412'],
+                    'High Risk' => ['#fee2e2', '#991b1b'],
                 ];
                 $color = $colors[$value] ?? ['#e5e7eb', '#374151'];
                 return '<span style="display: inline-block; padding: 3px 8px; border-radius: 999px; background-color: ' . $color[0] . '; color: ' . $color[1] . '; font-size: 11px; font-weight: 600;">' . e($statusLabel($value)) . '</span>';
             };
+
+            $formatPhysicalPercent = function ($value) {
+                if ($value === null || $value === '') {
+                    return '-';
+                }
+
+                return number_format((float) $value, 2) . '%';
+            };
+
+            $physicalTrendIndicator = function ($currentValue, $previousValue) {
+                if (!is_numeric($currentValue) || !is_numeric($previousValue)) {
+                    return '';
+                }
+
+                $current = (float) $currentValue;
+                $previous = (float) $previousValue;
+
+                if ($current > $previous) {
+                    return '<span class="lfp-physical-trend-indicator is-up !text-2xl !font-bold" title="Higher than the previous logged month">&#8593;</span>';
+                }
+
+                if ($current < $previous) {
+                    return '<span class="lfp-physical-trend-indicator is-down !text-2xl !font-bold" title="Lower than the previous logged month">&#8595;</span>';
+                }
+
+                return '';
+            };
+
+            $physicalTimelineEntries = [];
+            foreach ($months as $monthNumber => $monthName) {
+                $row = $physicalByMonth[$monthNumber] ?? [];
+                $hasData = collect([
+                    $row['status_project_fou'] ?? null,
+                    $row['status_project_ro'] ?? null,
+                    $row['accomplishment_pct'] ?? null,
+                    $row['accomplishment_pct_ro'] ?? null,
+                    $row['slippage'] ?? null,
+                    $row['slippage_ro'] ?? null,
+                    $row['risk_aging'] ?? null,
+                    $row['nc_letters'] ?? null,
+                ])->contains(function ($value) {
+                    return $value !== null && $value !== '';
+                });
+
+                if (!$hasData) {
+                    continue;
+                }
+
+                $physicalTimelineEntries[] = [
+                    'month_number' => $monthNumber,
+                    'month_label' => $monthName,
+                    'month_short' => substr($monthName, 0, 3),
+                    'status_project_fou' => $row['status_project_fou'] ?? null,
+                    'status_project_ro' => $row['status_project_ro'] ?? null,
+                    'accomplishment_pct' => $row['accomplishment_pct'] ?? null,
+                    'accomplishment_pct_ro' => $row['accomplishment_pct_ro'] ?? null,
+                    'slippage' => $row['slippage'] ?? null,
+                    'slippage_ro' => $row['slippage_ro'] ?? null,
+                    'risk_aging' => $row['risk_aging'] ?? null,
+                    'nc_letters' => $row['nc_letters'] ?? null,
+                    'remarks' => $monthNumber === (int) $currentMonth ? ($project->physical_remarks ?? null) : null,
+                ];
+            }
+
+            $formatFinancialCurrency = function ($value) {
+                if ($value === null || $value === '') {
+                    return '-';
+                }
+
+                return 'PHP ' . number_format((float) $value, 2);
+            };
+
+            $formatFinancialPercent = function ($value) {
+                if ($value === null || $value === '') {
+                    return '-';
+                }
+
+                return number_format((float) $value, 2) . '%';
+            };
+
+            $financialTrendIndicator = function ($currentValue, $previousValue) {
+                if (!is_numeric($currentValue) || !is_numeric($previousValue)) {
+                    return '';
+                }
+
+                $current = (float) $currentValue;
+                $previous = (float) $previousValue;
+
+                if ($current > $previous) {
+                    return '<span class="lfp-physical-trend-indicator is-up !text-2xl !font-bold" title="Higher than the previous logged month">&#8593;</span>';
+                }
+
+                if ($current < $previous) {
+                    return '<span class="lfp-physical-trend-indicator is-down !text-2xl !font-bold" title="Lower than the previous logged month">&#8595;</span>';
+                }
+
+                return '';
+            };
+
+            $financialAllocation = (float) ($project->lgsf_allocation ?? 0);
+            $financialTimelineEntries = [];
+            $latestFinancialEntry = null;
+            foreach ($months as $monthNumber => $monthName) {
+                $row = $financialByMonth[$monthNumber] ?? [];
+                $hasData = collect([
+                    $row['obligation'] ?? null,
+                    $row['disbursed_amount'] ?? null,
+                    $row['reverted_amount'] ?? null,
+                ])->contains(function ($value) {
+                    return $value !== null && $value !== '';
+                });
+
+                if (!$hasData) {
+                    continue;
+                }
+
+                $monthDisbursed = (float) ($row['disbursed_amount'] ?? 0);
+                $monthReverted = (float) ($row['reverted_amount'] ?? 0);
+                $monthBalance = $financialAllocation - ($monthDisbursed + $monthReverted);
+                $monthUtilizationRate = $financialAllocation > 0
+                    ? (($monthDisbursed + $monthReverted) / $financialAllocation) * 100
+                    : 0;
+
+                $entry = [
+                    'month_number' => $monthNumber,
+                    'month_label' => $monthName,
+                    'month_short' => substr($monthName, 0, 3),
+                    'obligation' => $row['obligation'] ?? null,
+                    'disbursed_amount' => $row['disbursed_amount'] ?? null,
+                    'reverted_amount' => $row['reverted_amount'] ?? null,
+                    'balance' => $monthBalance,
+                    'utilization_rate' => $monthUtilizationRate,
+                    'remarks' => $monthNumber === (int) $currentMonth ? ($project->financial_remarks ?? null) : null,
+                ];
+
+                $financialTimelineEntries[] = $entry;
+                $latestFinancialEntry = $entry;
+            }
+
+            $currentFinancial = $latestFinancialEntry ?? [
+                'obligation' => $financialTotals['obligation'] ?? null,
+                'disbursed_amount' => $financialTotals['disbursed_amount'] ?? null,
+                'reverted_amount' => $financialTotals['reverted_amount'] ?? null,
+                'balance' => $financialBalance ?? 0,
+                'utilization_rate' => $financialUtilizationRate ?? 0,
+            ];
+
         @endphp
 
-        <div id="editPhysicalFormBackdrop" class="lfp-inline-modal-backdrop" aria-hidden="true"></div>
-        <div id="physicalAccomplishmentSection" class="project-tab-panel lfp-inline-modal-section" data-tab-key="physical" role="tabpanel" aria-labelledby="tab-physical-accomplishment" data-inline-modal-section="true" data-inline-target="editPhysicalForm" style="margin-bottom: 24px; padding: 20px; border: 1px solid #00267C; border-radius: 10px; background-color: #ffffff;">
+        <div id="physicalAccomplishmentSection" class="project-tab-panel" data-tab-key="physical" role="tabpanel" aria-labelledby="tab-physical-accomplishment" style="margin-bottom: 24px; padding: 20px; border: 1px solid #00267C; border-radius: 10px; background-color: #ffffff;">
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 2px solid #00267C; padding-bottom: 10px;">
                 <h3 class="lfp-physical-section-title" style="color: #00267C; font-size: clamp(14px, 4vw, 18px); font-weight: 700; margin: 0;">Physical Accomplishment</h3>
                 <div style="display: flex; gap: 8px; align-items: center;">
                     @if(!$isLguAgencyUser)
-                        <a href="#" data-toggle="inline-edit" data-target="editPhysicalForm" data-physical-toggle="true" style="padding: 6px 12px; background-color: #002C76; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 12px;"><i class="fas fa-edit" style="margin-right: 6px;"></i>Update</a>
+                        <a href="#" class="lfp-inline-edit-trigger" data-toggle="inline-edit" data-target="editPhysicalForm" data-physical-toggle="true"><i class="fas fa-edit" aria-hidden="true"></i>Update</a>
                     @endif
-                    <button type="button" class="lfp-inline-modal-close lfp-inline-modal-section-close" data-toggle="inline-cancel" data-target="editPhysicalForm" aria-label="Close physical accomplishment editor">&times;</button>
                 </div>
             </div>
-            <div style="display: grid; grid-template-columns: repeat(2, minmax(300px, 1fr)); gap: 16px;">
+            <div class="lfp-physical-hero">
+                <div class="lfp-physical-hero-copy">
+                    <span class="lfp-physical-eyebrow">Progress Snapshot</span>
+                    <h4 class="lfp-physical-hero-title">Monthly delivery trend across FOU and RO updates</h4>
+                    <p class="lfp-physical-hero-text">The timeline below separates the read-only progress history from the edit flow, making it easier to scan how status, accomplishment, slippage, and compliance changed over time.</p>
+                </div>
+                <div class="lfp-physical-summary-grid">
+                    <div class="lfp-physical-summary-card">
+                        <span class="lfp-physical-summary-label">Current FOU Status</span>
+                        <div class="lfp-physical-summary-value">{!! $statusBadge($currentPhysical['status_project_fou'] ?? null) !!}</div>
+                    </div>
+                    <div class="lfp-physical-summary-card">
+                        <span class="lfp-physical-summary-label">Current RO Status</span>
+                        <div class="lfp-physical-summary-value">{!! $statusBadge($currentPhysical['status_project_ro'] ?? null) !!}</div>
+                    </div>
+                    <div class="lfp-physical-summary-card">
+                        <span class="lfp-physical-summary-label">FOU Accomplishment</span>
+                        <div class="lfp-physical-summary-value">{{ $formatPhysicalPercent($currentPhysical['accomplishment_pct'] ?? null) }}</div>
+                    </div>
+                    <div class="lfp-physical-summary-card">
+                        <span class="lfp-physical-summary-label">RO Accomplishment</span>
+                        <div class="lfp-physical-summary-value">{{ $formatPhysicalPercent($currentPhysical['accomplishment_pct_ro'] ?? null) }}</div>
+                    </div>
+                    <div class="lfp-physical-summary-card">
+                        <span class="lfp-physical-summary-label">Risk As To Aging</span>
+                        <div class="lfp-physical-summary-value">{!! $statusBadge($currentPhysical['risk_aging'] ?? null) !!}</div>
+                    </div>
+                    <div class="lfp-physical-summary-card">
+                        <span class="lfp-physical-summary-label">NC Letters</span>
+                        <div class="lfp-physical-summary-value">{!! $statusBadge($currentPhysical['nc_letters'] ?? null) !!}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lfp-physical-footer-meta">
+                <div>
+                    <span>Actual Date of Completion</span>
+                    <strong>{{ $project->actual_date_completion ? $project->actual_date_completion->format('F j, Y') : 'N/A' }}</strong>
+                </div>
+                <div>
+                    <span>Last Remarks Update</span>
+                    <strong>{{ $project->physical_remarks_updated_at ? $project->physical_remarks_updated_at->format('M d, Y h:i A') : '-' }}</strong>
+                </div>
+                <div>
+                    <span>Updated By</span>
+                    <strong>{{ $physicalRemarksUpdatedByName ?? ($actualCompletionUpdatedByName ?? 'N/A') }}</strong>
+                </div>
+            </div>
+
+            <details class="lfp-physical-timeline-details">
+                <summary class="lfp-physical-timeline-summary">View physical timeline</summary>
+                <div class="lfp-physical-timeline">
+                    @forelse($physicalTimelineEntries as $entry)
+                        @php
+                            $previousEntry = $loop->first ? null : ($physicalTimelineEntries[$loop->index - 1] ?? null);
+                        @endphp
+                        <article class="lfp-physical-timeline-item">
+                            <div class="lfp-physical-timeline-node">
+                                <span>{{ $entry['month_short'] }}</span>
+                            </div>
+                            <div class="lfp-physical-timeline-card">
+                                <div class="lfp-physical-timeline-card-header">
+                                    <div>
+                                        <p class="lfp-physical-timeline-kicker">Timeline Point</p>
+                                        <h4>{{ $entry['month_label'] }}</h4>
+                                    </div>
+                                    <span class="lfp-physical-timeline-month">{{ str_pad((string) $entry['month_number'], 2, '0', STR_PAD_LEFT) }}</span>
+                                </div>
+                                <button type="button"
+                                        class="lfp-physical-compare-toggle"
+                                        data-physical-compare-trigger="true"
+                                        data-physical-compare-title="{{ $entry['month_label'] }} comparison">
+                                    Compare FOU vs RO
+                                </button>
+                                <div class="lfp-physical-timeline-metrics">
+                                    <div class="">
+                                        <div class="lfp-physical-timeline-metric !mb-4">
+                                            <span>Risk</span>
+                                            <strong>{!! $statusBadge($entry['risk_aging']) !!}</strong>
+                                        </div>
+                                        <div class="lfp-physical-timeline-metric !mt-4">
+                                            <span>NC Letters</span>
+                                            <strong>{!! $statusBadge($entry['nc_letters']) !!}</strong>
+                                        </div>
+                                    </div>
+
+                                    <div class="lfp-physical-timeline-columns">
+                                        <div class="flex flex-col gap-4">
+                                            <div class="lfp-physical-timeline-metric">
+                                                <span>FOU Status</span>
+                                                <strong>{!! $statusBadge($entry['status_project_fou']) !!}</strong>
+                                            </div>
+
+                                            <div class="lfp-physical-timeline-metric">
+                                                <span>FOU Accomplishment</span>
+                                                <strong class="lfp-physical-trend">
+                                                    {!! $physicalTrendIndicator($entry['accomplishment_pct'], $previousEntry['accomplishment_pct'] ?? null) !!}
+                                                    <span>{{ $formatPhysicalPercent($entry['accomplishment_pct']) }}</span>
+                                                </strong>
+                                            </div>
+
+                                            <div class="lfp-physical-timeline-metric">
+                                                <span>FOU Slippage</span>
+                                                <strong class="lfp-physical-trend">
+                                                    {!! $physicalTrendIndicator($entry['slippage'], $previousEntry['slippage'] ?? null) !!}
+                                                    <span>{{ $formatPhysicalPercent($entry['slippage']) }}</span>
+                                                </strong>
+                                            </div>
+                                        </div>
+
+                                        <div class="flex flex-col gap-4">
+                                            <div class="lfp-physical-timeline-metric">
+                                                <span>RO Status</span>
+                                                <strong>{!! $statusBadge($entry['status_project_ro']) !!}</strong>
+                                            </div>
+
+                                            <div class="lfp-physical-timeline-metric">
+                                                <span>RO Accomplishment</span>
+                                                <strong class="lfp-physical-trend">
+                                                    {!! $physicalTrendIndicator($entry['accomplishment_pct_ro'], $previousEntry['accomplishment_pct_ro'] ?? null) !!}
+                                                    <span>{{ $formatPhysicalPercent($entry['accomplishment_pct_ro']) }}</span>
+                                                </strong>
+                                            </div>
+
+                                            <div class="lfp-physical-timeline-metric">
+                                                <span>RO Slippage</span>
+                                                <strong class="lfp-physical-trend">
+                                                    {!! $physicalTrendIndicator($entry['slippage_ro'], $previousEntry['slippage_ro'] ?? null) !!}
+                                                    <span>{{ $formatPhysicalPercent($entry['slippage_ro']) }}</span>
+                                                </strong>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                @if(!empty($entry['remarks']))
+                                    <div class="lfp-physical-timeline-remarks">
+                                        <span>Remarks</span>
+                                        <p>{{ $entry['remarks'] }}</p>
+                                    </div>
+                                @endif
+                            </div>
+                        </article>
+                    @empty
+                        <div class="lfp-physical-empty-state">No physical accomplishment updates have been logged yet.</div>
+                    @endforelse
+                </div>
+            </details>
+        </div>
+
+        <div id="physicalCompareModalBackdrop" class="lfp-inline-modal-backdrop" aria-hidden="true"></div>
+        <div id="physicalCompareModalWrapper" class="lfp-inline-modal" role="dialog" aria-modal="true" aria-labelledby="physicalCompareModalTitle" aria-hidden="true" style="display: none;">
+            <div class="lfp-inline-modal-header">
+                <h3 id="physicalCompareModalTitle" style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">FOU vs RO Comparison</h3>
+                <button type="button" class="lfp-inline-modal-close" id="physicalCompareModalClose" aria-label="Close physical comparison modal">&times;</button>
+            </div>
+            <div class="lfp-inline-modal-body">
+                <div id="physicalCompareModalContent"></div>
+            </div>
+        </div>
+
+        <div id="editPhysicalFormBackdrop" class="lfp-inline-modal-backdrop{{ old('section') === 'physical' ? ' is-visible' : '' }}" aria-hidden="{{ old('section') === 'physical' ? 'false' : 'true' }}"></div>
+        <div id="editPhysicalFormWrapper" class="lfp-inline-modal{{ old('section') === 'physical' ? ' is-visible' : '' }}" data-inline-modal="true" role="dialog" aria-modal="true" aria-labelledby="editPhysicalModalTitle" aria-hidden="{{ old('section') === 'physical' ? 'false' : 'true' }}" style="display: {{ old('section') === 'physical' ? 'block' : 'none' }};">
+            <div class="lfp-inline-modal-header">
+                <h3 id="editPhysicalModalTitle" style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Edit Physical Accomplishment</h3>
+                <button type="button" class="lfp-inline-modal-close" data-toggle="inline-cancel" data-target="editPhysicalForm" aria-label="Close physical accomplishment editor">&times;</button>
+            </div>
+            <div class="lfp-inline-modal-body">
+            <div class="lfp-physical-modal-grid">
                 <div>
                     <strong>STATUS OF PROJECT (for FOU updating):</strong>
                     {!! $statusBadge($currentPhysical['status_project_fou'] ?? null) !!}
@@ -1288,24 +2175,156 @@
                     </form>
                 </div>
             </div>
-            
+            <div class="lfp-inline-section-footer" style="display: flex;">
+                <button type="button" class="lfp-inline-section-save" data-inline-section-save="editPhysicalForm"><i class="fas fa-check" style="margin-right: 8px;" aria-hidden="true"></i>Save Changes</button>
+                <button type="button" class="lfp-inline-section-cancel" data-inline-section-cancel="editPhysicalForm"><i class="fas fa-times" style="margin-right: 8px;" aria-hidden="true"></i>Cancel</button>
+            </div>
+            </div>
         </div>
 
-        <div id="editFinancialFormBackdrop" class="lfp-inline-modal-backdrop" aria-hidden="true"></div>
-        <div id="financialAccomplishmentSection" class="project-tab-panel lfp-inline-modal-section" data-inline-modal-section="true" data-inline-target="editFinancialForm" data-tab-key="financial" role="tabpanel" aria-labelledby="tab-financial-accomplishment" style="margin-bottom: 24px; padding: 20px; border: 1px solid #00267C; border-radius: 10px; background-color: #ffffff;">
+        <div id="financialAccomplishmentSection" class="project-tab-panel" data-tab-key="financial" role="tabpanel" aria-labelledby="tab-financial-accomplishment" style="margin-bottom: 24px; padding: 20px; border: 1px solid #00267C; border-radius: 10px; background-color: #ffffff;">
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 2px solid #00267C; padding-bottom: 10px;">
-                <h3 class="lfp-financial-section-title" style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Financial Accomplishment (based on Subaybayan)</h3>
+                <h3 class="lfp-physical-section-title" style="color: #00267C; font-size: clamp(14px, 4vw, 18px); font-weight: 700; margin: 0;">Financial Accomplishment (based on Subaybayan)</h3>
                 <div class="lfp-financial-section-actions" style="display: flex; gap: 8px; align-items: center;">
                     @if(!$isLguAgencyUser)
-                        <a href="#" data-toggle="inline-edit" data-target="editFinancialForm" data-financial-toggle="true" style="padding: 6px 12px; background-color: #002C76; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 12px;"><i class="fas fa-edit" style="margin-right: 6px;"></i>Update</a>
+                        <a href="#" class="lfp-inline-edit-trigger" data-toggle="inline-edit" data-target="editFinancialForm" data-financial-toggle="true"><i class="fas fa-edit" aria-hidden="true"></i>Update</a>
                     @endif
-                    <button type="button" class="lfp-inline-modal-close lfp-inline-modal-section-close" data-toggle="inline-cancel" data-target="editFinancialForm" aria-label="Close financial accomplishment editor">&times;</button>
                 </div>
             </div>
+            <div class="lfp-financial-view-stack">
+                <div class="lfp-physical-hero">
+                    <div class="lfp-physical-hero-copy">
+                        <span class="lfp-physical-eyebrow">Funding Snapshot</span>
+                        <h4 class="lfp-physical-hero-title">Monthly financial movement across obligation, disbursement, and balance</h4>
+                        <p class="lfp-physical-hero-text">The financial timeline mirrors the physical accomplishment view so you can scan each logged month, compare movement, and still use the existing inline update flow below.</p>
+                    </div>
+                    <div class="lfp-physical-summary-grid">
+                        <div class="lfp-physical-summary-card">
+                            <span class="lfp-physical-summary-label">Obligated Amount</span>
+                            <div class="lfp-physical-summary-value" id="financialSum-obligation">{{ number_format((float) ($financialTotals['obligation'] ?? 0), 2) }}</div>
+                        </div>
+                        <div class="lfp-physical-summary-card">
+                            <span class="lfp-physical-summary-label">Disbursed Amount</span>
+                            <div class="lfp-physical-summary-value" id="financialSum-disbursed_amount">{{ number_format((float) ($financialTotals['disbursed_amount'] ?? 0), 2) }}</div>
+                        </div>
+                        <div class="lfp-physical-summary-card">
+                            <span class="lfp-physical-summary-label">Reverted Amount</span>
+                            <div class="lfp-physical-summary-value" id="financialSum-reverted_amount">{{ number_format((float) ($financialTotals['reverted_amount'] ?? 0), 2) }}</div>
+                        </div>
+                        <div class="lfp-physical-summary-card">
+                            <span class="lfp-physical-summary-label">Remaining Balance</span>
+                            <div class="lfp-physical-summary-value" id="financialBalance">{{ number_format((float) $financialBalance, 2) }}</div>
+                        </div>
+                        <div class="lfp-physical-summary-card">
+                            <span class="lfp-physical-summary-label">Utilization Rate</span>
+                            <div class="lfp-physical-summary-value" id="financialUtilizationRate" style="color: {{ (float) $financialUtilizationRate < 100 ? '#dc2626' : '#111827' }};">{{ number_format((float) $financialUtilizationRate, 2) . '%' }}</div>
+                        </div>
+                        <div class="lfp-physical-summary-card">
+                            <span class="lfp-physical-summary-label">Latest Logged Month</span>
+                            <div class="lfp-physical-summary-value">{{ $latestFinancialEntry['month_label'] ?? $months[$currentMonth] }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lfp-physical-footer-meta">
+                    <div>
+                        <span>LGSF Allocation</span>
+                        <strong>{{ $formatFinancialCurrency($project->lgsf_allocation) }}</strong>
+                    </div>
+                    <div>
+                        <span>Last Remarks Update</span>
+                        <strong>{{ $project->financial_remarks_updated_at ? $project->financial_remarks_updated_at->format('M d, Y h:i A') : '-' }}</strong>
+                    </div>
+                    <div>
+                        <span>Updated By</span>
+                        <strong>{{ $financialRemarksUpdatedByName ?? 'N/A' }}</strong>
+                    </div>
+                </div>
+
+                <details class="lfp-physical-timeline-details">
+                    <summary class="lfp-physical-timeline-summary">View financial timeline</summary>
+                    <div class="lfp-physical-timeline">
+                        @forelse($financialTimelineEntries as $entry)
+                            @php
+                                $previousEntry = $loop->first ? null : ($financialTimelineEntries[$loop->index - 1] ?? null);
+                            @endphp
+                            <article class="lfp-physical-timeline-item">
+                                <div class="lfp-physical-timeline-node">
+                                    <span>{{ $entry['month_short'] }}</span>
+                                </div>
+                                <div class="lfp-physical-timeline-card">
+                                    <div class="lfp-physical-timeline-card-header">
+                                        <div>
+                                            <p class="lfp-physical-timeline-kicker">Timeline Point</p>
+                                            <h4>{{ $entry['month_label'] }}</h4>
+                                        </div>
+                                        <span class="lfp-physical-timeline-month">{{ str_pad((string) $entry['month_number'], 2, '0', STR_PAD_LEFT) }}</span>
+                                    </div>
+                                    <div class="lfp-financial-timeline-metrics">
+                                        <div class="lfp-physical-timeline-metric">
+                                            <span>Balance</span>
+                                            <strong>{{ $formatFinancialCurrency($entry['balance']) }}</strong>
+                                        </div>
+
+                                        <div class="lfp-physical-timeline-metric">
+                                            <span>Obligation</span>
+                                            <strong class="lfp-physical-trend">
+                                                {!! $financialTrendIndicator($entry['obligation'], $previousEntry['obligation'] ?? null) !!}
+                                                <span>{{ $formatFinancialCurrency($entry['obligation']) }}</span>
+                                            </strong>
+                                        </div>
+
+                                        <div class="lfp-physical-timeline-metric">
+                                            <span>Disbursed</span>
+                                            <strong class="lfp-physical-trend">
+                                                {!! $financialTrendIndicator($entry['disbursed_amount'], $previousEntry['disbursed_amount'] ?? null) !!}
+                                                <span>{{ $formatFinancialCurrency($entry['disbursed_amount']) }}</span>
+                                            </strong>
+                                        </div>
+
+                                        <div class="lfp-physical-timeline-metric">
+                                            <span>Reverted</span>
+                                            <strong class="lfp-physical-trend">
+                                                {!! $financialTrendIndicator($entry['reverted_amount'], $previousEntry['reverted_amount'] ?? null) !!}
+                                                <span>{{ $formatFinancialCurrency($entry['reverted_amount']) }}</span>
+                                            </strong>
+                                        </div>
+
+                                        <div class="lfp-physical-timeline-metric">
+                                            <span>Utilization Rate</span>
+                                            <strong class="lfp-physical-trend">
+                                                {!! $financialTrendIndicator($entry['utilization_rate'], $previousEntry['utilization_rate'] ?? null) !!}
+                                                <span>{{ $formatFinancialPercent($entry['utilization_rate']) }}</span>
+                                            </strong>
+                                        </div>
+                                    </div>
+                                    @if(!empty($entry['remarks']))
+                                        <div class="lfp-physical-timeline-remarks">
+                                            <span>Remarks</span>
+                                            <p>{{ $entry['remarks'] }}</p>
+                                        </div>
+                                    @endif
+                                </div>
+                            </article>
+                        @empty
+                            <div class="lfp-physical-empty-state">No financial accomplishment updates have been logged yet.</div>
+                        @endforelse
+                    </div>
+                </details>
+            </div>
+        </div>
+
+        <div id="editFinancialFormBackdrop" class="lfp-inline-modal-backdrop{{ old('section') === 'financial' ? ' is-visible' : '' }}" aria-hidden="{{ old('section') === 'financial' ? 'false' : 'true' }}"></div>
+        <div id="editFinancialFormWrapper" class="lfp-inline-modal{{ old('section') === 'financial' ? ' is-visible' : '' }}" data-inline-modal="true" role="dialog" aria-modal="true" aria-labelledby="editFinancialModalTitle" aria-hidden="{{ old('section') === 'financial' ? 'false' : 'true' }}" style="display: {{ old('section') === 'financial' ? 'block' : 'none' }};">
+            <div class="lfp-inline-modal-header">
+                <h3 id="editFinancialModalTitle" style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Edit Financial Accomplishment</h3>
+                <button type="button" class="lfp-inline-modal-close" data-toggle="inline-cancel" data-target="editFinancialForm" aria-label="Close financial accomplishment editor">&times;</button>
+            </div>
+            <div class="lfp-inline-modal-body">
             <div style="display: grid; grid-template-columns: 1fr; gap: 16px;">
                 <div>
                     <strong>Obligated Amount:</strong>
-                    <span id="financialSum-obligation">{{ number_format((float) ($financialTotals['obligation'] ?? 0), 2) }}</span>
+                    <span>{{ number_format((float) ($financialTotals['obligation'] ?? 0), 2) }}</span>
                     <details class="monthly-details" style="margin-top: 8px;">
                         <summary class="monthly-summary" style="cursor: pointer; color: #1d4ed8; background-color: #e0e7ff; border: 1px solid #c7d2fe; padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">View monthly Status</summary>
                         <div style="margin-top: 10px;">
@@ -1349,7 +2368,7 @@
 
                 <div>
                     <strong>Disbursed Amount:</strong>
-                    <span id="financialSum-disbursed_amount">{{ number_format((float) ($financialTotals['disbursed_amount'] ?? 0), 2) }}</span>
+                    <span>{{ number_format((float) ($financialTotals['disbursed_amount'] ?? 0), 2) }}</span>
                     <details class="monthly-details" style="margin-top: 8px;">
                         <summary class="monthly-summary" style="cursor: pointer; color: #1d4ed8; background-color: #e0e7ff; border: 1px solid #c7d2fe; padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">View monthly Status</summary>
                         <div style="margin-top: 10px;">
@@ -1393,7 +2412,7 @@
 
                 <div>
                     <strong>Reverted Amount:</strong>
-                    <span id="financialSum-reverted_amount">{{ number_format((float) ($financialTotals['reverted_amount'] ?? 0), 2) }}</span>
+                    <span>{{ number_format((float) ($financialTotals['reverted_amount'] ?? 0), 2) }}</span>
                     <details class="monthly-details" style="margin-top: 8px;">
                         <summary class="monthly-summary" style="cursor: pointer; color: #1d4ed8; background-color: #e0e7ff; border: 1px solid #c7d2fe; padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">View monthly Status</summary>
                         <div style="margin-top: 10px;">
@@ -1437,12 +2456,12 @@
 
                 <div>
                     <strong>Balance:</strong>
-                    <span id="financialBalance">{{ number_format((float) $financialBalance, 2) }}</span>
+                    <span>{{ number_format((float) $financialBalance, 2) }}</span>
                 </div>
 
                 <div>
                     <strong>Utilization Rate:</strong>
-                    <span id="financialUtilizationRate" style="color: {{ (float) $financialUtilizationRate < 100 ? '#dc2626' : '#111827' }};">{{ number_format((float) $financialUtilizationRate, 2) . '%' }}</span>
+                    <span style="color: {{ (float) $financialUtilizationRate < 100 ? '#dc2626' : '#111827' }};">{{ number_format((float) $financialUtilizationRate, 2) . '%' }}</span>
                 </div>
 
                 <div>
@@ -1463,15 +2482,16 @@
                     </form>
                 </div>
             </div>
+            </div>
         </div>
 
         <div id="editMonitoringFormBackdrop" class="lfp-inline-modal-backdrop" aria-hidden="true"></div>
         <div id="monitoringInspectionSection" class="project-tab-panel lfp-inline-modal-section" data-inline-modal-section="true" data-inline-target="editMonitoringForm" data-tab-key="monitoring" role="tabpanel" aria-labelledby="tab-monitoring-inspection" style="margin-bottom: 24px; padding: 20px; border: 1px solid #00267C; border-radius: 10px; background-color: #ffffff;">
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 2px solid #00267C; padding-bottom: 10px;">
-                <h3 style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Monitoring/Inspection Activities</h3>
+                <h3 data-inline-section-heading="true" data-view-title="Monitoring/Inspection Activities" data-edit-title="Edit Monitoring/Inspection Activities" style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Monitoring/Inspection Activities</h3>
                 <div style="display: flex; gap: 8px; align-items: center;">
                     @if(!$isLguAgencyUser)
-                        <a href="#" data-toggle="inline-edit" data-target="editMonitoringForm" data-monitoring-toggle="true" style="padding: 6px 12px; background-color: #002C76; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 12px;"><i class="fas fa-edit" style="margin-right: 6px;"></i>Update</a>
+                        <a href="#" class="lfp-inline-edit-trigger" data-toggle="inline-edit" data-target="editMonitoringForm" data-monitoring-toggle="true"><i class="fas fa-edit" aria-hidden="true"></i>Update</a>
                     @endif
                     <button type="button" class="lfp-inline-modal-close lfp-inline-modal-section-close" data-toggle="inline-cancel" data-target="editMonitoringForm" aria-label="Close monitoring editor">&times;</button>
                 </div>
@@ -1599,10 +2619,10 @@
         <div id="editPostImplementationFormBackdrop" class="lfp-inline-modal-backdrop" aria-hidden="true"></div>
         <div id="postImplementationSection" class="project-tab-panel lfp-inline-modal-section" data-inline-modal-section="true" data-inline-target="editPostImplementationForm" data-tab-key="post-implementation" role="tabpanel" aria-labelledby="tab-post-implementation" style="margin-bottom: 24px; padding: 20px; border: 1px solid #00267C; border-radius: 10px; background-color: #ffffff;">
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 2px solid #00267C; padding-bottom: 10px;">
-                <h3 style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Post Implementation Requirements</h3>
+                <h3 data-inline-section-heading="true" data-view-title="Post Implementation Requirements" data-edit-title="Edit Post Implementation Requirements" style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Post Implementation Requirements</h3>
                 <div style="display: flex; gap: 8px; align-items: center;">
                     @if(!$isLguAgencyUser)
-                        <a href="#" data-toggle="inline-edit" data-target="editPostImplementationForm" data-post-implementation-toggle="true" style="padding: 6px 12px; background-color: #002C76; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 12px;"><i class="fas fa-edit" style="margin-right: 6px;"></i>Update</a>
+                        <a href="#" class="lfp-inline-edit-trigger" data-toggle="inline-edit" data-target="editPostImplementationForm" data-post-implementation-toggle="true"><i class="fas fa-edit" aria-hidden="true"></i>Update</a>
                     @endif
                     <button type="button" class="lfp-inline-modal-close lfp-inline-modal-section-close" data-toggle="inline-cancel" data-target="editPostImplementationForm" aria-label="Close post implementation editor">&times;</button>
                 </div>
@@ -2010,7 +3030,7 @@
             opacity: 0;
             visibility: hidden;
             transition: opacity 0.2s ease, visibility 0.2s ease;
-            z-index: 1190;
+            z-index: 1390;
         }
 
         #activityLogBackdrop.is-visible {
@@ -2028,7 +3048,8 @@
             overflow: auto;
             box-shadow: 0 20px 40px rgba(15, 23, 42, 0.25);
             display: none;
-            z-index: 1200;
+            margin: 0 !important;
+            z-index: 1400;
         }
 
         #activityLogSection.is-visible {
@@ -2147,6 +3168,81 @@
             width: 50%;
             min-width: 320px;
             box-sizing: border-box;
+        }
+
+        .lfp-inline-form-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 16px !important;
+        }
+
+        .lfp-inline-form-save,
+        .lfp-inline-form-cancel {
+            padding: 8px 16px !important;
+            border: none !important;
+            border-radius: 6px !important;
+            font-size: 13px !important;
+            font-weight: 600 !important;
+            cursor: pointer !important;
+        }
+
+        .lfp-inline-form-save {
+            background-color: #16a34a !important;
+            color: #ffffff !important;
+        }
+
+        .lfp-inline-form-cancel {
+            display: none;
+            background-color: #6b7280 !important;
+            color: #ffffff !important;
+        }
+
+        .lfp-inline-section-footer {
+            display: none;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 20px;
+            padding-top: 16px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .lfp-inline-modal-section.is-inline-editing .lfp-inline-section-footer {
+            display: flex;
+        }
+
+        .lfp-inline-section-save,
+        .lfp-inline-section-cancel {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .lfp-inline-section-save {
+            background-color: #16a34a;
+            color: #ffffff;
+        }
+
+        .lfp-inline-section-save:disabled,
+        .lfp-inline-modal button[type="submit"]:disabled,
+        .lfp-inline-modal input[type="submit"]:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        .lfp-inline-section-cancel {
+            background-color: #6b7280;
+            color: #ffffff;
+        }
+
+        button[data-financial-save="true"],
+        button[data-monitoring-save="true"],
+        button[data-post-implementation-save="true"] {
+            display: none !important;
         }
 
         @media (max-width: 1024px) {
@@ -2435,6 +3531,24 @@
                 min-width: 0;
             }
 
+            #editPhysicalFormWrapper > .lfp-inline-modal-body > div[style*="grid-template-columns: repeat(2, minmax(300px, 1fr))"] {
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 12px !important;
+            }
+
+            #editPhysicalFormWrapper > .lfp-inline-modal-body > div[style*="grid-template-columns: repeat(2, minmax(300px, 1fr))"] > div,
+            #editPhysicalFormWrapper > .lfp-inline-modal-body > div[style*="grid-template-columns: repeat(2, minmax(300px, 1fr))"] > form {
+                width: 100%;
+                min-width: 0;
+            }
+
+            #editPhysicalFormWrapper > .lfp-inline-modal-body > .lfp-physical-modal-grid {
+                display: grid !important;
+                grid-template-columns: 1fr !important;
+                gap: 12px !important;
+            }
+
             .lfp-mobile-canvas #monitoringInspectionSection > div[style*="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr))"] {
                 display: flex !important;
                 flex-direction: column !important;
@@ -2599,8 +3713,6 @@
         updateFinancialSums();
 
         const inlineSectionTargetMap = {
-            editPhysicalForm: 'physicalAccomplishmentSection',
-            editFinancialForm: 'financialAccomplishmentSection',
             editMonitoringForm: 'monitoringInspectionSection',
             editPostImplementationForm: 'postImplementationSection',
         };
@@ -2638,9 +3750,30 @@
             return false;
         }
 
+        function syncInlineSectionHeading(targetId, isEditing) {
+            const mappedTargetId = inlineSectionTargetMap[targetId];
+            if (!mappedTargetId) {
+                return;
+            }
+
+            const section = document.getElementById(mappedTargetId);
+            const heading = section ? section.querySelector('[data-inline-section-heading="true"]') : null;
+            if (!heading) {
+                return;
+            }
+
+            heading.textContent = isEditing
+                ? (heading.dataset.editTitle || heading.textContent)
+                : (heading.dataset.viewTitle || heading.textContent);
+        }
+
         function syncBodyModalState() {
             const activityLogModal = document.getElementById('activityLogSection');
             const hasActivityLogModal = activityLogModal ? activityLogModal.classList.contains('is-visible') : false;
+            const physicalCompareModal = document.getElementById('physicalCompareModalWrapper');
+            const hasPhysicalCompareModal = physicalCompareModal
+                ? physicalCompareModal.classList.contains('is-visible') && physicalCompareModal.getAttribute('aria-hidden') !== 'true'
+                : false;
             const hasInlineModal = Array.from(document.querySelectorAll('.lfp-inline-modal[data-inline-modal="true"]')).some((modal) => {
                 return modal.style.display !== 'none' && modal.getAttribute('aria-hidden') !== 'true';
             });
@@ -2648,7 +3781,7 @@
                 return section.classList.contains('is-inline-editing');
             });
 
-            document.body.classList.toggle('modal-open', hasActivityLogModal || hasInlineModal || hasInlineSectionModal);
+            document.body.classList.toggle('modal-open', hasActivityLogModal || hasPhysicalCompareModal || hasInlineModal || hasInlineSectionModal);
         }
 
         function registerInlinePortal(targetId) {
@@ -2703,6 +3836,46 @@
             }
         }
 
+        function registerActivityLogPortal() {
+            const section = document.getElementById('activityLogSection');
+            const backdrop = document.getElementById('activityLogBackdrop');
+
+            if (!section || !backdrop || !section.parentNode || !backdrop.parentNode) {
+                return;
+            }
+
+            const originalParent = section.parentNode;
+            const anchor = document.createElement('span');
+            anchor.hidden = true;
+            originalParent.insertBefore(anchor, section);
+
+            const syncPortal = () => {
+                const isVisible = section.classList.contains('is-visible');
+
+                if (isVisible) {
+                    if (backdrop.parentNode !== document.body) {
+                        document.body.appendChild(backdrop);
+                    }
+
+                    if (section.parentNode !== document.body) {
+                        document.body.appendChild(section);
+                    }
+                } else {
+                    if (section.parentNode !== originalParent) {
+                        originalParent.insertBefore(section, anchor.nextSibling);
+                    }
+
+                    if (backdrop.parentNode !== originalParent) {
+                        originalParent.insertBefore(backdrop, section.nextSibling);
+                    }
+                }
+            };
+
+            syncPortal();
+
+            return syncPortal;
+        }
+
         function getInlineToggleMarkup(label, iconClass) {
             return '<i class="' + iconClass + '" style="margin-right: 6px;" aria-hidden="true"></i>' + label;
         }
@@ -2725,9 +3898,17 @@
                 ? getInlineToggleMarkup('Cancel', 'fas fa-times')
                 : (button.dataset.originalHtml || getInlineToggleMarkup(button.dataset.originalText || 'Update', 'fas fa-edit'));
             button.dataset.inlineState = isEditing ? 'editing' : 'idle';
-            button.style.backgroundColor = isEditing ? '#dc2626' : (button.dataset.originalBg || '');
-            button.style.color = isEditing ? '#ffffff' : (button.dataset.originalColor || '#ffffff');
+            const defaultBackground = button.classList.contains('lfp-inline-edit-trigger') ? '#002C76' : (button.dataset.originalBg || '');
+            const defaultColor = button.classList.contains('lfp-inline-edit-trigger') ? '#ffffff' : (button.dataset.originalColor || '#ffffff');
+            button.style.backgroundColor = isEditing ? '#dc2626' : defaultBackground;
+            button.style.color = isEditing ? '#ffffff' : defaultColor;
             button.setAttribute('aria-label', isEditing ? 'Cancel editing' : (button.dataset.originalText || 'Update'));
+
+            const targetId = button.getAttribute('data-target');
+            const isSectionTarget = targetId && ['editMonitoringForm', 'editPostImplementationForm'].includes(targetId);
+            if (isSectionTarget) {
+                button.style.display = isEditing ? 'none' : 'inline-flex';
+            }
         }
 
         function openInlineEdit(button) {
@@ -2747,6 +3928,7 @@
 
             if (isInlineSectionTarget(targetId, inlineElements)) {
                 target.classList.add('is-inline-editing');
+                syncInlineSectionHeading(targetId, true);
             }
 
             if (backdrop && (wrapper || isInlineSectionTarget(targetId, inlineElements))) {
@@ -2754,6 +3936,8 @@
                 backdrop.setAttribute('aria-hidden', 'false');
             }
 
+            snapshotInlineEditFields(targetId);
+            syncInlineEditSaveState(targetId);
             syncInlinePortalState(targetId);
             syncBodyModalState();
 
@@ -2815,6 +3999,9 @@
                         saveBtn.style.display = 'none';
                     }
                 });
+                document.querySelectorAll('[data-inline-form-cancel="true"][data-target="editFinancialForm"]').forEach((cancelBtn) => {
+                    cancelBtn.style.display = isROUser ? 'inline-block' : 'none';
+                });
             }
 
             if (button.hasAttribute('data-monitoring-toggle')) {
@@ -2845,6 +4032,12 @@
                     } else {
                         saveBtn.style.display = 'none';
                     }
+                });
+                document.querySelectorAll('[data-inline-form-cancel="true"][data-target="editMonitoringForm"]').forEach((cancelBtn) => {
+                    const form = cancelBtn.closest('form');
+                    const input = form ? form.querySelector('[data-monitoring-edit="true"]') : null;
+
+                    cancelBtn.style.display = input && !input.disabled ? 'inline-block' : 'none';
                 });
             }
 
@@ -2877,6 +4070,12 @@
                         saveBtn.style.display = 'none';
                     }
                 });
+                document.querySelectorAll('[data-inline-form-cancel="true"][data-target="editPostImplementationForm"]').forEach((cancelBtn) => {
+                    const form = cancelBtn.closest('form');
+                    const input = form ? form.querySelector('[data-post-implementation-edit="true"]') : null;
+
+                    cancelBtn.style.display = input && !input.disabled ? 'inline-block' : 'none';
+                });
             }
         }
 
@@ -2887,11 +4086,17 @@
             'editFinancialForm',
             'editMonitoringForm',
             'editPostImplementationForm',
-        ].forEach(registerInlinePortal);
+        ].forEach((targetId) => {
+            registerInlinePortal(targetId);
+            syncInlineSectionHeading(targetId, isInlineEditOpen(targetId));
+        });
 
         function closeInlineEdit(targetId) {
             const inlineElements = getInlineEditElements(targetId);
             const { target, wrapper, backdrop } = inlineElements;
+
+            restoreInlineEditFields(targetId);
+
             if (wrapper) {
                 wrapper.style.display = 'none';
                 wrapper.classList.remove('is-visible');
@@ -2900,6 +4105,7 @@
 
             if (isInlineSectionTarget(targetId, inlineElements)) {
                 target.classList.remove('is-inline-editing');
+                syncInlineSectionHeading(targetId, false);
             }
 
             if (backdrop) {
@@ -2922,6 +4128,9 @@
                 document.querySelectorAll('[data-financial-save="true"]').forEach((saveBtn) => {
                     saveBtn.style.display = 'none';
                 });
+                document.querySelectorAll('[data-inline-form-cancel="true"][data-target="editFinancialForm"]').forEach((cancelBtn) => {
+                    cancelBtn.style.display = 'none';
+                });
             }
 
             if (targetId === 'editMonitoringForm') {
@@ -2931,6 +4140,9 @@
                 });
                 document.querySelectorAll('[data-monitoring-save="true"]').forEach((saveBtn) => {
                     saveBtn.style.display = 'none';
+                });
+                document.querySelectorAll('[data-inline-form-cancel="true"][data-target="editMonitoringForm"]').forEach((cancelBtn) => {
+                    cancelBtn.style.display = 'none';
                 });
             }
 
@@ -2942,8 +4154,12 @@
                 document.querySelectorAll('[data-post-implementation-save="true"]').forEach((saveBtn) => {
                     saveBtn.style.display = 'none';
                 });
+                document.querySelectorAll('[data-inline-form-cancel="true"][data-target="editPostImplementationForm"]').forEach((cancelBtn) => {
+                    cancelBtn.style.display = 'none';
+                });
             }
 
+            syncInlineEditSaveState(targetId);
             syncInlinePortalState(targetId);
             syncBodyModalState();
         }
@@ -2970,9 +4186,339 @@
             document.querySelectorAll(saveSelectors.join(',')).forEach((saveBtn) => {
                 saveBtn.style.display = 'none';
             });
+
+            document.querySelectorAll('[data-inline-form-cancel="true"]').forEach((cancelBtn) => {
+                cancelBtn.style.display = 'none';
+            });
         }
 
         disableAllEditableControlsOnLoad();
+
+        const inlineEditConfigs = {
+            editProfileForm: {
+                selector: 'input, select, textarea',
+                scope: 'form',
+                submitMode: 'native',
+            },
+            editContractForm: {
+                selector: 'input, select, textarea',
+                scope: 'form',
+                submitMode: 'native',
+            },
+            editPhysicalForm: {
+                selector: '[data-physical-edit="true"]',
+                scope: 'section',
+                submitMode: 'ajax',
+                fallbackSection: 'physical',
+            },
+            editFinancialForm: {
+                selector: '[data-financial-edit="true"]',
+                scope: 'section',
+                submitMode: 'ajax',
+                fallbackSection: 'financial',
+            },
+            editMonitoringForm: {
+                selector: '[data-monitoring-edit="true"]',
+                scope: 'section',
+                submitMode: 'ajax',
+                fallbackSection: 'monitoring',
+            },
+            editPostImplementationForm: {
+                selector: '[data-post-implementation-edit="true"]',
+                scope: 'section',
+                submitMode: 'ajax',
+                fallbackSection: 'monitoring',
+            },
+        };
+
+        function getInlineEditConfig(targetId) {
+            return inlineEditConfigs[targetId] || null;
+        }
+
+        function getInlineSectionElement(targetId) {
+            return document.querySelector('.lfp-inline-modal-section[data-inline-target="' + targetId + '"]')
+                || document.getElementById(targetId + 'Wrapper');
+        }
+
+        function getInlineEditScopeElement(targetId) {
+            const config = getInlineEditConfig(targetId);
+            if (!config) {
+                return null;
+            }
+
+            if (config.scope === 'section') {
+                return getInlineSectionElement(targetId);
+            }
+
+            return document.getElementById(targetId);
+        }
+
+        function isTrackedInlineEditField(field) {
+            if (!field || !field.name) {
+                return false;
+            }
+
+            if (field.matches('button, input[type="submit"], input[type="button"], input[type="reset"], input[type="image"]')) {
+                return false;
+            }
+
+            if (field.type === 'hidden' && ['_token', '_method', 'section'].includes(field.name)) {
+                return false;
+            }
+
+            return true;
+        }
+
+        function getTrackedInlineEditValue(field) {
+            if (!field) {
+                return '';
+            }
+
+            if (field.type === 'file') {
+                return Array.from(field.files || []).map((file) => {
+                    return [file.name, file.size, file.lastModified].join(':');
+                }).join('|');
+            }
+
+            if (field.tagName === 'SELECT' && field.multiple) {
+                return Array.from(field.selectedOptions || []).map((option) => option.value).join('|');
+            }
+
+            return getEditableFieldValue(field);
+        }
+
+        function getInlineEditFields(targetId) {
+            const config = getInlineEditConfig(targetId);
+            const scopeElement = getInlineEditScopeElement(targetId);
+            if (!config || !scopeElement) {
+                return [];
+            }
+
+            return Array.from(scopeElement.querySelectorAll(config.selector)).filter(isTrackedInlineEditField);
+        }
+
+        function snapshotInlineEditFields(targetId) {
+            const scopeElement = getInlineEditScopeElement(targetId);
+            if (scopeElement) {
+                delete scopeElement.dataset.forceInlineDirty;
+            }
+
+            getInlineEditFields(targetId).forEach((field) => {
+                field.dataset.inlineOriginalValue = getTrackedInlineEditValue(field);
+            });
+        }
+
+        function restoreInlineEditFields(targetId) {
+            getInlineEditFields(targetId).forEach((field) => {
+                if (!Object.prototype.hasOwnProperty.call(field.dataset, 'inlineOriginalValue')) {
+                    return;
+                }
+
+                if (field.type === 'file') {
+                    field.value = '';
+                    return;
+                }
+
+                setEditableFieldValue(field, field.dataset.inlineOriginalValue);
+            });
+
+            if (targetId === 'editProfileForm' && typeof window.syncProjectBarangayPicker === 'function') {
+                window.syncProjectBarangayPicker();
+            }
+        }
+
+        function hasInlineEditChanges(targetId) {
+            const scopeElement = getInlineEditScopeElement(targetId);
+            if (scopeElement && scopeElement.dataset.forceInlineDirty === 'true') {
+                return true;
+            }
+
+            return getInlineEditFields(targetId).some((field) => {
+                const originalValue = Object.prototype.hasOwnProperty.call(field.dataset, 'inlineOriginalValue')
+                    ? field.dataset.inlineOriginalValue
+                    : getTrackedInlineEditValue(field);
+
+                return getTrackedInlineEditValue(field) !== originalValue;
+            });
+        }
+
+        function getInlineEditSaveButtons(targetId) {
+            const config = getInlineEditConfig(targetId);
+            const scopeElement = getInlineEditScopeElement(targetId);
+            if (!config || !scopeElement) {
+                return [];
+            }
+
+            if (config.submitMode === 'ajax') {
+                return Array.from(scopeElement.querySelectorAll('[data-inline-section-save="' + targetId + '"]'));
+            }
+
+            return Array.from(scopeElement.querySelectorAll('button[type="submit"], input[type="submit"]'));
+        }
+
+        function syncInlineEditSaveState(targetId) {
+            const hasChanges = hasInlineEditChanges(targetId);
+            getInlineEditSaveButtons(targetId).forEach((button) => {
+                button.disabled = !hasChanges;
+                button.setAttribute('aria-disabled', hasChanges ? 'false' : 'true');
+            });
+        }
+
+        function finalizeInlineEditClose(targetId) {
+            closeInlineEdit(targetId);
+            const editButton = document.querySelector('[data-toggle="inline-edit"][data-target="' + targetId + '"]');
+            setInlineToggleState(editButton, false);
+        }
+
+        function requestInlineEditClose(targetId) {
+            if (!hasInlineEditChanges(targetId)) {
+                finalizeInlineEditClose(targetId);
+                return;
+            }
+
+            openReusableConfirmation(
+                'You have unsaved changes. Discard them?',
+                () => {
+                    finalizeInlineEditClose(targetId);
+                }
+            );
+        }
+
+        function requestInlineSectionSave(targetId) {
+            if (!hasInlineEditChanges(targetId)) {
+                syncInlineEditSaveState(targetId);
+                return;
+            }
+
+            openReusableConfirmation(
+                'Save the changes in this section?',
+                () => {
+                    submitInlineSection(targetId);
+                }
+            );
+        }
+
+        function initializeInlineSectionFooters() {
+            document.querySelectorAll('.lfp-inline-modal-section[data-inline-target]').forEach((section) => {
+                if (section.querySelector('.lfp-inline-section-footer')) {
+                    return;
+                }
+
+                const targetId = section.getAttribute('data-inline-target');
+                const footer = document.createElement('div');
+                footer.className = 'lfp-inline-section-footer';
+                footer.innerHTML = '' +
+                    '<button type="button" class="lfp-inline-section-save" data-inline-section-save="' + targetId + '">' +
+                        '<i class="fas fa-check" style="margin-right: 8px;" aria-hidden="true"></i>Save Changes' +
+                    '</button>' +
+                    '<button type="button" class="lfp-inline-section-cancel" data-inline-section-cancel="' + targetId + '">' +
+                        '<i class="fas fa-times" style="margin-right: 8px;" aria-hidden="true"></i>Cancel' +
+                    '</button>';
+
+                section.appendChild(footer);
+            });
+        }
+
+        async function submitInlineSection(targetId) {
+            const section = getInlineEditScopeElement(targetId);
+            const config = getInlineEditConfig(targetId);
+            if (!section || !config) {
+                return;
+            }
+
+            const fields = getInlineEditFields(targetId).filter((field) => !field.disabled && field.name);
+            const referenceForm = section.querySelector('form[action]');
+            if (!referenceForm) {
+                return;
+            }
+
+            if (!hasInlineEditChanges(targetId)) {
+                syncInlineEditSaveState(targetId);
+                return;
+            }
+
+            const actionUrl = referenceForm.getAttribute('action');
+            const sectionField = referenceForm.querySelector('input[name="section"]');
+            const sectionValue = sectionField ? sectionField.value : config.fallbackSection;
+            const formData = new FormData();
+
+            formData.append('_token', '{{ csrf_token() }}');
+            formData.append('_method', 'PUT');
+            formData.append('section', sectionValue);
+
+            fields.forEach((field) => {
+                if (field.type === 'file') {
+                    Array.from(field.files || []).forEach((file) => {
+                        formData.append(field.name, file);
+                    });
+                    return;
+                }
+
+                if ((field.type === 'checkbox' || field.type === 'radio') && !field.checked) {
+                    return;
+                }
+
+                formData.append(field.name, field.value);
+            });
+
+            const saveButton = section.querySelector('[data-inline-section-save="' + targetId + '"]');
+            if (saveButton) {
+                saveButton.disabled = true;
+            }
+
+            try {
+                const response = await fetch(actionUrl, {
+                    method: 'POST',
+                    body: formData,
+                    credentials: 'same-origin',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'text/html,application/xhtml+xml',
+                    },
+                });
+
+                const html = await response.text();
+                if (!response.ok) {
+                    throw new Error('Request failed');
+                }
+
+                document.open();
+                document.write(html);
+                document.close();
+            } catch (error) {
+                if (saveButton) {
+                    saveButton.disabled = false;
+                }
+
+                if (typeof window.showSystemErrorModal === 'function') {
+                    window.showSystemErrorModal('Unable to save changes right now.');
+                }
+            }
+        }
+
+        initializeInlineSectionFooters();
+        Object.keys(inlineEditConfigs).forEach((targetId) => {
+            syncInlineEditSaveState(targetId);
+        });
+        const initialInlineDirtySectionKey = @json($errors->any() ? old('section') : '');
+        const initialInlineDirtyTargetId = initialInlineDirtySectionKey
+            ? ({
+                profile: 'editProfileForm',
+                contract: 'editContractForm',
+                physical: 'editPhysicalForm',
+                financial: 'editFinancialForm',
+                monitoring: 'editMonitoringForm',
+                'post-implementation': 'editPostImplementationForm',
+            }[initialInlineDirtySectionKey] || '')
+            : '';
+        if (initialInlineDirtyTargetId) {
+            const scopeElement = getInlineEditScopeElement(initialInlineDirtyTargetId);
+            if (scopeElement) {
+                scopeElement.dataset.forceInlineDirty = 'true';
+                syncInlineEditSaveState(initialInlineDirtyTargetId);
+            }
+        }
+        
 
         function submitFieldChangeForm(field) {
             if (!field) {
@@ -3150,8 +4696,6 @@
             });
         }
 
-        initializeFieldChangeConfirmation();
-
         document.querySelectorAll('[data-toggle="inline-edit"]').forEach((button) => {
             const targetId = button.getAttribute('data-target');
             setInlineToggleState(button, isInlineEditOpen(targetId));
@@ -3159,8 +4703,7 @@
             button.addEventListener('click', (event) => {
                 event.preventDefault();
                 if (button.dataset.inlineState === 'editing') {
-                    closeInlineEdit(targetId);
-                    setInlineToggleState(button, false);
+                    requestInlineEditClose(targetId);
                     return;
                 }
 
@@ -3171,21 +4714,78 @@
 
         syncBodyModalState();
 
+        document.querySelectorAll('[data-inline-section-save]').forEach((button) => {
+            button.addEventListener('click', () => {
+                const targetId = button.getAttribute('data-inline-section-save');
+                requestInlineSectionSave(targetId);
+            });
+        });
+
+        document.querySelectorAll('[data-inline-section-cancel]').forEach((button) => {
+            button.addEventListener('click', () => {
+                const targetId = button.getAttribute('data-inline-section-cancel');
+                requestInlineEditClose(targetId);
+            });
+        });
+
         document.querySelectorAll('[data-toggle="inline-cancel"]').forEach((button) => {
             button.addEventListener('click', () => {
                 const targetId = button.getAttribute('data-target');
-                closeInlineEdit(targetId);
-                const editButton = document.querySelector('[data-toggle="inline-edit"][data-target="' + targetId + '"]');
-                setInlineToggleState(editButton, false);
+                requestInlineEditClose(targetId);
             });
         });
 
         document.querySelectorAll('.lfp-inline-modal-backdrop').forEach((backdrop) => {
             backdrop.addEventListener('click', () => {
                 const targetId = backdrop.id.replace(/Backdrop$/, '');
-                closeInlineEdit(targetId);
-                const editButton = document.querySelector('[data-toggle="inline-edit"][data-target="' + targetId + '"]');
-                setInlineToggleState(editButton, false);
+                requestInlineEditClose(targetId);
+            });
+        });
+
+        Object.keys(inlineEditConfigs).forEach((targetId) => {
+            getInlineEditFields(targetId).forEach((field) => {
+                const updateState = () => {
+                    syncInlineEditSaveState(targetId);
+                };
+
+                field.addEventListener('input', updateState);
+                field.addEventListener('change', updateState);
+            });
+        });
+
+        ['editProfileForm', 'editContractForm'].forEach((targetId) => {
+            const form = document.getElementById(targetId);
+            if (!form) {
+                return;
+            }
+
+            form.addEventListener('submit', (event) => {
+                if (form.dataset.inlineSubmitConfirmed === 'true') {
+                    delete form.dataset.inlineSubmitConfirmed;
+                    return;
+                }
+
+                event.preventDefault();
+                syncInlineEditSaveState(targetId);
+
+                if (!hasInlineEditChanges(targetId)) {
+                    return;
+                }
+
+                const submitter = event.submitter || form.querySelector('button[type="submit"], input[type="submit"]');
+                openReusableConfirmation(
+                    'Save the changes in this section?',
+                    () => {
+                        form.dataset.inlineSubmitConfirmed = 'true';
+
+                        if (submitter && typeof form.requestSubmit === 'function') {
+                            form.requestSubmit(submitter);
+                            return;
+                        }
+
+                        form.submit();
+                    }
+                );
             });
         });
 
@@ -3314,10 +4914,91 @@
             setActiveProjectPanel(initialPanelId);
         }
 
+        const physicalCompareModalWrapper = document.getElementById('physicalCompareModalWrapper');
+        const physicalCompareModalBackdrop = document.getElementById('physicalCompareModalBackdrop');
+        const physicalCompareModalClose = document.getElementById('physicalCompareModalClose');
+        const physicalCompareModalTitle = document.getElementById('physicalCompareModalTitle');
+        const physicalCompareModalContent = document.getElementById('physicalCompareModalContent');
+
+        function closePhysicalCompareModal() {
+            if (!physicalCompareModalWrapper || !physicalCompareModalBackdrop || !physicalCompareModalContent) {
+                return;
+            }
+
+            physicalCompareModalWrapper.classList.remove('is-visible');
+            physicalCompareModalWrapper.style.display = 'none';
+            physicalCompareModalWrapper.setAttribute('aria-hidden', 'true');
+            physicalCompareModalBackdrop.classList.remove('is-visible');
+            physicalCompareModalBackdrop.setAttribute('aria-hidden', 'true');
+            physicalCompareModalContent.innerHTML = '';
+            syncBodyModalState();
+        }
+
+        function openPhysicalCompareModal(button) {
+            if (!physicalCompareModalWrapper || !physicalCompareModalBackdrop || !physicalCompareModalTitle || !physicalCompareModalContent) {
+                return;
+            }
+
+            const timelineCard = button.closest('.lfp-physical-timeline-card');
+            const comparisonSource = timelineCard ? timelineCard.querySelector('.lfp-physical-timeline-columns') : null;
+            if (!comparisonSource) {
+                return;
+            }
+
+            const comparisonClone = comparisonSource.cloneNode(true);
+            comparisonClone.classList.remove('lfp-physical-timeline-columns');
+            comparisonClone.classList.add('lfp-physical-compare-modal-grid');
+
+            const columns = Array.from(comparisonClone.children);
+            columns.forEach((column, index) => {
+                column.classList.remove('flex', 'flex-col', 'gap-4');
+                column.classList.add('lfp-physical-compare-modal-column');
+
+                const heading = document.createElement('h4');
+                heading.className = 'lfp-physical-compare-modal-heading';
+                heading.textContent = index === 0 ? 'FOU' : 'RO';
+                column.insertBefore(heading, column.firstChild);
+            });
+
+            physicalCompareModalTitle.textContent = button.getAttribute('data-physical-compare-title') || 'FOU vs RO Comparison';
+            physicalCompareModalContent.innerHTML = '';
+            physicalCompareModalContent.appendChild(comparisonClone);
+
+            physicalCompareModalWrapper.style.display = 'flex';
+            physicalCompareModalWrapper.classList.add('is-visible');
+            physicalCompareModalWrapper.setAttribute('aria-hidden', 'false');
+            physicalCompareModalBackdrop.classList.add('is-visible');
+            physicalCompareModalBackdrop.setAttribute('aria-hidden', 'false');
+            syncBodyModalState();
+
+            if (physicalCompareModalClose) {
+                physicalCompareModalClose.focus();
+            }
+        }
+
+        document.querySelectorAll('[data-physical-compare-trigger="true"]').forEach((button) => {
+            button.addEventListener('click', () => {
+                openPhysicalCompareModal(button);
+            });
+        });
+
+        if (physicalCompareModalBackdrop) {
+            physicalCompareModalBackdrop.addEventListener('click', () => {
+                closePhysicalCompareModal();
+            });
+        }
+
+        if (physicalCompareModalClose) {
+            physicalCompareModalClose.addEventListener('click', () => {
+                closePhysicalCompareModal();
+            });
+        }
+
         const activityLogSection = document.getElementById('activityLogSection');
         const activityLogBackdrop = document.getElementById('activityLogBackdrop');
         const activityLogFab = document.getElementById('activityLogFab');
         const activityLogClose = document.getElementById('activityLogClose');
+        const syncActivityLogPortal = registerActivityLogPortal();
 
         function setActivityLogVisibility(isVisible) {
             if (!activityLogSection || !activityLogFab || !activityLogBackdrop) {
@@ -3330,6 +5011,9 @@
             activityLogFab.dataset.state = isVisible ? 'open' : 'closed';
             activityLogSection.setAttribute('aria-hidden', isVisible ? 'false' : 'true');
             activityLogBackdrop.setAttribute('aria-hidden', isVisible ? 'false' : 'true');
+            if (typeof syncActivityLogPortal === 'function') {
+                syncActivityLogPortal();
+            }
             syncBodyModalState();
 
             const labelSpan = activityLogFab.querySelector('span');
@@ -3360,6 +5044,11 @@
 
             document.addEventListener('keydown', (event) => {
                 if (event.key !== 'Escape') {
+                    return;
+                }
+
+                if (physicalCompareModalWrapper && physicalCompareModalWrapper.classList.contains('is-visible')) {
+                    closePhysicalCompareModal();
                     return;
                 }
 
