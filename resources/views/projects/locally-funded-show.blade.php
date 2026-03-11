@@ -452,7 +452,7 @@
             </div>
             <div class="project-profile-grid" style="display: grid; grid-template-columns: repeat(2, minmax(260px, 1fr)); gap: 14px;">
                 <div style="grid-column: 1 / -1;">
-                    <span style="font-weight: 700; color: #000000;">Project Description:</span>
+                    <span style="font-weight: 700; color: #374151;">Project Description:</span>
                     </br>
                     <span class="text-[#374151]" style="margin-top: 6px; color: #374151;">{!! nl2br(e($project->project_description)) !!}</span>
                 </div>
@@ -474,8 +474,6 @@
                                 </ul>
                             @endif
                         </span>
-                        <span><strong>LGSF Allocation:</strong> ₱ {{ number_format($project->lgsf_allocation, 2) }}</span>
-                        <span><strong>LGU Counterpart:</strong> ₱ {{ number_format($project->lgu_counterpart, 2) }}</span>
                     </div>
 
                     <!-- OTHER INFO -->
@@ -485,6 +483,8 @@
                         <span><strong>No. of Beneficiaries:</strong> {{ number_format($project->no_of_beneficiaries) }}</span>
                         <span><strong>Rainwater Collection System:</strong> {{ $project->rainwater_collection_system }}</span>
                         <span><strong>Date of Confirmation Fund Receipt:</strong> {{ $project->date_confirmation_fund_receipt ? $project->date_confirmation_fund_receipt->format('F j, Y') : '' }}</span>
+                        <span><strong>LGSF Allocation:</strong> ₱ {{ number_format($project->lgsf_allocation, 2) }}</span>
+                        <span><strong>LGU Counterpart:</strong> ₱ {{ number_format($project->lgu_counterpart, 2) }}</span>
                     </div>
             </div>
             @if($canEditProjectProfile)
@@ -1996,6 +1996,7 @@
         #postImplementationSection,
         #activityLogSection {
             font-size: 0.9em;
+            color: #374151;
         }
 
         #activityLogBackdrop {
