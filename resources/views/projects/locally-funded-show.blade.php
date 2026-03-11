@@ -498,6 +498,59 @@
             background: #f8fafc;
         }
 
+        .lfp-financial-view-stack {
+            display: grid;
+            gap: 18px;
+            margin-bottom: 20px;
+        }
+
+        .lfp-financial-edit-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 16px;
+        }
+
+        .lfp-financial-edit-card {
+            padding: 16px;
+            border: 1px solid #dbeafe;
+            border-radius: 14px;
+            background: #ffffff;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+        }
+
+        .lfp-financial-edit-card--full {
+            grid-column: 1 / -1;
+        }
+
+        .lfp-financial-edit-summary {
+            margin: 0 0 8px;
+            color: #0f172a;
+            font-size: 15px;
+            font-weight: 700;
+        }
+
+        .lfp-financial-edit-summary span {
+            color: #1d4ed8;
+        }
+
+        .lfp-financial-timeline-metrics {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        @media (max-width: 1200px) {
+            .lfp-financial-timeline-metrics {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 768px) {
+            .lfp-financial-timeline-metrics {
+                grid-template-columns: 1fr;
+            }
+        }
+
         @media (max-width: 768px) {
             .lfp-summary-card {
                 padding: 16px;
@@ -1310,6 +1363,89 @@
                 ];
             }
 
+            $formatFinancialCurrency = function ($value) {
+                if ($value === null || $value === '') {
+                    return '-';
+                }
+
+                return 'PHP ' . number_format((float) $value, 2);
+            };
+
+            $formatFinancialPercent = function ($value) {
+                if ($value === null || $value === '') {
+                    return '-';
+                }
+
+                return number_format((float) $value, 2) . '%';
+            };
+
+            $financialTrendIndicator = function ($currentValue, $previousValue) {
+                if (!is_numeric($currentValue) || !is_numeric($previousValue)) {
+                    return '';
+                }
+
+                $current = (float) $currentValue;
+                $previous = (float) $previousValue;
+
+                if ($current > $previous) {
+                    return '<span class="lfp-physical-trend-indicator is-up !text-2xl !font-bold" title="Higher than the previous logged month">&#8593;</span>';
+                }
+
+                if ($current < $previous) {
+                    return '<span class="lfp-physical-trend-indicator is-down !text-2xl !font-bold" title="Lower than the previous logged month">&#8595;</span>';
+                }
+
+                return '';
+            };
+
+            $financialAllocation = (float) ($project->lgsf_allocation ?? 0);
+            $financialTimelineEntries = [];
+            $latestFinancialEntry = null;
+            foreach ($months as $monthNumber => $monthName) {
+                $row = $financialByMonth[$monthNumber] ?? [];
+                $hasData = collect([
+                    $row['obligation'] ?? null,
+                    $row['disbursed_amount'] ?? null,
+                    $row['reverted_amount'] ?? null,
+                ])->contains(function ($value) {
+                    return $value !== null && $value !== '';
+                });
+
+                if (!$hasData) {
+                    continue;
+                }
+
+                $monthDisbursed = (float) ($row['disbursed_amount'] ?? 0);
+                $monthReverted = (float) ($row['reverted_amount'] ?? 0);
+                $monthBalance = $financialAllocation - ($monthDisbursed + $monthReverted);
+                $monthUtilizationRate = $financialAllocation > 0
+                    ? (($monthDisbursed + $monthReverted) / $financialAllocation) * 100
+                    : 0;
+
+                $entry = [
+                    'month_number' => $monthNumber,
+                    'month_label' => $monthName,
+                    'month_short' => substr($monthName, 0, 3),
+                    'obligation' => $row['obligation'] ?? null,
+                    'disbursed_amount' => $row['disbursed_amount'] ?? null,
+                    'reverted_amount' => $row['reverted_amount'] ?? null,
+                    'balance' => $monthBalance,
+                    'utilization_rate' => $monthUtilizationRate,
+                    'remarks' => $monthNumber === (int) $currentMonth ? ($project->financial_remarks ?? null) : null,
+                ];
+
+                $financialTimelineEntries[] = $entry;
+                $latestFinancialEntry = $entry;
+            }
+
+            $currentFinancial = $latestFinancialEntry ?? [
+                'obligation' => $financialTotals['obligation'] ?? null,
+                'disbursed_amount' => $financialTotals['disbursed_amount'] ?? null,
+                'reverted_amount' => $financialTotals['reverted_amount'] ?? null,
+                'balance' => $financialBalance ?? 0,
+                'utilization_rate' => $financialUtilizationRate ?? 0,
+            ];
+
         @endphp
 
         <div id="physicalAccomplishmentSection" class="project-tab-panel" data-tab-key="physical" role="tabpanel" aria-labelledby="tab-physical-accomplishment" style="margin-bottom: 24px; padding: 20px; border: 1px solid #00267C; border-radius: 10px; background-color: #ffffff;">
@@ -1875,21 +2011,149 @@
             </div>
         </div>
 
-        <div id="editFinancialFormBackdrop" class="lfp-inline-modal-backdrop" aria-hidden="true"></div>
-        <div id="financialAccomplishmentSection" class="project-tab-panel lfp-inline-modal-section" data-inline-modal-section="true" data-inline-target="editFinancialForm" data-tab-key="financial" role="tabpanel" aria-labelledby="tab-financial-accomplishment" style="margin-bottom: 24px; padding: 20px; border: 1px solid #00267C; border-radius: 10px; background-color: #ffffff;">
+        <div id="financialAccomplishmentSection" class="project-tab-panel" data-tab-key="financial" role="tabpanel" aria-labelledby="tab-financial-accomplishment" style="margin-bottom: 24px; padding: 20px; border: 1px solid #00267C; border-radius: 10px; background-color: #ffffff;">
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 2px solid #00267C; padding-bottom: 10px;">
-                <h3 class="lfp-financial-section-title" data-inline-section-heading="true" data-view-title="Financial Accomplishment (based on Subaybayan)" data-edit-title="Edit Financial Accomplishment" style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Financial Accomplishment (based on Subaybayan)</h3>
+                <h3 class="lfp-physical-section-title" style="color: #00267C; font-size: clamp(14px, 4vw, 18px); font-weight: 700; margin: 0;">Financial Accomplishment (based on Subaybayan)</h3>
                 <div class="lfp-financial-section-actions" style="display: flex; gap: 8px; align-items: center;">
                     @if(!$isLguAgencyUser)
                         <a href="#" class="lfp-inline-edit-trigger" data-toggle="inline-edit" data-target="editFinancialForm" data-financial-toggle="true"><i class="fas fa-edit" aria-hidden="true"></i>Update</a>
                     @endif
-                    <button type="button" class="lfp-inline-modal-close lfp-inline-modal-section-close" data-toggle="inline-cancel" data-target="editFinancialForm" aria-label="Close financial accomplishment editor">&times;</button>
                 </div>
             </div>
+            <div class="lfp-financial-view-stack">
+                <div class="lfp-physical-hero">
+                    <div class="lfp-physical-hero-copy">
+                        <span class="lfp-physical-eyebrow">Funding Snapshot</span>
+                        <h4 class="lfp-physical-hero-title">Monthly financial movement across obligation, disbursement, and balance</h4>
+                        <p class="lfp-physical-hero-text">The financial timeline mirrors the physical accomplishment view so you can scan each logged month, compare movement, and still use the existing inline update flow below.</p>
+                    </div>
+                    <div class="lfp-physical-summary-grid">
+                        <div class="lfp-physical-summary-card">
+                            <span class="lfp-physical-summary-label">Obligated Amount</span>
+                            <div class="lfp-physical-summary-value" id="financialSum-obligation">{{ number_format((float) ($financialTotals['obligation'] ?? 0), 2) }}</div>
+                        </div>
+                        <div class="lfp-physical-summary-card">
+                            <span class="lfp-physical-summary-label">Disbursed Amount</span>
+                            <div class="lfp-physical-summary-value" id="financialSum-disbursed_amount">{{ number_format((float) ($financialTotals['disbursed_amount'] ?? 0), 2) }}</div>
+                        </div>
+                        <div class="lfp-physical-summary-card">
+                            <span class="lfp-physical-summary-label">Reverted Amount</span>
+                            <div class="lfp-physical-summary-value" id="financialSum-reverted_amount">{{ number_format((float) ($financialTotals['reverted_amount'] ?? 0), 2) }}</div>
+                        </div>
+                        <div class="lfp-physical-summary-card">
+                            <span class="lfp-physical-summary-label">Remaining Balance</span>
+                            <div class="lfp-physical-summary-value" id="financialBalance">{{ number_format((float) $financialBalance, 2) }}</div>
+                        </div>
+                        <div class="lfp-physical-summary-card">
+                            <span class="lfp-physical-summary-label">Utilization Rate</span>
+                            <div class="lfp-physical-summary-value" id="financialUtilizationRate" style="color: {{ (float) $financialUtilizationRate < 100 ? '#dc2626' : '#111827' }};">{{ number_format((float) $financialUtilizationRate, 2) . '%' }}</div>
+                        </div>
+                        <div class="lfp-physical-summary-card">
+                            <span class="lfp-physical-summary-label">Latest Logged Month</span>
+                            <div class="lfp-physical-summary-value">{{ $latestFinancialEntry['month_label'] ?? $months[$currentMonth] }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lfp-physical-footer-meta">
+                    <div>
+                        <span>LGSF Allocation</span>
+                        <strong>{{ $formatFinancialCurrency($project->lgsf_allocation) }}</strong>
+                    </div>
+                    <div>
+                        <span>Last Remarks Update</span>
+                        <strong>{{ $project->financial_remarks_updated_at ? $project->financial_remarks_updated_at->format('M d, Y h:i A') : '-' }}</strong>
+                    </div>
+                    <div>
+                        <span>Updated By</span>
+                        <strong>{{ $financialRemarksUpdatedByName ?? 'N/A' }}</strong>
+                    </div>
+                </div>
+
+                <details class="lfp-physical-timeline-details">
+                    <summary class="lfp-physical-timeline-summary">View financial timeline</summary>
+                    <div class="lfp-physical-timeline">
+                        @forelse($financialTimelineEntries as $entry)
+                            @php
+                                $previousEntry = $loop->first ? null : ($financialTimelineEntries[$loop->index - 1] ?? null);
+                            @endphp
+                            <article class="lfp-physical-timeline-item">
+                                <div class="lfp-physical-timeline-node">
+                                    <span>{{ $entry['month_short'] }}</span>
+                                </div>
+                                <div class="lfp-physical-timeline-card">
+                                    <div class="lfp-physical-timeline-card-header">
+                                        <div>
+                                            <p class="lfp-physical-timeline-kicker">Timeline Point</p>
+                                            <h4>{{ $entry['month_label'] }}</h4>
+                                        </div>
+                                        <span class="lfp-physical-timeline-month">{{ str_pad((string) $entry['month_number'], 2, '0', STR_PAD_LEFT) }}</span>
+                                    </div>
+                                    <div class="lfp-financial-timeline-metrics">
+                                        <div class="lfp-physical-timeline-metric">
+                                            <span>Obligation</span>
+                                            <strong class="lfp-physical-trend">
+                                                {!! $financialTrendIndicator($entry['obligation'], $previousEntry['obligation'] ?? null) !!}
+                                                <span>{{ $formatFinancialCurrency($entry['obligation']) }}</span>
+                                            </strong>
+                                        </div>
+
+                                        <div class="lfp-physical-timeline-metric">
+                                            <span>Disbursed</span>
+                                            <strong class="lfp-physical-trend">
+                                                {!! $financialTrendIndicator($entry['disbursed_amount'], $previousEntry['disbursed_amount'] ?? null) !!}
+                                                <span>{{ $formatFinancialCurrency($entry['disbursed_amount']) }}</span>
+                                            </strong>
+                                        </div>
+
+                                        <div class="lfp-physical-timeline-metric">
+                                            <span>Reverted</span>
+                                            <strong class="lfp-physical-trend">
+                                                {!! $financialTrendIndicator($entry['reverted_amount'], $previousEntry['reverted_amount'] ?? null) !!}
+                                                <span>{{ $formatFinancialCurrency($entry['reverted_amount']) }}</span>
+                                            </strong>
+                                        </div>
+
+                                        <div class="lfp-physical-timeline-metric">
+                                            <span>Balance</span>
+                                            <strong>{{ $formatFinancialCurrency($entry['balance']) }}</strong>
+                                        </div>
+
+                                        <div class="lfp-physical-timeline-metric">
+                                            <span>Utilization Rate</span>
+                                            <strong class="lfp-physical-trend">
+                                                {!! $financialTrendIndicator($entry['utilization_rate'], $previousEntry['utilization_rate'] ?? null) !!}
+                                                <span>{{ $formatFinancialPercent($entry['utilization_rate']) }}</span>
+                                            </strong>
+                                        </div>
+                                    </div>
+                                    @if(!empty($entry['remarks']))
+                                        <div class="lfp-physical-timeline-remarks">
+                                            <span>Remarks</span>
+                                            <p>{{ $entry['remarks'] }}</p>
+                                        </div>
+                                    @endif
+                                </div>
+                            </article>
+                        @empty
+                            <div class="lfp-physical-empty-state">No financial accomplishment updates have been logged yet.</div>
+                        @endforelse
+                    </div>
+                </details>
+            </div>
+        </div>
+
+        <div id="editFinancialFormBackdrop" class="lfp-inline-modal-backdrop{{ old('section') === 'financial' ? ' is-visible' : '' }}" aria-hidden="{{ old('section') === 'financial' ? 'false' : 'true' }}"></div>
+        <div id="editFinancialFormWrapper" class="lfp-inline-modal{{ old('section') === 'financial' ? ' is-visible' : '' }}" data-inline-modal="true" role="dialog" aria-modal="true" aria-labelledby="editFinancialModalTitle" aria-hidden="{{ old('section') === 'financial' ? 'false' : 'true' }}" style="display: {{ old('section') === 'financial' ? 'block' : 'none' }};">
+            <div class="lfp-inline-modal-header">
+                <h3 id="editFinancialModalTitle" style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Edit Financial Accomplishment</h3>
+                <button type="button" class="lfp-inline-modal-close" data-toggle="inline-cancel" data-target="editFinancialForm" aria-label="Close financial accomplishment editor">&times;</button>
+            </div>
+            <div class="lfp-inline-modal-body">
             <div style="display: grid; grid-template-columns: 1fr; gap: 16px;">
                 <div>
                     <strong>Obligated Amount:</strong>
-                    <span id="financialSum-obligation">{{ number_format((float) ($financialTotals['obligation'] ?? 0), 2) }}</span>
+                    <span>{{ number_format((float) ($financialTotals['obligation'] ?? 0), 2) }}</span>
                     <details class="monthly-details" style="margin-top: 8px;">
                         <summary class="monthly-summary" style="cursor: pointer; color: #1d4ed8; background-color: #e0e7ff; border: 1px solid #c7d2fe; padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">View monthly Status</summary>
                         <div style="margin-top: 10px;">
@@ -1933,7 +2197,7 @@
 
                 <div>
                     <strong>Disbursed Amount:</strong>
-                    <span id="financialSum-disbursed_amount">{{ number_format((float) ($financialTotals['disbursed_amount'] ?? 0), 2) }}</span>
+                    <span>{{ number_format((float) ($financialTotals['disbursed_amount'] ?? 0), 2) }}</span>
                     <details class="monthly-details" style="margin-top: 8px;">
                         <summary class="monthly-summary" style="cursor: pointer; color: #1d4ed8; background-color: #e0e7ff; border: 1px solid #c7d2fe; padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">View monthly Status</summary>
                         <div style="margin-top: 10px;">
@@ -1977,7 +2241,7 @@
 
                 <div>
                     <strong>Reverted Amount:</strong>
-                    <span id="financialSum-reverted_amount">{{ number_format((float) ($financialTotals['reverted_amount'] ?? 0), 2) }}</span>
+                    <span>{{ number_format((float) ($financialTotals['reverted_amount'] ?? 0), 2) }}</span>
                     <details class="monthly-details" style="margin-top: 8px;">
                         <summary class="monthly-summary" style="cursor: pointer; color: #1d4ed8; background-color: #e0e7ff; border: 1px solid #c7d2fe; padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">View monthly Status</summary>
                         <div style="margin-top: 10px;">
@@ -2021,12 +2285,12 @@
 
                 <div>
                     <strong>Balance:</strong>
-                    <span id="financialBalance">{{ number_format((float) $financialBalance, 2) }}</span>
+                    <span>{{ number_format((float) $financialBalance, 2) }}</span>
                 </div>
 
                 <div>
                     <strong>Utilization Rate:</strong>
-                    <span id="financialUtilizationRate" style="color: {{ (float) $financialUtilizationRate < 100 ? '#dc2626' : '#111827' }};">{{ number_format((float) $financialUtilizationRate, 2) . '%' }}</span>
+                    <span style="color: {{ (float) $financialUtilizationRate < 100 ? '#dc2626' : '#111827' }};">{{ number_format((float) $financialUtilizationRate, 2) . '%' }}</span>
                 </div>
 
                 <div>
@@ -2046,6 +2310,7 @@
                         </div>
                     </form>
                 </div>
+            </div>
             </div>
         </div>
 
@@ -3270,7 +3535,6 @@
         updateFinancialSums();
 
         const inlineSectionTargetMap = {
-            editFinancialForm: 'financialAccomplishmentSection',
             editMonitoringForm: 'monitoringInspectionSection',
             editPostImplementationForm: 'postImplementationSection',
         };
@@ -3419,7 +3683,7 @@
             button.setAttribute('aria-label', isEditing ? 'Cancel editing' : (button.dataset.originalText || 'Update'));
 
             const targetId = button.getAttribute('data-target');
-            const isSectionTarget = targetId && ['editFinancialForm', 'editMonitoringForm', 'editPostImplementationForm'].includes(targetId);
+            const isSectionTarget = targetId && ['editMonitoringForm', 'editPostImplementationForm'].includes(targetId);
             if (isSectionTarget) {
                 button.style.display = isEditing ? 'none' : 'inline-flex';
             }
