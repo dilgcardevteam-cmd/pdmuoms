@@ -77,6 +77,7 @@
             position: fixed;
             inset: 0;
             background: rgba(15, 23, 42, 0.56);
+            backdrop-filter: blur(2px);
             z-index: 1290;
         }
 
@@ -2033,7 +2034,10 @@
             transform: translate(-50%, -50%) scale(1);
         }
 
-        #financialAccomplishmentSection.is-inline-editing {
+        #physicalAccomplishmentSection.is-inline-editing,
+        #financialAccomplishmentSection.is-inline-editing,
+        #monitoringInspectionSection.is-inline-editing,
+        #postImplementationSection.is-inline-editing {
             position: fixed;
             left: 50%;
             top: 50%;
@@ -2046,7 +2050,10 @@
             z-index: 1300;
         }
 
-        #financialAccomplishmentSection.is-inline-editing .lfp-inline-modal-section-close {
+        #physicalAccomplishmentSection.is-inline-editing .lfp-inline-modal-section-close,
+        #financialAccomplishmentSection.is-inline-editing .lfp-inline-modal-section-close,
+        #monitoringInspectionSection.is-inline-editing .lfp-inline-modal-section-close,
+        #postImplementationSection.is-inline-editing .lfp-inline-modal-section-close {
             display: inline-flex;
         }
 
@@ -2586,6 +2593,7 @@
             editMonitoringForm: 'monitoringInspectionSection',
             editPostImplementationForm: 'postImplementationSection',
         };
+        const inlinePortalRegistry = new Map();
 
         function getInlineEditElements(targetId) {
             const mappedTargetId = inlineSectionTargetMap[targetId] || targetId;
@@ -2625,53 +2633,63 @@
             const hasInlineModal = Array.from(document.querySelectorAll('.lfp-inline-modal[data-inline-modal="true"]')).some((modal) => {
                 return modal.style.display !== 'none' && modal.getAttribute('aria-hidden') !== 'true';
             });
-            const financialInlineModal = document.getElementById('financialAccomplishmentSection');
-            const hasFinancialInlineModal = financialInlineModal
-                ? financialInlineModal.classList.contains('is-inline-editing')
-                : false;
+            const hasInlineSectionModal = Array.from(document.querySelectorAll('.lfp-inline-modal-section[data-inline-modal-section="true"]')).some((section) => {
+                return section.classList.contains('is-inline-editing');
+            });
 
-            document.body.classList.toggle('modal-open', hasActivityLogModal || hasInlineModal || hasFinancialInlineModal);
+            document.body.classList.toggle('modal-open', hasActivityLogModal || hasInlineModal || hasInlineSectionModal);
         }
 
-        function initializeMobileInlineModalPortal(wrapperId, backdropId) {
-            const wrapper = document.getElementById(wrapperId);
-            const backdrop = document.getElementById(backdropId);
+        function registerInlinePortal(targetId) {
+            const inlineElements = getInlineEditElements(targetId);
+            const nodeToPortal = inlineElements.wrapper || inlineElements.target;
+            const backdrop = inlineElements.backdrop;
 
-            if (!wrapper || !backdrop || !wrapper.parentNode) {
+            if (!nodeToPortal || !backdrop || !nodeToPortal.parentNode || !backdrop.parentNode) {
                 return;
             }
 
-            const originalParent = wrapper.parentNode;
+            const originalParent = nodeToPortal.parentNode;
             const anchor = document.createElement('span');
             anchor.hidden = true;
             originalParent.insertBefore(anchor, backdrop);
 
             const syncPortal = () => {
-                const isMobile = window.matchMedia('(max-width: 768px)').matches;
+                const isOpen = isInlineEditOpen(targetId);
 
-                if (isMobile) {
+                if (isOpen) {
                     if (backdrop.parentNode !== document.body) {
                         document.body.appendChild(backdrop);
                     }
 
-                    if (wrapper.parentNode !== document.body) {
-                        document.body.appendChild(wrapper);
+                    if (nodeToPortal.parentNode !== document.body) {
+                        document.body.appendChild(nodeToPortal);
                     }
                 } else {
                     if (backdrop.parentNode !== originalParent) {
                         originalParent.insertBefore(backdrop, anchor.nextSibling);
                     }
 
-                    if (wrapper.parentNode !== originalParent) {
-                        originalParent.insertBefore(wrapper, backdrop.nextSibling);
+                    if (nodeToPortal.parentNode !== originalParent) {
+                        const referenceNode = backdrop.parentNode === originalParent
+                            ? backdrop.nextSibling
+                            : anchor.nextSibling;
+                        originalParent.insertBefore(nodeToPortal, referenceNode);
                     }
                 }
 
                 syncBodyModalState();
             };
 
+            inlinePortalRegistry.set(targetId, syncPortal);
             syncPortal();
-            window.addEventListener('resize', syncPortal);
+        }
+
+        function syncInlinePortalState(targetId) {
+            const syncPortal = inlinePortalRegistry.get(targetId);
+            if (typeof syncPortal === 'function') {
+                syncPortal();
+            }
         }
 
         function getInlineToggleMarkup(label, iconClass) {
@@ -2720,11 +2738,12 @@
                 target.classList.add('is-inline-editing');
             }
 
-            if (backdrop && (wrapper || targetId === 'editFinancialForm')) {
+            if (backdrop && (wrapper || isInlineSectionTarget(targetId, inlineElements))) {
                 backdrop.classList.add('is-visible');
                 backdrop.setAttribute('aria-hidden', 'false');
             }
 
+            syncInlinePortalState(targetId);
             syncBodyModalState();
 
             if (button.hasAttribute('data-physical-toggle')) {
@@ -2850,8 +2869,14 @@
             }
         }
 
-        initializeMobileInlineModalPortal('editProfileFormWrapper', 'editProfileFormBackdrop');
-        initializeMobileInlineModalPortal('editContractFormWrapper', 'editContractFormBackdrop');
+        [
+            'editProfileForm',
+            'editContractForm',
+            'editPhysicalForm',
+            'editFinancialForm',
+            'editMonitoringForm',
+            'editPostImplementationForm',
+        ].forEach(registerInlinePortal);
 
         function closeInlineEdit(targetId) {
             const inlineElements = getInlineEditElements(targetId);
@@ -2908,6 +2933,7 @@
                 });
             }
 
+            syncInlinePortalState(targetId);
             syncBodyModalState();
         }
 
