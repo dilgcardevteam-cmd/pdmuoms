@@ -246,6 +246,58 @@
             margin-bottom: 18px;
         }
 
+        .lfp-physical-timeline-details {
+            margin-bottom: 18px;
+            padding: 12px 14px;
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+        }
+
+        .lfp-physical-timeline-details[open] {
+            border-color: #bfdbfe;
+            background-color: #eff6ff;
+            box-shadow: 0 10px 24px rgba(29, 78, 216, 0.1);
+        }
+
+        .lfp-physical-timeline-details > summary {
+            list-style: none;
+        }
+
+        .lfp-physical-timeline-summary::marker {
+            content: '';
+        }
+
+        .lfp-physical-timeline-summary {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            color: #1d4ed8;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .lfp-physical-timeline-summary::after {
+            content: '+';
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 18px;
+            height: 18px;
+            border-radius: 999px;
+            background-color: #dbeafe;
+            color: #1d4ed8;
+            font-size: 13px;
+            line-height: 1;
+            transition: transform 0.2s ease;
+        }
+
+        .lfp-physical-timeline-details[open] > .lfp-physical-timeline-summary::after {
+            transform: rotate(45deg);
+        }
+
         .lfp-physical-timeline::before {
             content: '';
             position: absolute;
@@ -323,7 +375,7 @@
 
         .lfp-physical-timeline-metrics {
             display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
+            grid-template-columns: minmax(0, 30%) minmax(0, 70%);
             gap: 12px;
         }
 
@@ -349,6 +401,38 @@
             font-size: 14px;
             font-weight: 700;
             line-height: 1.35;
+        }
+
+        .lfp-physical-trend {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: nowrap;
+        }
+
+        .lfp-physical-trend-indicator {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 34px;
+            height: 34px;
+            padding: 0 10px;
+            border-radius: 999px;
+            font-size: 26px;
+            font-weight: 800;
+            line-height: 1;
+            cursor: help;
+            flex: 0 0 auto;
+        }
+
+        .lfp-physical-trend-indicator.is-up {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .lfp-physical-trend-indicator.is-down {
+            background: #fee2e2;
+            color: #991b1b;
         }
 
         .lfp-physical-timeline-remarks {
@@ -1171,6 +1255,25 @@
                 return number_format((float) $value, 2) . '%';
             };
 
+            $physicalTrendIndicator = function ($currentValue, $previousValue) {
+                if (!is_numeric($currentValue) || !is_numeric($previousValue)) {
+                    return '';
+                }
+
+                $current = (float) $currentValue;
+                $previous = (float) $previousValue;
+
+                if ($current > $previous) {
+                    return '<span class="lfp-physical-trend-indicator is-up !text-2xl !font-bold" title="Higher than the previous logged month">&#8593;</span>';
+                }
+
+                if ($current < $previous) {
+                    return '<span class="lfp-physical-trend-indicator is-down !text-2xl !font-bold" title="Lower than the previous logged month">&#8595;</span>';
+                }
+
+                return '';
+            };
+
             $physicalTimelineEntries = [];
             foreach ($months as $monthNumber => $monthName) {
                 $row = $physicalByMonth[$monthNumber] ?? [];
@@ -1267,66 +1370,98 @@
                 </div>
             </div>
 
-            <div class="lfp-physical-timeline">
-                @forelse($physicalTimelineEntries as $entry)
-                    <article class="lfp-physical-timeline-item">
-                        <div class="lfp-physical-timeline-node">
-                            <span>{{ $entry['month_short'] }}</span>
-                        </div>
-                        <div class="lfp-physical-timeline-card">
-                            <div class="lfp-physical-timeline-card-header">
-                                <div>
-                                    <p class="lfp-physical-timeline-kicker">Timeline Point</p>
-                                    <h4>{{ $entry['month_label'] }}</h4>
-                                </div>
-                                <span class="lfp-physical-timeline-month">{{ str_pad((string) $entry['month_number'], 2, '0', STR_PAD_LEFT) }}</span>
+            <details class="lfp-physical-timeline-details">
+                <summary class="lfp-physical-timeline-summary">View physical timeline</summary>
+                <div class="lfp-physical-timeline">
+                    @forelse($physicalTimelineEntries as $entry)
+                        @php
+                            $previousEntry = $loop->first ? null : ($physicalTimelineEntries[$loop->index - 1] ?? null);
+                        @endphp
+                        <article class="lfp-physical-timeline-item">
+                            <div class="lfp-physical-timeline-node">
+                                <span>{{ $entry['month_short'] }}</span>
                             </div>
-                            <div class="lfp-physical-timeline-metrics">
-                                <div class="lfp-physical-timeline-metric">
-                                    <span>FOU Status</span>
-                                    <strong>{!! $statusBadge($entry['status_project_fou']) !!}</strong>
+                            <div class="lfp-physical-timeline-card">
+                                <div class="lfp-physical-timeline-card-header">
+                                    <div>
+                                        <p class="lfp-physical-timeline-kicker">Timeline Point</p>
+                                        <h4>{{ $entry['month_label'] }}</h4>
+                                    </div>
+                                    <span class="lfp-physical-timeline-month">{{ str_pad((string) $entry['month_number'], 2, '0', STR_PAD_LEFT) }}</span>
                                 </div>
-                                <div class="lfp-physical-timeline-metric">
-                                    <span>RO Status</span>
-                                    <strong>{!! $statusBadge($entry['status_project_ro']) !!}</strong>
+                                <div class="lfp-physical-timeline-metrics">
+                                    <div class="">
+                                        <div class="lfp-physical-timeline-metric !mb-4">
+                                            <span>Risk</span>
+                                            <strong>{!! $statusBadge($entry['risk_aging']) !!}</strong>
+                                        </div>
+                                        <div class="lfp-physical-timeline-metric !mt-4">
+                                            <span>NC Letters</span>
+                                            <strong>{!! $statusBadge($entry['nc_letters']) !!}</strong>
+                                        </div>
+                                    </div>
+
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div class="flex flex-col gap-4">
+                                            <div class="lfp-physical-timeline-metric">
+                                                <span>FOU Status</span>
+                                                <strong>{!! $statusBadge($entry['status_project_fou']) !!}</strong>
+                                            </div>
+
+                                            <div class="lfp-physical-timeline-metric">
+                                                <span>FOU Accomplishment</span>
+                                                <strong class="lfp-physical-trend">
+                                                    {!! $physicalTrendIndicator($entry['accomplishment_pct'], $previousEntry['accomplishment_pct'] ?? null) !!}
+                                                    <span>{{ $formatPhysicalPercent($entry['accomplishment_pct']) }}</span>
+                                                </strong>
+                                            </div>
+
+                                            <div class="lfp-physical-timeline-metric">
+                                                <span>FOU Slippage</span>
+                                                <strong class="lfp-physical-trend">
+                                                    {!! $physicalTrendIndicator($entry['slippage'], $previousEntry['slippage'] ?? null) !!}
+                                                    <span>{{ $formatPhysicalPercent($entry['slippage']) }}</span>
+                                                </strong>
+                                            </div>
+                                        </div>
+
+                                        <div class="flex flex-col gap-4">
+                                            <div class="lfp-physical-timeline-metric">
+                                                <span>RO Status</span>
+                                                <strong>{!! $statusBadge($entry['status_project_ro']) !!}</strong>
+                                            </div>
+
+                                            <div class="lfp-physical-timeline-metric">
+                                                <span>RO Accomplishment</span>
+                                                <strong class="lfp-physical-trend">
+                                                    {!! $physicalTrendIndicator($entry['accomplishment_pct_ro'], $previousEntry['accomplishment_pct_ro'] ?? null) !!}
+                                                    <span>{{ $formatPhysicalPercent($entry['accomplishment_pct_ro']) }}</span>
+                                                </strong>
+                                            </div>
+
+                                            <div class="lfp-physical-timeline-metric">
+                                                <span>RO Slippage</span>
+                                                <strong class="lfp-physical-trend">
+                                                    {!! $physicalTrendIndicator($entry['slippage_ro'], $previousEntry['slippage_ro'] ?? null) !!}
+                                                    <span>{{ $formatPhysicalPercent($entry['slippage_ro']) }}</span>
+                                                </strong>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="lfp-physical-timeline-metric">
-                                    <span>FOU Accomplishment</span>
-                                    <strong>{{ $formatPhysicalPercent($entry['accomplishment_pct']) }}</strong>
-                                </div>
-                                <div class="lfp-physical-timeline-metric">
-                                    <span>RO Accomplishment</span>
-                                    <strong>{{ $formatPhysicalPercent($entry['accomplishment_pct_ro']) }}</strong>
-                                </div>
-                                <div class="lfp-physical-timeline-metric">
-                                    <span>FOU Slippage</span>
-                                    <strong>{{ $formatPhysicalPercent($entry['slippage']) }}</strong>
-                                </div>
-                                <div class="lfp-physical-timeline-metric">
-                                    <span>RO Slippage</span>
-                                    <strong>{{ $formatPhysicalPercent($entry['slippage_ro']) }}</strong>
-                                </div>
-                                <div class="lfp-physical-timeline-metric">
-                                    <span>Risk</span>
-                                    <strong>{!! $statusBadge($entry['risk_aging']) !!}</strong>
-                                </div>
-                                <div class="lfp-physical-timeline-metric">
-                                    <span>NC Letters</span>
-                                    <strong>{!! $statusBadge($entry['nc_letters']) !!}</strong>
-                                </div>
+                                @if(!empty($entry['remarks']))
+                                    <div class="lfp-physical-timeline-remarks">
+                                        <span>Remarks</span>
+                                        <p>{{ $entry['remarks'] }}</p>
+                                    </div>
+                                @endif
                             </div>
-                            @if(!empty($entry['remarks']))
-                                <div class="lfp-physical-timeline-remarks">
-                                    <span>Remarks</span>
-                                    <p>{{ $entry['remarks'] }}</p>
-                                </div>
-                            @endif
-                        </div>
-                    </article>
-                @empty
-                    <div class="lfp-physical-empty-state">No physical accomplishment updates have been logged yet.</div>
-                @endforelse
-            </div>
+                        </article>
+                    @empty
+                        <div class="lfp-physical-empty-state">No physical accomplishment updates have been logged yet.</div>
+                    @endforelse
+                </div>
+            </details>
         </div>
 
         <div id="editPhysicalFormBackdrop" class="lfp-inline-modal-backdrop{{ old('section') === 'physical' ? ' is-visible' : '' }}" aria-hidden="{{ old('section') === 'physical' ? 'false' : 'true' }}"></div>
