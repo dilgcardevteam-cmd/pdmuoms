@@ -172,6 +172,304 @@
             line-height: 1.2;
         }
 
+        .lfp-physical-hero {
+            display: grid;
+            grid-template-columns: minmax(240px, 1.2fr) minmax(320px, 1fr);
+            gap: 18px;
+            margin-bottom: 18px;
+            padding: 18px;
+            border: 1px solid #dbeafe;
+            border-radius: 14px;
+            background: linear-gradient(135deg, #eff6ff 0%, #ffffff 58%, #f8fafc 100%);
+        }
+
+        .lfp-physical-eyebrow {
+            display: inline-block;
+            margin-bottom: 10px;
+            color: #1d4ed8;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+
+        .lfp-physical-hero-title {
+            margin: 0 0 8px;
+            color: #0f172a;
+            font-size: 24px;
+            line-height: 1.1;
+        }
+
+        .lfp-physical-hero-text {
+            margin: 0;
+            color: #475569;
+            font-size: 13px;
+            line-height: 1.6;
+            max-width: 58ch;
+        }
+
+        .lfp-physical-summary-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .lfp-physical-summary-card {
+            padding: 14px;
+            border: 1px solid #dbeafe;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.88);
+            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+        }
+
+        .lfp-physical-summary-label {
+            display: block;
+            margin-bottom: 8px;
+            color: #64748b;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        .lfp-physical-summary-value {
+            color: #0f172a;
+            font-size: 16px;
+            font-weight: 700;
+            line-height: 1.3;
+        }
+
+        .lfp-physical-graph-shell {
+            margin-bottom: 18px;
+            padding: 18px;
+            border: 1px solid #dbeafe;
+            border-radius: 14px;
+            background: #ffffff;
+        }
+
+        .lfp-physical-graph-header {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            align-items: flex-start;
+            margin-bottom: 14px;
+        }
+
+        .lfp-physical-block-title {
+            margin: 0 0 4px;
+            color: #0f172a;
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        .lfp-physical-block-copy,
+        .lfp-physical-block-note {
+            margin: 0;
+            color: #64748b;
+            font-size: 12px;
+        }
+
+        .lfp-physical-graph-scroll {
+            overflow-x: auto;
+            padding-bottom: 6px;
+        }
+
+        .lfp-physical-graph {
+            display: block;
+            width: max(100%, 520px);
+            height: 180px;
+        }
+
+        .lfp-physical-graph-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px 12px;
+            margin-top: 12px;
+            color: #475569;
+            font-size: 12px;
+        }
+
+        .lfp-physical-graph-legend span {
+            padding: 4px 8px;
+            border: 1px solid #dbeafe;
+            border-radius: 999px;
+            background: #f8fafc;
+        }
+
+        .lfp-physical-timeline {
+            position: relative;
+            display: grid;
+            gap: 18px;
+            margin-bottom: 18px;
+        }
+
+        .lfp-physical-timeline::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 19px;
+            width: 2px;
+            background: linear-gradient(180deg, #93c5fd 0%, #1d4ed8 100%);
+        }
+
+        .lfp-physical-timeline-item {
+            position: relative;
+            display: grid;
+            grid-template-columns: 40px minmax(0, 1fr);
+            gap: 16px;
+            align-items: start;
+        }
+
+        .lfp-physical-timeline-node {
+            position: relative;
+            z-index: 1;
+            width: 40px;
+            height: 40px;
+            border-radius: 999px;
+            background: #002c76;
+            color: #ffffff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 800;
+            box-shadow: 0 10px 24px rgba(0, 44, 118, 0.22);
+        }
+
+        .lfp-physical-timeline-card {
+            padding: 16px;
+            border: 1px solid #dbeafe;
+            border-radius: 14px;
+            background: #ffffff;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+        }
+
+        .lfp-physical-timeline-card-header {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            align-items: start;
+            margin-bottom: 14px;
+        }
+
+        .lfp-physical-timeline-card-header h4 {
+            margin: 0;
+            color: #0f172a;
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .lfp-physical-timeline-kicker {
+            margin: 0 0 4px;
+            color: #64748b;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .lfp-physical-timeline-month {
+            padding: 5px 9px;
+            border-radius: 999px;
+            background: #dbeafe;
+            color: #1d4ed8;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .lfp-physical-timeline-metrics {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .lfp-physical-timeline-metric {
+            padding: 12px;
+            border-radius: 12px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+        }
+
+        .lfp-physical-timeline-metric span {
+            display: block;
+            margin-bottom: 8px;
+            color: #64748b;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .lfp-physical-timeline-metric strong {
+            color: #0f172a;
+            font-size: 14px;
+            font-weight: 700;
+            line-height: 1.35;
+        }
+
+        .lfp-physical-timeline-remarks {
+            margin-top: 14px;
+            padding-top: 14px;
+            border-top: 1px dashed #cbd5e1;
+        }
+
+        .lfp-physical-timeline-remarks span {
+            display: block;
+            margin-bottom: 6px;
+            color: #64748b;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .lfp-physical-timeline-remarks p {
+            margin: 0;
+            color: #334155;
+            font-size: 13px;
+            line-height: 1.6;
+            white-space: pre-line;
+        }
+
+        .lfp-physical-footer-meta {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .lfp-physical-footer-meta div {
+            padding: 14px;
+            border-radius: 12px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+        }
+
+        .lfp-physical-footer-meta span {
+            display: block;
+            margin-bottom: 6px;
+            color: #64748b;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        .lfp-physical-footer-meta strong {
+            color: #0f172a;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .lfp-physical-empty-state {
+            padding: 18px;
+            border: 1px dashed #cbd5e1;
+            border-radius: 12px;
+            text-align: center;
+            color: #64748b;
+            font-size: 13px;
+            background: #f8fafc;
+        }
+
         @media (max-width: 768px) {
             .lfp-summary-card {
                 padding: 16px;
@@ -194,6 +492,21 @@
                 padding: 16px;
             }
 
+            .lfp-physical-hero {
+                grid-template-columns: 1fr;
+            }
+
+            .lfp-physical-summary-grid,
+            .lfp-physical-timeline-metrics,
+            .lfp-physical-footer-meta {
+                grid-template-columns: 1fr;
+            }
+
+            .lfp-physical-graph-header,
+            .lfp-physical-timeline-card-header {
+                flex-direction: column;
+            }
+
             .lfp-mobile-canvas .lfp-inline-modal-backdrop.is-visible {
                 display: block !important;
                 position: fixed;
@@ -203,7 +516,8 @@
             }
 
             #editProfileFormBackdrop.is-visible,
-            #editContractFormBackdrop.is-visible {
+            #editContractFormBackdrop.is-visible,
+            #editPhysicalFormBackdrop.is-visible {
                 display: block !important;
                 position: fixed;
                 inset: 0;
@@ -225,7 +539,8 @@
             }
 
             #editProfileFormWrapper,
-            #editContractFormWrapper {
+            #editContractFormWrapper,
+            #editPhysicalFormWrapper {
                 margin-top: 0;
                 top: auto;
                 left: auto;
@@ -252,7 +567,8 @@
             }
 
             #editProfileFormWrapper.is-visible,
-            #editContractFormWrapper.is-visible {
+            #editContractFormWrapper.is-visible,
+            #editPhysicalFormWrapper.is-visible {
                 position: fixed;
                 top: max(12px, env(safe-area-inset-top));
                 right: 12px;
@@ -276,7 +592,8 @@
             }
 
             #editProfileFormWrapper .lfp-inline-modal-header,
-            #editContractFormWrapper .lfp-inline-modal-header {
+            #editContractFormWrapper .lfp-inline-modal-header,
+            #editPhysicalFormWrapper .lfp-inline-modal-header {
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
@@ -300,7 +617,8 @@
             }
 
             #editProfileFormWrapper .lfp-inline-modal-body,
-            #editContractFormWrapper .lfp-inline-modal-body {
+            #editContractFormWrapper .lfp-inline-modal-body,
+            #editPhysicalFormWrapper .lfp-inline-modal-body {
                 flex: 1 1 auto;
                 min-height: 0;
                 max-height: none;
@@ -310,7 +628,8 @@
             }
 
             #editProfileFormWrapper .lfp-inline-modal-body form,
-            #editContractFormWrapper .lfp-inline-modal-body form {
+            #editContractFormWrapper .lfp-inline-modal-body form,
+            #editPhysicalFormWrapper .lfp-inline-modal-body form {
                 min-height: 100%;
             }
 
@@ -899,19 +1218,230 @@
                 $color = $colors[$value] ?? ['#e5e7eb', '#374151'];
                 return '<span style="display: inline-block; padding: 3px 8px; border-radius: 999px; background-color: ' . $color[0] . '; color: ' . $color[1] . '; font-size: 11px; font-weight: 600;">' . e($statusLabel($value)) . '</span>';
             };
+
+            $formatPhysicalPercent = function ($value) {
+                if ($value === null || $value === '') {
+                    return '-';
+                }
+
+                return number_format((float) $value, 2) . '%';
+            };
+
+            $physicalTimelineEntries = [];
+            foreach ($months as $monthNumber => $monthName) {
+                $row = $physicalByMonth[$monthNumber] ?? [];
+                $hasData = collect([
+                    $row['status_project_fou'] ?? null,
+                    $row['status_project_ro'] ?? null,
+                    $row['accomplishment_pct'] ?? null,
+                    $row['accomplishment_pct_ro'] ?? null,
+                    $row['slippage'] ?? null,
+                    $row['slippage_ro'] ?? null,
+                    $row['risk_aging'] ?? null,
+                    $row['nc_letters'] ?? null,
+                ])->contains(function ($value) {
+                    return $value !== null && $value !== '';
+                });
+
+                if (!$hasData) {
+                    continue;
+                }
+
+                $physicalTimelineEntries[] = [
+                    'month_number' => $monthNumber,
+                    'month_label' => $monthName,
+                    'month_short' => substr($monthName, 0, 3),
+                    'status_project_fou' => $row['status_project_fou'] ?? null,
+                    'status_project_ro' => $row['status_project_ro'] ?? null,
+                    'accomplishment_pct' => $row['accomplishment_pct'] ?? null,
+                    'accomplishment_pct_ro' => $row['accomplishment_pct_ro'] ?? null,
+                    'slippage' => $row['slippage'] ?? null,
+                    'slippage_ro' => $row['slippage_ro'] ?? null,
+                    'risk_aging' => $row['risk_aging'] ?? null,
+                    'nc_letters' => $row['nc_letters'] ?? null,
+                    'remarks' => $monthNumber === (int) $currentMonth ? ($project->physical_remarks ?? null) : null,
+                ];
+            }
+
+            $physicalGraphPoints = [];
+            $physicalGraphLabels = [];
+            $graphEntryCount = count($physicalTimelineEntries);
+            if ($graphEntryCount > 0) {
+                $graphWidth = max(180, ($graphEntryCount - 1) * 88 + 40);
+                foreach ($physicalTimelineEntries as $index => $entry) {
+                    $x = $graphEntryCount === 1 ? 20 : 20 + ($index * (($graphWidth - 40) / max(1, $graphEntryCount - 1)));
+                    $rawValue = $entry['accomplishment_pct_ro'] ?? $entry['accomplishment_pct'];
+                    $numericValue = is_numeric($rawValue) ? max(0, min(100, (float) $rawValue)) : null;
+                    $y = $numericValue === null ? 88 : 88 - ($numericValue * 0.68);
+
+                    $physicalGraphPoints[] = number_format($x, 2, '.', '') . ',' . number_format($y, 2, '.', '');
+                    $physicalGraphLabels[] = [
+                        'x' => number_format($x, 2, '.', ''),
+                        'label' => $entry['month_short'],
+                        'value' => $numericValue === null ? '-' : number_format($numericValue, 0) . '%',
+                    ];
+                }
+            } else {
+                $graphWidth = 180;
+            }
         @endphp
 
-        <div id="editPhysicalFormBackdrop" class="lfp-inline-modal-backdrop" aria-hidden="true"></div>
-        <div id="physicalAccomplishmentSection" class="project-tab-panel lfp-inline-modal-section" data-tab-key="physical" role="tabpanel" aria-labelledby="tab-physical-accomplishment" data-inline-modal-section="true" data-inline-target="editPhysicalForm" style="margin-bottom: 24px; padding: 20px; border: 1px solid #00267C; border-radius: 10px; background-color: #ffffff;">
+        <div id="physicalAccomplishmentSection" class="project-tab-panel" data-tab-key="physical" role="tabpanel" aria-labelledby="tab-physical-accomplishment" style="margin-bottom: 24px; padding: 20px; border: 1px solid #00267C; border-radius: 10px; background-color: #ffffff;">
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 2px solid #00267C; padding-bottom: 10px;">
-                <h3 class="lfp-physical-section-title" data-inline-section-heading="true" data-view-title="Physical Accomplishment" data-edit-title="Edit Physical Accomplishment" style="color: #00267C; font-size: clamp(14px, 4vw, 18px); font-weight: 700; margin: 0;">Physical Accomplishment</h3>
+                <h3 class="lfp-physical-section-title" style="color: #00267C; font-size: clamp(14px, 4vw, 18px); font-weight: 700; margin: 0;">Physical Accomplishment</h3>
                 <div style="display: flex; gap: 8px; align-items: center;">
                     @if(!$isLguAgencyUser)
                         <a href="#" class="lfp-inline-edit-trigger" data-toggle="inline-edit" data-target="editPhysicalForm" data-physical-toggle="true"><i class="fas fa-edit" aria-hidden="true"></i>Update</a>
                     @endif
-                    <button type="button" class="lfp-inline-modal-close lfp-inline-modal-section-close" data-toggle="inline-cancel" data-target="editPhysicalForm" aria-label="Close physical accomplishment editor">&times;</button>
                 </div>
             </div>
+            <div class="lfp-physical-hero">
+                <div class="lfp-physical-hero-copy">
+                    <span class="lfp-physical-eyebrow">Progress Snapshot</span>
+                    <h4 class="lfp-physical-hero-title">Monthly delivery trend across FOU and RO updates</h4>
+                    <p class="lfp-physical-hero-text">The timeline below separates the read-only progress history from the edit flow, making it easier to scan how status, accomplishment, slippage, and compliance changed over time.</p>
+                </div>
+                <div class="lfp-physical-summary-grid">
+                    <div class="lfp-physical-summary-card">
+                        <span class="lfp-physical-summary-label">Current FOU Status</span>
+                        <div class="lfp-physical-summary-value">{!! $statusBadge($currentPhysical['status_project_fou'] ?? null) !!}</div>
+                    </div>
+                    <div class="lfp-physical-summary-card">
+                        <span class="lfp-physical-summary-label">Current RO Status</span>
+                        <div class="lfp-physical-summary-value">{!! $statusBadge($currentPhysical['status_project_ro'] ?? null) !!}</div>
+                    </div>
+                    <div class="lfp-physical-summary-card">
+                        <span class="lfp-physical-summary-label">FOU Accomplishment</span>
+                        <div class="lfp-physical-summary-value">{{ $formatPhysicalPercent($currentPhysical['accomplishment_pct'] ?? null) }}</div>
+                    </div>
+                    <div class="lfp-physical-summary-card">
+                        <span class="lfp-physical-summary-label">RO Accomplishment</span>
+                        <div class="lfp-physical-summary-value">{{ $formatPhysicalPercent($currentPhysical['accomplishment_pct_ro'] ?? null) }}</div>
+                    </div>
+                    <div class="lfp-physical-summary-card">
+                        <span class="lfp-physical-summary-label">Risk As To Aging</span>
+                        <div class="lfp-physical-summary-value">{!! $statusBadge($currentPhysical['risk_aging'] ?? null) !!}</div>
+                    </div>
+                    <div class="lfp-physical-summary-card">
+                        <span class="lfp-physical-summary-label">NC Letters</span>
+                        <div class="lfp-physical-summary-value">{!! $statusBadge($currentPhysical['nc_letters'] ?? null) !!}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lfp-physical-graph-shell">
+                <div class="lfp-physical-graph-header">
+                    <div>
+                        <h4 class="lfp-physical-block-title">Accomplishment Trend</h4>
+                        <p class="lfp-physical-block-copy">Line-graph view of the monthly physical accomplishment record.</p>
+                    </div>
+                    <span class="lfp-physical-block-note">Uses RO data when available, otherwise FOU data</span>
+                </div>
+                @if(count($physicalTimelineEntries))
+                    <div class="lfp-physical-graph-scroll">
+                        <svg class="lfp-physical-graph" viewBox="0 0 {{ $graphWidth }} 100" preserveAspectRatio="none" role="img" aria-label="Physical accomplishment timeline graph">
+                            <line x1="20" y1="88" x2="{{ $graphWidth - 20 }}" y2="88" stroke="#cbd5e1" stroke-width="2" stroke-linecap="round"></line>
+                            <polyline fill="none" stroke="#1d4ed8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" points="{{ implode(' ', $physicalGraphPoints) }}"></polyline>
+                            @foreach($physicalGraphLabels as $label)
+                                <circle cx="{{ $label['x'] }}" cy="{{ explode(',', $physicalGraphPoints[$loop->index])[1] }}" r="4.5" fill="#ffffff" stroke="#1d4ed8" stroke-width="3"></circle>
+                                <text x="{{ $label['x'] }}" y="98" text-anchor="middle" font-size="7" fill="#475569">{{ $label['label'] }}</text>
+                            @endforeach
+                        </svg>
+                        <div class="lfp-physical-graph-legend">
+                            @foreach($physicalGraphLabels as $label)
+                                <span>{{ $label['label'] }}: {{ $label['value'] }}</span>
+                            @endforeach
+                        </div>
+                    </div>
+                @else
+                    <div class="lfp-physical-empty-state">No physical accomplishment timeline data is available yet.</div>
+                @endif
+            </div>
+
+            <div class="lfp-physical-timeline">
+                @forelse($physicalTimelineEntries as $entry)
+                    <article class="lfp-physical-timeline-item">
+                        <div class="lfp-physical-timeline-node">
+                            <span>{{ $entry['month_short'] }}</span>
+                        </div>
+                        <div class="lfp-physical-timeline-card">
+                            <div class="lfp-physical-timeline-card-header">
+                                <div>
+                                    <p class="lfp-physical-timeline-kicker">Timeline Point</p>
+                                    <h4>{{ $entry['month_label'] }}</h4>
+                                </div>
+                                <span class="lfp-physical-timeline-month">{{ str_pad((string) $entry['month_number'], 2, '0', STR_PAD_LEFT) }}</span>
+                            </div>
+                            <div class="lfp-physical-timeline-metrics">
+                                <div class="lfp-physical-timeline-metric">
+                                    <span>FOU Status</span>
+                                    <strong>{!! $statusBadge($entry['status_project_fou']) !!}</strong>
+                                </div>
+                                <div class="lfp-physical-timeline-metric">
+                                    <span>RO Status</span>
+                                    <strong>{!! $statusBadge($entry['status_project_ro']) !!}</strong>
+                                </div>
+                                <div class="lfp-physical-timeline-metric">
+                                    <span>FOU Accomplishment</span>
+                                    <strong>{{ $formatPhysicalPercent($entry['accomplishment_pct']) }}</strong>
+                                </div>
+                                <div class="lfp-physical-timeline-metric">
+                                    <span>RO Accomplishment</span>
+                                    <strong>{{ $formatPhysicalPercent($entry['accomplishment_pct_ro']) }}</strong>
+                                </div>
+                                <div class="lfp-physical-timeline-metric">
+                                    <span>FOU Slippage</span>
+                                    <strong>{{ $formatPhysicalPercent($entry['slippage']) }}</strong>
+                                </div>
+                                <div class="lfp-physical-timeline-metric">
+                                    <span>RO Slippage</span>
+                                    <strong>{{ $formatPhysicalPercent($entry['slippage_ro']) }}</strong>
+                                </div>
+                                <div class="lfp-physical-timeline-metric">
+                                    <span>Risk</span>
+                                    <strong>{!! $statusBadge($entry['risk_aging']) !!}</strong>
+                                </div>
+                                <div class="lfp-physical-timeline-metric">
+                                    <span>NC Letters</span>
+                                    <strong>{!! $statusBadge($entry['nc_letters']) !!}</strong>
+                                </div>
+                            </div>
+                            @if(!empty($entry['remarks']))
+                                <div class="lfp-physical-timeline-remarks">
+                                    <span>Remarks</span>
+                                    <p>{{ $entry['remarks'] }}</p>
+                                </div>
+                            @endif
+                        </div>
+                    </article>
+                @empty
+                    <div class="lfp-physical-empty-state">No physical accomplishment updates have been logged yet.</div>
+                @endforelse
+            </div>
+
+            <div class="lfp-physical-footer-meta">
+                <div>
+                    <span>Actual Date of Completion</span>
+                    <strong>{{ $project->actual_date_completion ? $project->actual_date_completion->format('F j, Y') : 'N/A' }}</strong>
+                </div>
+                <div>
+                    <span>Last Remarks Update</span>
+                    <strong>{{ $project->physical_remarks_updated_at ? $project->physical_remarks_updated_at->format('M d, Y h:i A') : '-' }}</strong>
+                </div>
+                <div>
+                    <span>Updated By</span>
+                    <strong>{{ $physicalRemarksUpdatedByName ?? ($actualCompletionUpdatedByName ?? 'N/A') }}</strong>
+                </div>
+            </div>
+        </div>
+
+        <div id="editPhysicalFormBackdrop" class="lfp-inline-modal-backdrop{{ old('section') === 'physical' ? ' is-visible' : '' }}" aria-hidden="{{ old('section') === 'physical' ? 'false' : 'true' }}"></div>
+        <div id="editPhysicalFormWrapper" class="lfp-inline-modal{{ old('section') === 'physical' ? ' is-visible' : '' }}" data-inline-modal="true" role="dialog" aria-modal="true" aria-labelledby="editPhysicalModalTitle" aria-hidden="{{ old('section') === 'physical' ? 'false' : 'true' }}" style="display: {{ old('section') === 'physical' ? 'block' : 'none' }};">
+            <div class="lfp-inline-modal-header">
+                <h3 id="editPhysicalModalTitle" style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Edit Physical Accomplishment</h3>
+                <button type="button" class="lfp-inline-modal-close" data-toggle="inline-cancel" data-target="editPhysicalForm" aria-label="Close physical accomplishment editor">&times;</button>
+            </div>
+            <div class="lfp-inline-modal-body">
             <div style="display: grid; grid-template-columns: repeat(2, minmax(300px, 1fr)); gap: 16px;">
                 <div>
                     <strong>STATUS OF PROJECT (for FOU updating):</strong>
@@ -1308,6 +1838,11 @@
                         </div>
                     </form>
                 </div>
+            </div>
+            <div class="lfp-inline-section-footer" style="display: flex;">
+                <button type="button" class="lfp-inline-section-save" data-inline-section-save="editPhysicalForm"><i class="fas fa-check" style="margin-right: 8px;" aria-hidden="true"></i>Save Changes</button>
+                <button type="button" class="lfp-inline-section-cancel" data-inline-section-cancel="editPhysicalForm"><i class="fas fa-times" style="margin-right: 8px;" aria-hidden="true"></i>Cancel</button>
+            </div>
             </div>
         </div>
 
@@ -2523,6 +3058,18 @@
                 min-width: 0;
             }
 
+            #editPhysicalFormWrapper > .lfp-inline-modal-body > div[style*="grid-template-columns: repeat(2, minmax(300px, 1fr))"] {
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 12px !important;
+            }
+
+            #editPhysicalFormWrapper > .lfp-inline-modal-body > div[style*="grid-template-columns: repeat(2, minmax(300px, 1fr))"] > div,
+            #editPhysicalFormWrapper > .lfp-inline-modal-body > div[style*="grid-template-columns: repeat(2, minmax(300px, 1fr))"] > form {
+                width: 100%;
+                min-width: 0;
+            }
+
             .lfp-mobile-canvas #monitoringInspectionSection > div[style*="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr))"] {
                 display: flex !important;
                 flex-direction: column !important;
@@ -2687,7 +3234,6 @@
         updateFinancialSums();
 
         const inlineSectionTargetMap = {
-            editPhysicalForm: 'physicalAccomplishmentSection',
             editFinancialForm: 'financialAccomplishmentSection',
             editMonitoringForm: 'monitoringInspectionSection',
             editPostImplementationForm: 'postImplementationSection',
@@ -2837,7 +3383,7 @@
             button.setAttribute('aria-label', isEditing ? 'Cancel editing' : (button.dataset.originalText || 'Update'));
 
             const targetId = button.getAttribute('data-target');
-            const isSectionTarget = targetId && ['editPhysicalForm', 'editFinancialForm', 'editMonitoringForm', 'editPostImplementationForm'].includes(targetId);
+            const isSectionTarget = targetId && ['editFinancialForm', 'editMonitoringForm', 'editPostImplementationForm'].includes(targetId);
             if (isSectionTarget) {
                 button.style.display = isEditing ? 'none' : 'inline-flex';
             }
@@ -3149,7 +3695,8 @@
         }
 
         function getInlineSectionElement(targetId) {
-            return document.querySelector('.lfp-inline-modal-section[data-inline-target="' + targetId + '"]');
+            return document.querySelector('.lfp-inline-modal-section[data-inline-target="' + targetId + '"]')
+                || document.getElementById(targetId + 'Wrapper');
         }
 
         function getInlineSectionEditableFields(targetId) {
