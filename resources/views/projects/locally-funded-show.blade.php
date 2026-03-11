@@ -367,7 +367,7 @@
             <div style="display: flex; flex-direction: column; gap: 6px; color: #374151; font-family: 'Facebook Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
                 <span style="display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                     <span>
-                    <span style="font-weight: 700; color: #000000;">
+                    <span style="font-weight: 700; color: #374151;">
                         Project Code:
                     </span>
                     {{ $project->subaybayan_project_code }}
@@ -378,13 +378,13 @@
                 </span>
 
                 <span>
-                    <span style="font-weight: 700; color: #000000;">
+                    <span style="font-weight: 700; color: #374151;">
                         Funding Year:
                     </span>
                     {{ $project->funding_year }}
                 </span>
                 <span>
-                <span style="font-weight: 700; color: #000000;">
+                <span style="font-weight: 700; color: #374151;">
                         Funding Source:
                     </span>
                     {{ $project->fund_source }}
@@ -442,6 +442,7 @@
             <button type="button" class="project-tab" id="tab-financial-accomplishment" data-project-tab-target="financialAccomplishmentSection" role="tab" aria-controls="financialAccomplishmentSection" aria-selected="false">Financial Accomplishment</button>
             <button type="button" class="project-tab" id="tab-monitoring-inspection" data-project-tab-target="monitoringInspectionSection" role="tab" aria-controls="monitoringInspectionSection" aria-selected="false">Monitoring/Inspection Activities</button>
             <button type="button" class="project-tab" id="tab-post-implementation" data-project-tab-target="postImplementationSection" role="tab" aria-controls="postImplementationSection" aria-selected="false">Post Implementation</button>
+            <button type="button" class="project-tab" id="tab-gallery">Gallery</button>
         </div>
 
         <div id="projectProfileSection" class="project-tab-panel is-active" data-tab-key="profile" role="tabpanel" aria-labelledby="tab-project-profile" style="margin-bottom: 24px; padding: 20px; border: 1px solid #00267C; border-radius: 10px; background-color: #ffffff;">
@@ -520,6 +521,47 @@
                             return strtolower(trim((string) $item)) === $selectedFundSourceNorm;
                         });
                     @endphp
+                    <div>
+                        <label for="project_name" style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Project Name <span class="asterisk">*</span></label>
+                        <input type="text" id="project_name" name="project_name" value="{{ old('project_name', $project->project_name) }}" required
+                               style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; box-sizing: border-box;">
+                    </div>
+                    
+                    <div>
+                        <label for="subaybayan_project_code" style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">SubayBayan Project Code <span class="asterisk">*</span></label>
+                        <input type="text" id="subaybayan_project_code" name="subaybayan_project_code" value="{{ old('subaybayan_project_code', $project->subaybayan_project_code) }}" required
+                               style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; box-sizing: border-box;">
+                    </div>
+
+                    
+                    <div>
+                        <label for="funding_year" style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Funding Year <span class="asterisk">*</span></label>
+                        <select id="funding_year" name="funding_year" required
+                                style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; box-sizing: border-box; background-color: white;">
+                            <option value="">-- Select Funding Year --</option>
+                            @foreach($fundingYears as $year)
+                                <option value="{{ $year }}" {{ (string) $year === $selectedFundingYear ? 'selected' : '' }}>{{ $year }}</option>
+                            @endforeach
+                            @if(!$hasFundingYearInOptions && trim($selectedFundingYear) !== '')
+                                <option value="{{ $selectedFundingYear }}" selected>{{ $selectedFundingYear }}</option>
+                            @endif
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="fund_source" style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Fund Source <span class="asterisk">*</span></label>
+                        <select id="fund_source" name="fund_source" required
+                                style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; box-sizing: border-box; background-color: white;">
+                            <option value="">-- Select Fund Source --</option>
+                            @foreach($fundSources as $source)
+                                <option value="{{ $source }}" {{ strtolower(trim((string) $source)) === $selectedFundSourceNorm ? 'selected' : '' }}>{{ $source }}</option>
+                            @endforeach
+                            @if(!$hasFundSourceInOptions && trim((string) $selectedFundSource) !== '')
+                                <option value="{{ $selectedFundSource }}" selected>{{ $selectedFundSource }}</option>
+                            @endif
+                        </select>
+                    </div>
+
                     <div style="grid-column: 1 / -1;">
                         <label for="project_description" style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Project Description <span class="asterisk">*</span></label>
                         <textarea id="project_description" name="project_description" required rows="3"
@@ -562,46 +604,6 @@
                     </div>
 
                     <div>
-                        <label for="funding_year" style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Funding Year <span class="asterisk">*</span></label>
-                        <select id="funding_year" name="funding_year" required
-                                style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; box-sizing: border-box; background-color: white;">
-                            <option value="">-- Select Funding Year --</option>
-                            @foreach($fundingYears as $year)
-                                <option value="{{ $year }}" {{ (string) $year === $selectedFundingYear ? 'selected' : '' }}>{{ $year }}</option>
-                            @endforeach
-                            @if(!$hasFundingYearInOptions && trim($selectedFundingYear) !== '')
-                                <option value="{{ $selectedFundingYear }}" selected>{{ $selectedFundingYear }}</option>
-                            @endif
-                        </select>
-                    </div>
-
-                    <div>
-                        <label for="fund_source" style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Fund Source <span class="asterisk">*</span></label>
-                        <select id="fund_source" name="fund_source" required
-                                style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; box-sizing: border-box; background-color: white;">
-                            <option value="">-- Select Fund Source --</option>
-                            @foreach($fundSources as $source)
-                                <option value="{{ $source }}" {{ strtolower(trim((string) $source)) === $selectedFundSourceNorm ? 'selected' : '' }}>{{ $source }}</option>
-                            @endforeach
-                            @if(!$hasFundSourceInOptions && trim((string) $selectedFundSource) !== '')
-                                <option value="{{ $selectedFundSource }}" selected>{{ $selectedFundSource }}</option>
-                            @endif
-                        </select>
-                    </div>
-
-                    <div>
-                        <label for="subaybayan_project_code" style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">SubayBayan Project Code <span class="asterisk">*</span></label>
-                        <input type="text" id="subaybayan_project_code" name="subaybayan_project_code" value="{{ old('subaybayan_project_code', $project->subaybayan_project_code) }}" required
-                               style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; box-sizing: border-box;">
-                    </div>
-
-                    <div>
-                        <label for="project_name" style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Project Name <span class="asterisk">*</span></label>
-                        <input type="text" id="project_name" name="project_name" value="{{ old('project_name', $project->project_name) }}" required
-                               style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; box-sizing: border-box;">
-                    </div>
-
-                    <div>
                         <label for="project_type" style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">Project Type <span class="asterisk">*</span></label>
                         <select id="project_type" name="project_type" required
                                 style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; box-sizing: border-box; background-color: white;">
@@ -630,7 +632,7 @@
                         <input type="text" id="lgu_counterpart" name="lgu_counterpart" value="{{ old('lgu_counterpart', number_format((float)$project->lgu_counterpart, 2, '.', ',')) }}" placeholder="0.00" required
                                style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; box-sizing: border-box;">
                     </div>
-
+                    
                     <div>
                         <label for="no_of_beneficiaries" style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">No. of Beneficiaries <span class="asterisk">*</span></label>
                         <input type="number" id="no_of_beneficiaries" name="no_of_beneficiaries" value="{{ old('no_of_beneficiaries', $project->no_of_beneficiaries) }}" min="0" required
@@ -2530,6 +2532,15 @@
     </style>
 
     <script>
+        document.getElementById("tab-gallery").addEventListener("click", function() {
+            if (typeof window.showSystemErrorModal === 'function') {
+                window.showSystemErrorModal('Gallery feature is coming soon!');
+                return;
+            }
+
+            alert('Gallery feature is coming soon!');
+        });
+
         function formatMoney(value) {
             return (Math.round((value + Number.EPSILON) * 100) / 100).toLocaleString('en-US', {
                 minimumFractionDigits: 2,
