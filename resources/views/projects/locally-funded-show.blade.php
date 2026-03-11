@@ -883,7 +883,7 @@
         <div id="editPhysicalFormBackdrop" class="lfp-inline-modal-backdrop" aria-hidden="true"></div>
         <div id="physicalAccomplishmentSection" class="project-tab-panel lfp-inline-modal-section" data-tab-key="physical" role="tabpanel" aria-labelledby="tab-physical-accomplishment" data-inline-modal-section="true" data-inline-target="editPhysicalForm" style="margin-bottom: 24px; padding: 20px; border: 1px solid #00267C; border-radius: 10px; background-color: #ffffff;">
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 2px solid #00267C; padding-bottom: 10px;">
-                <h3 class="lfp-physical-section-title" style="color: #00267C; font-size: clamp(14px, 4vw, 18px); font-weight: 700; margin: 0;">Physical Accomplishment</h3>
+                <h3 class="lfp-physical-section-title" data-inline-section-heading="true" data-view-title="Physical Accomplishment" data-edit-title="Edit Physical Accomplishment" style="color: #00267C; font-size: clamp(14px, 4vw, 18px); font-weight: 700; margin: 0;">Physical Accomplishment</h3>
                 <div style="display: flex; gap: 8px; align-items: center;">
                     @if(!$isLguAgencyUser)
                         <a href="#" data-toggle="inline-edit" data-target="editPhysicalForm" data-physical-toggle="true" style="padding: 6px 12px; background-color: #002C76; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 12px;"><i class="fas fa-edit" style="margin-right: 6px;"></i>Update</a>
@@ -1294,7 +1294,7 @@
         <div id="editFinancialFormBackdrop" class="lfp-inline-modal-backdrop" aria-hidden="true"></div>
         <div id="financialAccomplishmentSection" class="project-tab-panel lfp-inline-modal-section" data-inline-modal-section="true" data-inline-target="editFinancialForm" data-tab-key="financial" role="tabpanel" aria-labelledby="tab-financial-accomplishment" style="margin-bottom: 24px; padding: 20px; border: 1px solid #00267C; border-radius: 10px; background-color: #ffffff;">
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 2px solid #00267C; padding-bottom: 10px;">
-                <h3 class="lfp-financial-section-title" style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Financial Accomplishment (based on Subaybayan)</h3>
+                <h3 class="lfp-financial-section-title" data-inline-section-heading="true" data-view-title="Financial Accomplishment (based on Subaybayan)" data-edit-title="Edit Financial Accomplishment" style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Financial Accomplishment (based on Subaybayan)</h3>
                 <div class="lfp-financial-section-actions" style="display: flex; gap: 8px; align-items: center;">
                     @if(!$isLguAgencyUser)
                         <a href="#" data-toggle="inline-edit" data-target="editFinancialForm" data-financial-toggle="true" style="padding: 6px 12px; background-color: #002C76; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 12px;"><i class="fas fa-edit" style="margin-right: 6px;"></i>Update</a>
@@ -1468,7 +1468,7 @@
         <div id="editMonitoringFormBackdrop" class="lfp-inline-modal-backdrop" aria-hidden="true"></div>
         <div id="monitoringInspectionSection" class="project-tab-panel lfp-inline-modal-section" data-inline-modal-section="true" data-inline-target="editMonitoringForm" data-tab-key="monitoring" role="tabpanel" aria-labelledby="tab-monitoring-inspection" style="margin-bottom: 24px; padding: 20px; border: 1px solid #00267C; border-radius: 10px; background-color: #ffffff;">
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 2px solid #00267C; padding-bottom: 10px;">
-                <h3 style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Monitoring/Inspection Activities</h3>
+                <h3 data-inline-section-heading="true" data-view-title="Monitoring/Inspection Activities" data-edit-title="Edit Monitoring/Inspection Activities" style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Monitoring/Inspection Activities</h3>
                 <div style="display: flex; gap: 8px; align-items: center;">
                     @if(!$isLguAgencyUser)
                         <a href="#" data-toggle="inline-edit" data-target="editMonitoringForm" data-monitoring-toggle="true" style="padding: 6px 12px; background-color: #002C76; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 12px;"><i class="fas fa-edit" style="margin-right: 6px;"></i>Update</a>
@@ -1599,7 +1599,7 @@
         <div id="editPostImplementationFormBackdrop" class="lfp-inline-modal-backdrop" aria-hidden="true"></div>
         <div id="postImplementationSection" class="project-tab-panel lfp-inline-modal-section" data-inline-modal-section="true" data-inline-target="editPostImplementationForm" data-tab-key="post-implementation" role="tabpanel" aria-labelledby="tab-post-implementation" style="margin-bottom: 24px; padding: 20px; border: 1px solid #00267C; border-radius: 10px; background-color: #ffffff;">
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 2px solid #00267C; padding-bottom: 10px;">
-                <h3 style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Post Implementation Requirements</h3>
+                <h3 data-inline-section-heading="true" data-view-title="Post Implementation Requirements" data-edit-title="Edit Post Implementation Requirements" style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Post Implementation Requirements</h3>
                 <div style="display: flex; gap: 8px; align-items: center;">
                     @if(!$isLguAgencyUser)
                         <a href="#" data-toggle="inline-edit" data-target="editPostImplementationForm" data-post-implementation-toggle="true" style="padding: 6px 12px; background-color: #002C76; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 12px;"><i class="fas fa-edit" style="margin-right: 6px;"></i>Update</a>
@@ -2638,6 +2638,23 @@
             return false;
         }
 
+        function syncInlineSectionHeading(targetId, isEditing) {
+            const mappedTargetId = inlineSectionTargetMap[targetId];
+            if (!mappedTargetId) {
+                return;
+            }
+
+            const section = document.getElementById(mappedTargetId);
+            const heading = section ? section.querySelector('[data-inline-section-heading="true"]') : null;
+            if (!heading) {
+                return;
+            }
+
+            heading.textContent = isEditing
+                ? (heading.dataset.editTitle || heading.textContent)
+                : (heading.dataset.viewTitle || heading.textContent);
+        }
+
         function syncBodyModalState() {
             const activityLogModal = document.getElementById('activityLogSection');
             const hasActivityLogModal = activityLogModal ? activityLogModal.classList.contains('is-visible') : false;
@@ -2747,6 +2764,7 @@
 
             if (isInlineSectionTarget(targetId, inlineElements)) {
                 target.classList.add('is-inline-editing');
+                syncInlineSectionHeading(targetId, true);
             }
 
             if (backdrop && (wrapper || isInlineSectionTarget(targetId, inlineElements))) {
@@ -2887,7 +2905,10 @@
             'editFinancialForm',
             'editMonitoringForm',
             'editPostImplementationForm',
-        ].forEach(registerInlinePortal);
+        ].forEach((targetId) => {
+            registerInlinePortal(targetId);
+            syncInlineSectionHeading(targetId, isInlineEditOpen(targetId));
+        });
 
         function closeInlineEdit(targetId) {
             const inlineElements = getInlineEditElements(targetId);
@@ -2900,6 +2921,7 @@
 
             if (isInlineSectionTarget(targetId, inlineElements)) {
                 target.classList.remove('is-inline-editing');
+                syncInlineSectionHeading(targetId, false);
             }
 
             if (backdrop) {
