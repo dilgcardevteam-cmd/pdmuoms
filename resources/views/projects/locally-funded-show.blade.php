@@ -144,6 +144,27 @@
             display: none;
         }
 
+        .lfp-inline-edit-trigger {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background-color: #002C76;
+            color: #ffffff;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 12px;
+            font-weight: 600;
+            line-height: 1.2;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+
+        .lfp-inline-edit-trigger i {
+            margin-right: 0 !important;
+        }
+
         .lfp-physical-section-title {
             flex: 0 1 75%;
             max-width: 75%;
@@ -449,7 +470,7 @@
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 2px solid #00267C; padding-bottom: 10px;">
                 <h3 style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Project Profile</h3>
                 @if($canEditProjectProfile)
-                    <a href="#" data-toggle="inline-edit" data-target="editProfileForm" style="padding: 6px 12px; background-color: #002C76; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 12px;"><i class="fas fa-edit" style="margin-right: 6px;"></i>Update</a>
+                    <a href="#" class="lfp-inline-edit-trigger" data-toggle="inline-edit" data-target="editProfileForm"><i class="fas fa-edit" aria-hidden="true"></i>Update</a>
                 @endif
             </div>
             <div class="project-profile-grid" style="display: grid; grid-template-columns: repeat(2, minmax(260px, 1fr)); gap: 14px;">
@@ -671,7 +692,7 @@
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 2px solid #00267C; padding-bottom: 10px;">
                 <h3 style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Contract Information</h3>
                 @if(!$isLguAgencyUser)
-                    <a href="#" data-toggle="inline-edit" data-target="editContractForm" style="padding: 6px 12px; background-color: #002C76; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 12px;"><i class="fas fa-edit" style="margin-right: 6px;"></i>Update</a>
+                    <a href="#" class="lfp-inline-edit-trigger" data-toggle="inline-edit" data-target="editContractForm"><i class="fas fa-edit" aria-hidden="true"></i>Update</a>
                 @endif
             </div>
             <div class="contract-info-grid" style="display: grid; grid-template-columns: repeat(3, minmax(260px, 1fr)); gap: 14px;">
@@ -886,7 +907,7 @@
                 <h3 class="lfp-physical-section-title" data-inline-section-heading="true" data-view-title="Physical Accomplishment" data-edit-title="Edit Physical Accomplishment" style="color: #00267C; font-size: clamp(14px, 4vw, 18px); font-weight: 700; margin: 0;">Physical Accomplishment</h3>
                 <div style="display: flex; gap: 8px; align-items: center;">
                     @if(!$isLguAgencyUser)
-                        <a href="#" data-toggle="inline-edit" data-target="editPhysicalForm" data-physical-toggle="true" style="padding: 6px 12px; background-color: #002C76; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 12px;"><i class="fas fa-edit" style="margin-right: 6px;"></i>Update</a>
+                        <a href="#" class="lfp-inline-edit-trigger" data-toggle="inline-edit" data-target="editPhysicalForm" data-physical-toggle="true"><i class="fas fa-edit" aria-hidden="true"></i>Update</a>
                     @endif
                     <button type="button" class="lfp-inline-modal-close lfp-inline-modal-section-close" data-toggle="inline-cancel" data-target="editPhysicalForm" aria-label="Close physical accomplishment editor">&times;</button>
                 </div>
@@ -1288,7 +1309,6 @@
                     </form>
                 </div>
             </div>
-            
         </div>
 
         <div id="editFinancialFormBackdrop" class="lfp-inline-modal-backdrop" aria-hidden="true"></div>
@@ -1297,7 +1317,7 @@
                 <h3 class="lfp-financial-section-title" data-inline-section-heading="true" data-view-title="Financial Accomplishment (based on Subaybayan)" data-edit-title="Edit Financial Accomplishment" style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Financial Accomplishment (based on Subaybayan)</h3>
                 <div class="lfp-financial-section-actions" style="display: flex; gap: 8px; align-items: center;">
                     @if(!$isLguAgencyUser)
-                        <a href="#" data-toggle="inline-edit" data-target="editFinancialForm" data-financial-toggle="true" style="padding: 6px 12px; background-color: #002C76; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 12px;"><i class="fas fa-edit" style="margin-right: 6px;"></i>Update</a>
+                        <a href="#" class="lfp-inline-edit-trigger" data-toggle="inline-edit" data-target="editFinancialForm" data-financial-toggle="true"><i class="fas fa-edit" aria-hidden="true"></i>Update</a>
                     @endif
                     <button type="button" class="lfp-inline-modal-close lfp-inline-modal-section-close" data-toggle="inline-cancel" data-target="editFinancialForm" aria-label="Close financial accomplishment editor">&times;</button>
                 </div>
@@ -1471,7 +1491,7 @@
                 <h3 data-inline-section-heading="true" data-view-title="Monitoring/Inspection Activities" data-edit-title="Edit Monitoring/Inspection Activities" style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Monitoring/Inspection Activities</h3>
                 <div style="display: flex; gap: 8px; align-items: center;">
                     @if(!$isLguAgencyUser)
-                        <a href="#" data-toggle="inline-edit" data-target="editMonitoringForm" data-monitoring-toggle="true" style="padding: 6px 12px; background-color: #002C76; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 12px;"><i class="fas fa-edit" style="margin-right: 6px;"></i>Update</a>
+                        <a href="#" class="lfp-inline-edit-trigger" data-toggle="inline-edit" data-target="editMonitoringForm" data-monitoring-toggle="true"><i class="fas fa-edit" aria-hidden="true"></i>Update</a>
                     @endif
                     <button type="button" class="lfp-inline-modal-close lfp-inline-modal-section-close" data-toggle="inline-cancel" data-target="editMonitoringForm" aria-label="Close monitoring editor">&times;</button>
                 </div>
@@ -1602,7 +1622,7 @@
                 <h3 data-inline-section-heading="true" data-view-title="Post Implementation Requirements" data-edit-title="Edit Post Implementation Requirements" style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Post Implementation Requirements</h3>
                 <div style="display: flex; gap: 8px; align-items: center;">
                     @if(!$isLguAgencyUser)
-                        <a href="#" data-toggle="inline-edit" data-target="editPostImplementationForm" data-post-implementation-toggle="true" style="padding: 6px 12px; background-color: #002C76; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 12px;"><i class="fas fa-edit" style="margin-right: 6px;"></i>Update</a>
+                        <a href="#" class="lfp-inline-edit-trigger" data-toggle="inline-edit" data-target="editPostImplementationForm" data-post-implementation-toggle="true"><i class="fas fa-edit" aria-hidden="true"></i>Update</a>
                     @endif
                     <button type="button" class="lfp-inline-modal-close lfp-inline-modal-section-close" data-toggle="inline-cancel" data-target="editPostImplementationForm" aria-label="Close post implementation editor">&times;</button>
                 </div>
@@ -2147,6 +2167,74 @@
             width: 50%;
             min-width: 320px;
             box-sizing: border-box;
+        }
+
+        .lfp-inline-form-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 16px !important;
+        }
+
+        .lfp-inline-form-save,
+        .lfp-inline-form-cancel {
+            padding: 8px 16px !important;
+            border: none !important;
+            border-radius: 6px !important;
+            font-size: 13px !important;
+            font-weight: 600 !important;
+            cursor: pointer !important;
+        }
+
+        .lfp-inline-form-save {
+            background-color: #16a34a !important;
+            color: #ffffff !important;
+        }
+
+        .lfp-inline-form-cancel {
+            display: none;
+            background-color: #6b7280 !important;
+            color: #ffffff !important;
+        }
+
+        .lfp-inline-section-footer {
+            display: none;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 20px;
+            padding-top: 16px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .lfp-inline-modal-section.is-inline-editing .lfp-inline-section-footer {
+            display: flex;
+        }
+
+        .lfp-inline-section-save,
+        .lfp-inline-section-cancel {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .lfp-inline-section-save {
+            background-color: #16a34a;
+            color: #ffffff;
+        }
+
+        .lfp-inline-section-cancel {
+            background-color: #6b7280;
+            color: #ffffff;
+        }
+
+        button[data-financial-save="true"],
+        button[data-monitoring-save="true"],
+        button[data-post-implementation-save="true"] {
+            display: none !important;
         }
 
         @media (max-width: 1024px) {
@@ -2742,15 +2830,24 @@
                 ? getInlineToggleMarkup('Cancel', 'fas fa-times')
                 : (button.dataset.originalHtml || getInlineToggleMarkup(button.dataset.originalText || 'Update', 'fas fa-edit'));
             button.dataset.inlineState = isEditing ? 'editing' : 'idle';
-            button.style.backgroundColor = isEditing ? '#dc2626' : (button.dataset.originalBg || '');
-            button.style.color = isEditing ? '#ffffff' : (button.dataset.originalColor || '#ffffff');
+            const defaultBackground = button.classList.contains('lfp-inline-edit-trigger') ? '#002C76' : (button.dataset.originalBg || '');
+            const defaultColor = button.classList.contains('lfp-inline-edit-trigger') ? '#ffffff' : (button.dataset.originalColor || '#ffffff');
+            button.style.backgroundColor = isEditing ? '#dc2626' : defaultBackground;
+            button.style.color = isEditing ? '#ffffff' : defaultColor;
             button.setAttribute('aria-label', isEditing ? 'Cancel editing' : (button.dataset.originalText || 'Update'));
+
+            const targetId = button.getAttribute('data-target');
+            const isSectionTarget = targetId && ['editPhysicalForm', 'editFinancialForm', 'editMonitoringForm', 'editPostImplementationForm'].includes(targetId);
+            if (isSectionTarget) {
+                button.style.display = isEditing ? 'none' : 'inline-flex';
+            }
         }
 
         function openInlineEdit(button) {
             const targetId = button.getAttribute('data-target');
             const inlineElements = getInlineEditElements(targetId);
             const { target, wrapper, backdrop } = inlineElements;
+            snapshotInlineSectionFields(targetId);
             if (wrapper) {
                 wrapper.style.display = 'block';
                 wrapper.classList.add('is-visible');
@@ -2833,6 +2930,9 @@
                         saveBtn.style.display = 'none';
                     }
                 });
+                document.querySelectorAll('[data-inline-form-cancel="true"][data-target="editFinancialForm"]').forEach((cancelBtn) => {
+                    cancelBtn.style.display = isROUser ? 'inline-block' : 'none';
+                });
             }
 
             if (button.hasAttribute('data-monitoring-toggle')) {
@@ -2864,6 +2964,12 @@
                         saveBtn.style.display = 'none';
                     }
                 });
+                document.querySelectorAll('[data-inline-form-cancel="true"][data-target="editMonitoringForm"]').forEach((cancelBtn) => {
+                    const form = cancelBtn.closest('form');
+                    const input = form ? form.querySelector('[data-monitoring-edit="true"]') : null;
+
+                    cancelBtn.style.display = input && !input.disabled ? 'inline-block' : 'none';
+                });
             }
 
             if (button.hasAttribute('data-post-implementation-toggle')) {
@@ -2894,6 +3000,12 @@
                     } else {
                         saveBtn.style.display = 'none';
                     }
+                });
+                document.querySelectorAll('[data-inline-form-cancel="true"][data-target="editPostImplementationForm"]').forEach((cancelBtn) => {
+                    const form = cancelBtn.closest('form');
+                    const input = form ? form.querySelector('[data-post-implementation-edit="true"]') : null;
+
+                    cancelBtn.style.display = input && !input.disabled ? 'inline-block' : 'none';
                 });
             }
         }
@@ -2930,6 +3042,7 @@
             }
 
             if (targetId === 'editPhysicalForm') {
+                restoreInlineSectionFields(targetId);
                 document.querySelectorAll('[data-physical-edit="true"]').forEach((input) => {
                     input.disabled = true;
                     input.style.backgroundColor = '#f3f4f6';
@@ -2937,6 +3050,7 @@
             }
 
             if (targetId === 'editFinancialForm') {
+                restoreInlineSectionFields(targetId);
                 document.querySelectorAll('[data-financial-edit="true"]').forEach((input) => {
                     input.disabled = true;
                     input.style.backgroundColor = '#f3f4f6';
@@ -2944,9 +3058,13 @@
                 document.querySelectorAll('[data-financial-save="true"]').forEach((saveBtn) => {
                     saveBtn.style.display = 'none';
                 });
+                document.querySelectorAll('[data-inline-form-cancel="true"][data-target="editFinancialForm"]').forEach((cancelBtn) => {
+                    cancelBtn.style.display = 'none';
+                });
             }
 
             if (targetId === 'editMonitoringForm') {
+                restoreInlineSectionFields(targetId);
                 document.querySelectorAll('[data-monitoring-edit="true"]').forEach((input) => {
                     input.disabled = true;
                     input.style.backgroundColor = '#f3f4f6';
@@ -2954,15 +3072,22 @@
                 document.querySelectorAll('[data-monitoring-save="true"]').forEach((saveBtn) => {
                     saveBtn.style.display = 'none';
                 });
+                document.querySelectorAll('[data-inline-form-cancel="true"][data-target="editMonitoringForm"]').forEach((cancelBtn) => {
+                    cancelBtn.style.display = 'none';
+                });
             }
 
             if (targetId === 'editPostImplementationForm') {
+                restoreInlineSectionFields(targetId);
                 document.querySelectorAll('[data-post-implementation-edit="true"]').forEach((input) => {
                     input.disabled = true;
                     input.style.backgroundColor = '#f3f4f6';
                 });
                 document.querySelectorAll('[data-post-implementation-save="true"]').forEach((saveBtn) => {
                     saveBtn.style.display = 'none';
+                });
+                document.querySelectorAll('[data-inline-form-cancel="true"][data-target="editPostImplementationForm"]').forEach((cancelBtn) => {
+                    cancelBtn.style.display = 'none';
                 });
             }
 
@@ -2992,9 +3117,190 @@
             document.querySelectorAll(saveSelectors.join(',')).forEach((saveBtn) => {
                 saveBtn.style.display = 'none';
             });
+
+            document.querySelectorAll('[data-inline-form-cancel="true"]').forEach((cancelBtn) => {
+                cancelBtn.style.display = 'none';
+            });
         }
 
         disableAllEditableControlsOnLoad();
+
+        const inlineSectionConfigs = {
+            editPhysicalForm: {
+                selector: '[data-physical-edit="true"]',
+                fallbackSection: 'physical',
+            },
+            editFinancialForm: {
+                selector: '[data-financial-edit="true"]',
+                fallbackSection: 'financial',
+            },
+            editMonitoringForm: {
+                selector: '[data-monitoring-edit="true"]',
+                fallbackSection: 'monitoring',
+            },
+            editPostImplementationForm: {
+                selector: '[data-post-implementation-edit="true"]',
+                fallbackSection: 'monitoring',
+            },
+        };
+
+        function getInlineSectionConfig(targetId) {
+            return inlineSectionConfigs[targetId] || null;
+        }
+
+        function getInlineSectionElement(targetId) {
+            return document.querySelector('.lfp-inline-modal-section[data-inline-target="' + targetId + '"]');
+        }
+
+        function getInlineSectionEditableFields(targetId) {
+            const config = getInlineSectionConfig(targetId);
+            const section = getInlineSectionElement(targetId);
+            if (!config || !section) {
+                return [];
+            }
+
+            return Array.from(section.querySelectorAll(config.selector));
+        }
+
+        function snapshotInlineSectionFields(targetId) {
+            getInlineSectionEditableFields(targetId).forEach((field) => {
+                if (field.type === 'file') {
+                    field.dataset.inlineOriginalValue = '';
+                    return;
+                }
+
+                field.dataset.inlineOriginalValue = getEditableFieldValue(field);
+            });
+        }
+
+        function restoreInlineSectionFields(targetId) {
+            getInlineSectionEditableFields(targetId).forEach((field) => {
+                if (!Object.prototype.hasOwnProperty.call(field.dataset, 'inlineOriginalValue')) {
+                    return;
+                }
+
+                if (field.type === 'file') {
+                    field.value = '';
+                    return;
+                }
+
+                setEditableFieldValue(field, field.dataset.inlineOriginalValue);
+            });
+        }
+
+        function initializeInlineSectionFooters() {
+            document.querySelectorAll('.lfp-inline-modal-section[data-inline-target]').forEach((section) => {
+                if (section.querySelector('.lfp-inline-section-footer')) {
+                    return;
+                }
+
+                const targetId = section.getAttribute('data-inline-target');
+                const footer = document.createElement('div');
+                footer.className = 'lfp-inline-section-footer';
+                footer.innerHTML = '' +
+                    '<button type="button" class="lfp-inline-section-save" data-inline-section-save="' + targetId + '">' +
+                        '<i class="fas fa-check" style="margin-right: 8px;" aria-hidden="true"></i>Save Changes' +
+                    '</button>' +
+                    '<button type="button" class="lfp-inline-section-cancel" data-inline-section-cancel="' + targetId + '">' +
+                        '<i class="fas fa-times" style="margin-right: 8px;" aria-hidden="true"></i>Cancel' +
+                    '</button>';
+
+                section.appendChild(footer);
+            });
+        }
+
+        async function submitInlineSection(targetId) {
+            const section = getInlineSectionElement(targetId);
+            const config = getInlineSectionConfig(targetId);
+            if (!section || !config) {
+                return;
+            }
+
+            const fields = getInlineSectionEditableFields(targetId).filter((field) => !field.disabled && field.name);
+            const referenceForm = section.querySelector('form[action]');
+            if (!referenceForm) {
+                return;
+            }
+
+            const hasChanges = fields.some((field) => {
+                if (field.type === 'file') {
+                    return (field.files || []).length > 0;
+                }
+
+                const originalValue = Object.prototype.hasOwnProperty.call(field.dataset, 'inlineOriginalValue')
+                    ? field.dataset.inlineOriginalValue
+                    : getEditableFieldValue(field);
+
+                return getEditableFieldValue(field) !== originalValue;
+            });
+
+            if (!hasChanges) {
+                closeInlineEdit(targetId);
+                const editButton = document.querySelector('[data-toggle="inline-edit"][data-target="' + targetId + '"]');
+                setInlineToggleState(editButton, false);
+                return;
+            }
+
+            const actionUrl = referenceForm.getAttribute('action');
+            const sectionField = referenceForm.querySelector('input[name="section"]');
+            const sectionValue = sectionField ? sectionField.value : config.fallbackSection;
+            const formData = new FormData();
+
+            formData.append('_token', '{{ csrf_token() }}');
+            formData.append('_method', 'PUT');
+            formData.append('section', sectionValue);
+
+            fields.forEach((field) => {
+                if (field.type === 'file') {
+                    Array.from(field.files || []).forEach((file) => {
+                        formData.append(field.name, file);
+                    });
+                    return;
+                }
+
+                if ((field.type === 'checkbox' || field.type === 'radio') && !field.checked) {
+                    return;
+                }
+
+                formData.append(field.name, field.value);
+            });
+
+            const saveButton = section.querySelector('[data-inline-section-save="' + targetId + '"]');
+            if (saveButton) {
+                saveButton.disabled = true;
+            }
+
+            try {
+                const response = await fetch(actionUrl, {
+                    method: 'POST',
+                    body: formData,
+                    credentials: 'same-origin',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'text/html,application/xhtml+xml',
+                    },
+                });
+
+                const html = await response.text();
+                if (!response.ok) {
+                    throw new Error('Request failed');
+                }
+
+                document.open();
+                document.write(html);
+                document.close();
+            } catch (error) {
+                if (saveButton) {
+                    saveButton.disabled = false;
+                }
+
+                if (typeof window.showSystemErrorModal === 'function') {
+                    window.showSystemErrorModal('Unable to save changes right now.');
+                }
+            }
+        }
+
+        initializeInlineSectionFooters();
 
         function submitFieldChangeForm(field) {
             if (!field) {
@@ -3172,8 +3478,6 @@
             });
         }
 
-        initializeFieldChangeConfirmation();
-
         document.querySelectorAll('[data-toggle="inline-edit"]').forEach((button) => {
             const targetId = button.getAttribute('data-target');
             setInlineToggleState(button, isInlineEditOpen(targetId));
@@ -3192,6 +3496,22 @@
         });
 
         syncBodyModalState();
+
+        document.querySelectorAll('[data-inline-section-save]').forEach((button) => {
+            button.addEventListener('click', () => {
+                const targetId = button.getAttribute('data-inline-section-save');
+                submitInlineSection(targetId);
+            });
+        });
+
+        document.querySelectorAll('[data-inline-section-cancel]').forEach((button) => {
+            button.addEventListener('click', () => {
+                const targetId = button.getAttribute('data-inline-section-cancel');
+                closeInlineEdit(targetId);
+                const editButton = document.querySelector('[data-toggle="inline-edit"][data-target="' + targetId + '"]');
+                setInlineToggleState(editButton, false);
+            });
+        });
 
         document.querySelectorAll('[data-toggle="inline-cancel"]').forEach((button) => {
             button.addEventListener('click', () => {
