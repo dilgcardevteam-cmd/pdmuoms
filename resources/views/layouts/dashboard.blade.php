@@ -22,6 +22,11 @@
             box-sizing: border-box;
         }
         
+        html,
+        body {
+            height: 100%;
+        }
+
         body {
             font-family: 'Facebook Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             background-image: url('/background.jpg');
@@ -29,6 +34,7 @@
             background-position: center;
             background-attachment: fixed;
             overflow-x: hidden;
+            overflow-y: hidden;
         }
 
         body.sidebar-open {
@@ -582,7 +588,10 @@
             margin-top: 70px;
             margin-left: 250px;
             padding: 30px;
+            height: calc(100vh - 70px);
             min-height: calc(100vh - 70px);
+            overflow-y: auto;
+            overflow-x: hidden;
             transition: margin-left 280ms cubic-bezier(0.2, 0.8, 0.2, 1);
             will-change: margin-left, transform, opacity;
         }
@@ -832,7 +841,9 @@
                 margin-top: 60px;
                 margin-left: 0;
                 padding: 15px 12px;
+                height: calc(100vh - 60px);
                 min-height: calc(100vh - 60px);
+                overflow-y: auto;
             }
             
             .main-content.with-sidebar {
