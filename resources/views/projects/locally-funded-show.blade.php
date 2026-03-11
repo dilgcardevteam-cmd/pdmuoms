@@ -2262,6 +2262,11 @@
                                     </div>
                                     <div class="lfp-financial-timeline-metrics">
                                         <div class="lfp-physical-timeline-metric">
+                                            <span>Balance</span>
+                                            <strong>{{ $formatFinancialCurrency($entry['balance']) }}</strong>
+                                        </div>
+
+                                        <div class="lfp-physical-timeline-metric">
                                             <span>Obligation</span>
                                             <strong class="lfp-physical-trend">
                                                 {!! $financialTrendIndicator($entry['obligation'], $previousEntry['obligation'] ?? null) !!}
@@ -2283,11 +2288,6 @@
                                                 {!! $financialTrendIndicator($entry['reverted_amount'], $previousEntry['reverted_amount'] ?? null) !!}
                                                 <span>{{ $formatFinancialCurrency($entry['reverted_amount']) }}</span>
                                             </strong>
-                                        </div>
-
-                                        <div class="lfp-physical-timeline-metric">
-                                            <span>Balance</span>
-                                            <strong>{{ $formatFinancialCurrency($entry['balance']) }}</strong>
                                         </div>
 
                                         <div class="lfp-physical-timeline-metric">
@@ -3030,7 +3030,7 @@
             opacity: 0;
             visibility: hidden;
             transition: opacity 0.2s ease, visibility 0.2s ease;
-            z-index: 1190;
+            z-index: 1390;
         }
 
         #activityLogBackdrop.is-visible {
@@ -3048,7 +3048,8 @@
             overflow: auto;
             box-shadow: 0 20px 40px rgba(15, 23, 42, 0.25);
             display: none;
-            z-index: 1200;
+            margin: 0 !important;
+            z-index: 1400;
         }
 
         #activityLogSection.is-visible {
@@ -3833,6 +3834,46 @@
             if (typeof syncPortal === 'function') {
                 syncPortal();
             }
+        }
+
+        function registerActivityLogPortal() {
+            const section = document.getElementById('activityLogSection');
+            const backdrop = document.getElementById('activityLogBackdrop');
+
+            if (!section || !backdrop || !section.parentNode || !backdrop.parentNode) {
+                return;
+            }
+
+            const originalParent = section.parentNode;
+            const anchor = document.createElement('span');
+            anchor.hidden = true;
+            originalParent.insertBefore(anchor, section);
+
+            const syncPortal = () => {
+                const isVisible = section.classList.contains('is-visible');
+
+                if (isVisible) {
+                    if (backdrop.parentNode !== document.body) {
+                        document.body.appendChild(backdrop);
+                    }
+
+                    if (section.parentNode !== document.body) {
+                        document.body.appendChild(section);
+                    }
+                } else {
+                    if (section.parentNode !== originalParent) {
+                        originalParent.insertBefore(section, anchor.nextSibling);
+                    }
+
+                    if (backdrop.parentNode !== originalParent) {
+                        originalParent.insertBefore(backdrop, section.nextSibling);
+                    }
+                }
+            };
+
+            syncPortal();
+
+            return syncPortal;
         }
 
         function getInlineToggleMarkup(label, iconClass) {
@@ -4957,6 +4998,7 @@
         const activityLogBackdrop = document.getElementById('activityLogBackdrop');
         const activityLogFab = document.getElementById('activityLogFab');
         const activityLogClose = document.getElementById('activityLogClose');
+        const syncActivityLogPortal = registerActivityLogPortal();
 
         function setActivityLogVisibility(isVisible) {
             if (!activityLogSection || !activityLogFab || !activityLogBackdrop) {
@@ -4969,6 +5011,9 @@
             activityLogFab.dataset.state = isVisible ? 'open' : 'closed';
             activityLogSection.setAttribute('aria-hidden', isVisible ? 'false' : 'true');
             activityLogBackdrop.setAttribute('aria-hidden', isVisible ? 'false' : 'true');
+            if (typeof syncActivityLogPortal === 'function') {
+                syncActivityLogPortal();
+            }
             syncBodyModalState();
 
             const labelSpan = activityLogFab.querySelector('span');
