@@ -239,63 +239,6 @@
             line-height: 1.3;
         }
 
-        .lfp-physical-graph-shell {
-            margin-bottom: 18px;
-            padding: 18px;
-            border: 1px solid #dbeafe;
-            border-radius: 14px;
-            background: #ffffff;
-        }
-
-        .lfp-physical-graph-header {
-            display: flex;
-            justify-content: space-between;
-            gap: 12px;
-            align-items: flex-start;
-            margin-bottom: 14px;
-        }
-
-        .lfp-physical-block-title {
-            margin: 0 0 4px;
-            color: #0f172a;
-            font-size: 16px;
-            font-weight: 700;
-        }
-
-        .lfp-physical-block-copy,
-        .lfp-physical-block-note {
-            margin: 0;
-            color: #64748b;
-            font-size: 12px;
-        }
-
-        .lfp-physical-graph-scroll {
-            overflow-x: auto;
-            padding-bottom: 6px;
-        }
-
-        .lfp-physical-graph {
-            display: block;
-            width: max(100%, 520px);
-            height: 180px;
-        }
-
-        .lfp-physical-graph-legend {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px 12px;
-            margin-top: 12px;
-            color: #475569;
-            font-size: 12px;
-        }
-
-        .lfp-physical-graph-legend span {
-            padding: 4px 8px;
-            border: 1px solid #dbeafe;
-            border-radius: 999px;
-            background: #f8fafc;
-        }
-
         .lfp-physical-timeline {
             position: relative;
             display: grid;
@@ -435,6 +378,7 @@
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 12px;
+            margin-bottom: 18px;
         }
 
         .lfp-physical-footer-meta div {
@@ -500,9 +444,9 @@
             .lfp-physical-timeline-metrics,
             .lfp-physical-footer-meta {
                 grid-template-columns: 1fr;
+                margin-bottom: 4px;
             }
 
-            .lfp-physical-graph-header,
             .lfp-physical-timeline-card-header {
                 flex-direction: column;
             }
@@ -1263,27 +1207,6 @@
                 ];
             }
 
-            $physicalGraphPoints = [];
-            $physicalGraphLabels = [];
-            $graphEntryCount = count($physicalTimelineEntries);
-            if ($graphEntryCount > 0) {
-                $graphWidth = max(180, ($graphEntryCount - 1) * 88 + 40);
-                foreach ($physicalTimelineEntries as $index => $entry) {
-                    $x = $graphEntryCount === 1 ? 20 : 20 + ($index * (($graphWidth - 40) / max(1, $graphEntryCount - 1)));
-                    $rawValue = $entry['accomplishment_pct_ro'] ?? $entry['accomplishment_pct'];
-                    $numericValue = is_numeric($rawValue) ? max(0, min(100, (float) $rawValue)) : null;
-                    $y = $numericValue === null ? 88 : 88 - ($numericValue * 0.68);
-
-                    $physicalGraphPoints[] = number_format($x, 2, '.', '') . ',' . number_format($y, 2, '.', '');
-                    $physicalGraphLabels[] = [
-                        'x' => number_format($x, 2, '.', ''),
-                        'label' => $entry['month_short'],
-                        'value' => $numericValue === null ? '-' : number_format($numericValue, 0) . '%',
-                    ];
-                }
-            } else {
-                $graphWidth = 180;
-            }
         @endphp
 
         <div id="physicalAccomplishmentSection" class="project-tab-panel" data-tab-key="physical" role="tabpanel" aria-labelledby="tab-physical-accomplishment" style="margin-bottom: 24px; padding: 20px; border: 1px solid #00267C; border-radius: 10px; background-color: #ffffff;">
@@ -1329,33 +1252,19 @@
                 </div>
             </div>
 
-            <div class="lfp-physical-graph-shell">
-                <div class="lfp-physical-graph-header">
-                    <div>
-                        <h4 class="lfp-physical-block-title">Accomplishment Trend</h4>
-                        <p class="lfp-physical-block-copy">Line-graph view of the monthly physical accomplishment record.</p>
-                    </div>
-                    <span class="lfp-physical-block-note">Uses RO data when available, otherwise FOU data</span>
+            <div class="lfp-physical-footer-meta">
+                <div>
+                    <span>Actual Date of Completion</span>
+                    <strong>{{ $project->actual_date_completion ? $project->actual_date_completion->format('F j, Y') : 'N/A' }}</strong>
                 </div>
-                @if(count($physicalTimelineEntries))
-                    <div class="lfp-physical-graph-scroll">
-                        <svg class="lfp-physical-graph" viewBox="0 0 {{ $graphWidth }} 100" preserveAspectRatio="none" role="img" aria-label="Physical accomplishment timeline graph">
-                            <line x1="20" y1="88" x2="{{ $graphWidth - 20 }}" y2="88" stroke="#cbd5e1" stroke-width="2" stroke-linecap="round"></line>
-                            <polyline fill="none" stroke="#1d4ed8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" points="{{ implode(' ', $physicalGraphPoints) }}"></polyline>
-                            @foreach($physicalGraphLabels as $label)
-                                <circle cx="{{ $label['x'] }}" cy="{{ explode(',', $physicalGraphPoints[$loop->index])[1] }}" r="4.5" fill="#ffffff" stroke="#1d4ed8" stroke-width="3"></circle>
-                                <text x="{{ $label['x'] }}" y="98" text-anchor="middle" font-size="7" fill="#475569">{{ $label['label'] }}</text>
-                            @endforeach
-                        </svg>
-                        <div class="lfp-physical-graph-legend">
-                            @foreach($physicalGraphLabels as $label)
-                                <span>{{ $label['label'] }}: {{ $label['value'] }}</span>
-                            @endforeach
-                        </div>
-                    </div>
-                @else
-                    <div class="lfp-physical-empty-state">No physical accomplishment timeline data is available yet.</div>
-                @endif
+                <div>
+                    <span>Last Remarks Update</span>
+                    <strong>{{ $project->physical_remarks_updated_at ? $project->physical_remarks_updated_at->format('M d, Y h:i A') : '-' }}</strong>
+                </div>
+                <div>
+                    <span>Updated By</span>
+                    <strong>{{ $physicalRemarksUpdatedByName ?? ($actualCompletionUpdatedByName ?? 'N/A') }}</strong>
+                </div>
             </div>
 
             <div class="lfp-physical-timeline">
@@ -1417,21 +1326,6 @@
                 @empty
                     <div class="lfp-physical-empty-state">No physical accomplishment updates have been logged yet.</div>
                 @endforelse
-            </div>
-
-            <div class="lfp-physical-footer-meta">
-                <div>
-                    <span>Actual Date of Completion</span>
-                    <strong>{{ $project->actual_date_completion ? $project->actual_date_completion->format('F j, Y') : 'N/A' }}</strong>
-                </div>
-                <div>
-                    <span>Last Remarks Update</span>
-                    <strong>{{ $project->physical_remarks_updated_at ? $project->physical_remarks_updated_at->format('M d, Y h:i A') : '-' }}</strong>
-                </div>
-                <div>
-                    <span>Updated By</span>
-                    <strong>{{ $physicalRemarksUpdatedByName ?? ($actualCompletionUpdatedByName ?? 'N/A') }}</strong>
-                </div>
             </div>
         </div>
 
