@@ -131,57 +131,66 @@
 
             <div class="user-mobile-cards">
                 @forelse($users as $user)
-                    <article class="user-mobile-card">
-                        <div class="user-mobile-card__top">
-                            <div>
-                                <h3 class="user-mobile-card__name">{{ $user->fname }} {{ $user->lname }}</h3>
-                                <p class="user-mobile-card__username">{{ $user->username }}</p>
+                    <article class="user-mobile-card" data-user-mobile-card>
+                        <button type="button" class="user-mobile-card__toggle" data-user-mobile-toggle aria-expanded="false">
+                            <div class="user-mobile-card__top">
+                                <div>
+                                    <h3 class="user-mobile-card__name">{{ $user->fname }} {{ $user->lname }}</h3>
+                                    <p class="user-mobile-card__username">{{ $user->username }}</p>
+                                </div>
+                                <div class="user-mobile-card__summary">
+                                    <div class="user-mobile-card__badges">
+                                        <span style="padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;
+                                            @if($user->role === 'superadmin') background-color: #fee2e2; color: #991b1b;
+                                            @elseif($user->role === 'admin') background-color: #dbeafe; color: #0c2d6b;
+                                            @else background-color: #dcfce7; color: #166534; @endif">
+                                            {{ ucfirst($user->role) }}
+                                        </span>
+                                        <span style="padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;
+                                            @if($user->status === 'active') background-color: #d1fae5; color: #065f46;
+                                            @else background-color: #fed7aa; color: #92400e; @endif">
+                                            {{ ucfirst($user->status) }}
+                                        </span>
+                                    </div>
+                                    <span class="user-mobile-card__chevron" aria-hidden="true">
+                                        <i class="fas fa-chevron-down"></i>
+                                    </span>
+                                </div>
                             </div>
-                            <div class="user-mobile-card__badges">
-                                <span style="padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;
-                                    @if($user->role === 'superadmin') background-color: #fee2e2; color: #991b1b;
-                                    @elseif($user->role === 'admin') background-color: #dbeafe; color: #0c2d6b;
-                                    @else background-color: #dcfce7; color: #166534; @endif">
-                                    {{ ucfirst($user->role) }}
-                                </span>
-                                <span style="padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;
-                                    @if($user->status === 'active') background-color: #d1fae5; color: #065f46;
-                                    @else background-color: #fed7aa; color: #92400e; @endif">
-                                    {{ ucfirst($user->status) }}
-                                </span>
-                            </div>
-                        </div>
+                        </button>
 
-                        <dl class="user-mobile-card__meta">
-                            <div>
-                                <dt>Email</dt>
-                                <dd>{{ $user->emailaddress }}</dd>
-                            </div>
-                            <div>
-                                <dt>Username</dt>
-                                <dd>{{ $user->username }}</dd>
-                            </div>
-                        </dl>
+                        <div class="user-mobile-card__content" data-user-mobile-content hidden>
+                            <dl class="user-mobile-card__meta">
+                                <div>
+                                    <dt>Email</dt>
+                                    <dd>{{ $user->emailaddress }}</dd>
+                                </div>
+                                <div>
+                                    <dt>Username</dt>
+                                    <dd>{{ $user->username }}</dd>
+                                </div>
+                            </dl>
 
-                        <div class="user-mobile-card__actions">
-                            <a href="{{ route('users.show', $user->idno) }}" class="user-mobile-card__action user-mobile-card__action--view">
-                                <i class="fas fa-eye"></i> View
-                            </a>
-                            @if($user->idno !== Auth::id())
-                                <form action="{{ route('users.block', $user->idno) }}" method="POST" class="user-mobile-card__form" onsubmit="return confirm('{{ $user->status === 'inactive' ? 'Unblock this user? They will be able to log in again.' : 'Block this user? They will no longer be able to log in.' }}');">
-                                    @csrf
-                                    @method('PUT')
-                                    @if($user->status === 'inactive')
-                                        <button type="submit" class="user-mobile-card__action user-mobile-card__action--unblock">
-                                            <i class="fas fa-user-check"></i> Unblock
-                                        </button>
-                                    @else
-                                        <button type="submit" class="user-mobile-card__action user-mobile-card__action--block">
-                                            <i class="fas fa-user-slash"></i> Block
-                                        </button>
-                                    @endif
-                                </form>
-                            @endif
+                            <div class="user-mobile-card__actions">
+                                <a href="{{ route('users.show', $user->idno) }}" class="user-mobile-card__action user-mobile-card__action--view">
+                                    <i class="fas fa-eye"></i> View
+                                </a>
+                                @if($user->idno !== Auth::id())
+                                    <form action="{{ route('users.block', $user->idno) }}" method="POST" class="user-mobile-card__form" onsubmit="return confirm('{{ $user->status === 'inactive' ? 'Unblock this user? They will be able to log in again.' : 'Block this user? They will no longer be able to log in.' }}');">
+                                        @csrf
+                                        @method('PUT')
+                                        @if($user->status === 'inactive')
+                                            <button type="submit" class="user-mobile-card__action user-mobile-card__action--unblock">
+                                                <i class="fas fa-user-check"></i> Unblock
+                                            </button>
+                                        @else
+                                            <button type="submit" class="user-mobile-card__action user-mobile-card__action--block">
+                                                <i class="fas fa-user-slash"></i> Block
+                                            </button>
+                                        @endif
+                                    </form>
+                                @endif
+                            </div>
                         </div>
                     </article>
                 @empty
@@ -393,7 +402,43 @@
             justify-content: space-between;
             align-items: flex-start;
             gap: 12px;
-            margin-bottom: 14px;
+        }
+
+        .user-mobile-card__toggle {
+            width: 100%;
+            padding: 0;
+            border: none;
+            background: transparent;
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .user-mobile-card__summary {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-mobile-card__content {
+            margin-top: 14px;
+        }
+
+        .user-mobile-card__chevron {
+            width: 34px;
+            height: 34px;
+            border-radius: 999px;
+            background: #e2e8f0;
+            color: #334155;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s ease, background 0.2s ease;
+            flex: 0 0 auto;
+        }
+
+        .user-mobile-card.is-expanded .user-mobile-card__chevron {
+            transform: rotate(180deg);
+            background: #dbeafe;
         }
 
         .user-mobile-card__name {
@@ -615,13 +660,18 @@
             }
 
             .user-mobile-card__top {
-                flex-direction: column;
+                align-items: center;
             }
 
             .user-mobile-card__badges {
                 flex-direction: row;
                 align-items: center;
                 flex-wrap: wrap;
+            }
+
+            .user-mobile-card__summary {
+                width: 100%;
+                justify-content: space-between;
             }
 
             .access-grant-grid {
@@ -678,6 +728,30 @@
             tabs.forEach((tab) => {
                 tab.addEventListener('click', function () {
                     activateTab(tab.dataset.userTabTarget);
+                });
+            });
+        }());
+
+        (function attachUserMobileCards() {
+            const cards = Array.from(document.querySelectorAll('[data-user-mobile-card]'));
+
+            if (cards.length === 0) {
+                return;
+            }
+
+            cards.forEach((card) => {
+                const toggle = card.querySelector('[data-user-mobile-toggle]');
+                const content = card.querySelector('[data-user-mobile-content]');
+
+                if (!toggle || !content) {
+                    return;
+                }
+
+                toggle.addEventListener('click', function () {
+                    const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
+                    toggle.setAttribute('aria-expanded', isExpanded ? 'false' : 'true');
+                    content.hidden = isExpanded;
+                    card.classList.toggle('is-expanded', !isExpanded);
                 });
             });
         }());
