@@ -53,15 +53,15 @@
     </div>
 
     <section id="usersPanel" class="project-tab-panel {{ $activeUserTab === 'usersPanel' ? 'is-active' : '' }}" role="tabpanel">
-        <div style="background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; gap: 16px; flex-wrap: wrap;">
+        <div class="user-management-panel">
+            <div class="user-management-header">
                 <h2 style="color: #002C76; font-size: 18px; margin: 0;">Active Users ({{ $users->total() }})</h2>
-                <a href="{{ route('users.create') }}" style="padding: 10px 20px; background-color: #002C76; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px; text-decoration: none; display: flex; align-items: center; gap: 8px; transition: all 0.3s ease;">
+                <a href="{{ route('users.create') }}" class="user-management-add-btn" style="padding: 10px 20px; background-color: #002C76; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px; text-decoration: none; display: flex; align-items: center; gap: 8px; transition: all 0.3s ease;">
                     <i class="fas fa-user-plus"></i> Add New User
                 </a>
             </div>
 
-            <div style="overflow-x: auto;">
+            <div class="user-table-wrap">
                 <table style="width: 100%; border-collapse: collapse;">
                     <thead>
                         <tr style="background-color: #f3f4f6; border-bottom: 2px solid #e5e7eb;">
@@ -127,6 +127,69 @@
                         @endforelse
                     </tbody>
                 </table>
+            </div>
+
+            <div class="user-mobile-cards">
+                @forelse($users as $user)
+                    <article class="user-mobile-card">
+                        <div class="user-mobile-card__top">
+                            <div>
+                                <h3 class="user-mobile-card__name">{{ $user->fname }} {{ $user->lname }}</h3>
+                                <p class="user-mobile-card__username">{{ $user->username }}</p>
+                            </div>
+                            <div class="user-mobile-card__badges">
+                                <span style="padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;
+                                    @if($user->role === 'superadmin') background-color: #fee2e2; color: #991b1b;
+                                    @elseif($user->role === 'admin') background-color: #dbeafe; color: #0c2d6b;
+                                    @else background-color: #dcfce7; color: #166534; @endif">
+                                    {{ ucfirst($user->role) }}
+                                </span>
+                                <span style="padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;
+                                    @if($user->status === 'active') background-color: #d1fae5; color: #065f46;
+                                    @else background-color: #fed7aa; color: #92400e; @endif">
+                                    {{ ucfirst($user->status) }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <dl class="user-mobile-card__meta">
+                            <div>
+                                <dt>Email</dt>
+                                <dd>{{ $user->emailaddress }}</dd>
+                            </div>
+                            <div>
+                                <dt>Username</dt>
+                                <dd>{{ $user->username }}</dd>
+                            </div>
+                        </dl>
+
+                        <div class="user-mobile-card__actions">
+                            <a href="{{ route('users.show', $user->idno) }}" class="user-mobile-card__action user-mobile-card__action--view">
+                                <i class="fas fa-eye"></i> View
+                            </a>
+                            @if($user->idno !== Auth::id())
+                                <form action="{{ route('users.block', $user->idno) }}" method="POST" class="user-mobile-card__form" onsubmit="return confirm('{{ $user->status === 'inactive' ? 'Unblock this user? They will be able to log in again.' : 'Block this user? They will no longer be able to log in.' }}');">
+                                    @csrf
+                                    @method('PUT')
+                                    @if($user->status === 'inactive')
+                                        <button type="submit" class="user-mobile-card__action user-mobile-card__action--unblock">
+                                            <i class="fas fa-user-check"></i> Unblock
+                                        </button>
+                                    @else
+                                        <button type="submit" class="user-mobile-card__action user-mobile-card__action--block">
+                                            <i class="fas fa-user-slash"></i> Block
+                                        </button>
+                                    @endif
+                                </form>
+                            @endif
+                        </div>
+                    </article>
+                @empty
+                    <div class="user-mobile-empty">
+                        <i class="fas fa-inbox" style="font-size: 28px;"></i>
+                        <p style="margin: 0;">No users found</p>
+                    </div>
+                @endforelse
             </div>
 
             <div style="margin-top: 20px;">
@@ -293,6 +356,147 @@
             gap: 18px;
         }
 
+        .user-management-panel {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .user-management-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .user-table-wrap {
+            overflow-x: auto;
+        }
+
+        .user-mobile-cards {
+            display: none;
+        }
+
+        .user-mobile-card {
+            border: 1px solid #dbe4f0;
+            border-radius: 18px;
+            padding: 18px;
+            background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+            box-shadow: 0 14px 30px rgba(15, 23, 42, 0.06);
+        }
+
+        .user-mobile-card__top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        .user-mobile-card__name {
+            margin: 0 0 4px;
+            color: #0f172a;
+            font-size: 17px;
+            font-weight: 700;
+        }
+
+        .user-mobile-card__username {
+            margin: 0;
+            color: #64748b;
+            font-size: 13px;
+        }
+
+        .user-mobile-card__badges {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 8px;
+        }
+
+        .user-mobile-card__meta {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+            margin: 0 0 16px;
+        }
+
+        .user-mobile-card__meta div {
+            padding: 12px 14px;
+            border-radius: 14px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+        }
+
+        .user-mobile-card__meta dt {
+            margin-bottom: 4px;
+            color: #64748b;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .user-mobile-card__meta dd {
+            margin: 0;
+            color: #0f172a;
+            font-size: 14px;
+            word-break: break-word;
+        }
+
+        .user-mobile-card__actions {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .user-mobile-card__form {
+            margin: 0;
+        }
+
+        .user-mobile-card__action {
+            width: 100%;
+            border: none;
+            border-radius: 12px;
+            padding: 11px 14px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 700;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .user-mobile-card__action--view {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+
+        .user-mobile-card__action--block {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+
+        .user-mobile-card__action--unblock {
+            background: #d1fae5;
+            color: #047857;
+        }
+
+        .user-mobile-empty {
+            display: none;
+            padding: 40px 20px;
+            border: 1px dashed #cbd5e1;
+            border-radius: 18px;
+            text-align: center;
+            color: #94a3b8;
+            background: #f8fafc;
+        }
+
         .access-grant-card {
             border: 1px solid #e5e7eb;
             border-radius: 14px;
@@ -357,6 +561,11 @@
             transform: translateY(-2px);
         }
 
+        .user-mobile-card__action:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+        }
+
         @media (max-width: 768px) {
             .project-tabs {
                 flex-wrap: nowrap;
@@ -377,21 +586,70 @@
                 white-space: nowrap;
             }
 
-            div[style*="overflow-x: auto"] {
-                font-size: 12px !important;
+            .user-management-panel,
+            .access-grant-card,
+            #accessGrantsPanel > div[style*="background: white"] {
+                padding: 18px !important;
             }
 
-            table {
-                font-size: 12px !important;
+            .user-management-header {
+                align-items: stretch;
             }
 
-            th, td {
-                padding: 10px 8px !important;
+            .user-management-add-btn {
+                width: 100%;
+                justify-content: center;
             }
 
-            a[style*="padding: 6px"], button[type="submit"] {
-                padding: 5px 8px !important;
-                font-size: 11px !important;
+            .user-table-wrap {
+                display: none;
+            }
+
+            .user-mobile-cards {
+                display: grid;
+                gap: 14px;
+            }
+
+            .user-mobile-empty {
+                display: block;
+            }
+
+            .user-mobile-card__top {
+                flex-direction: column;
+            }
+
+            .user-mobile-card__badges {
+                flex-direction: row;
+                align-items: center;
+                flex-wrap: wrap;
+            }
+
+            .access-grant-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .crud-permission-table-wrap {
+                margin-left: -6px;
+                margin-right: -6px;
+                border-radius: 10px;
+            }
+
+            .crud-permission-table {
+                min-width: 460px;
+            }
+
+            .crud-permission-table th,
+            .crud-permission-table td {
+                padding: 10px 12px;
+                font-size: 12px;
+            }
+
+            .crud-check-item {
+                white-space: nowrap;
+            }
+
+            #accessGrantsPanel button[type="submit"] {
+                width: 100%;
             }
         }
     </style>
