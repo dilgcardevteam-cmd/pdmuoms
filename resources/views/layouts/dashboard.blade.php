@@ -1132,6 +1132,24 @@
                     <span>User Management</span>
                 </a>
             </li>
+            <li>
+                @php
+                    $utilitiesMenuActive = request()->routeIs('utilities.*');
+                @endphp
+                <a href="#" class="@if($utilitiesMenuActive) active @endif submenu-toggle" onclick="toggleSubmenu(event, 'utilitiesMenu')">
+                    <i class="fas fa-toolbox"></i>
+                    <span>Utilities</span>
+                    <i class="fas fa-chevron-down submenu-chevron" style="margin-left: auto; font-size: 12px;"></i>
+                </a>
+                <ul id="utilitiesMenu" class="submenu" style="display: {{ $utilitiesMenuActive ? 'block' : 'none' }};">
+                    <li>
+                        <a href="{{ route('utilities.backup-and-restore.index') }}" class="@if(request()->routeIs('utilities.backup-and-restore.*')) active @endif">
+                            <i class="fas fa-server"></i>
+                            <span>Backup and Restore</span>
+                        </a>
+                    </li>
+                </ul>
+            </li>
             @endif
         </ul>
     </aside>
