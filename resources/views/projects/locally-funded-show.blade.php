@@ -884,10 +884,6 @@
                 <i class="fas fa-arrow-left"></i>
                 Back to List
             </a>
-            <button id="activityLogFab" type="button" aria-controls="activityLogSection" aria-expanded="false" data-state="closed">
-                <i class="fas fa-clipboard-list" aria-hidden="true"></i>
-                <span style="font-weight: 600; font-size: 13px;">Activity Logs</span>
-            </button>
         </div>
     </div>
 
@@ -2877,48 +2873,64 @@
 
         </div>
     </div>
-        <div id="activityLogSection" role="dialog" aria-modal="true" aria-labelledby="activityLogTitle" aria-hidden="true" style="margin-bottom: 24px; padding: 20px; border: 1px solid #e5e7eb; border-radius: 10px; background-color: #f9fafb;">
-            <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 2px solid #00267C; padding-bottom: 10px; position: relative;">
-                <h3 id="activityLogTitle" style="color: #002C76; font-size: 15px; font-weight: 700; margin: 0;">Activity Logs</h3>
-                <button type="button" id="activityLogClose" aria-label="Close activity logs" style="border: none; background: #e2e8f0; color: #0f172a; width: 28px; height: 28px; border-radius: 999px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 16px;">
-                    <span aria-hidden="true">&times;</span>
-                </button>
+        <div id="activityLogSection" role="dialog" aria-modal="true" aria-labelledby="activityLogTitle" aria-hidden="true">
+            <div style="display: flex; flex-direction: column; height: 100%;">
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 18px 24px 16px; background: linear-gradient(135deg, #002C76 0%, #003d9e 100%); border-radius: 12px 12px 0 0; flex-shrink: 0;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="width: 32px; height: 32px; background: rgba(255,255,255,0.15); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-clipboard-list" style="color: white; font-size: 14px;"></i>
+                        </div>
+                        <h3 id="activityLogTitle" style="color: white; font-size: 16px; font-weight: 700; margin: 0;">Activity Logs</h3>
+                    </div>
+                    <button type="button" id="activityLogClose" aria-label="Close activity logs" style="border: none; background: rgba(255,255,255,0.15); color: white; width: 30px; height: 30px; border-radius: 999px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 18px; transition: background 0.2s;">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div style="padding: 20px 24px; overflow-y: auto; max-height: 65vh;">
+                    @if(empty($activityLogs))
+                        <div style="padding: 40px 20px; text-align: center;">
+                            <i class="fas fa-clipboard" style="font-size: 36px; margin-bottom: 12px; display: block; color: #d1d5db;"></i>
+                            <div style="font-size: 14px; font-weight: 600; color: #6b7280;">No activity logs found for this project.</div>
+                        </div>
+                    @else
+                        <div style="overflow-x: auto;">
+                            <table style="width: 100%; border-collapse: collapse; min-width: 600px;">
+                                <thead>
+                                    <tr style="background: linear-gradient(135deg, #002C76 0%, #003d9e 100%);">
+                                        <th style="padding: 10px 12px; text-align: left; color: white; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap;">Date/Time</th>
+                                        <th style="padding: 10px 12px; text-align: left; color: white; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em;">User</th>
+                                        <th style="padding: 10px 12px; text-align: left; color: white; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em;">Section</th>
+                                        <th style="padding: 10px 12px; text-align: left; color: white; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em;">Field</th>
+                                        <th style="padding: 10px 12px; text-align: left; color: white; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em;">Details</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($activityLogs as $index => $log)
+                                        @php $rowBg = $index % 2 === 0 ? '#ffffff' : '#f9fafb'; @endphp
+                                        <tr style="background-color: {{ $rowBg }}; border-bottom: 1px solid #e5e7eb;">
+                                            <td style="padding: 10px 12px; color: #374151; font-size: 12px; white-space: nowrap;">{{ $log['timestamp']->format('M d, Y h:i A') }}</td>
+                                            <td style="padding: 10px 12px; color: #374151; font-size: 12px; white-space: nowrap;">
+                                                {{ $log['user_name'] ?? 'Unknown' }}@if(!empty($log['user_agency'])) <span style="color: #6b7280;">({{ $log['user_agency'] }})</span>@endif
+                                            </td>
+                                            <td style="padding: 10px 12px; color: #374151; font-size: 12px;">{{ $log['section'] }}</td>
+                                            <td style="padding: 10px 12px; color: #374151; font-size: 12px;">{{ $log['field'] }}</td>
+                                            <td style="padding: 10px 12px; color: #6b7280; font-size: 12px;">{{ $log['details'] ?? '—' }}</td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @endif
+                </div>
             </div>
-            @if(empty($activityLogs))
-                <div style="padding: 16px; background-color: #f9fafb; border: 1px dashed #d1d5db; border-radius: 8px; text-align: center; color: #6b7280; font-size: 13px;">
-                    No activity logs found for this project.
-                </div>
-            @else
-                <div style="overflow-x: auto;">
-                    <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
-                        <thead>
-                            <tr style="background-color: #f3f4f6; border-bottom: 2px solid #d1d5db;">
-                                <th style="padding: 8px 10px; text-align: left;">Date/Time</th>
-                                <th style="padding: 8px 10px; text-align: left;">User</th>
-                                <th style="padding: 8px 10px; text-align: left;">Section</th>
-                                <th style="padding: 8px 10px; text-align: left;">Field</th>
-                                <th style="padding: 8px 10px; text-align: left;">Details</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($activityLogs as $log)
-                                <tr style="border-bottom: 1px solid #e5e7eb;">
-                                    <td style="padding: 8px 10px; vertical-align: top;">{{ $log['timestamp']->format('M d, Y h:i A') }}</td>
-                                    <td style="padding: 8px 10px; vertical-align: top;">
-                                        {{ $log['user_name'] ?? 'Unknown' }}@if(!empty($log['user_agency'])) ({{ $log['user_agency'] }})@endif
-                                    </td>
-                                    <td style="padding: 8px 10px; vertical-align: top;">{{ $log['section'] }}</td>
-                                    <td style="padding: 8px 10px; vertical-align: top;">{{ $log['field'] }}</td>
-                                    <td style="padding: 8px 10px; vertical-align: top;">{{ $log['details'] ?? '—' }}</td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            @endif
         </div>
 
         <div id="activityLogBackdrop" aria-hidden="true"></div>
+
+        <button id="activityLogFab" type="button" aria-controls="activityLogSection" aria-expanded="false" data-state="closed">
+            <i class="fas fa-clipboard-list" aria-hidden="true"></i>
+            <span>Activity Logs</span>
+        </button>
 
     <style>
         .asterisk {
@@ -3025,11 +3037,12 @@
         #activityLogBackdrop {
             position: fixed;
             inset: 0;
-            background: rgba(15, 23, 42, 0.45);
-            backdrop-filter: blur(2px);
+            background: rgba(15, 23, 42, 0.55);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
             opacity: 0;
             visibility: hidden;
-            transition: opacity 0.2s ease, visibility 0.2s ease;
+            transition: opacity 0.25s ease, visibility 0.25s ease;
             z-index: 1390;
         }
 
@@ -3045,11 +3058,14 @@
             transform: translate(-50%, -50%) scale(0.98);
             width: min(900px, 92vw);
             max-height: 80vh;
-            overflow: auto;
+            overflow: hidden;
+            border-radius: 12px;
+            background: white;
             box-shadow: 0 20px 40px rgba(15, 23, 42, 0.25);
             display: none;
             margin: 0 !important;
             z-index: 1400;
+            transition: transform 0.25s ease;
         }
 
         #activityLogSection.is-visible {
@@ -3085,38 +3101,43 @@
         }
 
         #activityLogFab {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            padding: 8px 16px;
+            padding: 12px 20px;
             background-color: #002C76;
             color: #ffffff;
             border: none;
-            border-radius: 8px;
+            border-radius: 999px;
             font-size: 13px;
             font-weight: 600;
             cursor: pointer;
-            box-shadow: 0 10px 20px rgba(15, 23, 42, 0.18);
+            white-space: nowrap;
+            box-shadow: 0 8px 20px rgba(0, 44, 118, 0.35);
+            z-index: 1380;
             transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
         }
 
         #activityLogFab:hover {
-            background-color: #0b3b84;
+            background-color: #003d9e;
             transform: translateY(-2px);
-            box-shadow: 0 14px 22px rgba(15, 23, 42, 0.22);
+            box-shadow: 0 12px 24px rgba(0, 44, 118, 0.4);
         }
 
         #activityLogFab:active {
             transform: translateY(0);
-            box-shadow: 0 8px 16px rgba(15, 23, 42, 0.2);
         }
 
         #activityLogFab[data-state="open"] {
             background-color: #0f172a;
         }
 
-        #activityLogFab span {
-            white-space: nowrap;
+        @media (max-width: 640px) {
+            #activityLogFab span { display: none; }
+            #activityLogFab { padding: 14px; border-radius: 50%; }
         }
 
         #physicalAccomplishmentSection [style*="font-size"] {

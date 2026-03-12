@@ -21,41 +21,41 @@
         </div>
     @endif
 
-    <div style="background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); margin-bottom: 20px; border: 1px solid #e5e7eb;">
-        <form id="fund-utilization-filters" method="GET" action="{{ route('fund-utilization.index') }}" style="display: grid; grid-template-columns: minmax(220px, 2fr) repeat(3, minmax(140px, 1fr)) auto auto; gap: 10px; align-items: center;">
+    <div style="background: white; padding: 16px 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); margin-bottom: 20px; border: 1px solid #e5e7eb;">
+        <form id="fund-utilization-filters" method="GET" action="{{ route('fund-utilization.index') }}" style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
             <input type="hidden" name="per_page" value="{{ $perPage ?? 10 }}">
-            <div style="position: relative;">
-                <i class="fas fa-search" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #6b7280; font-size: 12px;"></i>
+            <div style="position: relative; flex: 2 1 220px; min-width: 200px;">
+                <i class="fas fa-search" style="position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: #9ca3af; font-size: 13px; pointer-events: none;"></i>
                 <input
                     type="text"
                     name="search"
                     value="{{ $filters['search'] ?? '' }}"
                     placeholder="Search project code, title, province..."
-                    style="width: 100%; padding: 10px 12px 10px 32px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; background-color: #f9fafb;"
+                    style="width: 100%; height: 42px; padding: 0 12px 0 34px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; background-color: #f9fafb; color: #374151; box-sizing: border-box; outline: none;"
                 >
             </div>
-            <select name="fund_source" style="padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; background-color: #f9fafb;">
+            <select name="fund_source" style="flex: 1 1 140px; min-width: 140px; height: 42px; padding: 0 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; background-color: #f9fafb; color: #374151;">
                 <option value="">All Fund Sources</option>
                 @foreach(($filterOptions['fund_sources'] ?? []) as $option)
                     <option value="{{ $option }}" {{ ($filters['fund_source'] ?? '') === $option ? 'selected' : '' }}>{{ $option }}</option>
                 @endforeach
             </select>
-            <select name="funding_year" style="padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; background-color: #f9fafb;">
+            <select name="funding_year" style="flex: 1 1 120px; min-width: 120px; height: 42px; padding: 0 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; background-color: #f9fafb; color: #374151;">
                 <option value="">All Years</option>
                 @foreach(($filterOptions['funding_years'] ?? []) as $option)
                     <option value="{{ $option }}" {{ (string) ($filters['funding_year'] ?? '') === (string) $option ? 'selected' : '' }}>{{ $option }}</option>
                 @endforeach
             </select>
-            <select name="province" style="padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; background-color: #f9fafb;">
+            <select name="province" style="flex: 1 1 140px; min-width: 140px; height: 42px; padding: 0 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; background-color: #f9fafb; color: #374151;">
                 <option value="">All Provinces</option>
                 @foreach(($filterOptions['provinces'] ?? []) as $option)
                     <option value="{{ $option }}" {{ ($filters['province'] ?? '') === $option ? 'selected' : '' }}>{{ $option }}</option>
                 @endforeach
             </select>
-            <button type="submit" style="padding: 10px 14px; background-color: #002C76; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13px; white-space: nowrap;">
-                <i class="fas fa-filter" style="margin-right: 6px;"></i> Apply
+            <button type="submit" style="flex: 0 0 auto; height: 42px; padding: 0 18px; background-color: #2563eb; color: white; border: 1px solid #2563eb; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; hover: background-color: #e5e7eb; transition: background-color 0.2s;">
+                <i class="fas fa-filter"></i> Apply
             </button>
-            <a href="{{ route('fund-utilization.index') }}" style="padding: 10px 14px; background-color: #6b7280; color: white; border: none; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 13px; text-align: center; white-space: nowrap;">
+            <a href="{{ route('fund-utilization.index') }}" style="flex: 0 0 auto; height: 42px; padding: 0 18px; background-color: #6b7280; color: white; border: 1px solid #6b7280; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; text-decoration: none; transition: background-color 0.2s;">
                 Reset
             </a>
         </form>

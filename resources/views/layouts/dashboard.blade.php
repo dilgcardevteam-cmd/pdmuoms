@@ -606,7 +606,7 @@
             overflow-y: auto;
             overflow-x: hidden;
             transition: margin-left 280ms cubic-bezier(0.2, 0.8, 0.2, 1);
-            will-change: margin-left, transform, opacity;
+            will-change: margin-left;
         }
         
         .main-content.with-sidebar {
@@ -1091,6 +1091,201 @@
             outline: none;
             border-color: #2563eb !important;
             box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+        }
+
+        /* Scoped detail/edit page refinement */
+        .ops-detail-page .content-header {
+            background: linear-gradient(135deg, #ffffff 0%, #f7faff 100%);
+            border: 1px solid #dbe4f0;
+            border-radius: 14px;
+            padding: 18px 20px;
+            box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+            margin-bottom: 18px;
+            flex-wrap: wrap;
+        }
+
+        .ops-detail-page .content-header h1 {
+            color: #0f2a5d;
+            letter-spacing: 0.01em;
+        }
+
+        .ops-detail-page .content-header p {
+            color: #4b5563;
+        }
+
+        .ops-detail-page .content-header > div:last-child {
+            margin-left: auto;
+        }
+
+        .ops-detail-page div[style*="background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08)"],
+        .ops-detail-page div[style*="background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1)"],
+        .ops-detail-page div[style*="background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1)"] {
+            border: 1px solid #dbe4f0 !important;
+            border-radius: 14px !important;
+            box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08) !important;
+            background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%) !important;
+        }
+
+        .ops-detail-page div[style*="border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden"] {
+            border-color: #dbe4f0 !important;
+            border-radius: 12px !important;
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+        }
+
+        .ops-detail-page div[style*="overflow-x: auto"] {
+            border: 1px solid #dbe4f0;
+            border-radius: 12px;
+            background: #ffffff;
+        }
+
+        .ops-detail-page table {
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
+            width: 100%;
+        }
+
+        .ops-detail-page table thead th {
+            background: #edf3ff !important;
+            color: #1f2a44 !important;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            font-size: 11px !important;
+            border-bottom: 1px solid #d9e3f0 !important;
+        }
+
+        .ops-detail-page table tbody td {
+            border-bottom: 1px solid #e8edf5 !important;
+        }
+
+        .ops-detail-page table tbody tr:nth-child(even) td {
+            background-color: #fbfdff;
+        }
+
+        .ops-detail-page table tbody tr:hover td {
+            background-color: #eef4ff !important;
+        }
+
+        .ops-detail-page .logs-table thead th,
+        .ops-detail-page [id$="ActivityLogModal"] thead th {
+            background: linear-gradient(135deg, #0f3b8a 0%, #1d4ed8 100%) !important;
+            color: #ffffff !important;
+        }
+
+        .ops-detail-page .logs-table tbody td,
+        .ops-detail-page [id$="ActivityLogModal"] tbody td {
+            font-size: 12px;
+        }
+
+        .ops-detail-page input[type="file"],
+        .ops-detail-page textarea,
+        .ops-detail-page select {
+            border: 1px solid #c7d5e8 !important;
+            border-radius: 10px !important;
+            background: #ffffff !important;
+        }
+
+        .ops-detail-page input[type="file"]:focus,
+        .ops-detail-page textarea:focus,
+        .ops-detail-page select:focus {
+            outline: none;
+            border-color: #2563eb !important;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+        }
+
+        .ops-detail-page button,
+        .ops-detail-page a {
+            transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+        }
+
+        .ops-detail-page button:hover,
+        .ops-detail-page a:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 16px rgba(15, 23, 42, 0.14);
+        }
+
+        .ops-detail-page button[style*="background-color: #002C76"],
+        .ops-detail-page a[style*="background-color: #002C76"] {
+            background: linear-gradient(135deg, #0f3b8a 0%, #1d4ed8 100%) !important;
+            border: 1px solid rgba(255, 255, 255, 0.12) !important;
+        }
+
+        .ops-detail-page .lpmc-accordion-toggle,
+        .ops-detail-page .road-maintenance-accordion-toggle,
+        .ops-detail-page .rbis-accordion-toggle {
+            border-radius: 10px !important;
+            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.16);
+        }
+
+        .ops-detail-page #activityLogsFab,
+        .ops-detail-page #lpmcActivityLogFab,
+        .ops-detail-page #roadMaintenanceActivityLogFab,
+        .ops-detail-page #rbisActivityLogFab {
+            right: 20px !important;
+            bottom: 20px !important;
+            box-shadow: 0 10px 24px rgba(0, 44, 118, 0.35) !important;
+        }
+
+        .ops-detail-page #logsModal,
+        .ops-detail-page #lpmcActivityLogBackdrop,
+        .ops-detail-page #roadMaintenanceActivityLogBackdrop,
+        .ops-detail-page #rbisActivityLogBackdrop {
+            background: rgba(15, 23, 42, 0.55) !important;
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+        }
+
+        .ops-detail-page #logsModal .modal-content,
+        .ops-detail-page #lpmcActivityLogModal,
+        .ops-detail-page #roadMaintenanceActivityLogModal,
+        .ops-detail-page #rbisActivityLogModal {
+            border: 1px solid #dbe4f0 !important;
+            border-radius: 14px !important;
+            background: #ffffff !important;
+        }
+
+        @media (max-width: 768px) {
+            .ops-detail-page .content-header {
+                padding: 14px 16px;
+            }
+
+            .ops-detail-page .content-header > div {
+                width: 100%;
+            }
+
+            .ops-detail-page .content-header > div:last-child {
+                margin-left: 0;
+            }
+
+            .ops-detail-page .content-header a,
+            .ops-detail-page .content-header button {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .ops-detail-page div[style*="padding: 30px"] {
+                padding: 18px !important;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .ops-detail-page #activityLogsFab span,
+            .ops-detail-page #lpmcActivityLogFab span,
+            .ops-detail-page #roadMaintenanceActivityLogFab span,
+            .ops-detail-page #rbisActivityLogFab span {
+                display: none;
+            }
+
+            .ops-detail-page #activityLogsFab,
+            .ops-detail-page #lpmcActivityLogFab,
+            .ops-detail-page #roadMaintenanceActivityLogFab,
+            .ops-detail-page #rbisActivityLogFab {
+                width: 52px;
+                height: 52px;
+                padding: 0 !important;
+                border-radius: 50% !important;
+                display: inline-flex;
+                justify-content: center;
+            }
         }
 
     </style>
