@@ -1,4 +1,4 @@
-@extends('layouts.dashboard')
+﻿@extends('layouts.dashboard')
 
 @section('title', 'Fund Utilization Report')
 @section('page-title', 'Fund Utilization Report')
@@ -22,7 +22,7 @@
     @endif
 
     <div style="background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); margin-bottom: 20px; border: 1px solid #e5e7eb;">
-        <form method="GET" action="{{ route('fund-utilization.index') }}" style="display: grid; grid-template-columns: minmax(220px, 2fr) repeat(3, minmax(140px, 1fr)) auto auto; gap: 10px; align-items: center;">
+        <form id="fund-utilization-filters" method="GET" action="{{ route('fund-utilization.index') }}" style="display: grid; grid-template-columns: minmax(220px, 2fr) repeat(3, minmax(140px, 1fr)) auto auto; gap: 10px; align-items: center;">
             <input type="hidden" name="per_page" value="{{ $perPage ?? 10 }}">
             <div style="position: relative;">
                 <i class="fas fa-search" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #6b7280; font-size: 12px;"></i>
@@ -62,9 +62,10 @@
     </div>
 
     <!-- Reports Card -->
-    <div style="background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); overflow-x: auto;">
-        <table style="width: 100%; border-collapse: collapse;">
-            <thead>
+    <div class="report-table-card" style="background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);">
+        <div class="report-table-scroll">
+            <table id="fund-utilization-table" style="width: 100%; border-collapse: collapse; min-width: 1700px;">
+            <thead>Manage fund utilization reports and project documents
                 <tr style="background-color: #f3f4f6; border-bottom: 2px solid #e5e7eb;">
                     <th style="padding: 12px; text-align: left; color: #374151; font-weight: 600; font-size: 14px;">Project Code</th>
                     <th style="padding: 12px; text-align: left; color: #374151; font-weight: 600; font-size: 14px; width: 180px; max-width: 180px;">Project Title</th>
@@ -113,8 +114,8 @@
                         </td>
                         <td style="padding: 12px; color: #111827; font-size: 14px;">{{ $report->fund_source }}</td>
                         <td style="padding: 12px; color: #111827; font-size: 14px;">{{ $report->funding_year }}</td>
-                        <td style="padding: 12px; color: #111827; font-size: 14px;">{{ $report->allocation ? '₱' . number_format($report->allocation, 2) : '-' }}</td>
-                        <td style="padding: 12px; color: #111827; font-size: 14px;">{{ $report->contract_amount ? '₱' . number_format($report->contract_amount, 2) : '-' }}</td>
+                        <td style="padding: 12px; color: #111827; font-size: 14px;">{{ $report->allocation ? 'PHP ' . number_format($report->allocation, 2) : '-' }}</td>
+                        <td style="padding: 12px; color: #111827; font-size: 14px;">{{ $report->contract_amount ? 'PHP ' . number_format($report->contract_amount, 2) : '-' }}</td>
                         <td style="padding: 12px; color: #111827; font-size: 14px;">{{ $report->project_status }}</td>
                         <td style="padding: 12px; text-align: center; color: {{ $report->quarter_q1_percentage == 100 ? '#10b981' : ($report->quarter_q1_percentage > 70 ? '#f59e0b' : '#ef4444') }}; font-size: 14px; font-weight: 600;">{{ $report->quarter_q1_percentage }}%</td>
                         <td style="padding: 12px; text-align: center; color: {{ $report->quarter_q2_percentage == 100 ? '#10b981' : ($report->quarter_q2_percentage > 70 ? '#f59e0b' : '#ef4444') }}; font-size: 14px; font-weight: 600;">{{ $report->quarter_q2_percentage }}%</td>
@@ -135,14 +136,15 @@
                     </tr>
                 @endforelse
             </tbody>
-        </table>
+            </table>
+        </div>
 
         @if($reports->count() > 0)
             <div style="margin-top: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
                 <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
                     <div style="font-size: 12px; color: #6b7280;">
-                        Page {{ $reports->currentPage() }} of {{ $reports->lastPage() }} ·
-                        Showing {{ $reports->firstItem() ?? 0 }}–{{ $reports->lastItem() ?? 0 }} of {{ $reports->total() }}
+                        Page {{ $reports->currentPage() }} of {{ $reports->lastPage() }} &middot;
+                        Showing {{ $reports->firstItem() ?? 0 }}-{{ $reports->lastItem() ?? 0 }} of {{ $reports->total() }}
                     </div>
                     <form method="GET" action="{{ route('fund-utilization.index') }}" style="display: inline-flex; align-items: center;">
                         <input type="hidden" name="search" value="{{ $filters['search'] ?? '' }}">
@@ -245,8 +247,13 @@
     </script>
 
     <style>
-        tr:hover {
-            background-color: #f9fafb !important;
+        #fund-utilization-table tbody tr:hover {
+            background-color: #eef4ff !important;
+        }
+
+        .report-table-scroll {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
         }
 
         table td,
@@ -262,15 +269,25 @@
             background-color: white;
         }
 
-        a:hover {
+        #fund-utilization-table tbody td:last-child a:hover {
             background-color: #001f59 !important;
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(0, 44, 118, 0.2);
         }
 
         @media (max-width: 1100px) {
-            form[method="GET"] {
-                grid-template-columns: 1fr 1fr;
+            #fund-utilization-filters {
+                grid-template-columns: 1fr 1fr !important;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .report-table-card {
+                padding: 16px !important;
+            }
+
+            #fund-utilization-filters {
+                grid-template-columns: 1fr !important;
             }
         }
     </style>

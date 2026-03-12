@@ -968,6 +968,132 @@
             }
         }
 
+        /* Shared report-table polish */
+        .report-table-card,
+        .report-table-shell {
+            position: relative;
+            border: 1px solid #dbe4f0 !important;
+            border-radius: 14px !important;
+            background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%) !important;
+            box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08) !important;
+        }
+
+        .report-table-card::before,
+        .report-table-shell::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            border-top-left-radius: 14px;
+            border-top-right-radius: 14px;
+            background: linear-gradient(90deg, #002C76 0%, #1d4ed8 55%, #0284c7 100%);
+            pointer-events: none;
+        }
+
+        .report-table-scroll,
+        .report-table-shell {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .report-table-scroll table,
+        .report-table-shell table {
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
+            background: #ffffff;
+        }
+
+        .report-table-scroll table thead th,
+        .report-table-shell table thead th {
+            background: #edf3ff !important;
+            color: #1f2a44 !important;
+            border-bottom: 1px solid #d9e3f0 !important;
+            font-size: 12px !important;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+            white-space: nowrap;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+        }
+
+        .report-table-scroll table tbody td,
+        .report-table-shell table tbody td {
+            border-bottom: 1px solid #e8edf5 !important;
+            color: #0f172a !important;
+            vertical-align: middle;
+        }
+
+        .report-table-scroll table tbody tr:nth-child(even),
+        .report-table-shell table tbody tr:nth-child(even) {
+            background-color: #fbfdff;
+        }
+
+        .report-table-scroll table tbody tr:hover,
+        .report-table-shell table tbody tr:hover {
+            background-color: #eef4ff !important;
+        }
+
+        .report-table-scroll table tbody td:last-child a,
+        .report-table-shell table tbody td:last-child a {
+            display: inline-flex !important;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 8px 14px !important;
+            border-radius: 999px !important;
+            border: 1px solid #1d4ed8 !important;
+            background: #ffffff !important;
+            color: #1d4ed8 !important;
+            font-size: 12px !important;
+            font-weight: 700 !important;
+            text-decoration: none !important;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease, color 0.2s ease !important;
+        }
+
+        .report-table-scroll table tbody td:last-child a:hover,
+        .report-table-shell table tbody td:last-child a:hover {
+            background: #1d4ed8 !important;
+            color: #ffffff !important;
+            transform: translateY(-1px);
+            box-shadow: 0 8px 16px rgba(29, 78, 216, 0.22);
+        }
+
+        .table-pagination-row {
+            margin-top: 18px !important;
+            padding-top: 14px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .table-pagination-row a,
+        .table-pagination-row span {
+            border-radius: 999px !important;
+            font-weight: 700 !important;
+            letter-spacing: 0.01em;
+        }
+
+        .table-pagination-row a:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 16px rgba(15, 23, 42, 0.14);
+        }
+
+        .table-pagination-row select {
+            border: 1px solid #c7d5e8 !important;
+            border-radius: 999px !important;
+            background: #ffffff !important;
+            color: #334155;
+            font-weight: 600;
+            padding: 6px 12px !important;
+        }
+
+        .table-pagination-row select:focus {
+            outline: none;
+            border-color: #2563eb !important;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+        }
+
     </style>
     
     @yield('styles')

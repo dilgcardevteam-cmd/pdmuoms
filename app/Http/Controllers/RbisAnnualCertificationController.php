@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\RbisAnnualCertificationDocument;
 use App\Models\User;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -505,6 +506,11 @@ class RbisAnnualCertificationController extends Controller
     {
         $reportingYear = $this->resolveReportingYear($request);
         $officeRows = $this->buildOfficeRows($this->getSortedOfficesByProvince());
+        $perPage = (int) $request->query('per_page', 15);
+        $allowedPerPage = [10, 15, 25, 50];
+        if (!in_array($perPage, $allowedPerPage, true)) {
+            $perPage = 15;
+        }
 
         $user = auth()->user();
         if ($user && $user->agency === 'LGU' && !empty($user->office)) {
@@ -517,9 +523,29 @@ class RbisAnnualCertificationController extends Controller
             }));
         }
 
-        $officeNames = array_values(array_unique(array_map(function ($row) {
-            return $row['city_municipality'];
+        $totalProvinces = count(array_unique(array_map(function ($row) {
+            return $row['province'];
         }, $officeRows)));
+        $totalOffices = count($officeRows);
+
+        $page = LengthAwarePaginator::resolveCurrentPage('page');
+        $officeRowsCollection = collect($officeRows);
+        $officeRows = (new LengthAwarePaginator(
+            $officeRowsCollection->forPage($page, $perPage)->values(),
+            $officeRowsCollection->count(),
+            $perPage,
+            $page,
+            [
+                'path' => $request->url(),
+                'query' => $request->query(),
+            ]
+        ))->withQueryString();
+
+        $officeNames = $officeRows->getCollection()
+            ->pluck('city_municipality')
+            ->unique()
+            ->values()
+            ->all();
 
         $uploadCountsByOffice = collect();
         if (!empty($officeNames)) {
@@ -533,12 +559,7 @@ class RbisAnnualCertificationController extends Controller
                 ->pluck('total', 'office');
         }
 
-        $totalProvinces = count(array_unique(array_map(function ($row) {
-            return $row['province'];
-        }, $officeRows)));
-        $totalOffices = count($officeRows);
-
-        return view('reports.rbis-annual-certification.index', compact('officeRows', 'uploadCountsByOffice', 'totalProvinces', 'totalOffices', 'reportingYear'));
+        return view('reports.rbis-annual-certification.index', compact('officeRows', 'uploadCountsByOffice', 'totalProvinces', 'totalOffices', 'reportingYear', 'perPage'));
     }
 
     public function edit(Request $request, $id)
@@ -769,4 +790,3 @@ class RbisAnnualCertificationController extends Controller
         return back()->with('success', $action === 'approve' ? 'Document validated.' : 'Document returned.');
     }
 }
-

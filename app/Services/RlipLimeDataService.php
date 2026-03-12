@@ -2,6 +2,11 @@
 
 namespace App\Services;
 
+
+ini_set('memory_limit', '512M');
+// or temporarily:
+// ini_set('memory_limit', '-1'); // unlimited, only for debugging
+
 use Illuminate\Support\Str;
 use RuntimeException;
 use Shuchkin\SimpleXLS;

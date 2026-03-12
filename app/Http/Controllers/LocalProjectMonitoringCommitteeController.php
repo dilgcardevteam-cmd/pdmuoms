@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Str;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
@@ -458,9 +459,14 @@ class LocalProjectMonitoringCommitteeController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
         $officeRows = $this->buildOfficeRows($this->getOffices());
+        $perPage = (int) $request->query('per_page', 15);
+        $allowedPerPage = [10, 15, 25, 50];
+        if (!in_array($perPage, $allowedPerPage, true)) {
+            $perPage = 15;
+        }
 
         $user = auth()->user();
         if ($user && $user->agency === 'LGU' && !empty($user->office)) {
@@ -468,7 +474,7 @@ class LocalProjectMonitoringCommitteeController extends Controller
                 return $row['city_municipality'] === $user->office;
             }));
         } elseif ($user && $user->agency === 'DILG' && !empty($user->province)) {
-            $selectedProvince = request('province');
+            $selectedProvince = $request->query('province');
             $userProvince = !empty($selectedProvince) ? $selectedProvince : $user->province;
             if ($userProvince !== 'Regional Office') {
                 $officeRows = array_values(array_filter($officeRows, function ($row) use ($userProvince) {
@@ -477,9 +483,24 @@ class LocalProjectMonitoringCommitteeController extends Controller
             }
         }
 
-        $officeNames = array_values(array_unique(array_map(function ($row) {
-            return $row['city_municipality'];
-        }, $officeRows)));
+        $page = LengthAwarePaginator::resolveCurrentPage('page');
+        $officeRowsCollection = collect($officeRows);
+        $officeRows = (new LengthAwarePaginator(
+            $officeRowsCollection->forPage($page, $perPage)->values(),
+            $officeRowsCollection->count(),
+            $perPage,
+            $page,
+            [
+                'path' => $request->url(),
+                'query' => $request->query(),
+            ]
+        ))->withQueryString();
+
+        $officeNames = $officeRows->getCollection()
+            ->pluck('city_municipality')
+            ->unique()
+            ->values()
+            ->all();
 
         $documentsByOffice = [];
         if (!empty($officeNames)) {
@@ -490,7 +511,7 @@ class LocalProjectMonitoringCommitteeController extends Controller
             }
         }
 
-        return view('reports.local-project-monitoring-committee.index', compact('officeRows', 'documentsByOffice'));
+        return view('reports.local-project-monitoring-committee.index', compact('officeRows', 'documentsByOffice', 'perPage'));
     }
 
     /**
@@ -722,4 +743,3 @@ class LocalProjectMonitoringCommitteeController extends Controller
         // Implementation for deleting the record
     }
 }
-
