@@ -1,12 +1,25 @@
+@php
+    $uploadPage = $uploadPage ?? [
+        'title' => 'Upload SubayBAYAN Data',
+        'pageTitle' => 'Upload SubayBAYAN Data',
+        'heading' => 'Upload SubayBAYAN Data',
+        'description' => 'Upload SubayBAYAN data files for system processing.',
+        'listTitle' => 'Imported SubayBAYAN Files',
+        'entityLabel' => 'SubayBAYAN',
+        'modalTitle' => 'Import SubayBAYAN Data (CSV)',
+        'routeBase' => 'system-management.upload-subaybayan',
+    ];
+@endphp
+
 @extends('layouts.dashboard')
 
-@section('title', 'Upload SubayBAYAN Data')
-@section('page-title', 'Upload SubayBAYAN Data')
+@section('title', $uploadPage['title'])
+@section('page-title', $uploadPage['pageTitle'])
 
 @section('content')
     <div class="content-header">
-        <h1>Upload SubayBAYAN Data</h1>
-        <p>Upload SubayBAYAN data files for system processing.</p>
+        <h1>{{ $uploadPage['heading'] }}</h1>
+        <p>{{ $uploadPage['description'] }}</p>
     </div>
 
     @if (session('success'))
@@ -33,14 +46,14 @@
 
     @if($tableMissing ?? false)
         <div style="background-color: #fee2e2; border: 1px solid #fecaca; color: #991b1b; padding: 14px 16px; border-radius: 8px; margin-top: 16px;">
-            SubayBAYAN data table is not available yet. Please run the migration first.
+            {{ $uploadPage['entityLabel'] }} data table is not available yet. Please run the migration first.
         </div>
     @else
         <div style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-top: 16px; overflow-x: auto;">
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px;">
-                <h2 style="color: #002C76; font-size: 18px; margin: 0;">Imported SubayBAYAN Files</h2>
+                <h2 style="color: #002C76; font-size: 18px; margin: 0;">{{ $uploadPage['listTitle'] }}</h2>
                 <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                    <a href="{{ route('system-management.upload-subaybayan.template') }}" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 8px 14px; background: linear-gradient(180deg, #008c4d 0%, #007542 100%); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12px; text-decoration: none; box-shadow: 0 6px 16px rgba(0, 117, 66, 0.18);">
+                    <a href="{{ route($uploadPage['routeBase'] . '.template') }}" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 8px 14px; background: linear-gradient(180deg, #008c4d 0%, #007542 100%); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12px; text-decoration: none; box-shadow: 0 6px 16px rgba(0, 117, 66, 0.18);">
                         <i class="fas fa-file-excel" aria-hidden="true"></i>
                         <span>Download Template</span>
                     </a>
@@ -83,16 +96,16 @@
                                     </td>
                                     <td style="padding: 10px; color: #374151; vertical-align: top;">
                                         <div style="display: flex; justify-content: center; gap: 8px; flex-wrap: wrap;">
-                                            <form method="POST" action="{{ route('system-management.upload-subaybayan.load', ['importId' => $historyRow->id]) }}">
+                                            <form method="POST" action="{{ route($uploadPage['routeBase'] . '.load', ['importId' => $historyRow->id]) }}">
                                                 @csrf
                                                 <button type="submit" style="padding: 6px 10px; background-color: #002C76; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 600;">
                                                     Load
                                                 </button>
                                             </form>
-                                            <a href="{{ route('system-management.upload-subaybayan.download', ['importId' => $historyRow->id]) }}" style="display: inline-flex; align-items: center; justify-content: center; padding: 6px 10px; background-color: #0f766e; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 600; text-decoration: none;">
+                                            <a href="{{ route($uploadPage['routeBase'] . '.download', ['importId' => $historyRow->id]) }}" style="display: inline-flex; align-items: center; justify-content: center; padding: 6px 10px; background-color: #0f766e; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 600; text-decoration: none;">
                                                 Download CSV
                                             </a>
-                                            <form method="POST" action="{{ route('system-management.upload-subaybayan.delete', ['importId' => $historyRow->id]) }}" onsubmit="return confirm('Delete this imported file record?');">
+                                            <form method="POST" action="{{ route($uploadPage['routeBase'] . '.delete', ['importId' => $historyRow->id]) }}" onsubmit="return confirm('Delete this imported file record?');">
                                                 @csrf
                                                 @method('DELETE')
                                                 <button type="submit" style="padding: 6px 10px; background-color: #dc2626; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 600;">
@@ -148,8 +161,8 @@
 
     <div id="importModal" style="display: none; position: fixed; inset: 0; background-color: rgba(0,0,0,0.45); z-index: 1000; align-items: center; justify-content: center;">
         <div style="background: white; padding: 24px; border-radius: 10px; width: 100%; max-width: 480px; box-shadow: 0 10px 30px rgba(0,0,0,0.15);">
-            <h3 style="margin: 0 0 12px 0; color: #111827; font-size: 18px; font-weight: 600;">Import SubayBAYAN Data (CSV)</h3>
-            <form method="POST" action="{{ route('system-management.upload-subaybayan.import') }}" enctype="multipart/form-data">
+            <h3 style="margin: 0 0 12px 0; color: #111827; font-size: 18px; font-weight: 600;">{{ $uploadPage['modalTitle'] }}</h3>
+            <form method="POST" action="{{ route($uploadPage['routeBase'] . '.import') }}" enctype="multipart/form-data">
                 @csrf
                 <div style="margin-bottom: 16px;">
                     <label for="import-file" style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 6px;">Upload CSV File</label>
