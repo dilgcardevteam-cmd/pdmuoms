@@ -1629,6 +1629,8 @@ Route::middleware(['auth'])->group(function () {
         return $renderProjectDashboard('sglgif');
     })->name('projects.sglgif');
 
+    Route::get('/projects/rlip-lime/dashboard', [RlipLimeProjectController::class, 'dashboard'])
+        ->name('projects.rlip-lime.dashboard');
     Route::get('/projects/rlip-lime', [RlipLimeProjectController::class, 'index'])->name('projects.rlip-lime');
     Route::get('/projects/rlip-lime/{rowNumber}', [RlipLimeProjectController::class, 'show'])
         ->whereNumber('rowNumber')

@@ -971,14 +971,23 @@
         
         <ul class="sidebar-menu">
             <li>
-                <a href="{{ route('dashboard') }}" class="@if(Route::currentRouteName() == 'dashboard') active @endif">
+                @php
+                    $dashboardTabRouteActive = request()->routeIs('projects.rssa')
+                        || request()->routeIs('projects.sglgif')
+                        || request()->routeIs('projects.rlip-lime*');
+                    $dashboardMenuActive = Route::currentRouteName() == 'dashboard' || $dashboardTabRouteActive;
+                @endphp
+                <a href="{{ route('dashboard') }}" class="@if($dashboardMenuActive) active @endif">
                     <i class="fas fa-chart-line"></i>
                     <span>Dashboard</span>
                 </a>
             </li>
             <li>
                 @php
-                    $projectsMenuActive = request()->routeIs('projects.*') || request()->routeIs('projects.at-risk');
+                    $projectsMenuActive = (
+                        request()->routeIs('projects.*')
+                        && !$dashboardTabRouteActive
+                    ) || request()->routeIs('projects.at-risk');
                 @endphp
                 <a href="#" class="@if($projectsMenuActive) active @endif submenu-toggle" onclick="toggleSubmenu(event, 'projectsMenu')">
                     <i class="fas fa-project-diagram"></i>
@@ -993,7 +1002,7 @@
                         </a>
                     </li>
                     <li>
-                        <a href="{{ route('projects.rlip-lime') }}" class="@if(request()->routeIs('projects.rlip-lime*')) active @endif">
+                        <a href="{{ route('projects.rlip-lime') }}" class="@if(request()->routeIs('projects.rlip-lime*') && !$dashboardTabRouteActive) active @endif">
                             <i class="fas fa-leaf"></i>
                             <span>RLIP/LIME-20% Development Fund</span>
                         </a>
