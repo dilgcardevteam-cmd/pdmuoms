@@ -1555,6 +1555,10 @@ Route::middleware(['auth'])->group(function () {
     // User Management routes (superadmin only)
     Route::middleware('superadmin')->group(function () {
         Route::resource('users', App\Http\Controllers\UserManagementController::class);
+        Route::put('users/{user}/block', [App\Http\Controllers\UserManagementController::class, 'block'])
+            ->name('users.block');
+        Route::put('users/{user}/access', [App\Http\Controllers\UserManagementController::class, 'updateAccess'])
+            ->name('users.access.update');
         Route::get('/utilities/system-setup', [App\Http\Controllers\DatabaseUtilityController::class, 'systemSetup'])
             ->name('utilities.system-setup.index');
         Route::get('/utilities/location-configuration', [App\Http\Controllers\DatabaseUtilityController::class, 'locationConfiguration'])

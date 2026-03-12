@@ -16,6 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'superadmin' => \App\Http\Middleware\SuperAdminMiddleware::class,
             'regional_dilg' => \App\Http\Middleware\RegionalOfficeDilgMiddleware::class,
+            'crud_permission' => \App\Http\Middleware\EnsureCrudPermission::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
