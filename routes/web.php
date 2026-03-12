@@ -1648,6 +1648,8 @@ Route::middleware(['auth'])->group(function () {
             ->name('system-management.upload-rlip-lime');
         Route::get('/system-management/upload-project-at-risk', [App\Http\Controllers\ProjectAtRiskController::class, 'uploadManager'])
             ->name('system-management.upload-project-at-risk');
+        Route::view('/system-management/upload-sglgif', 'system-management.upload-sglgif')
+            ->name('system-management.upload-sglgif');
         Route::get('/system-management/upload-project-at-risk/template', [App\Http\Controllers\ProjectAtRiskController::class, 'downloadTemplate'])
             ->name('system-management.upload-project-at-risk.template');
         Route::post('/system-management/upload-project-at-risk/import', [App\Http\Controllers\ProjectAtRiskController::class, 'import'])

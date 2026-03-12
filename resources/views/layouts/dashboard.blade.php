@@ -1275,6 +1275,12 @@
                                 <span>Upload Project-at-Risk</span>
                             </a>
                         </li>
+                        <li>
+                            <a href="{{ route('system-management.upload-sglgif') }}" class="@if(Route::currentRouteName() == 'system-management.upload-sglgif') active @endif">
+                                <i class="fas fa-award"></i>
+                                <span>Upload SGLGIF Data</span>
+                            </a>
+                        </li>
                     </ul>
                 </li>
             @endif
