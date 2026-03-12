@@ -54,6 +54,34 @@
                 'status_subaybayan' => 'Status (Subaybayan)',
                 'last_updated_at' => 'Last Updated At',
             ];
+
+            $normalizePercent = function ($value) {
+                if (!is_numeric($value)) {
+                    return null;
+                }
+
+                return max(0, min(100, (float) $value));
+            };
+
+            $renderProgressBar = function ($value, string $context = 'table') use ($normalizePercent) {
+                $normalized = $normalizePercent($value);
+
+                if ($normalized === null) {
+                    return '<div class="lfp-progress lfp-progress--empty"><span class="lfp-progress-value">-</span></div>';
+                }
+
+                $valueLabel = number_format($normalized, 2) . '%';
+                $contextClass = $context === 'mobile' ? ' lfp-progress--mobile' : '';
+
+                return '
+                    <div class="lfp-progress' . $contextClass . '">
+                        <div class="lfp-progress-track" aria-hidden="true">
+                            <div class="lfp-progress-fill" style="width: ' . $normalized . '%;"></div>
+                        </div>
+                        <span class="lfp-progress-value">' . e($valueLabel) . '</span>
+                    </div>
+                ';
+            };
         @endphp
 
         <details id="lfp-filters-panel" class="lfp-filters-panel" open>
@@ -358,9 +386,7 @@
                                     @endif
                                 </td>
                                 <td data-column-key="physical_status_subaybayan" style="padding: 12px; color: #374151; text-align: center;">
-                                    {{ $subayAccomplishment !== null
-                                        ? number_format((float) $subayAccomplishment, 2) . '%'
-                                        : '-' }}
+                                    {!! $renderProgressBar($subayAccomplishment, 'table') !!}
                                 </td>
                                 <td data-column-key="status_actual" style="padding: 12px; text-align: center;">
                                     <span style="display: inline-block; padding: 4px 8px; background-color: #dbeafe; color: #0369a1; border-radius: 4px; font-size: 11px; font-weight: 600;">
@@ -471,7 +497,7 @@
                                     </div>
                                     <div class="lfp-mobile-card-detail" data-column-key="physical_status_subaybayan">
                                         <span class="lfp-mobile-card-detail-label">Physical Status (Subaybayan %)</span>
-                                        <strong>{{ $subayAccomplishment !== null ? number_format((float) $subayAccomplishment, 2) . '%' : '-' }}</strong>
+                                        <strong>{!! $renderProgressBar($subayAccomplishment, 'mobile') !!}</strong>
                                     </div>
                                     <div class="lfp-mobile-card-detail" data-column-key="status_actual">
                                         <span class="lfp-mobile-card-detail-label">Status (Actual)</span>
@@ -769,6 +795,55 @@
             line-height: 1.5;
         }
 
+        .lfp-progress {
+            display: inline-grid;
+            gap: 6px;
+            width: min(160px, 100%);
+            min-width: 110px;
+            text-align: left;
+        }
+
+        .lfp-progress--mobile {
+            width: 100%;
+            min-width: 0;
+        }
+
+        .lfp-progress-track {
+            width: 100%;
+            height: 10px;
+            border-radius: 999px;
+            overflow: hidden;
+            background: #dbeafe;
+            box-shadow: inset 0 0 0 1px rgba(29, 78, 216, 0.08);
+        }
+
+        .lfp-progress-fill {
+            height: 100%;
+            border-radius: inherit;
+            background: linear-gradient(90deg, #38bdf8 0%, #2563eb 55%, #1d4ed8 100%);
+        }
+
+        .lfp-progress-value {
+            color: #0f172a;
+            font-size: 12px;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        .lfp-progress--empty {
+            width: auto;
+            min-width: 0;
+            text-align: center;
+        }
+
+        .lfp-progress--empty .lfp-progress-value {
+            color: #6b7280;
+        }
+
+        .lfp-mobile-card-detail.is-column-hidden {
+            display: none;
+        }
+
         #lfp-table {
             width: max-content !important;
             min-width: 100%;
@@ -872,14 +947,14 @@
             display: none;
         }
 
-                        .projects-header {
-                            flex-wrap: wrap;
-                            gap: 12px;
-                        }
+        .projects-header {
+            flex-wrap: wrap;
+            gap: 12px;
+        }
 
-                        #lfp-table tbody tr {
-                            cursor: pointer;
-                        }
+        #lfp-table tbody tr {
+            cursor: pointer;
+        }
 
         @media (max-width: 1024px) {
             .projects-header {
@@ -914,7 +989,7 @@
             }
 
             .lfp-column-toggle-panel {
-                display: none;
+                padding: 12px;
             }
 
             .lfp-table-wrap {
@@ -935,6 +1010,18 @@
 
             .lfp-mobile-card-details {
                 grid-template-columns: 1fr;
+            }
+
+            .lfp-column-toggle-grid {
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+
+            .lfp-column-toggle-option {
+                padding: 8px 10px;
+                border: 1px solid #d1d5db;
+                border-radius: 8px;
+                background: #ffffff;
             }
         }
 
@@ -1026,7 +1113,7 @@
             }
 
             function applyVisibleColumns(visibleColumns) {
-                document.querySelectorAll('#lfp-table [data-column-key]').forEach(function (cell) {
+                document.querySelectorAll('#lfp-table [data-column-key], .lfp-mobile-card-detail[data-column-key]').forEach(function (cell) {
                     const columnKey = cell.dataset.columnKey || '';
                     cell.classList.toggle('is-column-hidden', !visibleColumns.includes(columnKey));
                 });
