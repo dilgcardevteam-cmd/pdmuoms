@@ -8,11 +8,15 @@ ini_set('memory_limit', '512M');
 // ini_set('memory_limit', '-1'); // unlimited, only for debugging
 
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 use Shuchkin\SimpleXLS;
 
 class RlipLimeDataService
 {
+    private const IMPORT_HISTORY_TABLE = 'rlip_lime_import_histories';
     private const SOURCE_RELATIVE_PATH = 'resources/sample file/rbme_master_list_2026_03_09_091438.xls';
     private const CACHE_RELATIVE_PATH = 'app/private/rlip_lime_master_cache.json';
     private const CACHE_SCHEMA_VERSION = 3;
@@ -59,7 +63,7 @@ class RlipLimeDataService
     ];
 
     /**
-     * Load parsed RLIP/LIME dataset from cache or source XLS.
+     * Load parsed RLIP/LIME dataset from the active import source.
      *
      * @return array{
      *     meta: array<string, mixed>,
@@ -70,15 +74,26 @@ class RlipLimeDataService
      */
     public function getDataset(): array
     {
-        $sourcePath = base_path(self::SOURCE_RELATIVE_PATH);
+        $source = $this->resolveSourceFile();
+        $sourcePath = $source['path'];
+        $sourceLabel = $source['label'];
+        $sourceImportId = $source['import_id'];
+
+        if ($sourcePath === null) {
+            return $this->emptyDataset($sourceLabel);
+        }
+
         if (!is_file($sourcePath)) {
             throw new RuntimeException('RLIP/LIME source file not found: ' . $sourcePath);
         }
 
         $sourceMtime = filemtime($sourcePath) ?: 0;
         $sourceSize = filesize($sourcePath) ?: 0;
-        $cachePath = storage_path(self::CACHE_RELATIVE_PATH);
+        $sourceIdentifier = $sourceImportId !== null
+            ? 'import:' . $sourceImportId
+            : 'path:' . md5($sourcePath . '|' . $sourceLabel);
 
+        $cachePath = $this->cachePath();
         if (is_file($cachePath)) {
             $cached = json_decode((string) file_get_contents($cachePath), true);
             if (
@@ -86,15 +101,150 @@ class RlipLimeDataService
                 && (int) ($cached['meta']['cache_schema_version'] ?? 0) === self::CACHE_SCHEMA_VERSION
                 && (int) ($cached['meta']['source_mtime'] ?? 0) === $sourceMtime
                 && (int) ($cached['meta']['source_size'] ?? 0) === $sourceSize
+                && (string) ($cached['meta']['source_identifier'] ?? '') === $sourceIdentifier
                 && isset($cached['rows'], $cached['columns'], $cached['categories'])
             ) {
                 return $cached;
             }
         }
 
+        $dataset = $this->buildDataset($sourcePath, $sourceLabel, $sourceImportId, $sourceMtime, $sourceSize);
+        $this->writeCache($dataset);
+
+        return $dataset;
+    }
+
+    /**
+     * Parse and cache a specific RLIP/LIME file (.xls or .csv).
+     *
+     * @return array{
+     *     meta: array<string, mixed>,
+     *     categories: array<string, array<int, array<string, mixed>>>,
+     *     columns: array<int, array<string, mixed>>,
+     *     rows: array<int, array<string, mixed>>
+     * }
+     */
+    public function refreshDatasetCacheFromPath(string $sourcePath, ?string $sourceLabel = null, ?int $sourceImportId = null): array
+    {
+        if (!is_file($sourcePath)) {
+            throw new RuntimeException('RLIP/LIME source file not found: ' . $sourcePath);
+        }
+
+        $sourceMtime = filemtime($sourcePath) ?: 0;
+        $sourceSize = filesize($sourcePath) ?: 0;
+        $dataset = $this->buildDataset(
+            $sourcePath,
+            $sourceLabel ?: self::SOURCE_RELATIVE_PATH,
+            $sourceImportId,
+            $sourceMtime,
+            $sourceSize
+        );
+        $this->writeCache($dataset);
+
+        return $dataset;
+    }
+
+    public function clearDatasetCache(): void
+    {
+        $cachePath = $this->cachePath();
+        if (is_file($cachePath)) {
+            @unlink($cachePath);
+        }
+    }
+
+    /**
+     * @return array{path: string|null, label: string, import_id: int|null}
+     */
+    private function resolveSourceFile(): array
+    {
+        $empty = [
+            'path' => null,
+            'label' => 'No active RLIP import loaded',
+            'import_id' => null,
+        ];
+
+        try {
+            if (!Schema::hasTable(self::IMPORT_HISTORY_TABLE)) {
+                return $empty;
+            }
+
+            $record = DB::table(self::IMPORT_HISTORY_TABLE)
+                ->whereNotNull('last_loaded_at')
+                ->orderByDesc('last_loaded_at')
+                ->orderByDesc('id')
+                ->first();
+
+            if (!$record) {
+                return $empty;
+            }
+
+            $storedPath = trim((string) ($record->stored_file_path ?? ''));
+            if ($storedPath === '' || !Storage::disk('local')->exists($storedPath)) {
+                return $empty;
+            }
+
+            return [
+                'path' => Storage::disk('local')->path($storedPath),
+                'label' => 'storage/app/' . str_replace('\\', '/', $storedPath),
+                'import_id' => (int) $record->id,
+            ];
+        } catch (\Throwable) {
+            return $empty;
+        }
+    }
+
+    /**
+     * @return array{
+     *     meta: array<string, mixed>,
+     *     categories: array<string, array<int, array<string, mixed>>>,
+     *     columns: array<int, array<string, mixed>>,
+     *     rows: array<int, array<string, mixed>>
+     * }
+     */
+    private function emptyDataset(string $sourceLabel): array
+    {
+        return [
+            'meta' => [
+                'source_file' => $sourceLabel,
+                'source_import_id' => null,
+                'source_identifier' => 'none',
+                'cache_schema_version' => self::CACHE_SCHEMA_VERSION,
+                'source_mtime' => 0,
+                'source_size' => 0,
+                'generated_at' => now()->toIso8601String(),
+                'row_count' => 0,
+                'column_count' => 0,
+            ],
+            'categories' => [],
+            'columns' => [],
+            'rows' => [],
+        ];
+    }
+
+    /**
+     * @return array{
+     *     meta: array<string, mixed>,
+     *     categories: array<string, array<int, array<string, mixed>>>,
+     *     columns: array<int, array<string, mixed>>,
+     *     rows: array<int, array<string, mixed>>
+     * }
+     */
+    private function buildDataset(
+        string $sourcePath,
+        string $sourceLabel,
+        ?int $sourceImportId,
+        int $sourceMtime,
+        int $sourceSize
+    ): array {
         $parsed = $this->parseWorkbook($sourcePath);
+        $sourceIdentifier = $sourceImportId !== null
+            ? 'import:' . $sourceImportId
+            : 'path:' . md5($sourcePath . '|' . $sourceLabel);
+
         $meta = [
-            'source_file' => self::SOURCE_RELATIVE_PATH,
+            'source_file' => $sourceLabel,
+            'source_import_id' => $sourceImportId,
+            'source_identifier' => $sourceIdentifier,
             'cache_schema_version' => self::CACHE_SCHEMA_VERSION,
             'source_mtime' => $sourceMtime,
             'source_size' => $sourceSize,
@@ -103,20 +253,36 @@ class RlipLimeDataService
             'column_count' => count($parsed['columns']),
         ];
 
-        $dataset = [
+        return [
             'meta' => $meta,
             'categories' => $parsed['categories'],
             'columns' => $parsed['columns'],
             'rows' => $parsed['rows'],
         ];
+    }
 
+    private function cachePath(): string
+    {
+        return storage_path(self::CACHE_RELATIVE_PATH);
+    }
+
+    /**
+     * @param array{
+     *     meta: array<string, mixed>,
+     *     categories: array<string, array<int, array<string, mixed>>>,
+     *     columns: array<int, array<string, mixed>>,
+     *     rows: array<int, array<string, mixed>>
+     * } $dataset
+     */
+    private function writeCache(array $dataset): void
+    {
+        $cachePath = $this->cachePath();
         $cacheDir = dirname($cachePath);
         if (!is_dir($cacheDir)) {
             @mkdir($cacheDir, 0777, true);
         }
-        @file_put_contents($cachePath, json_encode($dataset, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 
-        return $dataset;
+        @file_put_contents($cachePath, json_encode($dataset, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
     }
 
     /**
@@ -124,14 +290,19 @@ class RlipLimeDataService
      */
     private function parseWorkbook(string $sourcePath): array
     {
-        $xls = SimpleXLS::parse($sourcePath);
-        if (!$xls) {
-            throw new RuntimeException('Unable to parse RLIP/LIME XLS: ' . (SimpleXLS::parseError() ?: 'Unknown parser error'));
-        }
+        $extension = strtolower(pathinfo($sourcePath, PATHINFO_EXTENSION));
+        if (in_array($extension, ['csv', 'txt'], true)) {
+            $rows = $this->readCsvRows($sourcePath);
+        } else {
+            $xls = SimpleXLS::parse($sourcePath);
+            if (!$xls) {
+                throw new RuntimeException('Unable to parse RLIP/LIME Excel file: ' . (SimpleXLS::parseError() ?: 'Unknown parser error'));
+            }
 
-        $rows = $xls->rows();
+            $rows = $xls->rows();
+        }
         if (!isset($rows[self::HEADER_SECTION_ROW], $rows[self::HEADER_FIELD_ROW], $rows[self::HEADER_SUBFIELD_ROW])) {
-            throw new RuntimeException('RLIP/LIME XLS is missing expected header rows.');
+            throw new RuntimeException('RLIP/LIME file is missing expected header rows.');
         }
 
         $columnCount = $this->resolveColumnCount($rows);
@@ -197,6 +368,32 @@ class RlipLimeDataService
             'columns' => array_values($columns),
             'rows' => $tableRows,
         ];
+    }
+
+    /**
+     * @return array<int, array<int, string|null>>
+     */
+    private function readCsvRows(string $sourcePath): array
+    {
+        if (!is_readable($sourcePath)) {
+            throw new RuntimeException('Unable to read RLIP/LIME CSV file.');
+        }
+
+        $handle = fopen($sourcePath, 'r');
+        if ($handle === false) {
+            throw new RuntimeException('Unable to open RLIP/LIME CSV file.');
+        }
+
+        try {
+            $rows = [];
+            while (($row = fgetcsv($handle)) !== false) {
+                $rows[] = $row;
+            }
+
+            return $rows;
+        } finally {
+            fclose($handle);
+        }
     }
 
     /**
@@ -329,7 +526,8 @@ class RlipLimeDataService
             return trim($numeric);
         }
 
-        return trim((string) $value);
+        $string = ltrim((string) $value, "\xEF\xBB\xBF");
+        return trim($string);
     }
 
     private function buildColumnKey(int $index, string $section, string $field, string $subField): string

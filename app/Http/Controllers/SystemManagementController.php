@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\RlipLimeDataService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -11,6 +12,7 @@ use Illuminate\Support\Str;
 class SystemManagementController extends Controller
 {
     private const IMPORT_HISTORY_TABLE = 'subaybayan_import_histories';
+    private const RLIP_LIME_IMPORT_HISTORY_TABLE = 'rlip_lime_import_histories';
     private const TEMPLATE_HEADERS = [
         'program',
         'project_code',
@@ -384,6 +386,245 @@ class SystemManagementController extends Controller
         );
     }
 
+    public function uploadRlipLime()
+    {
+        $importHistoryTableMissing = !Schema::hasTable(self::RLIP_LIME_IMPORT_HISTORY_TABLE);
+        $importHistoryRows = $importHistoryTableMissing
+            ? collect()
+            : DB::table(self::RLIP_LIME_IMPORT_HISTORY_TABLE)
+                ->orderByDesc('imported_at')
+                ->orderByDesc('id')
+                ->paginate(15, ['*'], 'imports_page')
+                ->withQueryString();
+
+        $activeImportId = null;
+        if (!$importHistoryTableMissing) {
+            $activeImportId = DB::table(self::RLIP_LIME_IMPORT_HISTORY_TABLE)
+                ->whereNotNull('last_loaded_at')
+                ->orderByDesc('last_loaded_at')
+                ->orderByDesc('id')
+                ->value('id');
+        }
+
+        return view('system-management.upload-rlip-lime', [
+            'importHistoryRows' => $importHistoryRows,
+            'importHistoryTableMissing' => $importHistoryTableMissing,
+            'activeImportId' => $activeImportId !== null ? (int) $activeImportId : null,
+        ]);
+    }
+
+    public function importRlipLime(Request $request, RlipLimeDataService $rlipLimeDataService)
+    {
+        $request->validate([
+            'file' => [
+                'required',
+                'file',
+                'max:51200',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if (!$value instanceof \Illuminate\Http\UploadedFile) {
+                        $fail('Please upload a CSV or Excel (.csv or .xls) file using the RLIP master-list format.');
+                        return;
+                    }
+
+                    $extension = strtolower((string) $value->getClientOriginalExtension());
+                    if (!in_array($extension, ['csv', 'xls'], true)) {
+                        $fail('Please upload a CSV or Excel (.csv or .xls) file using the RLIP master-list format.');
+                    }
+                },
+            ],
+        ]);
+
+        $file = $request->file('file');
+        if (!$file) {
+            return back()->with('error', 'No file was uploaded.');
+        }
+
+        if (!Schema::hasTable(self::RLIP_LIME_IMPORT_HISTORY_TABLE)) {
+            return back()->with('error', 'RLIP/LIME import history table is not available yet. Please run migration first.');
+        }
+
+        $originalFileName = (string) $file->getClientOriginalName();
+        $sourceExtension = strtolower((string) $file->getClientOriginalExtension());
+        if ($sourceExtension === '') {
+            $sourceExtension = 'csv';
+        }
+
+        $storageFileName = $this->generateImportStorageFileName($originalFileName, 'rlip-lime', $sourceExtension);
+        $storedPath = $file->storeAs('rlip-lime-imports', $storageFileName, 'local');
+        if (!$storedPath) {
+            return back()->with('error', 'Unable to store the uploaded file.');
+        }
+
+        $now = now();
+        $importId = (int) DB::table(self::RLIP_LIME_IMPORT_HISTORY_TABLE)->insertGetId([
+            'original_file_name' => $originalFileName !== '' ? $originalFileName : basename($storedPath),
+            'stored_file_path' => $storedPath,
+            'file_size_bytes' => $file->getSize(),
+            'imported_at' => $now,
+            'last_loaded_at' => $now,
+            'created_by' => auth()->id(),
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+
+        $absolutePath = Storage::disk('local')->path($storedPath);
+        $sourceLabel = 'storage/app/' . str_replace('\\', '/', $storedPath);
+
+        try {
+            $dataset = $rlipLimeDataService->refreshDatasetCacheFromPath($absolutePath, $sourceLabel, $importId);
+        } catch (\RuntimeException $exception) {
+            if (Storage::disk('local')->exists($storedPath)) {
+                Storage::disk('local')->delete($storedPath);
+            }
+            DB::table(self::RLIP_LIME_IMPORT_HISTORY_TABLE)
+                ->where('id', $importId)
+                ->delete();
+
+            return back()->with('error', $exception->getMessage());
+        }
+
+        $oldRecords = DB::table(self::RLIP_LIME_IMPORT_HISTORY_TABLE)
+            ->where('id', '!=', $importId)
+            ->get(['id', 'stored_file_path']);
+
+        DB::table(self::RLIP_LIME_IMPORT_HISTORY_TABLE)
+            ->where('id', '!=', $importId)
+            ->delete();
+
+        foreach ($oldRecords as $oldRecord) {
+            $oldPath = (string) ($oldRecord->stored_file_path ?? '');
+            if ($oldPath !== '' && Storage::disk('local')->exists($oldPath)) {
+                Storage::disk('local')->delete($oldPath);
+            }
+        }
+
+        $loadedRows = (int) ($dataset['meta']['row_count'] ?? 0);
+        return back()->with('success', "Imported and replaced RLIP data with {$loadedRows} rows.");
+    }
+
+    public function loadRlipLimeImport($importId, RlipLimeDataService $rlipLimeDataService)
+    {
+        if (!Schema::hasTable(self::RLIP_LIME_IMPORT_HISTORY_TABLE)) {
+            return back()->with('error', 'RLIP/LIME import history table is not available yet. Please run migration first.');
+        }
+
+        $record = DB::table(self::RLIP_LIME_IMPORT_HISTORY_TABLE)
+            ->where('id', (int) $importId)
+            ->first();
+
+        if (!$record) {
+            return back()->with('error', 'Selected import record was not found.');
+        }
+
+        $storedPath = (string) ($record->stored_file_path ?? '');
+        if ($storedPath === '' || !Storage::disk('local')->exists($storedPath)) {
+            return back()->with('error', 'The selected imported file is no longer available.');
+        }
+
+        $absolutePath = Storage::disk('local')->path($storedPath);
+        $sourceLabel = 'storage/app/' . str_replace('\\', '/', $storedPath);
+
+        try {
+            $dataset = $rlipLimeDataService->refreshDatasetCacheFromPath($absolutePath, $sourceLabel, (int) $importId);
+        } catch (\RuntimeException $exception) {
+            return back()->with('error', $exception->getMessage());
+        }
+
+        $now = now();
+        DB::transaction(function () use ($importId, $now) {
+            DB::table(self::RLIP_LIME_IMPORT_HISTORY_TABLE)
+                ->whereNotNull('last_loaded_at')
+                ->update([
+                    'last_loaded_at' => null,
+                    'updated_at' => $now,
+                ]);
+
+            DB::table(self::RLIP_LIME_IMPORT_HISTORY_TABLE)
+                ->where('id', (int) $importId)
+                ->update([
+                    'last_loaded_at' => $now,
+                    'updated_at' => $now,
+                ]);
+        });
+
+        $displayName = trim((string) ($record->original_file_name ?? ''));
+        if ($displayName === '') {
+            $displayName = basename($storedPath);
+        }
+
+        $loadedRows = (int) ($dataset['meta']['row_count'] ?? 0);
+        return back()->with('success', "Loaded {$loadedRows} RLIP rows from {$displayName}.");
+    }
+
+    public function deleteRlipLimeImport($importId, RlipLimeDataService $rlipLimeDataService)
+    {
+        if (!Schema::hasTable(self::RLIP_LIME_IMPORT_HISTORY_TABLE)) {
+            return back()->with('error', 'RLIP/LIME import history table is not available yet. Please run migration first.');
+        }
+
+        $record = DB::table(self::RLIP_LIME_IMPORT_HISTORY_TABLE)
+            ->where('id', (int) $importId)
+            ->first();
+
+        if (!$record) {
+            return back()->with('error', 'Selected import record was not found.');
+        }
+
+        $wasLoaded = !empty($record->last_loaded_at);
+        $storedPath = (string) ($record->stored_file_path ?? '');
+        if ($storedPath !== '' && Storage::disk('local')->exists($storedPath)) {
+            Storage::disk('local')->delete($storedPath);
+        }
+
+        DB::table(self::RLIP_LIME_IMPORT_HISTORY_TABLE)
+            ->where('id', (int) $importId)
+            ->delete();
+
+        if ($wasLoaded) {
+            $rlipLimeDataService->clearDatasetCache();
+        }
+
+        return back()->with('success', 'RLIP imported file record deleted successfully.');
+    }
+
+    public function downloadRlipLimeImport($importId)
+    {
+        if (!Schema::hasTable(self::RLIP_LIME_IMPORT_HISTORY_TABLE)) {
+            return back()->with('error', 'RLIP/LIME import history table is not available yet. Please run migration first.');
+        }
+
+        $record = DB::table(self::RLIP_LIME_IMPORT_HISTORY_TABLE)
+            ->where('id', (int) $importId)
+            ->first();
+
+        if (!$record) {
+            return back()->with('error', 'Selected import record was not found.');
+        }
+
+        $storedPath = (string) ($record->stored_file_path ?? '');
+        if ($storedPath === '' || !Storage::disk('local')->exists($storedPath)) {
+            return back()->with('error', 'The selected imported file is no longer available.');
+        }
+
+        $downloadName = trim((string) ($record->original_file_name ?? ''));
+        if ($downloadName === '') {
+            $downloadName = basename($storedPath);
+        }
+        $downloadName = basename($downloadName);
+        $extension = strtolower(pathinfo($downloadName, PATHINFO_EXTENSION));
+        $contentType = in_array($extension, ['csv', 'txt'], true)
+            ? 'text/csv; charset=UTF-8'
+            : 'application/vnd.ms-excel';
+
+        return response()->download(
+            Storage::disk('local')->path($storedPath),
+            $downloadName,
+            [
+                'Content-Type' => $contentType,
+            ]
+        );
+    }
+
     private function importCsvSnapshot(string $path): int
     {
         if (!is_readable($path)) {
@@ -456,20 +697,32 @@ class SystemManagementController extends Controller
         }
     }
 
-    private function generateImportStorageFileName(string $originalFileName): string
+    private function generateImportStorageFileName(
+        string $originalFileName,
+        string $fallbackBaseName = 'subaybayan',
+        string $fallbackExtension = 'csv'
+    ): string
     {
         $extension = strtolower(pathinfo($originalFileName, PATHINFO_EXTENSION));
         $baseName = pathinfo($originalFileName, PATHINFO_FILENAME);
         $baseNameSlug = Str::slug($baseName);
         if ($baseNameSlug === '') {
-            $baseNameSlug = 'subaybayan';
+            $baseNameSlug = Str::slug($fallbackBaseName);
+        }
+        if ($baseNameSlug === '') {
+            $baseNameSlug = 'import';
         }
 
         $timestamp = now()->format('Ymd_His');
         $randomSuffix = Str::lower(Str::random(8));
         $fileName = $timestamp . '_' . $baseNameSlug . '_' . $randomSuffix;
 
-        return $fileName . ($extension !== '' ? '.' . $extension : '.csv');
+        $fallbackExtension = trim(strtolower($fallbackExtension));
+        if ($fallbackExtension === '') {
+            $fallbackExtension = 'dat';
+        }
+
+        return $fileName . ($extension !== '' ? '.' . $extension : '.' . $fallbackExtension);
     }
 
     private function buildHeaderMap(array $headers, array $columns): array

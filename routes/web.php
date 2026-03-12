@@ -1644,7 +1644,7 @@ Route::middleware(['auth'])->group(function () {
             ->name('system-management.upload-subaybayan');
         Route::get('/system-management/upload-subaybayan/template', [SystemManagementController::class, 'downloadSubaybayanTemplate'])
             ->name('system-management.upload-subaybayan.template');
-        Route::view('/system-management/upload-rlip-lime', 'system-management.upload-rlip-lime')
+        Route::get('/system-management/upload-rlip-lime', [SystemManagementController::class, 'uploadRlipLime'])
             ->name('system-management.upload-rlip-lime');
         Route::get('/system-management/upload-project-at-risk', [App\Http\Controllers\ProjectAtRiskController::class, 'uploadManager'])
             ->name('system-management.upload-project-at-risk');
@@ -1666,6 +1666,14 @@ Route::middleware(['auth'])->group(function () {
             ->name('system-management.upload-subaybayan.download');
         Route::delete('/system-management/upload-subaybayan/import/{importId}', [SystemManagementController::class, 'deleteSubaybayanImport'])
             ->name('system-management.upload-subaybayan.delete');
+        Route::post('/system-management/upload-rlip-lime/import', [SystemManagementController::class, 'importRlipLime'])
+            ->name('system-management.upload-rlip-lime.import');
+        Route::post('/system-management/upload-rlip-lime/import/{importId}/load', [SystemManagementController::class, 'loadRlipLimeImport'])
+            ->name('system-management.upload-rlip-lime.load');
+        Route::get('/system-management/upload-rlip-lime/import/{importId}/download', [SystemManagementController::class, 'downloadRlipLimeImport'])
+            ->name('system-management.upload-rlip-lime.download');
+        Route::delete('/system-management/upload-rlip-lime/import/{importId}', [SystemManagementController::class, 'deleteRlipLimeImport'])
+            ->name('system-management.upload-rlip-lime.delete');
     });
 
     // Local Project Monitoring Committee routes
