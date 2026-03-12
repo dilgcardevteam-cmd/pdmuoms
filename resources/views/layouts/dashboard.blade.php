@@ -987,7 +987,7 @@
                 @php
                     $dashboardTabRouteActive = request()->routeIs('projects.rssa')
                         || request()->routeIs('projects.sglgif')
-                        || request()->routeIs('projects.rlip-lime*');
+                        || request()->routeIs('projects.rlip-lime.dashboard');
                     $dashboardMenuActive = Route::currentRouteName() == 'dashboard' || $dashboardTabRouteActive;
                 @endphp
                 <a href="{{ route('dashboard') }}" class="@if($dashboardMenuActive) active @endif">
