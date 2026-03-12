@@ -406,7 +406,10 @@
                 return;
             }
 
-            const isSubmitControl = tag === 'button' || (tag === 'input' && target.type === 'submit');
+            const rawType = (target.getAttribute && target.getAttribute('type')) || target.type || '';
+            const resolvedType = String(rawType).toLowerCase();
+            const isSubmitControl = (tag === 'button' && (resolvedType === '' || resolvedType === 'submit'))
+                || (tag === 'input' && resolvedType === 'submit');
             if (form && isSubmitControl) {
                 if (typeof form.requestSubmit === 'function') {
                     form.requestSubmit(target);
