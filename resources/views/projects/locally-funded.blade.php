@@ -41,6 +41,19 @@
                 ->unique()
                 ->sort()
                 ->values();
+
+            $columnToggleOptions = [
+                'funding_year' => 'Funding Year',
+                'fund_source' => 'Fund Source',
+                'procurement_type' => 'Procurement Type',
+                'lgsf_allocation' => 'LGSF Allocation',
+                'obligation' => 'Obligation',
+                'utilization_rate' => 'Utilization Rate',
+                'physical_status_subaybayan' => 'Physical Status (Subaybayan %)',
+                'status_actual' => 'Status (Actual)',
+                'status_subaybayan' => 'Status (Subaybayan)',
+                'last_updated_at' => 'Last Updated At',
+            ];
         @endphp
 
         <form id="lfp-filters-form" method="GET" action="{{ route('projects.locally-funded') }}" style="display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; margin-bottom: 16px;">
@@ -116,6 +129,24 @@
             </a>
         </form>
 
+        <div class="lfp-column-toggle-panel" aria-label="Table columns filter">
+            <div class="lfp-column-toggle-header">
+                <div class="lfp-column-toggle-label">Visible Columns</div>
+                <label class="lfp-column-toggle-option lfp-column-toggle-option--master">
+                    <input type="checkbox" id="lfp-column-toggle-all" checked>
+                    <span>Select All</span>
+                </label>
+            </div>
+            <div class="lfp-column-toggle-grid">
+                @foreach($columnToggleOptions as $columnKey => $columnLabel)
+                    <label class="lfp-column-toggle-option">
+                        <input type="checkbox" class="lfp-column-toggle-checkbox" data-column-toggle="{{ $columnKey }}" checked>
+                        <span>{{ $columnLabel }}</span>
+                    </label>
+                @endforeach
+            </div>
+        </div>
+
         @if($projects->isEmpty())
             @if(Auth::user()->agency === 'DILG' && Auth::user()->province === 'Regional Office')
             <p style="margin: 0; color: #6b7280; text-align: center; padding: 40px 0;">No projects found. <a href="{{ route('locally-funded-project.create') }}" style="color: #002C76; text-decoration: none; font-weight: 600;">Create one now</a></p>
@@ -168,57 +199,57 @@
                                     <span>Project Title</span><span class="lfp-sort-indicator">{{ $sortIndicator('project_title') }}</span>
                                 </a>
                             </th>
-                            <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; min-width: 260px;">
+                            <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; min-width: 220px;">
                                 <a href="{{ $sortUrl('location') }}" class="lfp-sort-link" style="display: flex; align-items: center; gap: 4px; width: 100%; justify-content: flex-start;">
                                     <span>Location</span><span class="lfp-sort-indicator">{{ $sortIndicator('location') }}</span>
                                 </a>
                             </th>
-                            <th style="padding: 12px; text-align: center; font-weight: 600; color: #374151;">
+                            <th data-column-key="funding_year" style="padding: 12px; text-align: center; font-weight: 600; color: #374151;">
                                 <a href="{{ $sortUrl('funding_year', 'desc') }}" class="lfp-sort-link" style="display: flex; align-items: center; gap: 4px; width: 100%; justify-content: center;">
                                     <span>Funding Year</span><span class="lfp-sort-indicator">{{ $sortIndicator('funding_year') }}</span>
                                 </a>
                             </th>
-                            <th style="padding: 12px; text-align: center; font-weight: 600; color: #374151;">
+                            <th data-column-key="fund_source" style="padding: 12px; text-align: center; font-weight: 600; color: #374151;">
                                 <a href="{{ $sortUrl('fund_source') }}" class="lfp-sort-link" style="display: flex; align-items: center; gap: 4px; width: 100%; justify-content: center;">
                                     <span>Fund Source</span><span class="lfp-sort-indicator">{{ $sortIndicator('fund_source') }}</span>
                                 </a>
                             </th>
-                            <th style="padding: 12px; text-align: center; font-weight: 600; color: #374151;">
+                            <th data-column-key="procurement_type" style="padding: 12px; text-align: center; font-weight: 600; color: #374151;">
                                 <a href="{{ $sortUrl('procurement') }}" class="lfp-sort-link" style="display: flex; align-items: center; gap: 4px; width: 100%; justify-content: center;">
                                     <span>Procurement Type</span><span class="lfp-sort-indicator">{{ $sortIndicator('procurement') }}</span>
                                 </a>
                             </th>
-                            <th style="padding: 12px; text-align: center; font-weight: 600; color: #374151;">
+                            <th data-column-key="lgsf_allocation" style="padding: 12px; text-align: center; font-weight: 600; color: #374151;">
                                 <a href="{{ $sortUrl('lgsf_allocation', 'desc') }}" class="lfp-sort-link" style="display: flex; align-items: center; gap: 4px; width: 100%; justify-content: center;">
                                     <span>LGSF Allocation</span><span class="lfp-sort-indicator">{{ $sortIndicator('lgsf_allocation') }}</span>
                                 </a>
                             </th>
-                            <th style="padding: 12px; text-align: center; font-weight: 600; color: #374151;">
+                            <th data-column-key="obligation" style="padding: 12px; text-align: center; font-weight: 600; color: #374151;">
                                 <a href="{{ $sortUrl('obligation', 'desc') }}" class="lfp-sort-link" style="display: flex; align-items: center; gap: 4px; width: 100%; justify-content: center;">
                                     <span>Obligation</span><span class="lfp-sort-indicator">{{ $sortIndicator('obligation') }}</span>
                                 </a>
                             </th>
-                            <th style="padding: 12px; text-align: center; font-weight: 600; color: #374151;">
+                            <th data-column-key="utilization_rate" style="padding: 12px; text-align: center; font-weight: 600; color: #374151;">
                                 <a href="{{ $sortUrl('utilization_rate', 'desc') }}" class="lfp-sort-link" style="display: flex; align-items: center; gap: 4px; width: 100%; justify-content: center;">
                                     <span>Utilization Rate</span><span class="lfp-sort-indicator">{{ $sortIndicator('utilization_rate') }}</span>
                                 </a>
                             </th>
-                            <th style="padding: 12px; text-align: center; font-weight: 600; color: #374151;">
+                            <th data-column-key="physical_status_subaybayan" style="padding: 12px; text-align: center; font-weight: 600; color: #374151;">
                                 <a href="{{ $sortUrl('physical_subaybayan', 'desc') }}" class="lfp-sort-link" style="display: flex; align-items: center; gap: 4px; width: 100%; justify-content: center;">
                                     <span>Physical Status (Subaybayan %)</span><span class="lfp-sort-indicator">{{ $sortIndicator('physical_subaybayan') }}</span>
                                 </a>
                             </th>
-                            <th style="padding: 12px; text-align: center; font-weight: 600; color: #374151;">
+                            <th data-column-key="status_actual" style="padding: 12px; text-align: center; font-weight: 600; color: #374151;">
                                 <a href="{{ $sortUrl('status_actual') }}" class="lfp-sort-link" style="display: flex; align-items: center; gap: 4px; width: 100%; justify-content: center;">
                                     <span>Status (Actual)</span><span class="lfp-sort-indicator">{{ $sortIndicator('status_actual') }}</span>
                                 </a>
                             </th>
-                            <th style="padding: 12px; text-align: center; font-weight: 600; color: #374151;">
+                            <th data-column-key="status_subaybayan" style="padding: 12px; text-align: center; font-weight: 600; color: #374151;">
                                 <a href="{{ $sortUrl('status_subaybayan') }}" class="lfp-sort-link" style="display: flex; align-items: center; gap: 4px; width: 100%; justify-content: center;">
                                     <span>Status (Subaybayan)</span><span class="lfp-sort-indicator">{{ $sortIndicator('status_subaybayan') }}</span>
                                 </a>
                             </th>
-                            <th style="padding: 12px; text-align: center; font-weight: 600; color: #374151;">
+                            <th data-column-key="last_updated_at" style="padding: 12px; text-align: center; font-weight: 600; color: #374151;">
                                 <a href="{{ $sortUrl('last_updated', 'desc') }}" class="lfp-sort-link" style="display: flex; align-items: center; gap: 4px; width: 100%; justify-content: center;">
                                     <span>Last Updated At</span><span class="lfp-sort-indicator">{{ $sortIndicator('last_updated') }}</span>
                                 </a>
@@ -272,8 +303,8 @@
                                         {{ $project->project_name }}
                                     </span>
                                 </td>
-                                <td style="padding: 12px; color: #374151; min-width: 260px;">
-                                    <div class="wrap-text" style="font-size: 12px; line-height: 1.4; white-space: normal; max-width: 260px;">
+                                <td style="padding: 12px; color: #374151; min-width: 220px;">
+                                    <div class="wrap-text" style="font-size: 12px; line-height: 1.4; white-space: normal; max-width: 220px;">
                                         <strong>Province:</strong> {{ $project->province }}<br>
                                         <strong>City/Mun:</strong> {{ $project->city_municipality }}<br>
                                         @php
@@ -291,24 +322,24 @@
                                         @endif
                                     </div>
                                 </td>
-                                <td style="padding: 12px; color: #374151; text-align: center;">{{ $project->funding_year }}</td>
-                                <td style="padding: 12px; color: #374151; text-align: center;">{{ $project->fund_source }}</td>
-                                <td style="padding: 12px; color: #374151; text-align: center;">{{ $project->mode_of_procurement }}</td>
-                                <td style="padding: 12px; color: #374151; text-align: center;">
+                                <td data-column-key="funding_year" style="padding: 12px; color: #374151; text-align: center;">{{ $project->funding_year }}</td>
+                                <td data-column-key="fund_source" style="padding: 12px; color: #374151; text-align: center;">{{ $project->fund_source }}</td>
+                                <td data-column-key="procurement_type" style="padding: 12px; color: #374151; text-align: center;">{{ $project->mode_of_procurement }}</td>
+                                <td data-column-key="lgsf_allocation" style="padding: 12px; color: #374151; text-align: center;">
                                     @if($project->lgsf_allocation !== null)
                                         ₱ {{ number_format($project->lgsf_allocation, 2) }}
                                     @else
                                         -
                                     @endif
                                 </td>
-                                <td style="padding: 12px; color: #374151; text-align: center;">
+                                <td data-column-key="obligation" style="padding: 12px; color: #374151; text-align: center;">
                                     @if($project->obligation !== null)
                                         ₱ {{ number_format($project->obligation, 2) }}
                                     @else
                                         -
                                     @endif
                                 </td>
-                                <td style="padding: 12px; color: #374151; text-align: center;">
+                                <td data-column-key="utilization_rate" style="padding: 12px; color: #374151; text-align: center;">
                                     @if($project->utilization_rate !== null)
                                         @php $utilizationRate = (float) $project->utilization_rate; @endphp
                                         <span style="color: {{ $utilizationRate < 100 ? '#dc2626' : '#374151' }};">
@@ -318,22 +349,22 @@
                                         -
                                     @endif
                                 </td>
-                                <td style="padding: 12px; color: #374151; text-align: center;">
+                                <td data-column-key="physical_status_subaybayan" style="padding: 12px; color: #374151; text-align: center;">
                                     {{ $subayAccomplishment !== null
                                         ? number_format((float) $subayAccomplishment, 2) . '%'
                                         : '-' }}
                                 </td>
-                                <td style="padding: 12px; text-align: center;">
+                                <td data-column-key="status_actual" style="padding: 12px; text-align: center;">
                                     <span style="display: inline-block; padding: 4px 8px; background-color: #dbeafe; color: #0369a1; border-radius: 4px; font-size: 11px; font-weight: 600;">
                                         {{ $statusActual }}
                                     </span>
                                 </td>
-                                <td style="padding: 12px; text-align: center;">
+                                <td data-column-key="status_subaybayan" style="padding: 12px; text-align: center;">
                                     <span style="display: inline-block; padding: 4px 8px; background-color: #dbeafe; color: #0369a1; border-radius: 4px; font-size: 11px; font-weight: 600;">
                                         {{ $statusSubaybayan }}
                                     </span>
                                 </td>
-                                <td style="padding: 12px; color: #374151; text-align: center;">
+                                <td data-column-key="last_updated_at" style="padding: 12px; color: #374151; text-align: center;">
                                     @if($project->updated_at)
                                         {{ $project->updated_at->format('Y-m-d') }}<br>
                                         <span style="font-size: 11px; color: #6b7280;">{{ $project->updated_at->format('h:i A') }}</span>
@@ -418,7 +449,7 @@
 
         #lfp-table {
             width: max-content !important;
-            min-width: 2000px;
+            min-width: 100%;
             table-layout: auto !important;
         }
 
@@ -431,11 +462,16 @@
         }
 
         #lfp-table th:nth-child(2),
-        #lfp-table td:nth-child(2),
-        #lfp-table th:nth-child(3),
-        #lfp-table td:nth-child(3) {
+        #lfp-table td:nth-child(2) {
             min-width: 320px;
             max-width: 420px;
+            white-space: normal !important;
+        }
+
+        #lfp-table th:nth-child(3),
+        #lfp-table td:nth-child(3) {
+            min-width: 220px;
+            max-width: 280px;
             white-space: normal !important;
         }
 
@@ -462,6 +498,58 @@
             text-align: center;
         }
 
+        .lfp-column-toggle-panel {
+            margin-bottom: 16px;
+            padding: 14px 16px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            background: #f9fafb;
+        }
+
+        .lfp-column-toggle-label {
+            font-size: 12px;
+            font-weight: 700;
+            color: #374151;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .lfp-column-toggle-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+
+        .lfp-column-toggle-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 10px 16px;
+        }
+
+        .lfp-column-toggle-option {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: #374151;
+            cursor: pointer;
+        }
+
+        .lfp-column-toggle-option input {
+            margin: 0;
+        }
+
+        .lfp-column-toggle-option--master {
+            font-weight: 600;
+        }
+
+        #lfp-table [data-column-key].is-column-hidden {
+            display: none;
+        }
+
                         .projects-header {
                             flex-wrap: wrap;
                             gap: 12px;
@@ -474,6 +562,10 @@
         @media (max-width: 1024px) {
             .projects-header {
                 flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .lfp-column-toggle-header {
                 align-items: flex-start;
             }
         }
@@ -501,7 +593,7 @@
             }
 
             #lfp-table {
-                min-width: 1900px;
+                min-width: 100%;
             }
 
             #lfp-table th,
@@ -525,7 +617,7 @@
             }
 
             #lfp-table {
-                min-width: 1800px;
+                min-width: 100%;
             }
         }
     </style>
@@ -539,7 +631,10 @@
             const fundSourceSelect = document.getElementById('filter-fund-source');
             const procurementSelect = document.getElementById('filter-procurement');
             const statusSelect = document.getElementById('filter-status');
+            const selectAllColumnsToggle = document.getElementById('lfp-column-toggle-all');
+            const columnToggles = Array.from(document.querySelectorAll('.lfp-column-toggle-checkbox'));
             const locationData = @json($provinceMunicipalities);
+            const columnToggleStorageKey = 'lfp-visible-columns';
             const selectedCity = citySelect ? (citySelect.dataset.selectedCity || '') : '';
             let searchTimer = null;
 
@@ -586,6 +681,82 @@
                 filtersForm.requestSubmit();
             }
 
+            function applyVisibleColumns(visibleColumns) {
+                document.querySelectorAll('#lfp-table [data-column-key]').forEach(function (cell) {
+                    const columnKey = cell.dataset.columnKey || '';
+                    cell.classList.toggle('is-column-hidden', !visibleColumns.includes(columnKey));
+                });
+            }
+
+            function syncVisibleColumns() {
+                const visibleColumns = columnToggles
+                    .filter(function (toggle) {
+                        return toggle.checked;
+                    })
+                    .map(function (toggle) {
+                        return toggle.dataset.columnToggle || '';
+                    })
+                    .filter(Boolean);
+
+                applyVisibleColumns(visibleColumns);
+
+                if (columnToggles.length > 0) {
+                    localStorage.setItem(columnToggleStorageKey, JSON.stringify(visibleColumns));
+                }
+
+                if (selectAllColumnsToggle) {
+                    const checkedCount = visibleColumns.length;
+                    const totalCount = columnToggles.length;
+                    selectAllColumnsToggle.checked = totalCount > 0 && checkedCount === totalCount;
+                    selectAllColumnsToggle.indeterminate = checkedCount > 0 && checkedCount < totalCount;
+                }
+            }
+
+            function initializeColumnToggles() {
+                if (columnToggles.length === 0) {
+                    return;
+                }
+
+                const storedColumnsRaw = localStorage.getItem(columnToggleStorageKey);
+                let savedColumns = null;
+
+                try {
+                    savedColumns = JSON.parse(storedColumnsRaw || 'null');
+                } catch (error) {
+                    savedColumns = null;
+                }
+
+                const validColumns = Array.isArray(savedColumns)
+                    ? savedColumns.filter(function (columnKey) {
+                        return columnToggles.some(function (toggle) {
+                            return toggle.dataset.columnToggle === columnKey;
+                        });
+                    })
+                    : null;
+
+                if (storedColumnsRaw !== null && validColumns) {
+                    columnToggles.forEach(function (toggle) {
+                        toggle.checked = validColumns.includes(toggle.dataset.columnToggle || '');
+                    });
+                }
+
+                columnToggles.forEach(function (toggle) {
+                    toggle.addEventListener('change', syncVisibleColumns);
+                });
+
+                if (selectAllColumnsToggle) {
+                    selectAllColumnsToggle.addEventListener('change', function () {
+                        columnToggles.forEach(function (toggle) {
+                            toggle.checked = selectAllColumnsToggle.checked;
+                        });
+
+                        syncVisibleColumns();
+                    });
+                }
+
+                syncVisibleColumns();
+            }
+
             if (searchInput) {
                 searchInput.addEventListener('input', function () {
                     clearTimeout(searchTimer);
@@ -606,6 +777,7 @@
                 });
 
             populateCityOptions(provinceSelect.value, selectedCity);
+            initializeColumnToggles();
         });
     </script>
 @endsection
