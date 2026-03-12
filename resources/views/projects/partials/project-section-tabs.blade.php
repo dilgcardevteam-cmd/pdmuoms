@@ -41,7 +41,12 @@
             margin: 0 0 24px;
             padding: 0 0 3px;
             overflow-x: auto;
-            scrollbar-width: thin;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .project-section-tabs::-webkit-scrollbar {
+            display: none;
         }
 
         .project-section-tabs::after {
