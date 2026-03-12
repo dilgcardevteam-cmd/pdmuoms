@@ -120,40 +120,164 @@ class RlipLimeProjectController extends Controller
             ->pluck('employment_generated_value')
             ->filter(fn ($value) => is_numeric($value))
             ->sum(), 0);
+        $totalContractAmount = (float) $rows
+            ->map(fn (array $row) => $this->extractNumeric($row['contract_amount'] ?? null))
+            ->filter(fn ($value) => is_numeric($value))
+            ->sum();
+        $averageProgrammedAmount = $totalProjects > 0
+            ? round($totalProgrammedAmount / $totalProjects, 2)
+            : 0;
 
-        $statusCounts = $rows
-            ->groupBy(fn (array $row) => trim((string) ($row['project_status'] ?? '')) ?: 'UNSPECIFIED')
-            ->map(fn (Collection $group) => $group->count())
-            ->sortDesc()
-            ->values();
+        $statusBreakdown = $this->buildCountBreakdown($rows, 'project_status');
+        $fundSourceBreakdown = $this->buildCountBreakdown($rows, 'fund_source');
+        $provinceBreakdown = $this->buildCountBreakdown($rows, 'province', 8);
+        $cityBreakdown = $this->buildCountBreakdown($rows, 'city_municipality', 8);
+        $projectTypeBreakdown = $this->buildCountBreakdown($rows, 'project_type', 8);
+        $modeBreakdown = $this->buildCountBreakdown($rows, 'mode_of_implementation');
+        $profileApprovalBreakdown = $this->buildCountBreakdown($rows, 'profile_approval_status');
+        $completionApprovalBreakdown = $this->buildCountBreakdown($rows, 'completion_approval_status');
 
-        $statusBreakdown = $rows
-            ->groupBy(fn (array $row) => trim((string) ($row['project_status'] ?? '')) ?: 'UNSPECIFIED')
+        $fundingYearBreakdown = $rows
+            ->groupBy(fn (array $row) => trim((string) ($row['funding_year'] ?? '')) ?: 'UNSPECIFIED')
             ->map(fn (Collection $group, string $label) => [
                 'label' => $label,
                 'count' => $group->count(),
             ])
-            ->sortByDesc('count')
+            ->sortByDesc(function (array $item) {
+                $label = trim((string) ($item['label'] ?? ''));
+                if (is_numeric($label)) {
+                    return (int) $label;
+                }
+
+                return -1;
+            })
             ->values();
 
-        $fundSourceBreakdown = $rows
-            ->groupBy(fn (array $row) => trim((string) ($row['fund_source'] ?? '')) ?: 'UNSPECIFIED')
-            ->map(fn (Collection $group, string $label) => [
-                'label' => $label,
-                'count' => $group->count(),
-            ])
-            ->sortByDesc('count')
+        $completionBuckets = [
+            ['label' => '0-24%', 'count' => 0],
+            ['label' => '25-49%', 'count' => 0],
+            ['label' => '50-74%', 'count' => 0],
+            ['label' => '75-99%', 'count' => 0],
+            ['label' => '100%', 'count' => 0],
+            ['label' => 'No Data', 'count' => 0],
+        ];
+
+        $completedProjects = 0;
+        $ongoingProjects = 0;
+        $notStartedProjects = 0;
+        $withAipCount = 0;
+        $withBriefAttachmentCount = 0;
+        $withCompletionAttachmentCount = 0;
+        $withScheduleCount = 0;
+        $withoutScheduleCount = 0;
+        $overdueCount = 0;
+        $dueSoonCount = 0;
+        $completedWithoutDateCount = 0;
+
+        $todayTs = now()->startOfDay()->timestamp;
+        $dueSoonTs = now()->copy()->addDays(30)->endOfDay()->timestamp;
+
+        foreach ($rows as $row) {
+            $statusText = mb_strtolower(trim((string) ($row['project_status'] ?? '')));
+            $completion = is_numeric($row['overall_completion_value'] ?? null)
+                ? (float) $row['overall_completion_value']
+                : null;
+
+            if ($completion === null) {
+                $completionBuckets[5]['count']++;
+            } elseif ($completion >= 100) {
+                $completionBuckets[4]['count']++;
+            } elseif ($completion >= 75) {
+                $completionBuckets[3]['count']++;
+            } elseif ($completion >= 50) {
+                $completionBuckets[2]['count']++;
+            } elseif ($completion >= 25) {
+                $completionBuckets[1]['count']++;
+            } else {
+                $completionBuckets[0]['count']++;
+            }
+
+            if (
+                ($completion !== null && $completion >= 100)
+                || str_contains($statusText, 'completed')
+                || str_contains($statusText, 'complete')
+            ) {
+                $completedProjects++;
+            } elseif (
+                str_contains($statusText, 'not yet')
+                || str_contains($statusText, 'not started')
+                || ($completion !== null && $completion <= 0)
+            ) {
+                $notStartedProjects++;
+            } else {
+                $ongoingProjects++;
+            }
+
+            if ($this->isAffirmativeValue((string) ($row['has_aip'] ?? ''))) {
+                $withAipCount++;
+            }
+            if ($this->hasDocumentValue((string) ($row['project_brief_attachment'] ?? ''))) {
+                $withBriefAttachmentCount++;
+            }
+            if ($this->hasDocumentValue((string) ($row['completion_has_attachment'] ?? ''))) {
+                $withCompletionAttachmentCount++;
+            }
+
+            $startTs = $this->parseDateToTimestamp((string) ($row['project_schedule_start_date'] ?? ''));
+            $endTs = $this->parseDateToTimestamp((string) ($row['project_schedule_end_date'] ?? ''));
+            $completionDateTs = $this->parseDateToTimestamp((string) ($row['date_of_completion'] ?? ''));
+            $isComplete = $completion !== null && $completion >= 100;
+
+            if ($startTs !== null && $endTs !== null) {
+                $withScheduleCount++;
+            } else {
+                $withoutScheduleCount++;
+            }
+
+            if ($endTs !== null && !$isComplete) {
+                if ($endTs < $todayTs) {
+                    $overdueCount++;
+                } elseif ($endTs <= $dueSoonTs) {
+                    $dueSoonCount++;
+                }
+            }
+
+            if ($isComplete && $completionDateTs === null) {
+                $completedWithoutDateCount++;
+            }
+        }
+
+        $completionBucketBreakdown = collect($completionBuckets)
+            ->filter(fn (array $bucket) => (int) $bucket['count'] > 0)
             ->values();
 
-        $provinceBreakdown = $rows
-            ->groupBy(fn (array $row) => trim((string) ($row['province'] ?? '')) ?: 'UNSPECIFIED')
-            ->map(fn (Collection $group, string $label) => [
-                'label' => $label,
-                'count' => $group->count(),
-            ])
-            ->sortByDesc('count')
-            ->take(8)
+        $programmedValues = $rows
+            ->pluck('total_amount_programmed_value')
+            ->filter(fn ($value) => is_numeric($value))
+            ->map(fn ($value) => (float) $value)
+            ->sort()
             ->values();
+        $thresholdIndex = max(0, (int) floor(($programmedValues->count() - 1) * 0.75));
+        $highBudgetThreshold = (float) ($programmedValues[$thresholdIndex] ?? 0);
+        if ($highBudgetThreshold <= 0) {
+            $highBudgetThreshold = 5000000;
+        }
+
+        $highBudgetLowProgressCount = $rows
+            ->filter(function (array $row) use ($highBudgetThreshold) {
+                $programmed = (float) ($row['total_amount_programmed_value'] ?? 0);
+                $completion = (float) ($row['overall_completion_value'] ?? 0);
+
+                return $programmed >= $highBudgetThreshold && $completion < 50;
+            })
+            ->count();
+
+        $completedRatePercent = $totalProjects > 0 ? round(($completedProjects / $totalProjects) * 100, 2) : 0;
+        $aipCoveragePercent = $totalProjects > 0 ? round(($withAipCount / $totalProjects) * 100, 2) : 0;
+        $briefCoveragePercent = $totalProjects > 0 ? round(($withBriefAttachmentCount / $totalProjects) * 100, 2) : 0;
+        $completionDocCoveragePercent = $totalProjects > 0 ? round(($withCompletionAttachmentCount / $totalProjects) * 100, 2) : 0;
+        $documentationCoveragePercent = round(($aipCoveragePercent + $briefCoveragePercent + $completionDocCoveragePercent) / 3, 2);
+        $scheduleRiskPercent = $totalProjects > 0 ? round((($overdueCount + $dueSoonCount) / $totalProjects) * 100, 2) : 0;
 
         $fundingYears = $this->extractSortedValues($scopedRows, 'funding_year', true);
         $fundSources = $this->extractSortedValues($scopedRows, 'fund_source');
@@ -174,7 +298,7 @@ class RlipLimeProjectController extends Controller
             ->sort()
             ->values();
 
-        $topStatusCount = (int) ($statusCounts->first() ?? 0);
+        $topStatusCount = (int) ($statusBreakdown->first()['count'] ?? 0);
         $topFundSourceCount = (int) ($fundSourceBreakdown->first()['count'] ?? 0);
         $topProvinceCount = (int) ($provinceBreakdown->first()['count'] ?? 0);
 
@@ -185,9 +309,37 @@ class RlipLimeProjectController extends Controller
             'totalProgrammedAmount' => $totalProgrammedAmount,
             'averageCompletion' => $averageCompletion,
             'totalEmployment' => $totalEmployment,
+            'totalContractAmount' => $totalContractAmount,
+            'averageProgrammedAmount' => $averageProgrammedAmount,
+            'completedProjects' => $completedProjects,
+            'ongoingProjects' => $ongoingProjects,
+            'notStartedProjects' => $notStartedProjects,
+            'highBudgetLowProgressCount' => $highBudgetLowProgressCount,
+            'highBudgetThreshold' => $highBudgetThreshold,
+            'completedRatePercent' => $completedRatePercent,
+            'documentationCoveragePercent' => $documentationCoveragePercent,
+            'scheduleRiskPercent' => $scheduleRiskPercent,
+            'aipCoveragePercent' => $aipCoveragePercent,
+            'briefCoveragePercent' => $briefCoveragePercent,
+            'completionDocCoveragePercent' => $completionDocCoveragePercent,
+            'withAipCount' => $withAipCount,
+            'withBriefAttachmentCount' => $withBriefAttachmentCount,
+            'withCompletionAttachmentCount' => $withCompletionAttachmentCount,
+            'withScheduleCount' => $withScheduleCount,
+            'withoutScheduleCount' => $withoutScheduleCount,
+            'overdueCount' => $overdueCount,
+            'dueSoonCount' => $dueSoonCount,
+            'completedWithoutDateCount' => $completedWithoutDateCount,
             'statusBreakdown' => $statusBreakdown,
             'fundSourceBreakdown' => $fundSourceBreakdown,
             'provinceBreakdown' => $provinceBreakdown,
+            'cityBreakdown' => $cityBreakdown,
+            'projectTypeBreakdown' => $projectTypeBreakdown,
+            'modeBreakdown' => $modeBreakdown,
+            'profileApprovalBreakdown' => $profileApprovalBreakdown,
+            'completionApprovalBreakdown' => $completionApprovalBreakdown,
+            'completionBucketBreakdown' => $completionBucketBreakdown,
+            'fundingYearBreakdown' => $fundingYearBreakdown,
             'fundingYears' => $fundingYears,
             'fundSources' => $fundSources,
             'provinces' => $provinces,
@@ -472,6 +624,95 @@ class RlipLimeProjectController extends Controller
         $base = preg_replace('/^(municipality|city)\s+of\s+/i', '', $base) ?? $base;
 
         return trim($base);
+    }
+
+    private function buildCountBreakdown(Collection $rows, string $key, ?int $limit = null): Collection
+    {
+        $breakdown = $rows
+            ->groupBy(fn (array $row) => trim((string) ($row[$key] ?? '')) ?: 'UNSPECIFIED')
+            ->map(fn (Collection $group, string $label) => [
+                'label' => $label,
+                'count' => $group->count(),
+            ])
+            ->sortByDesc('count')
+            ->values();
+
+        if ($limit !== null && $limit > 0) {
+            return $breakdown->take($limit)->values();
+        }
+
+        return $breakdown;
+    }
+
+    private function extractNumeric(mixed $value): ?float
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_numeric($value)) {
+            return (float) $value;
+        }
+
+        $normalized = trim((string) $value);
+        if ($normalized === '') {
+            return null;
+        }
+
+        $clean = preg_replace('/[^0-9.\-]/', '', str_replace(',', '', $normalized));
+        if ($clean === null || $clean === '' || !is_numeric($clean)) {
+            return null;
+        }
+
+        return (float) $clean;
+    }
+
+    private function parseDateToTimestamp(string $value): ?int
+    {
+        $normalized = trim($value);
+        if ($normalized === '') {
+            return null;
+        }
+
+        if (is_numeric($normalized)) {
+            $numeric = (float) $normalized;
+            if ($numeric >= 30000 && $numeric <= 80000) {
+                $excelBase = new \DateTimeImmutable('1899-12-30 00:00:00');
+                return $excelBase->modify('+' . (int) floor($numeric) . ' days')->getTimestamp();
+            }
+            if ($numeric >= 1900 && $numeric <= 2100) {
+                return strtotime((int) $numeric . '-01-01') ?: null;
+            }
+        }
+
+        $parsed = strtotime($normalized);
+        return $parsed !== false ? $parsed : null;
+    }
+
+    private function isAffirmativeValue(string $value): bool
+    {
+        $normalized = mb_strtolower(trim($value));
+        if ($normalized === '') {
+            return false;
+        }
+
+        return in_array($normalized, ['yes', 'y', 'true', '1'], true)
+            || str_contains($normalized, 'yes')
+            || str_contains($normalized, 'true');
+    }
+
+    private function hasDocumentValue(string $value): bool
+    {
+        $normalized = mb_strtolower(trim($value));
+        if ($normalized === '') {
+            return false;
+        }
+
+        if (in_array($normalized, ['no', 'none', 'n/a', 'na', '-', '0'], true)) {
+            return false;
+        }
+
+        return !str_contains($normalized, 'not available');
     }
 
     private function resolveCellValue(array $project, int $index): string

@@ -167,11 +167,369 @@
             </section>
         </div>
 
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin-bottom: 18px;">
+            <div style="border: 1px solid #dbeafe; background: #f8fbff; border-radius: 10px; padding: 14px;">
+                <div style="font-size: 11px; color: #1e40af; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700;">Completed Projects</div>
+                <div style="margin-top: 6px; font-size: 28px; color: #0f172a; font-weight: 800;">{{ number_format($completedProjects) }}</div>
+                <div style="font-size: 12px; color: #475569;">Delivery rate: {{ number_format($completedRatePercent, 2) }}%</div>
+            </div>
+            <div style="border: 1px solid #e2e8f0; background: #ffffff; border-radius: 10px; padding: 14px;">
+                <div style="font-size: 11px; color: #0f172a; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700;">On-going Projects</div>
+                <div style="margin-top: 6px; font-size: 28px; color: #0f172a; font-weight: 800;">{{ number_format($ongoingProjects) }}</div>
+                <div style="font-size: 12px; color: #475569;">Active implementation pipeline</div>
+            </div>
+            <div style="border: 1px solid #fde68a; background: #fffbeb; border-radius: 10px; padding: 14px;">
+                <div style="font-size: 11px; color: #92400e; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700;">Not Yet Started</div>
+                <div style="margin-top: 6px; font-size: 28px; color: #0f172a; font-weight: 800;">{{ number_format($notStartedProjects) }}</div>
+                <div style="font-size: 12px; color: #475569;">Potential mobilization backlog</div>
+            </div>
+            <div style="border: 1px solid #fecaca; background: #fff5f5; border-radius: 10px; padding: 14px;">
+                <div style="font-size: 11px; color: #b91c1c; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700;">High Budget, Low Progress</div>
+                <div style="margin-top: 6px; font-size: 28px; color: #0f172a; font-weight: 800;">{{ number_format($highBudgetLowProgressCount) }}</div>
+                <div style="font-size: 12px; color: #475569;">Threshold: &#8369; {{ number_format($highBudgetThreshold, 2) }}</div>
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px;" class="rlip-dashboard-ring-grid">
+            <section class="rlip-infographic-card">
+                <h3 style="margin: 0 0 12px; color: #0f172a; font-size: 14px; font-weight: 700;">Portfolio Completion Rate</h3>
+                <div class="rlip-ring-wrap">
+                    <div class="rlip-ring" style="--p: {{ max(0, min(100, (float) $completedRatePercent)) }}; --ring-color: #2563eb;">
+                        <span>{{ number_format($completedRatePercent, 2) }}%</span>
+                    </div>
+                    <div class="rlip-ring-copy">
+                        <p><strong>{{ number_format($completedProjects) }}</strong> projects completed</p>
+                        <p>Out of <strong>{{ number_format($totalProjects) }}</strong> total projects in filter scope.</p>
+                    </div>
+                </div>
+            </section>
+            <section class="rlip-infographic-card">
+                <h3 style="margin: 0 0 12px; color: #0f172a; font-size: 14px; font-weight: 700;">Documentation Coverage</h3>
+                <div class="rlip-ring-wrap">
+                    <div class="rlip-ring" style="--p: {{ max(0, min(100, (float) $documentationCoveragePercent)) }}; --ring-color: #059669;">
+                        <span>{{ number_format($documentationCoveragePercent, 2) }}%</span>
+                    </div>
+                    <div class="rlip-ring-copy">
+                        <p>AIP: <strong>{{ number_format($withAipCount) }}</strong> ({{ number_format($aipCoveragePercent, 2) }}%)</p>
+                        <p>Brief attachment: <strong>{{ number_format($withBriefAttachmentCount) }}</strong> ({{ number_format($briefCoveragePercent, 2) }}%)</p>
+                        <p>Completion doc: <strong>{{ number_format($withCompletionAttachmentCount) }}</strong> ({{ number_format($completionDocCoveragePercent, 2) }}%)</p>
+                    </div>
+                </div>
+            </section>
+            <section class="rlip-infographic-card">
+                <h3 style="margin: 0 0 12px; color: #0f172a; font-size: 14px; font-weight: 700;">Schedule Risk Exposure</h3>
+                <div class="rlip-ring-wrap">
+                    <div class="rlip-ring" style="--p: {{ max(0, min(100, (float) $scheduleRiskPercent)) }}; --ring-color: #dc2626;">
+                        <span>{{ number_format($scheduleRiskPercent, 2) }}%</span>
+                    </div>
+                    <div class="rlip-ring-copy">
+                        <p>Overdue projects: <strong>{{ number_format($overdueCount) }}</strong></p>
+                        <p>Due in 30 days: <strong>{{ number_format($dueSoonCount) }}</strong></p>
+                        <p>Missing schedule fields: <strong>{{ number_format($withoutScheduleCount) }}</strong></p>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        @php
+            $topCompletionBucketCount = (int) ($completionBucketBreakdown->first()['count'] ?? 0);
+            $topFundingYearCount = (int) ($fundingYearBreakdown->first()['count'] ?? 0);
+            $topCityCount = (int) ($cityBreakdown->first()['count'] ?? 0);
+            $topProjectTypeCount = (int) ($projectTypeBreakdown->first()['count'] ?? 0);
+            $topModeCount = (int) ($modeBreakdown->first()['count'] ?? 0);
+            $topProfileApprovalCount = (int) ($profileApprovalBreakdown->first()['count'] ?? 0);
+            $topCompletionApprovalCount = (int) ($completionApprovalBreakdown->first()['count'] ?? 0);
+        @endphp
+
+        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px;" class="rlip-dashboard-breakdown-grid-4">
+            <section class="rlip-infographic-card">
+                <h3 class="rlip-infographic-title">Completion Stage Distribution</h3>
+                @forelse($completionBucketBreakdown as $item)
+                    @php $barWidth = $topCompletionBucketCount > 0 ? round(($item['count'] / $topCompletionBucketCount) * 100, 2) : 0; @endphp
+                    <div class="rlip-infographic-row">
+                        <div class="rlip-infographic-row-head"><span>{{ $item['label'] }}</span><strong>{{ number_format($item['count']) }}</strong></div>
+                        <div class="rlip-infographic-bar"><div style="width: {{ $barWidth }}%;"></div></div>
+                    </div>
+                @empty
+                    <p class="rlip-infographic-empty">No data for selected filters.</p>
+                @endforelse
+            </section>
+
+            <section class="rlip-infographic-card">
+                <h3 class="rlip-infographic-title">Funding Year Distribution</h3>
+                @forelse($fundingYearBreakdown as $item)
+                    @php $barWidth = $topFundingYearCount > 0 ? round(($item['count'] / $topFundingYearCount) * 100, 2) : 0; @endphp
+                    <div class="rlip-infographic-row">
+                        <div class="rlip-infographic-row-head"><span>{{ $item['label'] }}</span><strong>{{ number_format($item['count']) }}</strong></div>
+                        <div class="rlip-infographic-bar"><div style="width: {{ $barWidth }}%;"></div></div>
+                    </div>
+                @empty
+                    <p class="rlip-infographic-empty">No data for selected filters.</p>
+                @endforelse
+            </section>
+
+            <section class="rlip-infographic-card">
+                <h3 class="rlip-infographic-title">Top Cities / Municipalities</h3>
+                @forelse($cityBreakdown as $item)
+                    @php $barWidth = $topCityCount > 0 ? round(($item['count'] / $topCityCount) * 100, 2) : 0; @endphp
+                    <div class="rlip-infographic-row">
+                        <div class="rlip-infographic-row-head"><span>{{ $item['label'] }}</span><strong>{{ number_format($item['count']) }}</strong></div>
+                        <div class="rlip-infographic-bar"><div style="width: {{ $barWidth }}%;"></div></div>
+                    </div>
+                @empty
+                    <p class="rlip-infographic-empty">No data for selected filters.</p>
+                @endforelse
+            </section>
+
+            <section class="rlip-infographic-card">
+                <h3 class="rlip-infographic-title">Project Type Mix</h3>
+                @forelse($projectTypeBreakdown as $item)
+                    @php $barWidth = $topProjectTypeCount > 0 ? round(($item['count'] / $topProjectTypeCount) * 100, 2) : 0; @endphp
+                    <div class="rlip-infographic-row">
+                        <div class="rlip-infographic-row-head"><span>{{ $item['label'] }}</span><strong>{{ number_format($item['count']) }}</strong></div>
+                        <div class="rlip-infographic-bar"><div style="width: {{ $barWidth }}%;"></div></div>
+                    </div>
+                @empty
+                    <p class="rlip-infographic-empty">No data for selected filters.</p>
+                @endforelse
+            </section>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px;" class="rlip-dashboard-breakdown-grid">
+            <section class="rlip-infographic-card">
+                <h3 class="rlip-infographic-title">Mode of Implementation</h3>
+                @forelse($modeBreakdown as $item)
+                    @php $barWidth = $topModeCount > 0 ? round(($item['count'] / $topModeCount) * 100, 2) : 0; @endphp
+                    <div class="rlip-infographic-row">
+                        <div class="rlip-infographic-row-head"><span>{{ $item['label'] }}</span><strong>{{ number_format($item['count']) }}</strong></div>
+                        <div class="rlip-infographic-bar"><div style="width: {{ $barWidth }}%;"></div></div>
+                    </div>
+                @empty
+                    <p class="rlip-infographic-empty">No data for selected filters.</p>
+                @endforelse
+            </section>
+
+            <section class="rlip-infographic-card">
+                <h3 class="rlip-infographic-title">Profile Approval Status</h3>
+                @forelse($profileApprovalBreakdown as $item)
+                    @php $barWidth = $topProfileApprovalCount > 0 ? round(($item['count'] / $topProfileApprovalCount) * 100, 2) : 0; @endphp
+                    <div class="rlip-infographic-row">
+                        <div class="rlip-infographic-row-head"><span>{{ $item['label'] }}</span><strong>{{ number_format($item['count']) }}</strong></div>
+                        <div class="rlip-infographic-bar"><div style="width: {{ $barWidth }}%;"></div></div>
+                    </div>
+                @empty
+                    <p class="rlip-infographic-empty">No data for selected filters.</p>
+                @endforelse
+            </section>
+
+            <section class="rlip-infographic-card">
+                <h3 class="rlip-infographic-title">Completion Approval Status</h3>
+                @forelse($completionApprovalBreakdown as $item)
+                    @php $barWidth = $topCompletionApprovalCount > 0 ? round(($item['count'] / $topCompletionApprovalCount) * 100, 2) : 0; @endphp
+                    <div class="rlip-infographic-row">
+                        <div class="rlip-infographic-row-head"><span>{{ $item['label'] }}</span><strong>{{ number_format($item['count']) }}</strong></div>
+                        <div class="rlip-infographic-bar"><div style="width: {{ $barWidth }}%;"></div></div>
+                    </div>
+                @empty
+                    <p class="rlip-infographic-empty">No data for selected filters.</p>
+                @endforelse
+            </section>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;" class="rlip-dashboard-monitoring-grid">
+            <section class="rlip-infographic-card">
+                <h3 class="rlip-infographic-title">Documentation & Budget Monitoring</h3>
+                <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-bottom: 10px;">
+                    <div class="rlip-mini-stat">
+                        <div class="rlip-mini-label">Total Contract Amount</div>
+                        <div class="rlip-mini-value">&#8369; {{ number_format($totalContractAmount, 2) }}</div>
+                    </div>
+                    <div class="rlip-mini-stat">
+                        <div class="rlip-mini-label">Average Programmed / Project</div>
+                        <div class="rlip-mini-value">&#8369; {{ number_format($averageProgrammedAmount, 2) }}</div>
+                    </div>
+                </div>
+                <div class="rlip-infographic-row">
+                    <div class="rlip-infographic-row-head"><span>AIP Available</span><strong>{{ number_format($aipCoveragePercent, 2) }}%</strong></div>
+                    <div class="rlip-infographic-bar"><div style="width: {{ max(0, min(100, (float) $aipCoveragePercent)) }}%;"></div></div>
+                </div>
+                <div class="rlip-infographic-row">
+                    <div class="rlip-infographic-row-head"><span>Project Brief Attachment</span><strong>{{ number_format($briefCoveragePercent, 2) }}%</strong></div>
+                    <div class="rlip-infographic-bar"><div style="width: {{ max(0, min(100, (float) $briefCoveragePercent)) }}%;"></div></div>
+                </div>
+                <div class="rlip-infographic-row">
+                    <div class="rlip-infographic-row-head"><span>Completion Attachment</span><strong>{{ number_format($completionDocCoveragePercent, 2) }}%</strong></div>
+                    <div class="rlip-infographic-bar"><div style="width: {{ max(0, min(100, (float) $completionDocCoveragePercent)) }}%;"></div></div>
+                </div>
+            </section>
+
+            <section class="rlip-infographic-card">
+                <h3 class="rlip-infographic-title">Schedule Health & Compliance Alerts</h3>
+                <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;">
+                    <div class="rlip-mini-stat">
+                        <div class="rlip-mini-label">With Complete Schedule</div>
+                        <div class="rlip-mini-value">{{ number_format($withScheduleCount) }}</div>
+                    </div>
+                    <div class="rlip-mini-stat">
+                        <div class="rlip-mini-label">Missing Schedule Fields</div>
+                        <div class="rlip-mini-value">{{ number_format($withoutScheduleCount) }}</div>
+                    </div>
+                    <div class="rlip-mini-stat rlip-mini-stat-risk">
+                        <div class="rlip-mini-label">Overdue Projects</div>
+                        <div class="rlip-mini-value">{{ number_format($overdueCount) }}</div>
+                    </div>
+                    <div class="rlip-mini-stat rlip-mini-stat-risk">
+                        <div class="rlip-mini-label">Due in Next 30 Days</div>
+                        <div class="rlip-mini-value">{{ number_format($dueSoonCount) }}</div>
+                    </div>
+                </div>
+                <div style="margin-top: 12px; font-size: 12px; color: #475569;">
+                    Completed projects missing completion date: <strong>{{ number_format($completedWithoutDateCount) }}</strong>
+                </div>
+            </section>
+        </div>
+
     </div>
 
     <style>
+        .rlip-infographic-card {
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            background: #ffffff;
+            padding: 12px;
+        }
+
+        .rlip-infographic-title {
+            margin: 0 0 10px;
+            color: #0f172a;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .rlip-infographic-row {
+            margin-bottom: 9px;
+        }
+
+        .rlip-infographic-row-head {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            font-size: 12px;
+            margin-bottom: 4px;
+            color: #334155;
+        }
+
+        .rlip-infographic-row-head strong {
+            color: #0f172a;
+        }
+
+        .rlip-infographic-bar {
+            height: 7px;
+            border-radius: 999px;
+            background: #f1f5f9;
+            overflow: hidden;
+        }
+
+        .rlip-infographic-bar > div {
+            height: 100%;
+            border-radius: 999px;
+            background: linear-gradient(90deg, #2563eb, #0ea5e9);
+            transition: width 0.5s ease;
+        }
+
+        .rlip-infographic-empty {
+            margin: 0;
+            color: #64748b;
+            font-size: 12px;
+        }
+
+        .rlip-ring-wrap {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .rlip-ring {
+            --p: 0;
+            --ring-color: #2563eb;
+            width: 96px;
+            height: 96px;
+            position: relative;
+            border-radius: 999px;
+            background: conic-gradient(var(--ring-color) calc(var(--p) * 1%), #e2e8f0 0);
+            display: grid;
+            place-items: center;
+            flex-shrink: 0;
+        }
+
+        .rlip-ring::before {
+            content: '';
+            width: 72px;
+            height: 72px;
+            border-radius: 999px;
+            background: #ffffff;
+            position: absolute;
+        }
+
+        .rlip-ring span {
+            position: relative;
+            z-index: 1;
+            font-size: 13px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .rlip-ring-copy {
+            display: grid;
+            gap: 5px;
+            font-size: 12px;
+            color: #475569;
+        }
+
+        .rlip-ring-copy p {
+            margin: 0;
+        }
+
+        .rlip-mini-stat {
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            background: #f8fafc;
+            padding: 10px;
+        }
+
+        .rlip-mini-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            margin-bottom: 4px;
+        }
+
+        .rlip-mini-value {
+            font-size: 18px;
+            font-weight: 800;
+            color: #0f172a;
+            word-break: break-word;
+        }
+
+        .rlip-mini-stat-risk {
+            border-color: #fecaca;
+            background: #fff7f7;
+        }
+
+        .rlip-dashboard-breakdown-grid-4 {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+
         @media (max-width: 1000px) {
             .rlip-dashboard-breakdown-grid {
+                grid-template-columns: 1fr !important;
+            }
+
+            .rlip-dashboard-breakdown-grid-4,
+            .rlip-dashboard-ring-grid,
+            .rlip-dashboard-monitoring-grid {
                 grid-template-columns: 1fr !important;
             }
         }
@@ -189,6 +547,11 @@
                 display: inline-flex;
                 align-items: center;
                 justify-content: center;
+            }
+
+            .rlip-ring-wrap {
+                flex-direction: column;
+                align-items: flex-start;
             }
         }
     </style>
