@@ -42,9 +42,15 @@
                     <h2 style="color: #002C76; font-size: 18px; margin: 0;">Imported Project-at-Risk Files</h2>
                     <p style="margin: 6px 0 0 0; color: #6b7280; font-size: 12px;">Loading a file will delete the current Project At Risk records first, then import the selected CSV.</p>
                 </div>
-                <button type="button" onclick="openImportModal()" style="padding: 8px 14px; background-color: #002C76; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12px;">
-                    Import CSV
-                </button>
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <a href="{{ route('system-management.upload-project-at-risk.template') }}" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 8px 14px; background: linear-gradient(180deg, #008c4d 0%, #007542 100%); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12px; text-decoration: none; box-shadow: 0 6px 16px rgba(0, 117, 66, 0.18);">
+                        <i class="fas fa-file-excel" aria-hidden="true"></i>
+                        <span>Download Template</span>
+                    </a>
+                    <button type="button" onclick="openImportModal()" style="padding: 8px 14px; background: linear-gradient(180deg, #0a4cb3 0%, #002C76 100%); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12px; box-shadow: 0 6px 16px rgba(0, 44, 118, 0.2);">
+                        Import CSV
+                    </button>
+                </div>
             </div>
 
             @if($importHistoryTableMissing ?? false)

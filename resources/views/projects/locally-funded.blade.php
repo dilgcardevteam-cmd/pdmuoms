@@ -56,96 +56,104 @@
             ];
         @endphp
 
-        <form id="lfp-filters-form" method="GET" action="{{ route('projects.locally-funded') }}" style="display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; margin-bottom: 16px;">
-            <input type="hidden" name="sort_by" value="{{ $sortBy ?? 'funding_year' }}">
-            <input type="hidden" name="sort_dir" value="{{ $sortDir ?? 'asc' }}">
-            <input type="hidden" name="per_page" value="{{ $perPage ?? 10 }}">
-            @if($activeFilters['project_code'] !== '')
-                <input type="hidden" name="project_code" value="{{ $activeFilters['project_code'] }}">
-            @endif
-            @if($activeFilters['project_update_status'] !== '')
-                <input type="hidden" name="project_update_status" value="{{ $activeFilters['project_update_status'] }}">
-            @endif
-            <div style="min-width: 220px; flex: 1;">
-                <label for="lfp-search" style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 6px;">Search</label>
-                <input id="lfp-search" name="search" type="text" value="{{ $activeFilters['search'] }}" placeholder="Search project code, title, province, fund source..." style="width: 100%; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px;">
-            </div>
-            <div style="min-width: 150px;">
-                <label for="filter-year" style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 6px;">Funding Year</label>
-                <select id="filter-year" name="funding_year" style="width: 100%; padding: 6px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px;">
-                    <option value="">All</option>
-                    @foreach($fundingYears as $year)
-                        <option value="{{ $year }}" {{ (string) $activeFilters['funding_year'] === (string) $year ? 'selected' : '' }}>{{ $year }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div style="min-width: 160px;">
-                <label for="filter-fund-source" style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 6px;">Fund Source</label>
-                <select id="filter-fund-source" name="fund_source" style="width: 100%; padding: 6px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px;">
-                    <option value="">All</option>
-                    @foreach($fundSources as $source)
-                        <option value="{{ $source }}" {{ (string) $activeFilters['fund_source'] === (string) $source ? 'selected' : '' }}>{{ $source }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div style="min-width: 170px;">
-                <label for="filter-province" style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 6px;">Province</label>
-                <select id="filter-province" name="province" style="width: 100%; padding: 6px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px;">
-                    <option value="">All</option>
-                    @foreach($provinces as $province)
-                        <option value="{{ $province }}" {{ (string) $activeFilters['province'] === (string) $province ? 'selected' : '' }}>{{ $province }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div style="min-width: 170px;">
-                <label for="filter-city" style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 6px;">City/Mun</label>
-                <select id="filter-city" name="city" data-selected-city="{{ $activeFilters['city'] }}" style="width: 100%; padding: 6px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px;">
-                    <option value="">All</option>
-                    @foreach($cityOptions as $city)
-                        <option value="{{ $city }}" {{ (string) $activeFilters['city'] === (string) $city ? 'selected' : '' }}>{{ $city }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div style="min-width: 170px;">
-                <label for="filter-procurement" style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 6px;">Procurement Type</label>
-                <select id="filter-procurement" name="procurement" style="width: 100%; padding: 6px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px;">
-                    <option value="">All</option>
-                    @foreach($procurementTypes as $type)
-                        <option value="{{ $type }}" {{ (string) $activeFilters['procurement'] === (string) $type ? 'selected' : '' }}>{{ ucfirst($type) }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div style="min-width: 170px;">
-                <label for="filter-status" style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 6px;">Status</label>
-                <select id="filter-status" name="status" style="width: 100%; padding: 6px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px;">
-                    <option value="">All</option>
-                    @foreach($statusOptions as $status)
-                        <option value="{{ $status }}" {{ (string) $activeFilters['status'] === (string) $status ? 'selected' : '' }}>{{ $status }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <a href="{{ route('projects.locally-funded', ['sort_by' => $sortBy ?? 'funding_year', 'sort_dir' => $sortDir ?? 'asc', 'per_page' => $perPage ?? 10]) }}" style="padding: 8px 12px; background-color: #6b7280; color: white; border-radius: 6px; font-size: 12px; font-weight: 600; text-decoration: none;">
-                Clear
-            </a>
-        </form>
+        <details id="lfp-filters-panel" class="lfp-filters-panel" open>
+            <summary class="lfp-filters-summary">
+                <span>Filters</span>
+                <span class="lfp-filters-summary-icon" aria-hidden="true"></span>
+            </summary>
+            <div class="lfp-filters-body">
+                <form id="lfp-filters-form" method="GET" action="{{ route('projects.locally-funded') }}" style="display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; margin-bottom: 16px;">
+                    <input type="hidden" name="sort_by" value="{{ $sortBy ?? 'funding_year' }}">
+                    <input type="hidden" name="sort_dir" value="{{ $sortDir ?? 'asc' }}">
+                    <input type="hidden" name="per_page" value="{{ $perPage ?? 10 }}">
+                    @if($activeFilters['project_code'] !== '')
+                        <input type="hidden" name="project_code" value="{{ $activeFilters['project_code'] }}">
+                    @endif
+                    @if($activeFilters['project_update_status'] !== '')
+                        <input type="hidden" name="project_update_status" value="{{ $activeFilters['project_update_status'] }}">
+                    @endif
+                    <div style="min-width: 220px; flex: 1;">
+                        <label for="lfp-search" style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 6px;">Search</label>
+                        <input id="lfp-search" name="search" type="text" value="{{ $activeFilters['search'] }}" placeholder="Search project code, title, province, fund source..." style="width: 100%; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px;">
+                    </div>
+                    <div style="min-width: 150px;">
+                        <label for="filter-year" style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 6px;">Funding Year</label>
+                        <select id="filter-year" name="funding_year" style="width: 100%; padding: 6px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px;">
+                            <option value="">All</option>
+                            @foreach($fundingYears as $year)
+                                <option value="{{ $year }}" {{ (string) $activeFilters['funding_year'] === (string) $year ? 'selected' : '' }}>{{ $year }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div style="min-width: 160px;">
+                        <label for="filter-fund-source" style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 6px;">Fund Source</label>
+                        <select id="filter-fund-source" name="fund_source" style="width: 100%; padding: 6px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px;">
+                            <option value="">All</option>
+                            @foreach($fundSources as $source)
+                                <option value="{{ $source }}" {{ (string) $activeFilters['fund_source'] === (string) $source ? 'selected' : '' }}>{{ $source }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div style="min-width: 170px;">
+                        <label for="filter-province" style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 6px;">Province</label>
+                        <select id="filter-province" name="province" style="width: 100%; padding: 6px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px;">
+                            <option value="">All</option>
+                            @foreach($provinces as $province)
+                                <option value="{{ $province }}" {{ (string) $activeFilters['province'] === (string) $province ? 'selected' : '' }}>{{ $province }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div style="min-width: 170px;">
+                        <label for="filter-city" style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 6px;">City/Mun</label>
+                        <select id="filter-city" name="city" data-selected-city="{{ $activeFilters['city'] }}" style="width: 100%; padding: 6px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px;">
+                            <option value="">All</option>
+                            @foreach($cityOptions as $city)
+                                <option value="{{ $city }}" {{ (string) $activeFilters['city'] === (string) $city ? 'selected' : '' }}>{{ $city }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div style="min-width: 170px;">
+                        <label for="filter-procurement" style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 6px;">Procurement Type</label>
+                        <select id="filter-procurement" name="procurement" style="width: 100%; padding: 6px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px;">
+                            <option value="">All</option>
+                            @foreach($procurementTypes as $type)
+                                <option value="{{ $type }}" {{ (string) $activeFilters['procurement'] === (string) $type ? 'selected' : '' }}>{{ ucfirst($type) }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div style="min-width: 170px;">
+                        <label for="filter-status" style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 6px;">Status</label>
+                        <select id="filter-status" name="status" style="width: 100%; padding: 6px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px;">
+                            <option value="">All</option>
+                            @foreach($statusOptions as $status)
+                                <option value="{{ $status }}" {{ (string) $activeFilters['status'] === (string) $status ? 'selected' : '' }}>{{ $status }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <a href="{{ route('projects.locally-funded', ['sort_by' => $sortBy ?? 'funding_year', 'sort_dir' => $sortDir ?? 'asc', 'per_page' => $perPage ?? 10]) }}" style="padding: 8px 12px; background-color: #6b7280; color: white; border-radius: 6px; font-size: 12px; font-weight: 600; text-decoration: none;">
+                        Clear
+                    </a>
+                </form>
 
-        <div class="lfp-column-toggle-panel" aria-label="Table columns filter">
-            <div class="lfp-column-toggle-header">
-                <div class="lfp-column-toggle-label">Visible Columns</div>
-                <label class="lfp-column-toggle-option lfp-column-toggle-option--master">
-                    <input type="checkbox" id="lfp-column-toggle-all" checked>
-                    <span>Select All</span>
-                </label>
+                <div class="lfp-column-toggle-panel" aria-label="Table columns filter">
+                    <div class="lfp-column-toggle-header">
+                        <div class="lfp-column-toggle-label">Visible Columns</div>
+                        <label class="lfp-column-toggle-option lfp-column-toggle-option--master">
+                            <input type="checkbox" id="lfp-column-toggle-all" checked>
+                            <span>Select All</span>
+                        </label>
+                    </div>
+                    <div class="lfp-column-toggle-grid">
+                        @foreach($columnToggleOptions as $columnKey => $columnLabel)
+                            <label class="lfp-column-toggle-option">
+                                <input type="checkbox" class="lfp-column-toggle-checkbox" data-column-toggle="{{ $columnKey }}" checked>
+                                <span>{{ $columnLabel }}</span>
+                            </label>
+                        @endforeach
+                    </div>
+                </div>
             </div>
-            <div class="lfp-column-toggle-grid">
-                @foreach($columnToggleOptions as $columnKey => $columnLabel)
-                    <label class="lfp-column-toggle-option">
-                        <input type="checkbox" class="lfp-column-toggle-checkbox" data-column-toggle="{{ $columnKey }}" checked>
-                        <span>{{ $columnLabel }}</span>
-                    </label>
-                @endforeach
-            </div>
-        </div>
+        </details>
 
         @if($projects->isEmpty())
             @if(Auth::user()->agency === 'DILG' && Auth::user()->province === 'Regional Office')
@@ -382,6 +390,113 @@
                     </tbody>
                 </table>
             </div>
+            <div class="lfp-mobile-cards" aria-label="Locally Funded Projects cards">
+                @foreach($projects as $project)
+                    @php
+                        $lfpId = $project->lfp_id ?? null;
+                        $statusActual = $lfpId && isset($physicalStatuses[$lfpId]['status_actual'])
+                            ? $physicalStatuses[$lfpId]['status_actual']
+                            : 'Pending';
+                        $statusSubaybayan = $lfpId && isset($physicalStatuses[$lfpId]['status_subaybayan'])
+                            ? $physicalStatuses[$lfpId]['status_subaybayan']
+                            : ($project->status_subaybayan ?? 'Pending');
+                        $subayAccomplishment = $lfpId && isset($physicalStatuses[$lfpId]['accomplishment_pct_ro'])
+                            ? $physicalStatuses[$lfpId]['accomplishment_pct_ro']
+                            : ($project->subay_accomplishment_pct ?? null);
+                        $hasLfp = !empty($lfpId);
+                        $viewUrl = $hasLfp
+                            ? route('locally-funded-project.show', $lfpId)
+                            : route('locally-funded-project.ensure', $project->subaybayan_project_code);
+                        $barangays = array_filter(array_map('trim', explode(',', (string) $project->barangay)));
+                    @endphp
+                    <details class="lfp-mobile-card">
+                        <summary class="lfp-mobile-card-summary">
+                            <div class="lfp-mobile-card-summary-main">
+                                <div class="lfp-mobile-card-code">{{ $project->subaybayan_project_code }}</div>
+                                <h3 class="lfp-mobile-card-title">{{ $project->project_name }}</h3>
+                            </div>
+                            <span class="lfp-mobile-card-chevron" aria-hidden="true"></span>
+                        </summary>
+
+                        <div class="lfp-mobile-card-body">
+                            <div class="lfp-mobile-card-body-inner">
+                                <div class="lfp-mobile-card-actions">
+                                    <a href="{{ $viewUrl }}" class="lfp-mobile-card-action">View</a>
+                                </div>
+
+                                <div class="lfp-mobile-card-section">
+                                    <div class="lfp-mobile-card-section-label">Location</div>
+                                    <div class="lfp-mobile-card-location">
+                                        <div><strong>Province:</strong> {{ $project->province }}</div>
+                                        <div><strong>City/Mun:</strong> {{ $project->city_municipality }}</div>
+                                        <div>
+                                            <strong>Barangay:</strong>
+                                            @if(count($barangays))
+                                                <ul class="lfp-mobile-card-list">
+                                                    @foreach($barangays as $barangay)
+                                                        <li>{{ $barangay }}</li>
+                                                    @endforeach
+                                                </ul>
+                                            @else
+                                                <span>-</span>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="lfp-mobile-card-details">
+                                    <div class="lfp-mobile-card-detail" data-column-key="funding_year">
+                                        <span class="lfp-mobile-card-detail-label">Funding Year</span>
+                                        <strong>{{ $project->funding_year ?: '-' }}</strong>
+                                    </div>
+                                    <div class="lfp-mobile-card-detail" data-column-key="fund_source">
+                                        <span class="lfp-mobile-card-detail-label">Fund Source</span>
+                                        <strong>{{ $project->fund_source ?: '-' }}</strong>
+                                    </div>
+                                    <div class="lfp-mobile-card-detail" data-column-key="procurement_type">
+                                        <span class="lfp-mobile-card-detail-label">Procurement Type</span>
+                                        <strong>{{ $project->mode_of_procurement ?: '-' }}</strong>
+                                    </div>
+                                    <div class="lfp-mobile-card-detail" data-column-key="lgsf_allocation">
+                                        <span class="lfp-mobile-card-detail-label">LGSF Allocation</span>
+                                        <strong>{{ $project->lgsf_allocation !== null ? '₱ ' . number_format($project->lgsf_allocation, 2) : '-' }}</strong>
+                                    </div>
+                                    <div class="lfp-mobile-card-detail" data-column-key="obligation">
+                                        <span class="lfp-mobile-card-detail-label">Obligation</span>
+                                        <strong>{{ $project->obligation !== null ? '₱ ' . number_format($project->obligation, 2) : '-' }}</strong>
+                                    </div>
+                                    <div class="lfp-mobile-card-detail" data-column-key="utilization_rate">
+                                        <span class="lfp-mobile-card-detail-label">Utilization Rate</span>
+                                        <strong>{{ $project->utilization_rate !== null ? number_format((float) $project->utilization_rate, 2) . '%' : '-' }}</strong>
+                                    </div>
+                                    <div class="lfp-mobile-card-detail" data-column-key="physical_status_subaybayan">
+                                        <span class="lfp-mobile-card-detail-label">Physical Status (Subaybayan %)</span>
+                                        <strong>{{ $subayAccomplishment !== null ? number_format((float) $subayAccomplishment, 2) . '%' : '-' }}</strong>
+                                    </div>
+                                    <div class="lfp-mobile-card-detail" data-column-key="status_actual">
+                                        <span class="lfp-mobile-card-detail-label">Status (Actual)</span>
+                                        <strong>{{ $statusActual }}</strong>
+                                    </div>
+                                    <div class="lfp-mobile-card-detail" data-column-key="status_subaybayan">
+                                        <span class="lfp-mobile-card-detail-label">Status (Subaybayan)</span>
+                                        <strong>{{ $statusSubaybayan }}</strong>
+                                    </div>
+                                    <div class="lfp-mobile-card-detail" data-column-key="last_updated_at">
+                                        <span class="lfp-mobile-card-detail-label">Last Updated At</span>
+                                        <strong>
+                                            @if($project->updated_at)
+                                                {{ $project->updated_at->format('Y-m-d h:i A') }}
+                                            @else
+                                                -
+                                            @endif
+                                        </strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </details>
+                @endforeach
+            </div>
             @if($projects->hasPages())
                 <div style="margin-top: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
                     <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
@@ -437,6 +552,58 @@
             vertical-align: top;
         }
 
+        .lfp-filters-panel {
+            margin-bottom: 16px;
+            border: 1px solid #d1d5db;
+            border-radius: 10px;
+            background: #ffffff;
+            overflow: hidden;
+        }
+
+        .lfp-filters-summary {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 14px 16px;
+            color: #1f2937;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            list-style: none;
+            user-select: none;
+        }
+
+        .lfp-filters-summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .lfp-filters-summary-icon::before {
+            content: '+';
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 22px;
+            height: 22px;
+            border-radius: 999px;
+            background: #e5e7eb;
+            color: #374151;
+            font-size: 16px;
+            line-height: 1;
+        }
+
+        .lfp-filters-panel[open] .lfp-filters-summary {
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .lfp-filters-panel[open] .lfp-filters-summary-icon::before {
+            content: '-';
+        }
+
+        .lfp-filters-body {
+            padding: 16px;
+        }
+
         .lfp-table-wrap {
             width: 100%;
             overflow-x: auto;
@@ -445,6 +612,161 @@
             border: 1px solid #e5e7eb;
             border-radius: 8px;
             background: #ffffff;
+        }
+
+        .lfp-mobile-cards {
+            display: none;
+            gap: 12px;
+        }
+
+        .lfp-mobile-card {
+            border: 1px solid #d1d5db;
+            border-radius: 12px;
+            background: #ffffff;
+            box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+            overflow: hidden;
+        }
+
+        .lfp-mobile-card-summary {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            padding: 14px;
+            cursor: pointer;
+            list-style: none;
+        }
+
+        .lfp-mobile-card-summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .lfp-mobile-card-summary-main {
+            min-width: 0;
+        }
+
+        .lfp-mobile-card-chevron {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 999px;
+            background: #eff6ff;
+            color: #0369a1;
+            flex: 0 0 auto;
+            transition: transform 0.25s ease;
+        }
+
+        .lfp-mobile-card-chevron::before {
+            content: '+';
+            font-size: 18px;
+            line-height: 1;
+        }
+
+        .lfp-mobile-card-code {
+            color: #1f2937;
+            font-size: 12px;
+            font-weight: 700;
+            line-height: 1.4;
+        }
+
+        .lfp-mobile-card-title {
+            margin: 4px 0 0;
+            color: #111827;
+            font-size: 15px;
+            line-height: 1.4;
+        }
+
+        .lfp-mobile-card[open] .lfp-mobile-card-chevron {
+            transform: rotate(135deg);
+        }
+
+        .lfp-mobile-card-body {
+            display: grid;
+            grid-template-rows: 0fr;
+            opacity: 0;
+            transition: grid-template-rows 0.28s ease, opacity 0.22s ease;
+        }
+
+        .lfp-mobile-card[open] .lfp-mobile-card-body {
+            grid-template-rows: 1fr;
+            opacity: 1;
+        }
+
+        .lfp-mobile-card-body-inner {
+            min-height: 0;
+            overflow: hidden;
+            padding: 0 14px 14px;
+        }
+
+        .lfp-mobile-card-actions {
+            margin-bottom: 12px;
+        }
+
+        .lfp-mobile-card-action {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px 12px;
+            border-radius: 8px;
+            background: #0369a1;
+            color: #ffffff;
+            font-size: 12px;
+            font-weight: 600;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+
+        .lfp-mobile-card-section {
+            padding-top: 12px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .lfp-mobile-card-section-label,
+        .lfp-mobile-card-detail-label {
+            display: block;
+            margin-bottom: 4px;
+            color: #6b7280;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .lfp-mobile-card-location {
+            color: #374151;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .lfp-mobile-card-list {
+            margin: 4px 0 0 16px;
+            padding: 0;
+        }
+
+        .lfp-mobile-card-details {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .lfp-mobile-card-detail {
+            padding: 10px 12px;
+            border-radius: 10px;
+            background: #f8fafc;
+            border: 1px solid #e5e7eb;
+            color: #111827;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        .lfp-mobile-card-detail strong {
+            display: block;
+            color: #111827;
+            font-size: 13px;
+            line-height: 1.5;
         }
 
         #lfp-table {
@@ -585,25 +907,34 @@
                 justify-content: center;
             }
 
+            .lfp-filters-summary,
+            .lfp-filters-body {
+                padding-left: 12px;
+                padding-right: 12px;
+            }
+
+            .lfp-column-toggle-panel {
+                display: none;
+            }
+
             .lfp-table-wrap {
-                margin: 0 -8px;
-                border-left: 0;
-                border-right: 0;
-                border-radius: 0;
+                display: none;
             }
 
-            #lfp-table {
-                min-width: 100%;
+            .lfp-mobile-cards {
+                display: grid;
             }
 
-            #lfp-table th,
-            #lfp-table td {
-                padding: 7px !important;
-                font-size: 11px;
+            .lfp-mobile-card-summary {
+                align-items: flex-start;
             }
 
-            #lfp-table td .wrap-text {
-                min-width: 260px;
+            .lfp-mobile-card-action {
+                width: 100%;
+            }
+
+            .lfp-mobile-card-details {
+                grid-template-columns: 1fr;
             }
         }
 
@@ -616,13 +947,22 @@
                 font-size: 12px;
             }
 
-            #lfp-table {
-                min-width: 100%;
+            .lfp-mobile-card {
+                border-radius: 10px;
+            }
+
+            .lfp-mobile-card-summary {
+                padding: 12px;
+            }
+
+            .lfp-mobile-card-body-inner {
+                padding: 0 12px 12px;
             }
         }
     </style>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            const filtersPanel = document.getElementById('lfp-filters-panel');
             const filtersForm = document.getElementById('lfp-filters-form');
             const searchInput = document.getElementById('lfp-search');
             const provinceSelect = document.getElementById('filter-province');
@@ -637,6 +977,10 @@
             const columnToggleStorageKey = 'lfp-visible-columns';
             const selectedCity = citySelect ? (citySelect.dataset.selectedCity || '') : '';
             let searchTimer = null;
+
+            if (filtersPanel && window.matchMedia('(max-width: 768px)').matches) {
+                filtersPanel.removeAttribute('open');
+            }
 
             if (!filtersForm || !provinceSelect || !citySelect) {
                 return;
