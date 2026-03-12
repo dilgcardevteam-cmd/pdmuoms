@@ -1132,6 +1132,24 @@
                     <span>User Management</span>
                 </a>
             </li>
+            <li>
+                @php
+                    $utilitiesMenuActive = request()->routeIs('utilities.*');
+                @endphp
+                <a href="#" class="@if($utilitiesMenuActive) active @endif submenu-toggle" onclick="toggleSubmenu(event, 'utilitiesMenu')">
+                    <i class="fas fa-toolbox"></i>
+                    <span>Utilities</span>
+                    <i class="fas fa-chevron-down submenu-chevron" style="margin-left: auto; font-size: 12px;"></i>
+                </a>
+                <ul id="utilitiesMenu" class="submenu" style="display: {{ $utilitiesMenuActive ? 'block' : 'none' }};">
+                    <li>
+                        <a href="{{ route('utilities.backup-and-restore.index') }}" class="@if(request()->routeIs('utilities.backup-and-restore.*')) active @endif">
+                            <i class="fas fa-server"></i>
+                            <span>Backup and Restore</span>
+                        </a>
+                    </li>
+                </ul>
+            </li>
             @endif
         </ul>
     </aside>
@@ -1375,6 +1393,7 @@
         const notificationMenu = document.getElementById('notificationMenu');
         
         const SIDEBAR_SUBMENU_STORAGE_KEY = 'pdmuoms.sidebar.openSubmenus';
+        const SIDEBAR_SUBMENU_COLLAPSE_ONCE_KEY = 'pdmuoms.sidebar.collapseSubmenusOnce';
 
         function findDirectSubmenu(listItem) {
             if (!listItem || !listItem.children) {
@@ -1500,9 +1519,24 @@
             }
         }
 
+        function consumeSidebarSubmenuCollapseOnce() {
+            try {
+                const shouldCollapse = localStorage.getItem(SIDEBAR_SUBMENU_COLLAPSE_ONCE_KEY) === 'true';
+
+                if (shouldCollapse) {
+                    localStorage.removeItem(SIDEBAR_SUBMENU_COLLAPSE_ONCE_KEY);
+                }
+
+                return shouldCollapse;
+            } catch (error) {
+                return false;
+            }
+        }
+
         function initializeSidebarSubmenus() {
             const submenuToggles = document.querySelectorAll('.sidebar-menu a.submenu-toggle[onclick*="toggleSubmenu"]');
             const storedOpenSubmenus = readStoredOpenSubmenus();
+            const shouldForceCollapse = consumeSidebarSubmenuCollapseOnce();
             const hasActiveMenuSelection = !!document.querySelector('.sidebar-menu a.active');
 
             submenuToggles.forEach((submenuToggle) => {
@@ -1529,6 +1563,11 @@
 
             const allSubmenus = document.querySelectorAll('.sidebar-menu .submenu[id]');
             allSubmenus.forEach((submenu) => {
+                if (shouldForceCollapse) {
+                    setSubmenuState(submenu, false);
+                    return;
+                }
+
                 const hasInlineOpenState = submenu.style.display === 'block';
                 const hasActiveDescendant = !!submenu.querySelector('a.active');
                 const hasStoredOpenState = storedOpenSubmenus.has(submenu.id);
@@ -1543,7 +1582,7 @@
             });
 
             // Keep only the active path expanded, including top-level menus.
-            if (hasActiveMenuSelection) {
+            if (hasActiveMenuSelection && !shouldForceCollapse) {
                 const activePathSubmenus = Array.from(allSubmenus).filter((submenu) => submenu.querySelector('a.active'));
                 activePathSubmenus.forEach((submenu) => {
                     setSubmenuState(submenu, true);

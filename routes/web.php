@@ -1554,6 +1554,16 @@ Route::middleware(['auth'])->group(function () {
     // User Management routes (superadmin only)
     Route::middleware('superadmin')->group(function () {
         Route::resource('users', App\Http\Controllers\UserManagementController::class);
+        Route::get('/utilities/backup-and-restore', [App\Http\Controllers\DatabaseUtilityController::class, 'index'])
+            ->name('utilities.backup-and-restore.index');
+        Route::get('/utilities/backup-and-restore/download', [App\Http\Controllers\DatabaseUtilityController::class, 'downloadBackup'])
+            ->name('utilities.backup-and-restore.download');
+        Route::post('/utilities/backup-and-restore/restore', [App\Http\Controllers\DatabaseUtilityController::class, 'restore'])
+            ->name('utilities.backup-and-restore.restore');
+        Route::post('/utilities/backup-and-restore/schedule', [App\Http\Controllers\DatabaseUtilityController::class, 'saveSchedule'])
+            ->name('utilities.backup-and-restore.schedule');
+        Route::post('/utilities/backup-and-restore/test-now', [App\Http\Controllers\DatabaseUtilityController::class, 'sendTestBackupNow'])
+            ->name('utilities.backup-and-restore.test-now');
     });
 
     // Fund Utilization Report routes
