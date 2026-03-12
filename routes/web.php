@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use App\Models\LocallyFundedProject;
 use Illuminate\Support\Facades\Schema;
+use App\Http\Controllers\RlipLimeProjectController;
 use App\Http\Controllers\SystemManagementController;
 
 Auth::routes(['reset' => false, 'register' => false]); // Disable default register routes
@@ -1628,9 +1629,10 @@ Route::middleware(['auth'])->group(function () {
         return $renderProjectDashboard('sglgif');
     })->name('projects.sglgif');
 
-    Route::get('/projects/rlip-lime', function () use ($renderProjectDashboard) {
-        return $renderProjectDashboard('rlip-lime');
-    })->name('projects.rlip-lime');
+    Route::get('/projects/rlip-lime', [RlipLimeProjectController::class, 'index'])->name('projects.rlip-lime');
+    Route::get('/projects/rlip-lime/{rowNumber}', [RlipLimeProjectController::class, 'show'])
+        ->whereNumber('rowNumber')
+        ->name('projects.rlip-lime.show');
 
     Route::middleware('regional_dilg')->group(function () {
         Route::get('/system-management', function () {

@@ -1006,7 +1006,7 @@
                         </a>
                     </li>
                     <li>
-                        <a href="{{ route('projects.rlip-lime') }}" class="@if(Route::currentRouteName() == 'projects.rlip-lime') active @endif">
+                        <a href="{{ route('projects.rlip-lime') }}" class="@if(request()->routeIs('projects.rlip-lime*')) active @endif">
                             <i class="fas fa-leaf"></i>
                             <span>RLIP/LIME-20% Development Fund</span>
                         </a>
