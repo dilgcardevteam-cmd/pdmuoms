@@ -70,25 +70,6 @@
                                 <p style="margin: 6px 0 0; color: #64748b; font-size: 13px; line-height: 1.6;">{{ $dataset['description'] }}</p>
                             </div>
                         </div>
-                        <span style="display: inline-flex; align-items: center; justify-content: center; min-width: 72px; padding: 6px 10px; border-radius: 999px; background: #dbeafe; color: #1d4ed8; font-size: 12px; font-weight: 700;">
-                            {{ number_format((int) $dataset['row_count']) }}
-                        </span>
-                    </div>
-
-                    <div style="display: grid; gap: 8px; margin-bottom: 16px; padding: 14px 16px; border: 1px solid #dbe4f0; border-radius: 12px; background: rgba(255, 255, 255, 0.78);">
-                        <p style="margin: 0; color: #334155; font-size: 12px; line-height: 1.6;">
-                            <strong>Accepted files:</strong> `.csv`
-                        </p>
-                        <p style="margin: 0; color: #334155; font-size: 12px; line-height: 1.6;">
-                            <strong>Suggested CSV columns:</strong> {{ implode(', ', $dataset['columns']) }}
-                        </p>
-                        <p style="margin: 0; color: #334155; font-size: 12px; line-height: 1.6;">
-                            <strong>Last loaded:</strong>
-                            {{ $lastUpdated ? $lastUpdated->format('M d, Y h:i A') : 'No data loaded yet' }}
-                        </p>
-                        <p style="margin: 0; color: #64748b; font-size: 12px; line-height: 1.6;">
-                            Upload adds the file to import history. Click Load to replace the current dataset.
-                        </p>
                     </div>
 
                     @if ($dataset['table_exists'])
