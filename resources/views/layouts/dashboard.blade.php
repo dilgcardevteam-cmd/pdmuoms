@@ -986,7 +986,6 @@
             <li>
                 @php
                     $dashboardTabRouteActive = request()->routeIs('projects.rssa')
-                        || request()->routeIs('projects.sglgif')
                         || request()->routeIs('projects.rlip-lime.dashboard');
                     $dashboardMenuActive = Route::currentRouteName() == 'dashboard' || $dashboardTabRouteActive;
                 @endphp
@@ -1024,6 +1023,12 @@
                         <a href="{{ url('/project-at-risk') }}" class="@if(Route::currentRouteName() == 'projects.at-risk') active @endif">
                             <i class="fas fa-exclamation-triangle"></i>
                             <span>Project At Risk</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('projects.sglgif') }}" class="@if(Route::currentRouteName() == 'projects.sglgif') active @endif">
+                            <i class="fas fa-award"></i>
+                            <span>SGLGIF Portal</span>
                         </a>
                     </li>
                 </ul>
