@@ -5,12 +5,15 @@
 
 @section('content')
     <div class="ops-detail-page">
-    <div class="content-header" style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;">
-        <div>
-            <h1>{{ $report->project_code }}</h1>
-            <p>{{ $report->project_title }}</p>
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 24px;">
+        <div style="flex: 1; min-width: 0;">
+            <div style="display: inline-flex; align-items: center; gap: 8px; background: linear-gradient(135deg, #002C76, #003d9e); padding: 5px 14px; border-radius: 999px; margin-bottom: 10px;">
+                <i class="fas fa-file-invoice-dollar" style="color: rgba(255,255,255,0.85); font-size: 11px;"></i>
+                <span style="color: white; font-size: 11px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase;">{{ $report->project_code }}</span>
+            </div>
+            <h1 style="color: #0f172a; font-size: 20px; font-weight: 700; margin: 0; line-height: 1.35;">{{ $report->project_title }}</h1>
         </div>
-        <div style="display: flex; gap: 8px; align-items: center;">
+        <div style="display: flex; gap: 8px; align-items: center; flex-shrink: 0;">
             <a href="{{ route('fund-utilization.index') }}" style="display: inline-flex; padding: 10px 18px; background-color: #6b7280; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; text-decoration: none; align-items: center; gap: 6px; white-space: nowrap;">
                 <i class="fas fa-arrow-left"></i> Back to Reports
             </a>
@@ -25,9 +28,15 @@
     @endif
 
     <!-- Project Information Card -->
-    <div style="background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); margin-bottom: 30px;">
-        <h2 style="color: #002C76; font-size: 18px; margin-bottom: 20px; font-weight: 600;">Project Information</h2>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+    <div style="background: white; border-radius: 12px; box-shadow: 0 4px 16px rgba(15,23,42,0.09); margin-bottom: 28px; overflow: hidden;">
+        <div style="display: flex; align-items: center; gap: 12px; padding: 16px 24px; background: linear-gradient(135deg, #002C76 0%, #003d9e 100%);">
+            <div style="width: 34px; height: 34px; background: rgba(255,255,255,0.15); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <i class="fas fa-info-circle" style="color: white; font-size: 14px;"></i>
+            </div>
+            <h2 style="color: white; font-size: 15px; font-weight: 700; margin: 0; letter-spacing: 0.01em;">Project Information</h2>
+        </div>
+        <div style="padding: 24px 28px;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px;">
             <div>
                 <label style="display: block; color: #6b7280; font-size: 12px; font-weight: 600; text-transform: uppercase; margin-bottom: 4px;">Project Code</label>
                 <p style="color: #111827; font-size: 16px; font-weight: 500; margin: 0;">{{ $report->project_code }}</p>
@@ -98,8 +107,9 @@
             </div>
             <div style="grid-column: 1 / -1;">
                 <label style="display: block; color: #6b7280; font-size: 12px; font-weight: 600; text-transform: uppercase; margin-bottom: 4px;">Project Title</label>
-                <p style="color: #111827; font-size: 16px; font-weight: 500; margin: 0;">{{ $report->project_title }}</p>
+                <p style="color: #111827; font-size: 15px; font-weight: 500; margin: 0;">{{ $report->project_title }}</p>
             </div>
+        </div>
         </div>
     </div>
 
@@ -163,23 +173,26 @@
             // Define FDP variables early to avoid undefined variable errors
             $isFdpReturned = $fdpDocuments[$quarter] && $fdpDocuments[$quarter]->fdp_status === 'returned';
         @endphp
-        <div style="background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); margin-bottom: 30px; border: 1px solid #e5e7eb;">
+        <div style="background: white; border-radius: 12px; box-shadow: 0 4px 16px rgba(15,23,42,0.09); margin-bottom: 24px; border: 1px solid #e5e7eb; overflow: hidden;">
             <!-- Quarter Accordion Header -->
-            <button type="button" onclick="toggleAccordion('quarter-{{ $quarter }}')" style="width: 100%; padding: 16px; background-color: #002C76; color: white; border: none; text-align: left; cursor: pointer; font-weight: 600; font-size: 16px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
-                <span style="display: flex; align-items: center; gap: 15px;">
-                    <i class="fas fa-calendar" style="margin-right: 5px;"></i>{{ $quarterLabel }}
-                    <div style="display: inline-flex; align-items: center; gap: 8px; background-color: rgba(255, 255, 255, 0.2); padding: 4px 12px; border-radius: 20px; font-size: 13px;">
-                        <div style="width: 50px; height: 6px; background-color: rgba(255, 255, 255, 0.3); border-radius: 3px; overflow: hidden;">
-                            <div style="width: {{ $accomplishmentPercentages[$quarter] }}%; height: 100%; background-color: #10b981; transition: width 0.3s ease;"></div>
-                        </div>
-                        <span style="font-weight: 600;">{{ $accomplishmentPercentages[$quarter] }}%</span>
-                    </div>
+            <button type="button" onclick="toggleAccordion('quarter-{{ $quarter }}')" style="width: 100%; padding: 18px 24px; background: linear-gradient(135deg, #002C76 0%, #003d9e 100%); color: white; border: none; text-align: left; cursor: pointer; font-weight: 700; font-size: 15px; display: flex; justify-content: space-between; align-items: center;" onmouseover="this.style.filter='brightness(1.08)'" onmouseout="this.style.filter='brightness(1)'">
+                <span style="display: flex; align-items: center; gap: 12px;">
+                    <span style="width: 34px; height: 34px; background: rgba(255,255,255,0.15); border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                        <i class="fas fa-calendar-alt" style="font-size: 14px;"></i>
+                    </span>
+                    <span>{{ $quarterLabel }}</span>
+                    <span style="display: inline-flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.15); padding: 4px 12px; border-radius: 999px; font-size: 12px;">
+                        <span style="width: 60px; height: 5px; background: rgba(255,255,255,0.25); border-radius: 999px; overflow: hidden; display: inline-block;">
+                            <span style="width: {{ $accomplishmentPercentages[$quarter] }}%; height: 100%; background: #34d399; display: block;"></span>
+                        </span>
+                        <span style="font-weight: 700;">{{ $accomplishmentPercentages[$quarter] }}%</span>
+                    </span>
                 </span>
-                <i class="fas fa-chevron-down" id="icon-quarter-{{ $quarter }}" style="transition: transform 0.3s; transform: {{ $iconRotation }};"></i>
+                <i class="fas fa-chevron-down" id="icon-quarter-{{ $quarter }}" style="transition: transform 0.3s; transform: {{ $iconRotation }}; opacity: 0.9;"></i>
             </button>
 
             <!-- Quarter Content -->
-            <div id="quarter-{{ $quarter }}" style="display: {{ $displayStyle }}; padding: 20px; border-top: 1px solid #e5e7eb;">
+            <div id="quarter-{{ $quarter }}" style="display: {{ $displayStyle }}; padding: 22px 24px;">
 
             <!-- Fund Utilization Report (MOV) Section -->
             @php
@@ -217,22 +230,26 @@
                 $isMovForPoValidation = $hasMovFile && !$isMovReturned && !$isPendingDilgRoValidation && !$isApprovedByDilgRo;
                 $isMovUnderValidation = $isPendingDilgRoValidation || $isMovForPoValidation;
             @endphp
-            <div style="border: 1px solid #e5e7eb; padding: 20px; border-radius: 8px; margin-bottom: 20px; background-color: {{ $movBackgroundColor }};">
-                <h3 style="color: #374151; font-size: 16px; font-weight: 600; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
-                    <span>
-                        <i class="fas fa-file-pdf" style="color: #dc2626; margin-right: 8px;"></i>
-                        Upload file for Fund Utilization Report (MOV on PDF Format)
+            <div style="border: 1px solid #e5e7eb; border-left: 4px solid {{ $movStatusColor }}; border-radius: 8px; margin-bottom: 18px; overflow: hidden; background-color: white;">
+                <h3 style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 0 0 0 0; padding: 12px 16px; background-color: #f8fafc; border-bottom: 1px solid #e5e7eb; font-weight: 400;">
+                    <span style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0;">
+                        <span style="width: 30px; height: 30px; background: rgba(220,38,38,0.1); border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                            <i class="fas fa-file-pdf" style="color: #dc2626; font-size: 13px;"></i>
+                        </span>
+                        <span style="display: flex; flex-direction: column; gap: 1px;">
+                            <span style="color: #1e293b; font-size: 13px; font-weight: 700; line-height: 1.3;">Fund Utilization Report</span>
+                            <span style="color: #64748b; font-size: 11px; font-weight: 400;">MOV on PDF Format</span>
+                        </span>
                     </span>
                     @php
                     @endphp
-                    <span style="display: inline-block; padding: 4px 12px; background-color: {{ $movStatusColor }}; color: white; border-radius: 20px; font-size: 11px; font-weight: 600; white-space: nowrap;">
+                    <span style="display: inline-flex; align-items: center; padding: 3px 10px; background-color: {{ $movStatusColor }}; color: white; border-radius: 999px; font-size: 10px; font-weight: 700; white-space: nowrap; flex-shrink: 0; text-transform: uppercase; letter-spacing: 0.04em;">
                         {{ $movStatusLabel }}
                     </span>
                 </h3>
+                <div style="padding: 16px;">
                 <div style="padding: 12px; background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px;">
-                    <label style="display: block; margin-bottom: 8px; color: #374151; font-weight: 600; font-size: 12px;">
-                        Upload file for Fund Utilization Report (MOV on PDF Format)
-                    </label>
+                    <label style="display: none;"></label>
                     <div data-pagasa-time style="display: none; margin-bottom: 8px; color: #059669; font-size: 11px; font-weight: 600; min-height: 16px;"></div>
                     <label style="display: block; margin-bottom: 8px; color: #374151; font-weight: 600; font-size: 12px;">
                         @if($movUploads[$quarter] && $movUploads[$quarter]->mov_file_path)
@@ -404,35 +421,35 @@
                     @endif
                 @endif
             </div>
+            </div>
 
             <!-- Written Notice Section -->
             @php
                 $hasAnyWrittenFile = $writtenNotices[$quarter] && ($writtenNotices[$quarter]->secretary_dbm_path || $writtenNotices[$quarter]->secretary_dilg_path || $writtenNotices[$quarter]->speaker_house_path || $writtenNotices[$quarter]->president_senate_path || $writtenNotices[$quarter]->house_committee_path || $writtenNotices[$quarter]->senate_committee_path);
                 $writtenBackgroundColor = $hasAnyWrittenFile ? '#fffbeb' : 'transparent';
             @endphp
-            <div style="border: 1px solid #e5e7eb; padding: 20px; border-radius: 8px; margin-bottom: 20px; background-color: {{ $writtenBackgroundColor }};">
-                <h3 style="color: #374151; font-size: 16px; font-weight: 600; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
-                    <span>
-                        <i class="fas fa-file-upload" style="color: #2563eb; margin-right: 8px;"></i>
-                        WRITTEN NOTICE (MOV SCREENSHOT OF EMAILED NOTICE AND WRITTEN NOTICE PDF FORMAT)
-                    </span>
+            <div style="border: 1px solid #e5e7eb; border-left: 4px solid #2563eb; border-radius: 8px; margin-bottom: 18px; overflow: hidden; background-color: white;">
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 16px; background-color: #f8fafc; border-bottom: 1px solid #e5e7eb;">
+                    <div style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0;">
+                        <span style="width: 30px; height: 30px; background: rgba(37,99,235,0.1); border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                            <i class="fas fa-envelope-open-text" style="color: #2563eb; font-size: 13px;"></i>
+                        </span>
+                        <div>
+                            <p style="margin: 0; color: #1e293b; font-size: 13px; font-weight: 700; line-height: 1.3;">Written Notice</p>
+                            <p style="margin: 0; color: #64748b; font-size: 11px;">MOV Screenshot of Emailed Notice &amp; Written Notice PDF</p>
+                        </div>
+                    </div>
                     @if($writtenNotices[$quarter] && $writtenNotices[$quarter]->updated_at)
-                        <span style="font-size: 12px; font-weight: normal; color: #6b7280;">
+                        <span style="font-size: 11px; color: #6b7280; flex-shrink: 0; white-space: nowrap;">
                             @php
                                 $createdAt = $writtenNotices[$quarter]->updated_at;
                                 $uploadedTime = is_string($createdAt) ? \Carbon\Carbon::parse($createdAt)->setTimezone(config('app.timezone')) : $createdAt->setTimezone(config('app.timezone'));
                             @endphp
-                            Uploaded: {{ $uploadedTime->format('M d, Y h:i A') }}
-                            @if($writtenNotices[$quarter]->approved_at)
-                                @php
-                                    $approvedAt = $writtenNotices[$quarter]->approved_at;
-                                    $approvalTime = is_string($approvedAt) ? \Carbon\Carbon::parse($approvedAt)->setTimezone(config('app.timezone')) : $approvedAt->setTimezone(config('app.timezone'));
-                                @endphp
-                                | Approved: {{ $approvalTime->format('M d, Y h:i A') }}
-                            @endif
+                            Updated: {{ $uploadedTime->format('M d, Y h:i A') }}
                         </span>
                     @endif
-                </h3>
+                </div>
+                <div style="padding: 16px;">
                 <form id="written-notice-form-{{ $quarter }}" action="{{ route('fund-utilization.upload-written-notice', $report->project_code) }}" method="POST" enctype="multipart/form-data">
                     @csrf
                     <input type="hidden" name="quarter" value="{{ $quarter }}">
@@ -1467,18 +1484,25 @@
 
 
             </div>
+            </div>
 
             <!-- Full Disclosure Policy Section -->
             @php
                 $hasFdpFile = $fdpDocuments[$quarter] && $fdpDocuments[$quarter]->fdp_file_path;
                 $isFdpReturned = $fdpDocuments[$quarter] && $fdpDocuments[$quarter]->fdp_status === 'returned';
                 $fdpBackgroundColor = $isFdpReturned ? '#fee2e2' : ($hasFdpFile ? '#fffbeb' : 'transparent');
+                $fdpBorderColor = $isFdpReturned ? '#ef4444' : ($hasFdpFile ? '#059669' : '#f59e0b');
             @endphp
-            <div style="border: 1px solid #e5e7eb; padding: 20px; border-radius: 8px; margin-bottom: 20px; background-color: {{ $fdpBackgroundColor }};">
-                <h3 style="color: #374151; font-size: 16px; font-weight: 600; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
-                    <span>
-                        <i class="fas fa-file-pdf" style="color: #dc2626; margin-right: 8px;"></i>
-                        Upload file for Full Disclosure Policy (FDP on PDF Format)
+            <div style="border: 1px solid #e5e7eb; border-left: 4px solid {{ $fdpBorderColor }}; border-radius: 8px; margin-bottom: 18px; overflow: hidden; background-color: white;">
+                <h3 style="margin: 0; padding: 12px 16px; background-color: #f8fafc; border-bottom: 1px solid #e5e7eb; font-weight: 400; display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+                    <span style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0;">
+                        <span style="width: 30px; height: 30px; background: rgba(220,38,38,0.1); border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                            <i class="fas fa-file-pdf" style="color: #dc2626; font-size: 13px;"></i>
+                        </span>
+                        <span style="display: flex; flex-direction: column; gap: 1px;">
+                            <span style="color: #1e293b; font-size: 13px; font-weight: 700; line-height: 1.3;">Full Disclosure Policy (FDP)</span>
+                            <span style="color: #64748b; font-size: 11px; font-weight: 400;">On PDF Format</span>
+                        </span>
                     </span>
                     @php
                         $hasFdpFile = $fdpDocuments[$quarter] && $fdpDocuments[$quarter]->fdp_file_path;
@@ -1512,14 +1536,13 @@
                         $isFdpForPoValidation = $hasFdpFile && !$isFdpReturned && !$isFdpPendingDilgRoValidation && !$isFdpApprovedByDilgRo;
                         $isFdpUnderValidation = $isFdpPendingDilgRoValidation || $isFdpForPoValidation;
                     @endphp
-                    <span style="display: inline-block; padding: 4px 12px; background-color: {{ $fdpStatusColor }}; color: white; border-radius: 20px; font-size: 11px; font-weight: 600; white-space: nowrap;">
+                    <span style="display: inline-flex; align-items: center; padding: 3px 10px; background-color: {{ $fdpStatusColor }}; color: white; border-radius: 999px; font-size: 10px; font-weight: 700; white-space: nowrap; flex-shrink: 0; text-transform: uppercase; letter-spacing: 0.04em;">
                         {{ $fdpStatusLabel }}
                     </span>
                 </h3>
+                <div style="padding: 16px;">
                 <div style="padding: 12px; background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px;">
-                    <label style="display: block; margin-bottom: 8px; color: #374151; font-weight: 600; font-size: 12px;">
-                        Upload file for Full Disclosure Policy (FDP on PDF Format)
-                    </label>
+                    <label style="display: none;"></label>
                     <div data-pagasa-time style="display: none; margin-bottom: 8px; color: #059669; font-size: 11px; font-weight: 600; min-height: 16px;"></div>
                     <label style="display: block; margin-bottom: 8px; color: #374151; font-weight: 600; font-size: 12px;">
                         @if($fdpDocuments[$quarter] && $fdpDocuments[$quarter]->fdp_file_path)
@@ -1658,6 +1681,7 @@
                     @endif
                 </div>
             </div>
+            </div>
 
             <!-- LGU Posting Link Section -->
             @php
@@ -1677,20 +1701,24 @@
                     $postingStatusLabel = $hasPostingLink ? 'For DILG Provincial Office Validation' : 'Pending Upload';
                 }
             @endphp
-            <div style="border: 1px solid #e5e7eb; padding: 20px; border-radius: 8px; margin-bottom: 20px; background-color: {{ $postingBackgroundColor }};">
-                <h3 style="color: #374151; font-size: 16px; font-weight: 600; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
-                    <span>
-                        <i class="fas fa-file-pdf" style="color: #dc2626; margin-right: 8px;"></i>
-                        LGU Website/ Social Media Account (the link of the Posting)
+            <div style="border: 1px solid #e5e7eb; border-left: 4px solid {{ $postingStatusColor }}; border-radius: 8px; margin-bottom: 18px; overflow: hidden; background-color: white;">
+                <h3 style="margin: 0; padding: 12px 16px; background-color: #f8fafc; border-bottom: 1px solid #e5e7eb; font-weight: 400; display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+                    <span style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0;">
+                        <span style="width: 30px; height: 30px; background: rgba(5,150,105,0.1); border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                            <i class="fas fa-link" style="color: #059669; font-size: 13px;"></i>
+                        </span>
+                        <span style="display: flex; flex-direction: column; gap: 1px;">
+                            <span style="color: #1e293b; font-size: 13px; font-weight: 700; line-height: 1.3;">LGU Website / Social Media</span>
+                            <span style="color: #64748b; font-size: 11px; font-weight: 400;">Posting Link</span>
+                        </span>
                     </span>
-                    <span style="display: inline-block; padding: 4px 12px; background-color: {{ $postingStatusColor }}; color: white; border-radius: 20px; font-size: 11px; font-weight: 600; white-space: nowrap;">
+                    <span style="display: inline-flex; align-items: center; padding: 3px 10px; background-color: {{ $postingStatusColor }}; color: white; border-radius: 999px; font-size: 10px; font-weight: 700; white-space: nowrap; flex-shrink: 0; text-transform: uppercase; letter-spacing: 0.04em;">
                         {{ $postingStatusLabel }}
                     </span>
                 </h3>
+                <div style="padding: 16px;">
                 <div style="padding: 12px; background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px;">
-                    <label style="display: block; margin-bottom: 8px; color: #374151; font-weight: 600; font-size: 12px;">
-                        LGU Website/ Social Media Account (the link of the Posting)
-                    </label>
+                    <label style="display: none;"></label>
                     <div data-pagasa-time style="display: none; margin-bottom: 8px; color: #059669; font-size: 11px; font-weight: 600; min-height: 16px;"></div>
                     <label style="display: block; margin-bottom: 8px; color: #374151; font-weight: 600; font-size: 12px;">
                         @if($hasPostingLink)
@@ -1788,6 +1816,7 @@
                         @endif
                     @endif
                 </div>
+            </div>
             </div>
 
             </div>
@@ -1913,6 +1942,24 @@
         .log-pill.remarks { background-color: #e0e7ff; color: #4338ca; }
         .log-pill.update { background-color: #e5e7eb; color: #374151; }
 
+        /* Section card hover accent */
+        div[style*="border-left: 4px solid"] {
+            transition: box-shadow 0.18s ease;
+        }
+        div[style*="border-left: 4px solid"]:hover {
+            box-shadow: 0 4px 14px rgba(0, 44, 118, 0.1);
+        }
+
+        /* Prevent full-width accordion buttons from jumping on hover */
+        button[style*="width: 100%"]:hover {
+            transform: none !important;
+        }
+
+        /* Notes toggle button polish */
+        button[onclick*="toggleAccordion"] {
+            transition: background-color 0.15s, color 0.15s;
+        }
+
         @media (max-width: 768px) {
             .content-header h1 {
                 font-size: 20px;
@@ -1926,12 +1973,17 @@
 
     <!-- Logs Modal -->
     <div id="logsModal" class="modal">
-        <div class="modal-content" style="max-width: 900px;">
-            <div class="modal-header">
-                <button class="close-modal" onclick="closeLogsModal()">&times;</button>
-                <h2>Activity Logs</h2>
+        <div class="modal-content" style="max-width: 900px; padding: 0; overflow: hidden;">
+            <div class="modal-header" style="margin: 0; background: linear-gradient(135deg, #002C76 0%, #003d9e 100%); padding: 16px 20px; display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="width: 32px; height: 32px; background: rgba(255,255,255,0.15); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                        <i class="fas fa-history" style="color: white; font-size: 13px;"></i>
+                    </div>
+                    <h2 style="margin: 0; color: white; font-size: 16px; font-weight: 700;">Activity Logs</h2>
+                </div>
+                <button class="close-modal" onclick="closeLogsModal()" style="color: rgba(255,255,255,0.8); font-size: 22px; line-height: 1;">&times;</button>
             </div>
-            <div style="max-height: 60vh; overflow-y: auto;">
+            <div style="padding: 20px; max-height: 60vh; overflow-y: auto;">
                 @if(empty($activityLogs))
                     <div style="padding: 16px; background-color: #f9fafb; border: 1px dashed #d1d5db; border-radius: 8px; text-align: center; color: #6b7280; font-size: 13px;">
                         No activity logs found for this project.
@@ -1990,12 +2042,17 @@
 
     <!-- Remarks Modal -->
     <div id="remarksModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <button class="close-modal" onclick="closeRemarksModal()">&times;</button>
-                <h2 id="modalTitle">Add Remarks</h2>
+        <div class="modal-content" style="padding: 0; overflow: hidden;">
+            <div class="modal-header" style="margin: 0; background: linear-gradient(135deg, #002C76 0%, #003d9e 100%); padding: 16px 20px; display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="width: 32px; height: 32px; background: rgba(255,255,255,0.15); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                        <i class="fas fa-comment-alt" style="color: white; font-size: 13px;"></i>
+                    </div>
+                    <h2 id="modalTitle" style="margin: 0; color: white; font-size: 16px; font-weight: 700;">Add Remarks</h2>
+                </div>
+                <button class="close-modal" onclick="closeRemarksModal()" style="color: rgba(255,255,255,0.8); font-size: 22px; line-height: 1;">&times;</button>
             </div>
-            <form id="remarksForm" method="POST" style="display: none;">
+            <form id="remarksForm" method="POST" style="display: none; padding: 20px;">
                 @csrf
                 <textarea id="remarksText" name="remarks" placeholder="Enter remarks..." style="width: 100%; padding: 12px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px; font-family: inherit; resize: vertical; min-height: 120px;"></textarea>
                 <div class="modal-buttons">

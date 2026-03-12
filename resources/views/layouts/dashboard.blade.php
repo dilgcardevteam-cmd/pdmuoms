@@ -2233,7 +2233,13 @@
                 const message = resolveMessage(target, form);
                 window.openConfirmationModal(message, function() {
                     target.dataset.confirmed = 'true';
-                    if (form && (target.type === 'submit' || target.getAttribute('type') === 'submit' || target.tagName === 'BUTTON')) {
+                    const targetTag = target.tagName ? target.tagName.toUpperCase() : '';
+                    const explicitType = (target.getAttribute('type') || '').toLowerCase();
+                    const resolvedType = (target.type || explicitType || '').toLowerCase();
+                    const isSubmitButton = targetTag === 'BUTTON' && (resolvedType === '' || resolvedType === 'submit');
+                    const isSubmitInput = targetTag === 'INPUT' && resolvedType === 'submit';
+
+                    if (form && (isSubmitButton || isSubmitInput)) {
                         window.withNativeConfirmBypass(function() {
                             if (typeof form.requestSubmit === 'function') {
                                 form.requestSubmit(target);
