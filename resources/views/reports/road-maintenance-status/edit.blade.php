@@ -4,12 +4,13 @@
 @section('page-title', 'Update Road Maintenance Status Report')
 
 @section('content')
+    <div class="ops-detail-page">
     <div class="content-header" style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap;">
         <div>
             <h1>Update - {{ $officeName }}</h1>
             <p>Upload or update quarterly road maintenance status reports.</p>
         </div>
-        <div style="display: flex; gap: 8px; align-items: center;">
+        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
             <a href="{{ route('road-maintenance-status.index', ['year' => $reportingYear]) }}" style="display: inline-flex; padding: 10px 18px; background-color: #6b7280; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; text-decoration: none; align-items: center; gap: 6px; white-space: nowrap;">
                 <i class="fas fa-arrow-left"></i> Back to List
             </a>
@@ -335,53 +336,68 @@
     </div>
 
     <div id="roadMaintenanceActivityLogModal" role="dialog" aria-modal="true" aria-labelledby="roadMaintenanceActivityLogTitle" aria-hidden="true">
-        <div style="padding: 20px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 2px solid #00267C; padding-bottom: 10px;">
-                <h3 id="roadMaintenanceActivityLogTitle" style="color: #002C76; font-size: 16px; font-weight: 700; margin: 0;">Activity Logs</h3>
-                <button type="button" id="roadMaintenanceActivityLogClose" aria-label="Close activity logs" style="border: none; background: #e2e8f0; color: #0f172a; width: 28px; height: 28px; border-radius: 999px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 16px;">
+        <div style="display: flex; flex-direction: column; height: 100%;">
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 18px 24px 16px; border-bottom: 1px solid #e5e7eb; background: linear-gradient(135deg, #002C76 0%, #003d9e 100%); border-radius: 12px 12px 0 0; flex-shrink: 0;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="width: 32px; height: 32px; background: rgba(255,255,255,0.15); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-clipboard-list" style="color: white; font-size: 14px;"></i>
+                    </div>
+                    <h3 id="roadMaintenanceActivityLogTitle" style="color: white; font-size: 16px; font-weight: 700; margin: 0;">Activity Logs</h3>
+                </div>
+                <button type="button" id="roadMaintenanceActivityLogClose" aria-label="Close activity logs" style="border: none; background: rgba(255,255,255,0.15); color: white; width: 30px; height: 30px; border-radius: 999px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 18px; transition: background 0.2s;">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
-            <div style="max-height: 60vh; overflow-y: auto;">
+            <div style="padding: 20px 24px; overflow-y: auto; max-height: 65vh;">
                 @if (empty($activityLogs))
-                    <div style="padding: 16px; background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; color: #6b7280; font-size: 13px;">
-                        No activity recorded yet.
+                    <div style="padding: 40px 20px; text-align: center; color: #9ca3af;">
+                        <i class="fas fa-clipboard" style="font-size: 36px; margin-bottom: 12px; display: block; color: #d1d5db;"></i>
+                        <div style="font-size: 14px; font-weight: 600; color: #6b7280;">No activity recorded yet.</div>
                     </div>
                 @else
                     <div style="overflow-x: auto;">
-                        <table style="width: 100%; border-collapse: collapse;">
+                        <table style="width: 100%; border-collapse: collapse; min-width: 600px;">
                             <thead>
-                                <tr style="background-color: #f3f4f6; border-bottom: 2px solid #e5e7eb;">
-                                    <th style="padding: 10px; text-align: left; color: #374151; font-weight: 600; font-size: 12px;">Date/Time</th>
-                                    <th style="padding: 10px; text-align: left; color: #374151; font-weight: 600; font-size: 12px;">Action</th>
-                                    <th style="padding: 10px; text-align: left; color: #374151; font-weight: 600; font-size: 12px;">Document</th>
-                                    <th style="padding: 10px; text-align: left; color: #374151; font-weight: 600; font-size: 12px;">User</th>
-                                    <th style="padding: 10px; text-align: left; color: #374151; font-weight: 600; font-size: 12px;">Remarks</th>
+                                <tr style="background: linear-gradient(135deg, #002C76 0%, #003d9e 100%);">
+                                    <th style="padding: 10px 12px; text-align: left; color: white; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap;">Date/Time</th>
+                                    <th style="padding: 10px 12px; text-align: left; color: white; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em;">Action</th>
+                                    <th style="padding: 10px 12px; text-align: left; color: white; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em;">Document</th>
+                                    <th style="padding: 10px 12px; text-align: left; color: white; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em;">User</th>
+                                    <th style="padding: 10px 12px; text-align: left; color: white; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em;">Remarks</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach ($activityLogs as $log)
+                                @foreach ($activityLogs as $index => $log)
                                     @php
                                         $logUser = $log['user_id'] && isset($usersById[$log['user_id']])
                                             ? $usersById[$log['user_id']]
                                             : null;
+                                        $action = strtolower($log['action'] ?? '');
+                                        if (str_contains($action, 'upload') || str_contains($action, 'save')) {
+                                            $pillBg = '#d1fae5'; $pillColor = '#065f46';
+                                        } elseif (str_contains($action, 'delete') || str_contains($action, 'remove')) {
+                                            $pillBg = '#fee2e2'; $pillColor = '#991b1b';
+                                        } elseif (str_contains($action, 'approve')) {
+                                            $pillBg = '#dbeafe'; $pillColor = '#1d4ed8';
+                                        } elseif (str_contains($action, 'return') || str_contains($action, 'reject')) {
+                                            $pillBg = '#fef3c7'; $pillColor = '#92400e';
+                                        } else {
+                                            $pillBg = '#e5e7eb'; $pillColor = '#374151';
+                                        }
+                                        $rowBg = $index % 2 === 0 ? '#ffffff' : '#f9fafb';
                                     @endphp
-                                    <tr style="border-bottom: 1px solid #e5e7eb;">
-                                        <td style="padding: 10px; color: #111827; font-size: 12px;">
+                                    <tr style="background-color: {{ $rowBg }}; border-bottom: 1px solid #e5e7eb;">
+                                        <td style="padding: 10px 12px; color: #374151; font-size: 12px; white-space: nowrap;">
                                             {{ $log['timestamp'] ? $log['timestamp']->format('M d, Y H:i') : '—' }}
                                         </td>
-                                        <td style="padding: 10px; color: #111827; font-size: 12px;">
-                                            {{ $log['action'] }}
+                                        <td style="padding: 10px 12px; font-size: 12px;">
+                                            <span style="display: inline-block; padding: 2px 8px; background-color: {{ $pillBg }}; color: {{ $pillColor }}; border-radius: 999px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;">{{ $log['action'] }}</span>
                                         </td>
-                                        <td style="padding: 10px; color: #111827; font-size: 12px;">
-                                            {{ $log['document'] }}
-                                        </td>
-                                        <td style="padding: 10px; color: #111827; font-size: 12px;">
+                                        <td style="padding: 10px 12px; color: #374151; font-size: 12px;">{{ $log['document'] }}</td>
+                                        <td style="padding: 10px 12px; color: #374151; font-size: 12px; white-space: nowrap;">
                                             {{ $logUser ? trim($logUser->fname . ' ' . $logUser->lname) : 'Unknown' }}
                                         </td>
-                                        <td style="padding: 10px; color: #6b7280; font-size: 12px;">
-                                            {{ $log['remarks'] ?: '—' }}
-                                        </td>
+                                        <td style="padding: 10px 12px; color: #6b7280; font-size: 12px;">{{ $log['remarks'] ?: '—' }}</td>
                                     </tr>
                                 @endforeach
                             </tbody>
@@ -395,7 +411,7 @@
     <div id="roadMaintenanceActivityLogBackdrop" aria-hidden="true"></div>
 
     <button id="roadMaintenanceActivityLogFab" type="button" aria-controls="roadMaintenanceActivityLogModal" aria-expanded="false" data-state="closed">
-        <i class="fas fa-clipboard-list" aria-hidden="true" style="font-size: 14px;"></i>
+        <i class="fas fa-clipboard-list" aria-hidden="true"></i>
         <span>Activity Logs</span>
     </button>
 
@@ -407,6 +423,21 @@
                 if (!panel) return;
 
                 const isOpen = panel.style.display === 'block';
+
+                if (!isOpen) {
+                    document.querySelectorAll('.road-maintenance-accordion-toggle').forEach(function (otherBtn) {
+                        if (otherBtn === button) return;
+                        const otherId = otherBtn.getAttribute('data-target');
+                        const otherPanel = document.getElementById(otherId);
+                        if (otherPanel && otherPanel.style.display === 'block') {
+                            otherPanel.style.display = 'none';
+                            otherBtn.setAttribute('aria-expanded', 'false');
+                            const otherIcon = otherBtn.querySelector('.fa-chevron-down');
+                            if (otherIcon) otherIcon.style.transform = 'rotate(0deg)';
+                        }
+                    });
+                }
+
                 panel.style.display = isOpen ? 'none' : 'block';
                 button.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
 
@@ -442,10 +473,12 @@
         #roadMaintenanceActivityLogBackdrop {
             position: fixed;
             inset: 0;
-            background: rgba(15, 23, 42, 0.45);
+            background: rgba(15, 23, 42, 0.55);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
             opacity: 0;
             visibility: hidden;
-            transition: opacity 0.2s ease, visibility 0.2s ease;
+            transition: opacity 0.25s ease, visibility 0.25s ease;
             z-index: 1190;
         }
 
@@ -484,12 +517,12 @@
 
         #roadMaintenanceActivityLogFab {
             position: fixed;
-            right: 24px;
             bottom: 24px;
+            right: 24px;
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            padding: 12px 16px;
+            padding: 12px 20px;
             background-color: #002C76;
             color: white;
             border: none;
@@ -497,43 +530,34 @@
             font-size: 13px;
             font-weight: 600;
             cursor: pointer;
-            box-shadow: 0 10px 20px rgba(15, 23, 42, 0.18);
-            z-index: 1200;
+            white-space: nowrap;
+            box-shadow: 0 8px 20px rgba(0, 44, 118, 0.35);
+            z-index: 1180;
             transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
         }
 
         #roadMaintenanceActivityLogFab:hover {
-            background-color: #0b3b84;
+            background-color: #003d9e;
             transform: translateY(-2px);
-            box-shadow: 0 14px 22px rgba(15, 23, 42, 0.22);
+            box-shadow: 0 12px 24px rgba(0, 44, 118, 0.4);
         }
 
         #roadMaintenanceActivityLogFab:active {
             transform: translateY(0);
-            box-shadow: 0 8px 16px rgba(15, 23, 42, 0.2);
         }
 
         #roadMaintenanceActivityLogFab[data-state="open"] {
             background-color: #0f172a;
         }
 
-        #roadMaintenanceActivityLogFab span {
-            white-space: nowrap;
+        @media (max-width: 640px) {
+            #roadMaintenanceActivityLogFab span { display: none; }
+            #roadMaintenanceActivityLogFab { padding: 14px; border-radius: 50%; }
         }
 
         @media (max-width: 768px) {
             #roadMaintenanceActivityLogModal {
                 width: 94vw;
-            }
-
-            #roadMaintenanceActivityLogFab {
-                right: 16px;
-                bottom: 16px;
-                padding: 10px 12px;
-            }
-
-            #roadMaintenanceActivityLogFab span {
-                display: none;
             }
         }
     </style>
@@ -643,4 +667,5 @@
             }
         });
     </script>
+    </div>
 @endsection
