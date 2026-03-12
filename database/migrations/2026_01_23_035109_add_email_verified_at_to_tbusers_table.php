@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (!Schema::hasTable('tbusers') || Schema::hasColumn('tbusers', 'email_verified_at')) {
+            return;
+        }
+
         Schema::table('tbusers', function (Blueprint $table) {
             $table->timestamp('email_verified_at')->nullable();
         });
@@ -21,6 +25,10 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (!Schema::hasTable('tbusers') || !Schema::hasColumn('tbusers', 'email_verified_at')) {
+            return;
+        }
+
         Schema::table('tbusers', function (Blueprint $table) {
             $table->dropColumn('email_verified_at');
         });
