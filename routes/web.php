@@ -1560,6 +1560,10 @@ Route::middleware(['auth'])->group(function () {
             ->name('utilities.backup-and-restore.download');
         Route::post('/utilities/backup-and-restore/restore', [App\Http\Controllers\DatabaseUtilityController::class, 'restore'])
             ->name('utilities.backup-and-restore.restore');
+        Route::post('/utilities/backup-and-restore/schedule', [App\Http\Controllers\DatabaseUtilityController::class, 'saveSchedule'])
+            ->name('utilities.backup-and-restore.schedule');
+        Route::post('/utilities/backup-and-restore/test-now', [App\Http\Controllers\DatabaseUtilityController::class, 'sendTestBackupNow'])
+            ->name('utilities.backup-and-restore.test-now');
     });
 
     // Fund Utilization Report routes

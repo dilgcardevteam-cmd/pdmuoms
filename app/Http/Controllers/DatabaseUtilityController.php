@@ -2,52 +2,60 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\AutomatedDatabaseBackupMail;
+use App\Models\BackupAutomationSetting;
+use App\Models\DatabaseBackupRun;
+use App\Services\DatabaseBackupService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Config;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\View\View;
-use RuntimeException;
-use Symfony\Component\Process\ExecutableFinder;
-use Symfony\Component\Process\Process;
 
 class DatabaseUtilityController extends Controller
 {
-    public function __construct()
-    {
+    public function __construct(
+        private readonly DatabaseBackupService $backupService,
+    ) {
         $this->middleware('auth');
         $this->middleware('superadmin');
     }
 
     public function index(): View
     {
-        $connection = $this->databaseConnection();
+        $connection = $this->backupService->databaseConnection();
+        $automationSetting = BackupAutomationSetting::query()->first();
 
         return view('admin.utilities.backup-and-restore', [
             'databaseName' => $connection['database'],
             'databaseHost' => $connection['host'],
+            'automationSetting' => $automationSetting,
+            'recentBackupRuns' => DatabaseBackupRun::query()
+                ->orderByDesc('started_at')
+                ->limit(10)
+                ->get(),
+            'dayOptions' => [
+                0 => 'Sunday',
+                1 => 'Monday',
+                2 => 'Tuesday',
+                3 => 'Wednesday',
+                4 => 'Thursday',
+                5 => 'Friday',
+                6 => 'Saturday',
+            ],
+            'nextScheduledRun' => $this->nextScheduledRun($automationSetting),
         ]);
     }
 
     public function downloadBackup()
     {
-        $connection = $this->databaseConnection();
-        $backupDirectory = storage_path('app/temp/database-backups');
-        File::ensureDirectoryExists($backupDirectory);
+        $backup = $this->backupService->createBackup([
+            'type' => 'manual',
+            'directory' => 'app/backups/manual',
+            'prefix' => $this->backupService->databaseConnection()['database'] . '-backup',
+        ]);
 
-        $timestamp = now()->format('Y-m-d_H-i-s');
-        $downloadFilename = sprintf('%s-backup-%s.sql', $connection['database'], $timestamp);
-        $temporaryPath = $backupDirectory . DIRECTORY_SEPARATOR . $downloadFilename;
-
-        try {
-            $this->generateBackupUsingMysqldump($connection, $temporaryPath);
-        } catch (RuntimeException $exception) {
-            $this->generateBackupUsingDatabaseConnection($connection, $temporaryPath);
-        }
-
-        return response()->download($temporaryPath, $downloadFilename, [
-            'Content-Type' => 'application/sql',
+        return response()->download($backup['absolute_path'], $backup['filename'], [
+            'Content-Type' => $backup['mime_type'],
         ])->deleteFileAfterSend(true);
     }
 
@@ -64,15 +72,10 @@ class DatabaseUtilityController extends Controller
             ]);
         }
 
-        $connection = $this->databaseConnection();
         try {
-            $this->restoreUsingMysqlClient($connection, $uploadedFile->getRealPath());
-        } catch (RuntimeException $exception) {
-            try {
-                $this->restoreUsingDatabaseConnection($connection, $uploadedFile->getRealPath());
-            } catch (\Throwable $fallbackException) {
-                return back()->with('error', 'Database restore failed. ' . $fallbackException->getMessage());
-            }
+            $this->backupService->restoreFromSqlFile($uploadedFile->getRealPath());
+        } catch (\Throwable $exception) {
+            return back()->with('error', 'Database restore failed. ' . $exception->getMessage());
         }
 
         return redirect()
@@ -80,357 +83,152 @@ class DatabaseUtilityController extends Controller
             ->with('success', 'Database restore completed successfully.');
     }
 
-    /**
-     * @return array{connection_name: string, host: string, port: string, database: string, username: string, password: string}
-     */
-    private function databaseConnection(): array
+    public function saveSchedule(Request $request): RedirectResponse
     {
-        $connectionName = Config::get('database.default');
-        $connection = Config::get("database.connections.{$connectionName}");
-
-        if (! is_array($connection) || ($connection['driver'] ?? null) !== 'mysql') {
-            throw new RuntimeException('Database backup and restore currently supports only MySQL connections.');
-        }
-
-        return [
-            'connection_name' => (string) $connectionName,
-            'host' => (string) ($connection['host'] ?? '127.0.0.1'),
-            'port' => (string) ($connection['port'] ?? '3306'),
-            'database' => (string) ($connection['database'] ?? ''),
-            'username' => (string) ($connection['username'] ?? ''),
-            'password' => (string) ($connection['password'] ?? ''),
-        ];
-    }
-
-    private function resolveMysqlExecutable(string $binary): string
-    {
-        $extension = DIRECTORY_SEPARATOR === '\\' ? '.exe' : '';
-        $binaryName = $binary . $extension;
-        $finder = new ExecutableFinder();
-
-        $phpRoot = dirname(dirname(PHP_BINARY));
-        $customMysqlBinPath = trim((string) env('MYSQL_BIN_PATH', ''));
-
-        $candidates = array_filter([
-            $customMysqlBinPath !== '' ? rtrim($customMysqlBinPath, '\\/') . DIRECTORY_SEPARATOR . $binaryName : null,
-            $phpRoot . DIRECTORY_SEPARATOR . 'mysql' . DIRECTORY_SEPARATOR . 'bin' . DIRECTORY_SEPARATOR . $binaryName,
-            base_path('mysql' . DIRECTORY_SEPARATOR . 'bin' . DIRECTORY_SEPARATOR . $binaryName),
-            $finder->find($binary),
-            $finder->find($binaryName),
+        $validated = $request->validate([
+            'is_enabled' => ['nullable', 'boolean'],
+            'frequency' => ['required', 'in:daily,weekly'],
+            'weekly_day' => ['nullable', 'integer', 'between:0,6'],
+            'run_time' => ['required', 'date_format:H:i'],
+            'recipient_emails' => ['required', 'string'],
+            'retention_days' => ['nullable', 'integer', 'min:1', 'max:365'],
+            'encrypt_backup' => ['nullable', 'boolean'],
+            'encryption_password' => ['nullable', 'string', 'min:8', 'max:255'],
         ]);
 
-        foreach ($candidates as $candidate) {
-            if (is_string($candidate) && File::exists($candidate)) {
-                return $candidate;
-            }
+        $isEnabled = $request->boolean('is_enabled');
+        $encryptBackup = $request->boolean('encrypt_backup');
+        $recipientEmails = $this->parseEmailList($validated['recipient_emails']);
+
+        if ($recipientEmails === []) {
+            return back()->withErrors([
+                'recipient_emails' => 'Enter at least one valid email address.',
+            ])->withInput();
         }
 
-        throw new RuntimeException(
-            sprintf(
-                'Unable to locate %s. Set MYSQL_BIN_PATH in your .env file if MySQL is installed in a custom directory.',
-                $binaryName
-            )
-        );
+        if (($validated['frequency'] ?? null) === 'weekly' && ! $request->filled('weekly_day')) {
+            return back()->withErrors([
+                'weekly_day' => 'Choose the weekday for weekly backups.',
+            ])->withInput();
+        }
+
+        if ($encryptBackup && ! $request->filled('encryption_password')) {
+            return back()->withErrors([
+                'encryption_password' => 'Set an encryption password when password protection is enabled.',
+            ])->withInput();
+        }
+
+        $setting = BackupAutomationSetting::query()->firstOrNew();
+        $setting->fill([
+            'is_enabled' => $isEnabled,
+            'frequency' => $validated['frequency'],
+            'weekly_day' => $validated['frequency'] === 'weekly' ? (int) $validated['weekly_day'] : null,
+            'run_time' => $validated['run_time'] . ':00',
+            'recipient_emails' => $recipientEmails,
+            'retention_days' => $request->filled('retention_days') ? (int) $validated['retention_days'] : null,
+            'encrypt_backup' => $encryptBackup,
+        ]);
+
+        if ($encryptBackup && $request->filled('encryption_password')) {
+            $setting->encryption_password = $validated['encryption_password'];
+        }
+
+        if (! $encryptBackup) {
+            $setting->encryption_password = null;
+        }
+
+        $setting->save();
+
+        return redirect()
+            ->route('utilities.backup-and-restore.index')
+            ->with('success', 'Backup scheduler settings saved successfully.');
     }
 
-    /**
-     * @param array{connection_name: string, host: string, port: string, database: string, username: string, password: string} $connection
-     */
-    private function generateBackupUsingMysqldump(array $connection, string $temporaryPath): void
+    public function sendTestBackupNow(): RedirectResponse
     {
-        $dumpBinary = $this->resolveMysqlExecutable('mysqldump');
+        $setting = BackupAutomationSetting::query()->first();
 
-        $command = [
-            $dumpBinary,
-            '--host=' . $connection['host'],
-            '--port=' . $connection['port'],
-            '--user=' . $connection['username'],
-            '--default-character-set=utf8mb4',
-            '--single-transaction',
-            '--routines',
-            '--triggers',
-            '--events',
-            '--add-drop-table',
-            '--databases',
-            $connection['database'],
-            '--result-file=' . $temporaryPath,
-        ];
-
-        if ($connection['password'] !== '') {
-            $command[] = '--password=' . $connection['password'];
+        if (! $setting) {
+            return redirect()
+                ->route('utilities.backup-and-restore.index', ['tab' => 'scheduler'])
+                ->with('error', 'Save scheduler settings before sending a test backup.');
         }
 
-        $process = new Process($command);
-        $process->setTimeout(null);
-        $process->run();
-
-        if (! $process->isSuccessful() || ! File::exists($temporaryPath)) {
-            if (File::exists($temporaryPath)) {
-                File::delete($temporaryPath);
-            }
-
-            throw new RuntimeException($this->formatProcessFailureMessage(
-                'Unable to generate the database backup.',
-                $process
-            ));
+        $recipients = array_values(array_filter($setting->recipient_emails ?? []));
+        if ($recipients === []) {
+            return redirect()
+                ->route('utilities.backup-and-restore.index', ['tab' => 'scheduler'])
+                ->with('error', 'Add at least one recipient email before sending a test backup.');
         }
-    }
-
-    /**
-     * @param array{connection_name: string, host: string, port: string, database: string, username: string, password: string} $connection
-     */
-    private function generateBackupUsingDatabaseConnection(array $connection, string $temporaryPath): void
-    {
-        $database = $connection['database'];
-        $connectionInstance = DB::connection($connection['connection_name']);
-        $pdo = $connectionInstance->getPdo();
-
-        $sql = [];
-        $sql[] = '-- PDMUOMS database backup';
-        $sql[] = '-- Generated at ' . now()->toDateTimeString();
-        $sql[] = 'SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";';
-        $sql[] = 'SET FOREIGN_KEY_CHECKS=0;';
-        $sql[] = 'SET NAMES utf8mb4;';
-        $sql[] = 'CREATE DATABASE IF NOT EXISTS ' . $this->quoteIdentifier($database) . ' /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci */;';
-        $sql[] = 'USE ' . $this->quoteIdentifier($database) . ';';
-        $sql[] = '';
-
-        $tables = [];
-        $views = [];
-        $tableRows = $connectionInstance->select('SHOW FULL TABLES WHERE Table_type IN (?, ?)', ['BASE TABLE', 'VIEW']);
-
-        foreach ($tableRows as $tableRow) {
-            $row = array_values((array) $tableRow);
-            if (count($row) < 2) {
-                continue;
-            }
-
-            $tableName = (string) $row[0];
-            $tableType = strtoupper((string) $row[1]);
-
-            if ($tableType === 'VIEW') {
-                $views[] = $tableName;
-                continue;
-            }
-
-            $tables[] = $tableName;
-        }
-
-        foreach ($tables as $tableName) {
-            $sql[] = 'DROP TABLE IF EXISTS ' . $this->quoteIdentifier($tableName) . ';';
-
-            $createTableRow = (array) $connectionInstance->selectOne('SHOW CREATE TABLE ' . $this->quoteIdentifier($tableName));
-            $createTableSql = (string) ($createTableRow['Create Table'] ?? end($createTableRow));
-            $sql[] = $createTableSql . ';';
-            $sql[] = '';
-
-            $rows = $connectionInstance->table($tableName)->get();
-            if ($rows->isEmpty()) {
-                continue;
-            }
-
-            $columns = array_keys((array) $rows->first());
-            $columnList = implode(', ', array_map([$this, 'quoteIdentifier'], $columns));
-
-            foreach ($rows->chunk(100) as $chunk) {
-                $valueSets = [];
-
-                foreach ($chunk as $row) {
-                    $rowArray = (array) $row;
-                    $values = [];
-
-                    foreach ($columns as $column) {
-                        $values[] = $this->quoteValue($pdo, $rowArray[$column] ?? null);
-                    }
-
-                    $valueSets[] = '(' . implode(', ', $values) . ')';
-                }
-
-                $sql[] = 'INSERT INTO ' . $this->quoteIdentifier($tableName) . ' (' . $columnList . ') VALUES';
-                $sql[] = implode(",\n", $valueSets) . ';';
-                $sql[] = '';
-            }
-        }
-
-        foreach ($views as $viewName) {
-            $sql[] = 'DROP VIEW IF EXISTS ' . $this->quoteIdentifier($viewName) . ';';
-
-            $createViewRow = (array) $connectionInstance->selectOne('SHOW CREATE VIEW ' . $this->quoteIdentifier($viewName));
-            $createViewSql = (string) ($createViewRow['Create View'] ?? end($createViewRow));
-            $sql[] = $createViewSql . ';';
-            $sql[] = '';
-        }
-
-        $sql[] = 'SET FOREIGN_KEY_CHECKS=1;';
-        $sql[] = '';
-
-        File::put($temporaryPath, implode("\n", $sql));
-    }
-
-    /**
-     * @param array{connection_name: string, host: string, port: string, database: string, username: string, password: string} $connection
-     */
-    private function restoreUsingMysqlClient(array $connection, string $sqlFilePath): void
-    {
-        $mysqlBinary = $this->resolveMysqlExecutable('mysql');
-
-        $command = [
-            $mysqlBinary,
-            '--host=' . $connection['host'],
-            '--port=' . $connection['port'],
-            '--user=' . $connection['username'],
-            '--default-character-set=utf8mb4',
-            $connection['database'],
-        ];
-
-        if ($connection['password'] !== '') {
-            $command[] = '--password=' . $connection['password'];
-        }
-
-        $stream = fopen($sqlFilePath, 'rb');
-        if ($stream === false) {
-            throw new RuntimeException('Unable to read the uploaded SQL backup file.');
-        }
-
-        DB::disconnect($connection['connection_name']);
 
         try {
-            $process = new Process($command);
-            $process->setTimeout(null);
-            $process->setInput($stream);
-            $process->run();
-        } finally {
-            fclose($stream);
-            DB::purge($connection['connection_name']);
-            DB::reconnect($connection['connection_name']);
-        }
+            $connection = $this->backupService->databaseConnection();
+            $backup = $this->backupService->createBackup([
+                'type' => 'test',
+                'directory' => 'app/backups/automated',
+                'prefix' => $connection['database'] . '-test-backup',
+                'encrypt' => $setting->encrypt_backup,
+                'encryption_password' => $setting->encrypt_backup ? $setting->encryption_password : null,
+                'setting_id' => $setting->id,
+                'mailed_to' => $recipients,
+            ]);
 
-        if (! $process->isSuccessful()) {
-            throw new RuntimeException($this->formatProcessFailureMessage(
-                'Database restore failed.',
-                $process
+            Mail::to($recipients)->send(new AutomatedDatabaseBackupMail(
+                databaseName: $connection['database'],
+                filePath: $backup['absolute_path'],
+                fileName: $backup['filename'],
+                wasEncrypted: $backup['was_encrypted'],
+                retentionDays: $setting->retention_days,
             ));
+
+            $deletedCount = $this->backupService->pruneOldBackups($setting->retention_days);
+
+            DatabaseBackupRun::query()
+                ->where('stored_path', $backup['stored_path'])
+                ->latest('id')
+                ->first()?->update([
+                    'retention_deleted_count' => $deletedCount,
+                ]);
+
+            return redirect()
+                ->route('utilities.backup-and-restore.index', ['tab' => 'scheduler'])
+                ->with('success', 'Test backup email sent successfully.');
+        } catch (\Throwable $exception) {
+            return redirect()
+                ->route('utilities.backup-and-restore.index', ['tab' => 'scheduler'])
+                ->with('error', 'Test backup failed. ' . $exception->getMessage());
         }
     }
 
-    /**
-     * @param array{connection_name: string, host: string, port: string, database: string, username: string, password: string} $connection
-     */
-    private function restoreUsingDatabaseConnection(array $connection, string $sqlFilePath): void
+    private function parseEmailList(string $emails): array
     {
-        $handle = fopen($sqlFilePath, 'rb');
-        if ($handle === false) {
-            throw new RuntimeException('Unable to read the uploaded SQL backup file.');
+        $items = preg_split('/[\s,;]+/', $emails) ?: [];
+        $items = array_unique(array_filter(array_map('trim', $items)));
+
+        return array_values(array_filter($items, fn (string $email): bool => filter_var($email, FILTER_VALIDATE_EMAIL) !== false));
+    }
+
+    private function nextScheduledRun(?BackupAutomationSetting $setting): ?string
+    {
+        if (! $setting || ! $setting->is_enabled) {
+            return null;
         }
 
-        $connectionInstance = DB::connection($connection['connection_name']);
-        $statementBuffer = '';
-        $delimiter = ';';
+        $candidate = now()->copy()->setTimeFromTimeString($setting->run_time);
 
-        try {
-            while (($line = fgets($handle)) !== false) {
-                $trimmedLine = trim($line);
-                if ($statementBuffer === '' && $this->shouldSkipSqlLine($trimmedLine)) {
-                    continue;
-                }
-
-                if (preg_match('/^\s*DELIMITER\s+(.+)\s*$/i', $line, $matches) === 1) {
-                    $delimiter = trim($matches[1]);
-                    continue;
-                }
-
-                $statementBuffer .= $line;
-
-                if (! $this->statementEndsWithDelimiter($statementBuffer, $delimiter)) {
-                    continue;
-                }
-
-                $sql = $this->stripTrailingDelimiter($statementBuffer, $delimiter);
-                $statementBuffer = '';
-
-                if (trim($sql) === '') {
-                    continue;
-                }
-
-                $connectionInstance->unprepared($sql);
+        if ($setting->frequency === 'daily') {
+            if ($candidate->lte(now())) {
+                $candidate->addDay();
             }
-        } finally {
-            fclose($handle);
-            DB::purge($connection['connection_name']);
-            DB::reconnect($connection['connection_name']);
+
+            return $candidate->format('F j, Y g:i A');
         }
 
-        if (trim($statementBuffer) !== '') {
-            $connectionInstance->unprepared($statementBuffer);
-        }
-    }
-
-    private function shouldSkipSqlLine(string $line): bool
-    {
-        if ($line === '') {
-            return true;
+        $weeklyDay = (int) $setting->weekly_day;
+        while ($candidate->dayOfWeek !== $weeklyDay || $candidate->lte(now())) {
+            $candidate->addDay();
         }
 
-        if (str_starts_with($line, '--')) {
-            return true;
-        }
-
-        if (str_starts_with($line, '#')) {
-            return true;
-        }
-
-        return str_starts_with($line, '/*')
-            && ! str_starts_with($line, '/*!')
-            && str_ends_with($line, '*/');
-    }
-
-    private function statementEndsWithDelimiter(string $statement, string $delimiter): bool
-    {
-        $trimmedStatement = rtrim($statement);
-
-        return $delimiter !== ''
-            && str_ends_with($trimmedStatement, $delimiter);
-    }
-
-    private function stripTrailingDelimiter(string $statement, string $delimiter): string
-    {
-        $trimmedStatement = rtrim($statement);
-
-        if ($delimiter === '' || ! str_ends_with($trimmedStatement, $delimiter)) {
-            return $trimmedStatement;
-        }
-
-        return rtrim(substr($trimmedStatement, 0, -strlen($delimiter)));
-    }
-
-    private function quoteIdentifier(string $identifier): string
-    {
-        return '`' . str_replace('`', '``', $identifier) . '`';
-    }
-
-    private function quoteValue(\PDO $pdo, mixed $value): string
-    {
-        if ($value === null) {
-            return 'NULL';
-        }
-
-        if (is_bool($value)) {
-            return $value ? '1' : '0';
-        }
-
-        if (is_int($value) || is_float($value)) {
-            return (string) $value;
-        }
-
-        return $pdo->quote((string) $value);
-    }
-
-    private function formatProcessFailureMessage(string $prefix, Process $process): string
-    {
-        $details = trim($process->getErrorOutput() ?: $process->getOutput());
-
-        return $details !== ''
-            ? $prefix . ' ' . $details
-            : $prefix;
+        return $candidate->format('F j, Y g:i A');
     }
 }
