@@ -2,18 +2,21 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Notifications\VerifyEmailNotification;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Support\Str;
-use App\Notifications\VerifyEmailNotification;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
+
+    public const ACCESS_SCOPE_ALL = 'crud:*';
+    public const ACCESS_SCOPE_NONE = 'crud:none';
+    public const ACCESS_PERMISSION_PREFIX = 'crud:';
 
     /**
      * The table associated with the model.
@@ -70,7 +73,7 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function getAuthIdentifierName()
     {
-        return $this->getKeyName();  // Return primary key (idno)
+        return $this->getKeyName();
     }
 
     /**
@@ -158,6 +161,7 @@ class User extends Authenticatable implements MustVerifyEmail
         $token = Str::random(64);
         $this->verification_token = $token;
         $this->save();
+
         return $token;
     }
 
@@ -172,9 +176,11 @@ class User extends Authenticatable implements MustVerifyEmail
         if ($this->verification_token === $token && $this->status === 'inactive') {
             $this->email_verified_at = now();
             $this->status = 'active';
-            $this->verification_token = null; // Clear the token after verification
+            $this->verification_token = null;
+
             return $this->save();
         }
+
         return false;
     }
 
@@ -186,30 +192,25 @@ class User extends Authenticatable implements MustVerifyEmail
     public function sendEmailVerificationNotification()
     {
         try {
-            // Generate token if not exists
             if (!$this->verification_token) {
                 $this->generateVerificationToken();
             }
-            
-            // Try sending via Mailable first
+
             \Illuminate\Support\Facades\Mail::send(new \App\Mail\VerifyEmailMailable($this));
-            
-            // Log successful send
+
             \Illuminate\Support\Facades\Log::info('Verification email sent', [
                 'user_id' => $this->id,
                 'email' => $this->emailaddress,
-                'timestamp' => now()
+                'timestamp' => now(),
             ]);
         } catch (\Exception $e) {
-            // Log the error but don't throw - allow registration to complete
             \Illuminate\Support\Facades\Log::error('Failed to send verification email', [
                 'user_id' => $this->id,
                 'email' => $this->emailaddress,
                 'error' => $e->getMessage(),
-                'driver' => config('mail.default')
+                'driver' => config('mail.default'),
             ]);
-            
-            // Still send the notification to ensure it's queued if needed
+
             $this->notify(new VerifyEmailNotification);
         }
     }
@@ -223,8 +224,9 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->emailaddress;
     }
+
     /**
-     * Find the user by username for authentication
+     * Find the user by username for authentication.
      *
      * @param string $username
      * @return mixed
@@ -232,4 +234,56 @@ class User extends Authenticatable implements MustVerifyEmail
     public static function findByUsername($username)
     {
         return static::where('username', $username)->first();
-    }}
+    }
+
+    public function usesScopedCrudAccess(): bool
+    {
+        $access = strtolower(trim((string) $this->access));
+
+        return $access === self::ACCESS_SCOPE_ALL
+            || $access === self::ACCESS_SCOPE_NONE
+            || str_starts_with($access, self::ACCESS_PERMISSION_PREFIX);
+    }
+
+    public function grantedCrudPermissions(): array
+    {
+        $access = strtolower(trim((string) $this->access));
+
+        if ($access === self::ACCESS_SCOPE_ALL) {
+            return ['*'];
+        }
+
+        if (!str_starts_with($access, self::ACCESS_PERMISSION_PREFIX)) {
+            return [];
+        }
+
+        $permissions = substr($access, strlen(self::ACCESS_PERMISSION_PREFIX));
+
+        return array_values(array_filter(array_map('trim', explode(',', $permissions))));
+    }
+
+    public function hasCrudPermission(string $aspect, string $action): bool
+    {
+        if (strtolower(trim((string) $this->role)) === 'superadmin') {
+            return true;
+        }
+
+        if (!$this->usesScopedCrudAccess()) {
+            return true;
+        }
+
+        $access = strtolower(trim((string) $this->access));
+
+        if ($access === self::ACCESS_SCOPE_ALL) {
+            return true;
+        }
+
+        if ($access === self::ACCESS_SCOPE_NONE) {
+            return false;
+        }
+
+        $permissionKey = strtolower(trim($aspect)) . '.' . strtolower(trim($action));
+
+        return in_array($permissionKey, $this->grantedCrudPermissions(), true);
+    }
+}
