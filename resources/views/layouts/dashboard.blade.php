@@ -111,6 +111,10 @@
             margin-right: 0;
             transition: width 220ms ease, max-width 220ms ease, height 220ms ease, margin-right 220ms ease;
         }
+
+        .sidebar-logo--collapsed {
+            display: none;
+        }
         
         .sidebar-title {
             color: white;
@@ -666,6 +670,14 @@
             margin-right: 0;
         }
 
+        .sidebar.icon-collapsed .sidebar-logo--expanded {
+            display: none;
+        }
+
+        .sidebar.icon-collapsed .sidebar-logo--collapsed {
+            display: block;
+        }
+
         .sidebar.icon-collapsed .submenu,
         .sidebar.icon-collapsed .submenu-empty,
         .sidebar.icon-collapsed .submenu-chevron {
@@ -965,7 +977,8 @@
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <a href="{{ route('dashboard') }}" class="sidebar-brand-link" aria-label="Go to dashboard">
-                <img src="{{ asset('PDMUOMS.png') }}" alt="PDMUOMS" class="sidebar-logo">
+                <img src="{{ asset('PDMUOMS.png') }}" alt="PDMUOMS" class="sidebar-logo sidebar-logo--expanded">
+                <img src="{{ asset('DILG-Logo.png') }}" alt="DILG Logo" class="sidebar-logo sidebar-logo--collapsed">
             </a>
         </div>
         
