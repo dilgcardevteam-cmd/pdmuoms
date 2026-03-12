@@ -150,3 +150,26 @@
         </a>
     @endforeach
 </nav>
+
+@once
+    <script>
+        document.addEventListener('click', function (event) {
+            const projectTab = event.target.closest('.project-section-tab');
+
+            if (!projectTab || !projectTab.closest('.project-section-tabs')) {
+                return;
+            }
+
+            if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+                return;
+            }
+
+            try {
+                localStorage.setItem('pdmuoms.sidebar.collapseSubmenusOnce', 'true');
+                localStorage.setItem('pdmuoms.sidebar.openSubmenus', JSON.stringify([]));
+            } catch (error) {
+                // Ignore storage failures and continue navigation.
+            }
+        });
+    </script>
+@endonce

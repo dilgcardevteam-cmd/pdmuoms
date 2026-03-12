@@ -51,9 +51,9 @@
         $balanceProjectsModalTitleId = $balanceProjectsModalId . '-title';
     @endphp
 
-    <form method="GET" action="{{ route('dashboard') }}" class="dashboard-card project-filter-form collapsed" style="background: #ffffff; padding: 18px 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px;">
+    <form method="GET" action="{{ route('dashboard') }}" class="dashboard-card project-filter-form collapsed" style="background: #ffffff; padding: 16px 18px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px;">
         <button type="button" class="project-filter-toggle" onclick="toggleProjectFilter(this)" aria-expanded="false" aria-controls="project-filter-body">
-            <span style="font-size: 20px;">&#128269;</span>
+            <span style="font-size: 18px;">&#128269;</span>
             <span>PROJECT FILTER</span>
             <span class="project-filter-chevron">
                 <i class="fas fa-chevron-up"></i>
@@ -61,10 +61,10 @@
         </button>
 
         <div id="project-filter-body" class="project-filter-body">
-            <div class="dashboard-filter-grid" style="display: grid; grid-template-columns: repeat(3, minmax(220px, 1fr)); gap: 16px 22px; align-items: end;">
+            <div class="dashboard-filter-grid" style="display: grid; grid-template-columns: repeat(3, minmax(200px, 1fr)); gap: 12px 16px; align-items: end;">
             <div>
-                <label for="province" style="display: block; color: #1f2937; font-size: 13px; font-weight: 700; margin-bottom: 6px;">Province</label>
-                <select id="province" name="province" onchange="this.form.submit()" style="width: 100%; height: 38px; border: 1px solid #d1d5db; border-radius: 8px; background-color: #ffffff; color: #111827; padding: 0 10px;">
+                <label for="province" style="display: block; color: #1f2937; font-size: 12px; font-weight: 700; margin-bottom: 4px;">Province</label>
+                <select id="province" name="province" onchange="this.form.submit()" style="width: 100%; height: 34px; border: 1px solid #d1d5db; border-radius: 7px; background-color: #ffffff; color: #111827; padding: 0 8px; font-size: 12px;">
                     <option value="">All</option>
                     @foreach (($filterOptions['provinces'] ?? collect()) as $option)
                         <option value="{{ $option }}" @selected(($filters['province'] ?? '') === (string) $option)>{{ $option }}</option>
@@ -73,8 +73,8 @@
             </div>
 
             <div>
-                <label for="city_municipality" style="display: block; color: #1f2937; font-size: 13px; font-weight: 700; margin-bottom: 6px;">City/Municipality</label>
-                <select id="city_municipality" name="city_municipality" onchange="this.form.submit()" style="width: 100%; height: 38px; border: 1px solid #d1d5db; border-radius: 8px; background-color: #ffffff; color: #111827; padding: 0 10px;">
+                <label for="city_municipality" style="display: block; color: #1f2937; font-size: 12px; font-weight: 700; margin-bottom: 4px;">City/Municipality</label>
+                <select id="city_municipality" name="city_municipality" onchange="this.form.submit()" style="width: 100%; height: 34px; border: 1px solid #d1d5db; border-radius: 7px; background-color: #ffffff; color: #111827; padding: 0 8px; font-size: 12px;">
                     <option value="">All</option>
                     @foreach (($filterOptions['cities'] ?? collect()) as $option)
                         <option value="{{ $option }}" @selected(($filters['city_municipality'] ?? '') === (string) $option)>{{ $option }}</option>
@@ -83,8 +83,8 @@
             </div>
 
             <div>
-                <label for="barangay" style="display: block; color: #1f2937; font-size: 13px; font-weight: 700; margin-bottom: 6px;">Barangay</label>
-                <select id="barangay" name="barangay" onchange="this.form.submit()" style="width: 100%; height: 38px; border: 1px solid #d1d5db; border-radius: 8px; background-color: #ffffff; color: #111827; padding: 0 10px;">
+                <label for="barangay" style="display: block; color: #1f2937; font-size: 12px; font-weight: 700; margin-bottom: 4px;">Barangay</label>
+                <select id="barangay" name="barangay" onchange="this.form.submit()" style="width: 100%; height: 34px; border: 1px solid #d1d5db; border-radius: 7px; background-color: #ffffff; color: #111827; padding: 0 8px; font-size: 12px;">
                     <option value="">All</option>
                     @foreach (($filterOptions['barangays'] ?? collect()) as $option)
                         <option value="{{ $option }}" @selected(($filters['barangay'] ?? '') === (string) $option)>{{ $option }}</option>
@@ -100,7 +100,7 @@
                 data-dropdown-toggle-id="program_dropdown_toggle"
                 data-dropdown-menu-id="program_dropdown_menu"
             >
-                <label for="program_dropdown_toggle" style="display: block; color: #1f2937; font-size: 13px; font-weight: 700; margin-bottom: 6px;">Program</label>
+                <label for="program_dropdown_toggle" style="display: block; color: #1f2937; font-size: 12px; font-weight: 700; margin-bottom: 4px;">Program</label>
                 <div class="dashboard-stacked-filter-dropdown">
                     <div
                         id="program_dropdown_toggle"
@@ -133,8 +133,8 @@
             </div>
 
             <div>
-                <label for="funding_year" style="display: block; color: #1f2937; font-size: 13px; font-weight: 700; margin-bottom: 6px;">Funding Year</label>
-                <select id="funding_year" name="funding_year" onchange="this.form.submit()" style="width: 100%; height: 38px; border: 1px solid #d1d5db; border-radius: 8px; background-color: #ffffff; color: #111827; padding: 0 10px;">
+                <label for="funding_year" style="display: block; color: #1f2937; font-size: 12px; font-weight: 700; margin-bottom: 4px;">Funding Year</label>
+                <select id="funding_year" name="funding_year" onchange="this.form.submit()" style="width: 100%; height: 34px; border: 1px solid #d1d5db; border-radius: 7px; background-color: #ffffff; color: #111827; padding: 0 8px; font-size: 12px;">
                     <option value="">All</option>
                     @foreach (($filterOptions['funding_years'] ?? collect()) as $option)
                         <option value="{{ $option }}" @selected(($filters['funding_year'] ?? '') === (string) $option)>{{ $option }}</option>
@@ -143,8 +143,8 @@
             </div>
 
             <div>
-                <label for="project_type" style="display: block; color: #1f2937; font-size: 13px; font-weight: 700; margin-bottom: 6px;">Project Type</label>
-                <select id="project_type" name="project_type" onchange="this.form.submit()" style="width: 100%; height: 38px; border: 1px solid #d1d5db; border-radius: 8px; background-color: #ffffff; color: #111827; padding: 0 10px;">
+                <label for="project_type" style="display: block; color: #1f2937; font-size: 12px; font-weight: 700; margin-bottom: 4px;">Project Type</label>
+                <select id="project_type" name="project_type" onchange="this.form.submit()" style="width: 100%; height: 34px; border: 1px solid #d1d5db; border-radius: 7px; background-color: #ffffff; color: #111827; padding: 0 8px; font-size: 12px;">
                     <option value="">All</option>
                     @foreach (($filterOptions['project_types'] ?? collect()) as $option)
                         <option value="{{ $option }}" @selected(($filters['project_type'] ?? '') === (string) $option)>{{ $option }}</option>
@@ -153,8 +153,8 @@
             </div>
 
             <div>
-                <label for="project_status" style="display: block; color: #1f2937; font-size: 13px; font-weight: 700; margin-bottom: 6px;">Project Status</label>
-                <select id="project_status" name="project_status" onchange="this.form.submit()" style="width: 100%; height: 38px; border: 1px solid #d1d5db; border-radius: 8px; background-color: #ffffff; color: #111827; padding: 0 10px;">
+                <label for="project_status" style="display: block; color: #1f2937; font-size: 12px; font-weight: 700; margin-bottom: 4px;">Project Status</label>
+                <select id="project_status" name="project_status" onchange="this.form.submit()" style="width: 100%; height: 34px; border: 1px solid #d1d5db; border-radius: 7px; background-color: #ffffff; color: #111827; padding: 0 8px; font-size: 12px;">
                     <option value="">All</option>
                     @foreach (($filterOptions['project_statuses'] ?? collect()) as $option)
                         <option value="{{ $option }}" @selected(($filters['project_status'] ?? '') === (string) $option)>{{ $option }}</option>
@@ -163,7 +163,7 @@
             </div>
 
             <div class="dashboard-filter-reset" style="display: flex; align-items: end; justify-content: flex-end; gap: 8px; flex-wrap: wrap;">
-                <a href="{{ route('dashboard') }}" style="height: 38px; min-width: 170px; border-radius: 8px; background-color: #3b82f6; color: #ffffff; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; padding: 0 18px;">
+                <a href="{{ route('dashboard') }}" style="height: 34px; min-width: 150px; border-radius: 7px; background-color: #3b82f6; color: #ffffff; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; padding: 0 14px;">
                     Reset Filter
                 </a>
                 <button
@@ -1893,13 +1893,13 @@
             border: 0;
             background: transparent;
             color: #002C76;
-            font-size: 18px;
+            font-size: 16px;
             font-weight: 700;
-            margin: 0 0 16px;
+            margin: 0 0 14px;
             padding: 0;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
             text-align: left;
             cursor: pointer;
         }
@@ -1920,17 +1920,19 @@
         }
 
         .dashboard-stacked-filter-toggle {
-            min-height: 38px;
+            min-height: 34px;
             width: 100%;
             border: 1px solid #d1d5db;
-            border-radius: 8px;
-            background-color: #ffffff;
+            border-radius: 7px;
+            background: #ffffff;
             color: #111827;
             padding: 5px 10px;
             display: flex;
             align-items: center;
             gap: 8px;
+            font-size: 12px;
             cursor: pointer;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
         }
 
         .dashboard-stacked-filter-toggle:hover {
@@ -1938,37 +1940,39 @@
         }
 
         .dashboard-stacked-filter-toggle:focus-visible {
-            outline: 2px solid #60a5fa;
-            outline-offset: 1px;
+            outline: 0;
+            border-color: #60a5fa;
+            box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.2);
         }
 
         .dashboard-stacked-filter-toggle.is-open {
-            border-color: #93c5fd;
-            box-shadow: 0 0 0 2px rgba(147, 197, 253, 0.35);
+            border-color: #60a5fa;
+            box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.2);
         }
 
         .dashboard-filter-badge-list {
             margin-top: 0;
-            min-height: 24px;
+            min-height: 20px;
             display: flex;
             flex-wrap: wrap;
-            gap: 6px;
+            gap: 4px;
             align-items: center;
             flex: 1;
+            min-width: 0;
         }
 
         .dashboard-filter-badge {
             display: inline-flex;
             align-items: center;
-            gap: 6px;
-            background-color: #eff6ff;
-            border: 1px solid #bfdbfe;
-            border-radius: 999px;
-            color: #1e3a8a;
+            gap: 4px;
+            background: #f3f4f6;
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+            color: #374151;
             font-size: 11px;
-            font-weight: 600;
+            font-weight: 500;
             line-height: 1;
-            padding: 5px 8px;
+            padding: 3px 6px;
             max-width: 100%;
         }
 
@@ -1980,23 +1984,24 @@
 
         .dashboard-filter-badge-remove {
             border: 0;
-            background: #dbeafe;
-            color: #1d4ed8;
-            width: 16px;
-            height: 16px;
-            border-radius: 999px;
-            font-size: 12px;
+            background: transparent;
+            color: #6b7280;
+            width: auto;
+            height: auto;
+            border-radius: 0;
+            font-size: 11px;
             line-height: 1;
-            font-weight: 700;
+            font-weight: 600;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             padding: 0;
             cursor: pointer;
+            transition: color 0.15s ease;
         }
 
         .dashboard-filter-badge-remove:hover {
-            background: #bfdbfe;
+            color: #111827;
         }
 
         .dashboard-filter-badge-remove:focus-visible {
@@ -2005,9 +2010,9 @@
         }
 
         .dashboard-filter-badge-empty {
-            font-size: 11px;
+            font-size: 12px;
             color: #6b7280;
-            padding: 2px 0;
+            padding: 0;
         }
 
         .dashboard-stacked-filter-chevron {
@@ -2023,16 +2028,22 @@
         }
 
         .dashboard-stacked-filter-menu {
-            position: static;
+            position: fixed;
+            left: 0;
+            top: 0;
             display: none;
-            margin-top: 4px;
+            width: auto;
+            margin-top: 0;
             background: #ffffff;
             border: 1px solid #d1d5db;
-            border-radius: 8px;
-            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.16);
-            padding: 6px;
+            border-radius: 7px;
+            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+            padding: 4px;
             max-height: 220px;
             overflow-y: auto;
+            overflow-x: hidden;
+            box-sizing: border-box;
+            z-index: 1250;
         }
 
         .dashboard-stacked-filter-menu.is-open {
@@ -2043,16 +2054,18 @@
             width: 100%;
             border: 0;
             background: transparent;
-            border-radius: 6px;
+            border-radius: 4px;
             color: #1f2937;
             padding: 7px 8px;
             font-size: 12px;
+            font-weight: 400;
             text-align: left;
             display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 8px;
             cursor: pointer;
+            transition: background 0.15s ease, color 0.15s ease;
         }
 
         .dashboard-stacked-filter-option:hover {
@@ -2067,7 +2080,7 @@
         .dashboard-stacked-filter-option.is-selected {
             background: #eff6ff;
             color: #1d4ed8;
-            font-weight: 600;
+            font-weight: 500;
         }
 
         .dashboard-stacked-filter-option-check {
@@ -2972,7 +2985,7 @@
             }
 
             .dashboard-filter-grid {
-                grid-template-columns: repeat(2, minmax(220px, 1fr)) !important;
+                grid-template-columns: repeat(2, minmax(200px, 1fr)) !important;
             }
 
             .dashboard-filter-reset {
@@ -3072,18 +3085,18 @@
         }
 
         .dashboard-filter-export-btn {
-            height: 38px;
-            min-width: 170px;
-            border-radius: 8px;
+            height: 34px;
+            min-width: 150px;
+            border-radius: 7px;
             border: 0;
             background-color: #16a34a;
             color: #ffffff;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 600;
-            padding: 0 18px;
+            padding: 0 14px;
             cursor: pointer;
         }
 
@@ -3402,6 +3415,12 @@
                 return;
             }
 
+            form.querySelectorAll('[data-stacked-filter]').forEach((stackedFilter) => {
+                if (typeof stackedFilter.__closeDropdown === 'function') {
+                    stackedFilter.__closeDropdown();
+                }
+            });
+
             const isCollapsed = form.classList.contains('collapsed');
             if (isCollapsed) {
                 form.classList.remove('collapsed');
@@ -3596,7 +3615,6 @@
                 const badgeContainerId = stackedFilter.dataset.badgeContainerId || '';
                 const dropdownToggleId = stackedFilter.dataset.dropdownToggleId || '';
                 const dropdownMenuId = stackedFilter.dataset.dropdownMenuId || '';
-
                 const sourceSelect = document.getElementById(sourceSelectId);
                 const badgeContainer = document.getElementById(badgeContainerId);
                 const dropdownToggle = document.getElementById(dropdownToggleId);
@@ -3604,6 +3622,11 @@
 
                 if (!sourceSelect || !badgeContainer || !dropdownToggle || !dropdownMenu) {
                     return;
+                }
+
+                if (dropdownMenu.dataset.overlayAttached !== '1') {
+                    document.body.appendChild(dropdownMenu);
+                    dropdownMenu.dataset.overlayAttached = '1';
                 }
 
                 const submitStackedFilterForm = () => {
@@ -3630,18 +3653,70 @@
                     });
                 };
 
+                const positionDropdownMenu = () => {
+                    if (!dropdownMenu.classList.contains('is-open')) {
+                        return;
+                    }
+
+                    const viewportMargin = 8;
+                    const menuGap = 4;
+                    const toggleRect = dropdownToggle.getBoundingClientRect();
+                    const availableBelow = Math.max(0, window.innerHeight - toggleRect.bottom - viewportMargin);
+                    const availableAbove = Math.max(0, toggleRect.top - viewportMargin);
+                    const preferredHeight = Math.min(dropdownMenu.scrollHeight, 220);
+                    const shouldOpenUpward = availableBelow < Math.min(preferredHeight, 160) && availableAbove > availableBelow;
+                    const availableHeight = Math.max(
+                        96,
+                        Math.min(
+                            Math.max(96, window.innerHeight - (viewportMargin * 2)),
+                            (shouldOpenUpward ? availableAbove : availableBelow) - menuGap
+                        )
+                    );
+                    const renderedHeight = Math.min(dropdownMenu.scrollHeight, availableHeight);
+                    const renderedWidth = Math.min(toggleRect.width, window.innerWidth - (viewportMargin * 2));
+                    const top = shouldOpenUpward
+                        ? Math.max(viewportMargin, toggleRect.top - renderedHeight - menuGap)
+                        : Math.min(window.innerHeight - viewportMargin - renderedHeight, toggleRect.bottom + menuGap);
+                    const left = Math.min(
+                        Math.max(viewportMargin, toggleRect.left),
+                        window.innerWidth - viewportMargin - renderedWidth
+                    );
+
+                    dropdownMenu.style.left = `${left}px`;
+                    dropdownMenu.style.top = `${Math.max(viewportMargin, top)}px`;
+                    dropdownMenu.style.width = `${renderedWidth}px`;
+                    dropdownMenu.style.maxHeight = `${availableHeight}px`;
+                };
+
+                const syncDropdownMenuPosition = () => {
+                    if (!dropdownMenu.classList.contains('is-open')) {
+                        return;
+                    }
+
+                    requestAnimationFrame(positionDropdownMenu);
+                };
+
                 const closeDropdown = () => {
                     dropdownMenu.classList.remove('is-open');
                     dropdownToggle.classList.remove('is-open');
                     dropdownToggle.setAttribute('aria-expanded', 'false');
-                    updateFilterBodyHeight();
+                    dropdownMenu.style.left = '';
+                    dropdownMenu.style.top = '';
+                    dropdownMenu.style.width = '';
+                    dropdownMenu.style.maxHeight = '';
                 };
 
                 const openDropdown = () => {
+                    document.querySelectorAll('[data-stacked-filter]').forEach((otherFilter) => {
+                        if (otherFilter !== stackedFilter && typeof otherFilter.__closeDropdown === 'function') {
+                            otherFilter.__closeDropdown();
+                        }
+                    });
+
                     dropdownMenu.classList.add('is-open');
                     dropdownToggle.classList.add('is-open');
                     dropdownToggle.setAttribute('aria-expanded', 'true');
-                    updateFilterBodyHeight();
+                    syncDropdownMenuPosition();
                 };
 
                 const toggleDropdown = () => {
@@ -3685,6 +3760,7 @@
                     }
 
                     updateFilterBodyHeight();
+                    syncDropdownMenuPosition();
                 };
 
                 const renderDropdownOptions = () => {
@@ -3794,7 +3870,7 @@
                 });
 
                 document.addEventListener('click', (event) => {
-                    if (!stackedFilter.contains(event.target)) {
+                    if (!stackedFilter.contains(event.target) && !dropdownMenu.contains(event.target)) {
                         closeDropdown();
                     }
                 });
@@ -3805,8 +3881,12 @@
                     }
                 });
 
+                window.addEventListener('resize', syncDropdownMenuPosition);
+                document.addEventListener('scroll', syncDropdownMenuPosition, true);
+
                 renderBadges();
                 renderDropdownOptions();
+                stackedFilter.__closeDropdown = closeDropdown;
                 stackedFilter.dataset.stackedFilterInitialized = '1';
             });
         }
