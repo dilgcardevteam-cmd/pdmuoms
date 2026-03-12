@@ -1555,10 +1555,25 @@ Route::middleware(['auth'])->group(function () {
     // User Management routes (superadmin only)
     Route::middleware('superadmin')->group(function () {
         Route::resource('users', App\Http\Controllers\UserManagementController::class);
-        Route::put('users/{user}/block', [App\Http\Controllers\UserManagementController::class, 'block'])
-            ->name('users.block');
-        Route::put('users/{user}/access', [App\Http\Controllers\UserManagementController::class, 'updateAccess'])
-            ->name('users.access.update');
+        Route::get('/utilities/system-setup', [App\Http\Controllers\DatabaseUtilityController::class, 'systemSetup'])
+            ->name('utilities.system-setup.index');
+        Route::get('/utilities/location-configuration', [App\Http\Controllers\DatabaseUtilityController::class, 'locationConfiguration'])
+            ->name('utilities.location-configuration.index');
+        Route::post('/utilities/location-configuration/import/{dataset}', [App\Http\Controllers\DatabaseUtilityController::class, 'importLocationDataset'])
+            ->whereIn('dataset', ['regions', 'provinces', 'city-municipalities'])
+            ->name('utilities.location-configuration.import');
+        Route::post('/utilities/location-configuration/import/{dataset}/{importId}/load', [App\Http\Controllers\DatabaseUtilityController::class, 'loadLocationDatasetImport'])
+            ->whereIn('dataset', ['regions', 'provinces', 'city-municipalities'])
+            ->whereNumber('importId')
+            ->name('utilities.location-configuration.load');
+        Route::get('/utilities/location-configuration/import/{dataset}/{importId}/download', [App\Http\Controllers\DatabaseUtilityController::class, 'downloadLocationDatasetImport'])
+            ->whereIn('dataset', ['regions', 'provinces', 'city-municipalities'])
+            ->whereNumber('importId')
+            ->name('utilities.location-configuration.download');
+        Route::delete('/utilities/location-configuration/import/{dataset}/{importId}', [App\Http\Controllers\DatabaseUtilityController::class, 'deleteLocationDatasetImport'])
+            ->whereIn('dataset', ['regions', 'provinces', 'city-municipalities'])
+            ->whereNumber('importId')
+            ->name('utilities.location-configuration.delete');
         Route::get('/utilities/backup-and-restore', [App\Http\Controllers\DatabaseUtilityController::class, 'index'])
             ->name('utilities.backup-and-restore.index');
         Route::get('/utilities/backup-and-restore/download', [App\Http\Controllers\DatabaseUtilityController::class, 'downloadBackup'])
@@ -1575,13 +1590,13 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('fund-utilization')->group(function () {
         Route::get('/', [App\Http\Controllers\FundUtilizationReportController::class, 'index'])->name('fund-utilization.index');
         Route::get('/export', [App\Http\Controllers\FundUtilizationReportController::class, 'export'])->name('fund-utilization.export');
-        Route::get('/create', [App\Http\Controllers\FundUtilizationReportController::class, 'create'])->middleware('crud_permission:fund_utilization_reports,add')->name('fund-utilization.create');
+        Route::get('/create', [App\Http\Controllers\FundUtilizationReportController::class, 'create'])->name('fund-utilization.create');
         Route::get('/get-municipalities/{province}', [App\Http\Controllers\FundUtilizationReportController::class, 'getMunicipalities'])->name('fund-utilization.get-municipalities');
-        Route::post('/', [App\Http\Controllers\FundUtilizationReportController::class, 'store'])->middleware('crud_permission:fund_utilization_reports,add')->name('fund-utilization.store');
+        Route::post('/', [App\Http\Controllers\FundUtilizationReportController::class, 'store'])->name('fund-utilization.store');
         Route::get('/{projectCode}', [App\Http\Controllers\FundUtilizationReportController::class, 'show'])->name('fund-utilization.show');
-        Route::get('/{projectCode}/edit', [App\Http\Controllers\FundUtilizationReportController::class, 'edit'])->middleware('crud_permission:fund_utilization_reports,update')->name('fund-utilization.edit');
-        Route::put('/{projectCode}', [App\Http\Controllers\FundUtilizationReportController::class, 'update'])->middleware('crud_permission:fund_utilization_reports,update')->name('fund-utilization.update');
-        Route::delete('/{projectCode}', [App\Http\Controllers\FundUtilizationReportController::class, 'deleteProject'])->middleware('crud_permission:fund_utilization_reports,delete')->name('fund-utilization.delete-project');
+        Route::get('/{projectCode}/edit', [App\Http\Controllers\FundUtilizationReportController::class, 'edit'])->name('fund-utilization.edit');
+        Route::put('/{projectCode}', [App\Http\Controllers\FundUtilizationReportController::class, 'update'])->name('fund-utilization.update');
+        Route::delete('/{projectCode}', [App\Http\Controllers\FundUtilizationReportController::class, 'deleteProject'])->name('fund-utilization.delete-project');
         Route::post('/{projectCode}/upload-mov', [App\Http\Controllers\FundUtilizationReportController::class, 'uploadMOV'])->name('fund-utilization.upload-mov');
         Route::post('/{projectCode}/upload-written-notice', [App\Http\Controllers\FundUtilizationReportController::class, 'uploadWrittenNotice'])->name('fund-utilization.upload-written-notice');
         Route::post('/{projectCode}/upload-fdp', [App\Http\Controllers\FundUtilizationReportController::class, 'uploadFDP'])->name('fund-utilization.upload-fdp');
@@ -1605,16 +1620,15 @@ Route::middleware(['auth'])->group(function () {
     // Projects routes
     Route::get('/projects/locally-funded', [App\Http\Controllers\LocallyFundedProjectController::class, 'index'])->name('projects.locally-funded');
     Route::get('/projects/locally-funded/subay/{projectCode}', [App\Http\Controllers\LocallyFundedProjectController::class, 'showSubaybayan'])->name('locally-funded-project.subay-show');
-    Route::get('/projects/locally-funded/create', [App\Http\Controllers\LocallyFundedProjectController::class, 'create'])->middleware('crud_permission:locally_funded_projects,add')->name('locally-funded-project.create');
+    Route::get('/projects/locally-funded/create', [App\Http\Controllers\LocallyFundedProjectController::class, 'create'])->name('locally-funded-project.create');
     Route::get('/projects/locally-funded/ensure/{projectCode}', [App\Http\Controllers\LocallyFundedProjectController::class, 'ensureFromSubay'])
-        ->middleware('crud_permission:locally_funded_projects,add')
         ->name('locally-funded-project.ensure');
-    Route::post('/projects/locally-funded', [App\Http\Controllers\LocallyFundedProjectController::class, 'store'])->middleware('crud_permission:locally_funded_projects,add')->name('locally-funded-project.store');
+    Route::post('/projects/locally-funded', [App\Http\Controllers\LocallyFundedProjectController::class, 'store'])->name('locally-funded-project.store');
     Route::get('/projects/locally-funded/{project}', [App\Http\Controllers\LocallyFundedProjectController::class, 'show'])->name('locally-funded-project.show');
     Route::get('/projects/locally-funded/{project}/pcr-mov', [App\Http\Controllers\LocallyFundedProjectController::class, 'viewPcrMov'])->name('locally-funded-project.view-pcr-mov');
-    Route::get('/projects/locally-funded/{project}/edit', [App\Http\Controllers\LocallyFundedProjectController::class, 'edit'])->middleware('crud_permission:locally_funded_projects,update')->name('locally-funded-project.edit');
-    Route::put('/projects/locally-funded/{project}', [App\Http\Controllers\LocallyFundedProjectController::class, 'update'])->middleware('crud_permission:locally_funded_projects,update')->name('locally-funded-project.update');
-    Route::delete('/projects/locally-funded/{project}', [App\Http\Controllers\LocallyFundedProjectController::class, 'destroy'])->middleware('crud_permission:locally_funded_projects,delete')->name('locally-funded-project.destroy');
+    Route::get('/projects/locally-funded/{project}/edit', [App\Http\Controllers\LocallyFundedProjectController::class, 'edit'])->name('locally-funded-project.edit');
+    Route::put('/projects/locally-funded/{project}', [App\Http\Controllers\LocallyFundedProjectController::class, 'update'])->name('locally-funded-project.update');
+    Route::delete('/projects/locally-funded/{project}', [App\Http\Controllers\LocallyFundedProjectController::class, 'destroy'])->name('locally-funded-project.destroy');
     
     // API routes for location data
 
@@ -1623,7 +1637,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/project-at-risk/export', [App\Http\Controllers\ProjectAtRiskController::class, 'export'])
         ->name('projects.at-risk.export');
     Route::post('/project-at-risk/import', [App\Http\Controllers\ProjectAtRiskController::class, 'import'])
-        ->middleware(['regional_dilg'])
+        ->middleware('regional_dilg')
         ->name('projects.at-risk.import');
 
     Route::get('/projects/rssa', function () use ($renderProjectDashboard) {
@@ -1641,7 +1655,7 @@ Route::middleware(['auth'])->group(function () {
         ->whereNumber('rowNumber')
         ->name('projects.rlip-lime.show');
 
-    Route::middleware(['regional_dilg'])->group(function () {
+    Route::middleware('regional_dilg')->group(function () {
         Route::get('/system-management', function () {
             return view('system-management.index');
         })->name('system-management.index');
@@ -1693,79 +1707,45 @@ Route::middleware(['auth'])->group(function () {
             ->name('system-management.upload-rlip-lime.delete');
     });
 
-    Route::group([], function () {
-        // Local Project Monitoring Committee routes
-        Route::post('local-project-monitoring-committee/{lpmc}/upload', [App\Http\Controllers\LocalProjectMonitoringCommitteeController::class, 'upload'])
-            ->name('local-project-monitoring-committee.upload');
-        Route::post('local-project-monitoring-committee/{lpmc}/approve/{docId}', [App\Http\Controllers\LocalProjectMonitoringCommitteeController::class, 'approveDocument'])
-            ->name('local-project-monitoring-committee.approve');
-        Route::get('local-project-monitoring-committee/{lpmc}/document/{docId}', [App\Http\Controllers\LocalProjectMonitoringCommitteeController::class, 'viewDocument'])
-            ->name('local-project-monitoring-committee.document');
-        Route::get('local-project-monitoring-committee/create', [App\Http\Controllers\LocalProjectMonitoringCommitteeController::class, 'create'])
-            ->middleware('crud_permission:local_project_monitoring_committee,add')
-            ->name('local-project-monitoring-committee.create');
-        Route::post('local-project-monitoring-committee', [App\Http\Controllers\LocalProjectMonitoringCommitteeController::class, 'store'])
-            ->middleware('crud_permission:local_project_monitoring_committee,add')
-            ->name('local-project-monitoring-committee.store');
-        Route::get('local-project-monitoring-committee/{lpmc}/edit', [App\Http\Controllers\LocalProjectMonitoringCommitteeController::class, 'edit'])
-            ->middleware('crud_permission:local_project_monitoring_committee,update')
-            ->name('local-project-monitoring-committee.edit');
-        Route::put('local-project-monitoring-committee/{lpmc}', [App\Http\Controllers\LocalProjectMonitoringCommitteeController::class, 'update'])
-            ->middleware('crud_permission:local_project_monitoring_committee,update')
-            ->name('local-project-monitoring-committee.update');
-        Route::delete('local-project-monitoring-committee/{lpmc}', [App\Http\Controllers\LocalProjectMonitoringCommitteeController::class, 'destroy'])
-            ->middleware('crud_permission:local_project_monitoring_committee,delete')
-            ->name('local-project-monitoring-committee.destroy');
-        Route::resource('local-project-monitoring-committee', App\Http\Controllers\LocalProjectMonitoringCommitteeController::class)
-            ->except(['create', 'store', 'edit', 'update', 'destroy'])
-            ->parameters(['local-project-monitoring-committee' => 'lpmc']);
+    // Local Project Monitoring Committee routes
+    Route::post('local-project-monitoring-committee/{lpmc}/upload', [App\Http\Controllers\LocalProjectMonitoringCommitteeController::class, 'upload'])
+        ->name('local-project-monitoring-committee.upload');
+    Route::post('local-project-monitoring-committee/{lpmc}/approve/{docId}', [App\Http\Controllers\LocalProjectMonitoringCommitteeController::class, 'approveDocument'])
+        ->name('local-project-monitoring-committee.approve');
+    Route::get('local-project-monitoring-committee/{lpmc}/document/{docId}', [App\Http\Controllers\LocalProjectMonitoringCommitteeController::class, 'viewDocument'])
+        ->name('local-project-monitoring-committee.document');
+    Route::resource('local-project-monitoring-committee', App\Http\Controllers\LocalProjectMonitoringCommitteeController::class)
+        ->parameters(['local-project-monitoring-committee' => 'lpmc']);
 
-        // Road Maintenance Status Report routes
-        Route::post('road-maintenance-status/{roadMaintenance}/upload', [App\Http\Controllers\RoadMaintenanceStatusReportController::class, 'upload'])
-            ->name('road-maintenance-status.upload');
-        Route::post('road-maintenance-status/{roadMaintenance}/approve/{docId}', [App\Http\Controllers\RoadMaintenanceStatusReportController::class, 'approveDocument'])
-            ->name('road-maintenance-status.approve');
-        Route::get('road-maintenance-status/{roadMaintenance}/document/{docId}', [App\Http\Controllers\RoadMaintenanceStatusReportController::class, 'viewDocument'])
-            ->name('road-maintenance-status.document');
-        Route::get('road-maintenance-status/create', [App\Http\Controllers\RoadMaintenanceStatusReportController::class, 'create'])
-            ->middleware('crud_permission:road_maintenance_status_reports,add')
-            ->name('road-maintenance-status.create');
-        Route::post('road-maintenance-status', [App\Http\Controllers\RoadMaintenanceStatusReportController::class, 'store'])
-            ->middleware('crud_permission:road_maintenance_status_reports,add')
-            ->name('road-maintenance-status.store');
-        Route::get('road-maintenance-status/{roadMaintenance}/edit', [App\Http\Controllers\RoadMaintenanceStatusReportController::class, 'edit'])
-            ->middleware('crud_permission:road_maintenance_status_reports,update')
-            ->name('road-maintenance-status.edit');
-        Route::put('road-maintenance-status/{roadMaintenance}', [App\Http\Controllers\RoadMaintenanceStatusReportController::class, 'update'])
-            ->middleware('crud_permission:road_maintenance_status_reports,update')
-            ->name('road-maintenance-status.update');
-        Route::delete('road-maintenance-status/{roadMaintenance}', [App\Http\Controllers\RoadMaintenanceStatusReportController::class, 'destroy'])
-            ->middleware('crud_permission:road_maintenance_status_reports,delete')
-            ->name('road-maintenance-status.destroy');
-        Route::resource('road-maintenance-status', App\Http\Controllers\RoadMaintenanceStatusReportController::class)
-            ->except(['create', 'store', 'edit', 'update', 'destroy'])
-            ->parameters(['road-maintenance-status' => 'roadMaintenance']);
+    // Road Maintenance Status Report routes
+    Route::post('road-maintenance-status/{roadMaintenance}/upload', [App\Http\Controllers\RoadMaintenanceStatusReportController::class, 'upload'])
+        ->name('road-maintenance-status.upload');
+    Route::post('road-maintenance-status/{roadMaintenance}/approve/{docId}', [App\Http\Controllers\RoadMaintenanceStatusReportController::class, 'approveDocument'])
+        ->name('road-maintenance-status.approve');
+    Route::get('road-maintenance-status/{roadMaintenance}/document/{docId}', [App\Http\Controllers\RoadMaintenanceStatusReportController::class, 'viewDocument'])
+        ->name('road-maintenance-status.document');
+    Route::resource('road-maintenance-status', App\Http\Controllers\RoadMaintenanceStatusReportController::class)
+        ->parameters(['road-maintenance-status' => 'roadMaintenance']);
 
-        Route::get('/reports/monthly/pd-no-pbbm-2025-1572-1573', [App\Http\Controllers\PdNoPbbmMonthlyReportController::class, 'index'])
-            ->name('reports.monthly.pd-no-pbbm-2025-1572-1573');
-        Route::get('/reports/monthly/pd-no-pbbm-2025-1572-1573/{office}/edit', [App\Http\Controllers\PdNoPbbmMonthlyReportController::class, 'edit'])
-            ->name('reports.monthly.pd-no-pbbm-2025-1572-1573.edit');
-        Route::post('/reports/monthly/pd-no-pbbm-2025-1572-1573/{office}/upload', [App\Http\Controllers\PdNoPbbmMonthlyReportController::class, 'upload'])
-            ->name('reports.monthly.pd-no-pbbm-2025-1572-1573.upload');
-        Route::post('/reports/monthly/pd-no-pbbm-2025-1572-1573/{office}/approve/{docId}', [App\Http\Controllers\PdNoPbbmMonthlyReportController::class, 'approveDocument'])
-            ->name('reports.monthly.pd-no-pbbm-2025-1572-1573.approve');
-        Route::get('/reports/monthly/pd-no-pbbm-2025-1572-1573/{office}/document/{docId}', [App\Http\Controllers\PdNoPbbmMonthlyReportController::class, 'viewDocument'])
-            ->name('reports.monthly.pd-no-pbbm-2025-1572-1573.document');
+    Route::get('/reports/monthly/pd-no-pbbm-2025-1572-1573', [App\Http\Controllers\PdNoPbbmMonthlyReportController::class, 'index'])
+        ->name('reports.monthly.pd-no-pbbm-2025-1572-1573');
+    Route::get('/reports/monthly/pd-no-pbbm-2025-1572-1573/{office}/edit', [App\Http\Controllers\PdNoPbbmMonthlyReportController::class, 'edit'])
+        ->name('reports.monthly.pd-no-pbbm-2025-1572-1573.edit');
+    Route::post('/reports/monthly/pd-no-pbbm-2025-1572-1573/{office}/upload', [App\Http\Controllers\PdNoPbbmMonthlyReportController::class, 'upload'])
+        ->name('reports.monthly.pd-no-pbbm-2025-1572-1573.upload');
+    Route::post('/reports/monthly/pd-no-pbbm-2025-1572-1573/{office}/approve/{docId}', [App\Http\Controllers\PdNoPbbmMonthlyReportController::class, 'approveDocument'])
+        ->name('reports.monthly.pd-no-pbbm-2025-1572-1573.approve');
+    Route::get('/reports/monthly/pd-no-pbbm-2025-1572-1573/{office}/document/{docId}', [App\Http\Controllers\PdNoPbbmMonthlyReportController::class, 'viewDocument'])
+        ->name('reports.monthly.pd-no-pbbm-2025-1572-1573.document');
 
-        Route::get('/reports/rbis-annual-certification', [App\Http\Controllers\RbisAnnualCertificationController::class, 'index'])
-            ->name('rbis-annual-certification.index');
-        Route::get('/reports/rbis-annual-certification/{office}/edit', [App\Http\Controllers\RbisAnnualCertificationController::class, 'edit'])
-            ->name('rbis-annual-certification.edit');
-        Route::post('/reports/rbis-annual-certification/{office}/upload', [App\Http\Controllers\RbisAnnualCertificationController::class, 'upload'])
-            ->name('rbis-annual-certification.upload');
-        Route::post('/reports/rbis-annual-certification/{office}/approve/{docId}', [App\Http\Controllers\RbisAnnualCertificationController::class, 'approveDocument'])
-            ->name('rbis-annual-certification.approve');
-        Route::get('/reports/rbis-annual-certification/{office}/document/{docId}', [App\Http\Controllers\RbisAnnualCertificationController::class, 'viewDocument'])
-            ->name('rbis-annual-certification.document');
-    });
+    Route::get('/reports/rbis-annual-certification', [App\Http\Controllers\RbisAnnualCertificationController::class, 'index'])
+        ->name('rbis-annual-certification.index');
+    Route::get('/reports/rbis-annual-certification/{office}/edit', [App\Http\Controllers\RbisAnnualCertificationController::class, 'edit'])
+        ->name('rbis-annual-certification.edit');
+    Route::post('/reports/rbis-annual-certification/{office}/upload', [App\Http\Controllers\RbisAnnualCertificationController::class, 'upload'])
+        ->name('rbis-annual-certification.upload');
+    Route::post('/reports/rbis-annual-certification/{office}/approve/{docId}', [App\Http\Controllers\RbisAnnualCertificationController::class, 'approveDocument'])
+        ->name('rbis-annual-certification.approve');
+    Route::get('/reports/rbis-annual-certification/{office}/document/{docId}', [App\Http\Controllers\RbisAnnualCertificationController::class, 'viewDocument'])
+        ->name('rbis-annual-certification.document');
 });
