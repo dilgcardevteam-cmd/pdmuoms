@@ -39,9 +39,15 @@
         <div style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-top: 16px; overflow-x: auto;">
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px;">
                 <h2 style="color: #002C76; font-size: 18px; margin: 0;">Imported SubayBAYAN Files</h2>
-                <button type="button" onclick="openImportModal()" style="padding: 8px 14px; background-color: #002C76; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12px;">
-                    Import CSV
-                </button>
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <a href="{{ route('system-management.upload-subaybayan.template') }}" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 8px 14px; background: linear-gradient(180deg, #008c4d 0%, #007542 100%); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12px; text-decoration: none; box-shadow: 0 6px 16px rgba(0, 117, 66, 0.18);">
+                        <i class="fas fa-file-excel" aria-hidden="true"></i>
+                        <span>Download Template</span>
+                    </a>
+                    <button type="button" onclick="openImportModal()" style="padding: 8px 14px; background: linear-gradient(180deg, #0a4cb3 0%, #002C76 100%); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12px; box-shadow: 0 6px 16px rgba(0, 44, 118, 0.2);">
+                        Import CSV
+                    </button>
+                </div>
             </div>
             @if($importHistoryTableMissing ?? false)
                 <div style="background-color: #fff7ed; border: 1px solid #fdba74; color: #9a3412; padding: 12px 14px; border-radius: 8px; margin-top: 16px; font-size: 12px;">
