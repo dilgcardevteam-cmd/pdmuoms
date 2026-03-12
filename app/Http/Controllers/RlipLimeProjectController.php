@@ -82,6 +82,125 @@ class RlipLimeProjectController extends Controller
         ]);
     }
 
+    public function dashboard(Request $request)
+    {
+        $dataset = $this->rlipLimeDataService->getDataset();
+        $allRows = collect($dataset['rows'] ?? []);
+        $scopedRows = $this->applyRoleScope($allRows);
+
+        $filters = [
+            'search' => trim((string) $request->query('search', '')),
+            'funding_year' => trim((string) $request->query('funding_year', '')),
+            'fund_source' => trim((string) $request->query('fund_source', '')),
+            'province' => trim((string) $request->query('province', '')),
+            'city' => trim((string) $request->query('city', '')),
+            'status' => trim((string) $request->query('status', '')),
+        ];
+
+        $rows = $this->applyFilters($scopedRows, [
+            'search' => $filters['search'],
+            'project_code' => '',
+            'funding_year' => $filters['funding_year'],
+            'fund_source' => $filters['fund_source'],
+            'province' => $filters['province'],
+            'city' => $filters['city'],
+            'status' => $filters['status'],
+        ]);
+
+        $totalProjects = $rows->count();
+        $totalProgrammedAmount = (float) $rows
+            ->pluck('total_amount_programmed_value')
+            ->filter(fn ($value) => is_numeric($value))
+            ->sum();
+        $averageCompletion = round((float) $rows
+            ->pluck('overall_completion_value')
+            ->filter(fn ($value) => is_numeric($value))
+            ->avg(), 2);
+        $totalEmployment = (int) round((float) $rows
+            ->pluck('employment_generated_value')
+            ->filter(fn ($value) => is_numeric($value))
+            ->sum(), 0);
+
+        $statusCounts = $rows
+            ->groupBy(fn (array $row) => trim((string) ($row['project_status'] ?? '')) ?: 'UNSPECIFIED')
+            ->map(fn (Collection $group) => $group->count())
+            ->sortDesc()
+            ->values();
+
+        $statusBreakdown = $rows
+            ->groupBy(fn (array $row) => trim((string) ($row['project_status'] ?? '')) ?: 'UNSPECIFIED')
+            ->map(fn (Collection $group, string $label) => [
+                'label' => $label,
+                'count' => $group->count(),
+            ])
+            ->sortByDesc('count')
+            ->values();
+
+        $fundSourceBreakdown = $rows
+            ->groupBy(fn (array $row) => trim((string) ($row['fund_source'] ?? '')) ?: 'UNSPECIFIED')
+            ->map(fn (Collection $group, string $label) => [
+                'label' => $label,
+                'count' => $group->count(),
+            ])
+            ->sortByDesc('count')
+            ->values();
+
+        $provinceBreakdown = $rows
+            ->groupBy(fn (array $row) => trim((string) ($row['province'] ?? '')) ?: 'UNSPECIFIED')
+            ->map(fn (Collection $group, string $label) => [
+                'label' => $label,
+                'count' => $group->count(),
+            ])
+            ->sortByDesc('count')
+            ->take(8)
+            ->values();
+
+        $fundingYears = $this->extractSortedValues($scopedRows, 'funding_year', true);
+        $fundSources = $this->extractSortedValues($scopedRows, 'fund_source');
+        $provinces = $this->extractSortedValues($scopedRows, 'province');
+        $statusOptions = $this->extractSortedValues($scopedRows, 'project_status');
+        $provinceMunicipalities = $this->buildProvinceMunicipalityMap($scopedRows);
+        $selectedProvinceFilter = $filters['province'];
+        if ($selectedProvinceFilter !== '' && array_key_exists($selectedProvinceFilter, $provinceMunicipalities)) {
+            $cityOptions = collect($provinceMunicipalities[$selectedProvinceFilter] ?? []);
+        } else {
+            $cityOptions = collect($provinceMunicipalities)->flatten(1);
+        }
+
+        $cityOptions = $cityOptions
+            ->map(fn ($city) => trim((string) $city))
+            ->filter()
+            ->unique()
+            ->sort()
+            ->values();
+
+        $topStatusCount = (int) ($statusCounts->first() ?? 0);
+        $topFundSourceCount = (int) ($fundSourceBreakdown->first()['count'] ?? 0);
+        $topProvinceCount = (int) ($provinceBreakdown->first()['count'] ?? 0);
+
+        return view('projects.rlip-lime-dashboard', [
+            'activeTab' => 'rlip-lime',
+            'filters' => $filters,
+            'totalProjects' => $totalProjects,
+            'totalProgrammedAmount' => $totalProgrammedAmount,
+            'averageCompletion' => $averageCompletion,
+            'totalEmployment' => $totalEmployment,
+            'statusBreakdown' => $statusBreakdown,
+            'fundSourceBreakdown' => $fundSourceBreakdown,
+            'provinceBreakdown' => $provinceBreakdown,
+            'fundingYears' => $fundingYears,
+            'fundSources' => $fundSources,
+            'provinces' => $provinces,
+            'statusOptions' => $statusOptions,
+            'provinceMunicipalities' => $provinceMunicipalities,
+            'cityOptions' => $cityOptions,
+            'sourceMeta' => $dataset['meta'] ?? [],
+            'topStatusCount' => $topStatusCount,
+            'topFundSourceCount' => $topFundSourceCount,
+            'topProvinceCount' => $topProvinceCount,
+        ]);
+    }
+
     public function show(Request $request, int $rowNumber)
     {
         $dataset = $this->rlipLimeDataService->getDataset();

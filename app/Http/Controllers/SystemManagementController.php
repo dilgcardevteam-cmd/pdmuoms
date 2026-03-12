@@ -11,6 +11,79 @@ use Illuminate\Support\Str;
 class SystemManagementController extends Controller
 {
     private const IMPORT_HISTORY_TABLE = 'subaybayan_import_histories';
+    private const TEMPLATE_HEADERS = [
+        'program',
+        'project_code',
+        'project_title',
+        'region',
+        'province',
+        'city_municipality',
+        'barangay',
+        'exact_location',
+        'type',
+        'project_description',
+        'road_length_in_km',
+        'funding_year',
+        'type_of_project',
+        'sub_type_of_project',
+        'procurement_type',
+        'procurement',
+        'beneficiaries',
+        'status',
+        'remarks',
+        'profile_approval_status',
+        'national_subsidy_original_allocation',
+        'lgu_counterpart_original_allocation',
+        'national_subsidy_cancelled_allocation',
+        'lgu_counterpart_cancelled_allocation',
+        'national_subsidy_reverted_amount',
+        'lgu_counterpart_reverted_amount',
+        'national_subsidy_revised_allocation',
+        'lgu_counterpart_revised_allocation',
+        'total_project_cost',
+        'implementing_unit',
+        'moi',
+        'total_estimated_cost_of_project',
+        'duration',
+        'intended_completion_date',
+        'actual_start_of_construction',
+        'unit_implementing_the_project',
+        'name_of_contractor',
+        'contract_price',
+        'contract_duration',
+        'office_address',
+        'date_of_perfection_of_contract',
+        'intended_completion_date_2',
+        'date_of_receipt_of_ntp',
+        'date_of_expiration_of_contract',
+        'total_accomplishment',
+        'date',
+        'obligation',
+        'disbursement',
+        'liquidations',
+        'bid_opening_bid_evaluation',
+        'bid_opening_evaluation',
+        'date_of_nadai',
+        'date_of_receipt_of_notice_to_proceed',
+        'ded_pow_preparation',
+        'ded_pow_prep_notarized_lce_cert',
+        'ded_pow_review_and_approval',
+        'ded_pow_review_and_approval_2',
+        'endorsement_of_projects_to_dbm_for_the_release_of_saro',
+        'fs_technical_specification_and_ded_pow_preparation',
+        'fs_technical_specification_and_ded_pow_review_approval',
+        'fs_technical_specification_preparation',
+        'installation_of_community_billboard',
+        'installation_of_community_billboard_2',
+        'invitation_to_bid_ib_posted',
+        'moa_signing',
+        'no_objection_1',
+        'no_objection_2',
+        'no_objection_3',
+        'noa_issuance',
+        'project_billboard',
+        'submission_of_certificate_on_the_receipt_of_funds',
+    ];
 
     public function uploadSubaybayan()
     {
@@ -135,6 +208,18 @@ class SystemManagementController extends Controller
             'filterOptions' => $filterOptions,
             'importHistoryRows' => $importHistoryRows,
             'importHistoryTableMissing' => $importHistoryTableMissing,
+        ]);
+    }
+
+    public function downloadSubaybayanTemplate()
+    {
+        return response()->streamDownload(function () {
+            echo "\xEF\xBB\xBF";
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, self::TEMPLATE_HEADERS);
+            fclose($handle);
+        }, 'subaybayan-template.csv', [
+            'Content-Type' => 'text/csv; charset=UTF-8',
         ]);
     }
 

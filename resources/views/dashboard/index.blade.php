@@ -32,12 +32,12 @@
         ];
 
         $fundSourceStyleMap = [
-            'SBDP' => ['bg' => '#eff6ff', 'border' => '#bfdbfe', 'iconBg' => '#dbeafe', 'iconColor' => '#1d4ed8', 'labelColor' => '#1e3a8a'],   // blue
-            'FALGU' => ['bg' => '#f0fdf4', 'border' => '#bbf7d0', 'iconBg' => '#dcfce7', 'iconColor' => '#15803d', 'labelColor' => '#14532d'], // green
-            'CMGP' => ['bg' => '#fff7ed', 'border' => '#fed7aa', 'iconBg' => '#ffedd5', 'iconColor' => '#c2410c', 'labelColor' => '#7c2d12'],  // orange
-            'GEF' => ['bg' => '#ecfeff', 'border' => '#a5f3fc', 'iconBg' => '#cffafe', 'iconColor' => '#0e7490', 'labelColor' => '#164e63'],   // cyan
-            'SAFPB' => ['bg' => '#fef2f2', 'border' => '#fecaca', 'iconBg' => '#fee2e2', 'iconColor' => '#dc2626', 'labelColor' => '#7f1d1d'], // red
-            'SGLGIF' => ['bg' => '#fdf4ff', 'border' => '#e9d5ff', 'iconBg' => '#f3e8ff', 'iconColor' => '#7e22ce', 'labelColor' => '#581c87'], // purple
+            'SBDP' => ['bg' => 'linear-gradient(180deg, #f8fbff 0%, #eff6ff 100%)', 'border' => '#bfdbfe', 'iconBg' => 'linear-gradient(180deg, #eff6ff 0%, #dbeafe 100%)', 'iconColor' => '#1d4ed8', 'labelColor' => '#1e3a8a'],   // blue
+            'FALGU' => ['bg' => 'linear-gradient(180deg, #f8fef9 0%, #f0fdf4 100%)', 'border' => '#bbf7d0', 'iconBg' => 'linear-gradient(180deg, #ecfdf3 0%, #dcfce7 100%)', 'iconColor' => '#15803d', 'labelColor' => '#14532d'], // green
+            'CMGP' => ['bg' => 'linear-gradient(180deg, #fffaf4 0%, #fff7ed 100%)', 'border' => '#fed7aa', 'iconBg' => 'linear-gradient(180deg, #fff4e5 0%, #ffedd5 100%)', 'iconColor' => '#c2410c', 'labelColor' => '#7c2d12'],  // orange
+            'GEF' => ['bg' => 'linear-gradient(180deg, #f4feff 0%, #ecfeff 100%)', 'border' => '#a5f3fc', 'iconBg' => 'linear-gradient(180deg, #e6fcff 0%, #cffafe 100%)', 'iconColor' => '#0e7490', 'labelColor' => '#164e63'],   // cyan
+            'SAFPB' => ['bg' => 'linear-gradient(180deg, #fff8f8 0%, #fef2f2 100%)', 'border' => '#fecaca', 'iconBg' => 'linear-gradient(180deg, #fff1f1 0%, #fee2e2 100%)', 'iconColor' => '#dc2626', 'labelColor' => '#7f1d1d'], // red
+            'SGLGIF' => ['bg' => 'linear-gradient(180deg, #fff8ff 0%, #fdf4ff 100%)', 'border' => '#e9d5ff', 'iconBg' => 'linear-gradient(180deg, #faf2ff 0%, #f3e8ff 100%)', 'iconColor' => '#7e22ce', 'labelColor' => '#581c87'], // purple
         ];
 
         $financialMetricStyleMap = [
@@ -51,137 +51,139 @@
         $balanceProjectsModalTitleId = $balanceProjectsModalId . '-title';
     @endphp
 
-    <form method="GET" action="{{ route('dashboard') }}" class="dashboard-card project-filter-form collapsed" style="background: #ffffff; padding: 16px 18px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px;">
-        <button type="button" class="project-filter-toggle" onclick="toggleProjectFilter(this)" aria-expanded="false" aria-controls="project-filter-body">
-            <span style="font-size: 18px;">&#128269;</span>
-            <span>PROJECT FILTER</span>
-            <span class="project-filter-chevron">
-                <i class="fas fa-chevron-up"></i>
-            </span>
-        </button>
-
-        <div id="project-filter-body" class="project-filter-body">
-            <div class="dashboard-filter-grid" style="display: grid; grid-template-columns: repeat(3, minmax(200px, 1fr)); gap: 12px 16px; align-items: end;">
-            <div>
-                <label for="province" style="display: block; color: #1f2937; font-size: 12px; font-weight: 700; margin-bottom: 4px;">Province</label>
-                <select id="province" name="province" onchange="this.form.submit()" style="width: 100%; height: 34px; border: 1px solid #d1d5db; border-radius: 7px; background-color: #ffffff; color: #111827; padding: 0 8px; font-size: 12px;">
-                    <option value="">All</option>
-                    @foreach (($filterOptions['provinces'] ?? collect()) as $option)
-                        <option value="{{ $option }}" @selected(($filters['province'] ?? '') === (string) $option)>{{ $option }}</option>
-                    @endforeach
-                </select>
-            </div>
-
-            <div>
-                <label for="city_municipality" style="display: block; color: #1f2937; font-size: 12px; font-weight: 700; margin-bottom: 4px;">City/Municipality</label>
-                <select id="city_municipality" name="city_municipality" onchange="this.form.submit()" style="width: 100%; height: 34px; border: 1px solid #d1d5db; border-radius: 7px; background-color: #ffffff; color: #111827; padding: 0 8px; font-size: 12px;">
-                    <option value="">All</option>
-                    @foreach (($filterOptions['cities'] ?? collect()) as $option)
-                        <option value="{{ $option }}" @selected(($filters['city_municipality'] ?? '') === (string) $option)>{{ $option }}</option>
-                    @endforeach
-                </select>
-            </div>
-
-            <div>
-                <label for="barangay" style="display: block; color: #1f2937; font-size: 12px; font-weight: 700; margin-bottom: 4px;">Barangay</label>
-                <select id="barangay" name="barangay" onchange="this.form.submit()" style="width: 100%; height: 34px; border: 1px solid #d1d5db; border-radius: 7px; background-color: #ffffff; color: #111827; padding: 0 8px; font-size: 12px;">
-                    <option value="">All</option>
-                    @foreach (($filterOptions['barangays'] ?? collect()) as $option)
-                        <option value="{{ $option }}" @selected(($filters['barangay'] ?? '') === (string) $option)>{{ $option }}</option>
-                    @endforeach
-                </select>
-            </div>
-
-            <div
-                class="dashboard-stacked-filter"
-                data-stacked-filter
-                data-source-select-id="program"
-                data-badge-container-id="program_badges"
-                data-dropdown-toggle-id="program_dropdown_toggle"
-                data-dropdown-menu-id="program_dropdown_menu"
-            >
-                <label for="program_dropdown_toggle" style="display: block; color: #1f2937; font-size: 12px; font-weight: 700; margin-bottom: 4px;">Program</label>
-                <div class="dashboard-stacked-filter-dropdown">
-                    <div
-                        id="program_dropdown_toggle"
-                        class="dashboard-stacked-filter-toggle"
-                        role="button"
-                        tabindex="0"
-                        aria-haspopup="listbox"
-                        aria-expanded="false"
-                        aria-controls="program_dropdown_menu"
-                    >
-                        <div id="program_badges" class="dashboard-filter-badge-list" aria-live="polite"></div>
-                        <span class="dashboard-stacked-filter-chevron">
-                            <i class="fas fa-chevron-down"></i>
-                        </span>
-                    </div>
-                    <div id="program_dropdown_menu" class="dashboard-stacked-filter-menu" role="listbox" aria-multiselectable="true"></div>
-                </div>
-                <select
-                    id="program"
-                    name="program[]"
-                    multiple
-                    class="dashboard-stacked-filter-source"
-                    data-filter-label="Program"
-                    aria-hidden="true"
-                >
-                    @foreach (($filterOptions['programs'] ?? collect()) as $option)
-                        <option value="{{ $option }}" @selected(in_array((string) $option, ($filters['programs'] ?? []), true))>{{ $option }}</option>
-                    @endforeach
-                </select>
-            </div>
-
-            <div>
-                <label for="funding_year" style="display: block; color: #1f2937; font-size: 12px; font-weight: 700; margin-bottom: 4px;">Funding Year</label>
-                <select id="funding_year" name="funding_year" onchange="this.form.submit()" style="width: 100%; height: 34px; border: 1px solid #d1d5db; border-radius: 7px; background-color: #ffffff; color: #111827; padding: 0 8px; font-size: 12px;">
-                    <option value="">All</option>
-                    @foreach (($filterOptions['funding_years'] ?? collect()) as $option)
-                        <option value="{{ $option }}" @selected(($filters['funding_year'] ?? '') === (string) $option)>{{ $option }}</option>
-                    @endforeach
-                </select>
-            </div>
-
-            <div>
-                <label for="project_type" style="display: block; color: #1f2937; font-size: 12px; font-weight: 700; margin-bottom: 4px;">Project Type</label>
-                <select id="project_type" name="project_type" onchange="this.form.submit()" style="width: 100%; height: 34px; border: 1px solid #d1d5db; border-radius: 7px; background-color: #ffffff; color: #111827; padding: 0 8px; font-size: 12px;">
-                    <option value="">All</option>
-                    @foreach (($filterOptions['project_types'] ?? collect()) as $option)
-                        <option value="{{ $option }}" @selected(($filters['project_type'] ?? '') === (string) $option)>{{ $option }}</option>
-                    @endforeach
-                </select>
-            </div>
-
-            <div>
-                <label for="project_status" style="display: block; color: #1f2937; font-size: 12px; font-weight: 700; margin-bottom: 4px;">Project Status</label>
-                <select id="project_status" name="project_status" onchange="this.form.submit()" style="width: 100%; height: 34px; border: 1px solid #d1d5db; border-radius: 7px; background-color: #ffffff; color: #111827; padding: 0 8px; font-size: 12px;">
-                    <option value="">All</option>
-                    @foreach (($filterOptions['project_statuses'] ?? collect()) as $option)
-                        <option value="{{ $option }}" @selected(($filters['project_status'] ?? '') === (string) $option)>{{ $option }}</option>
-                    @endforeach
-                </select>
-            </div>
-
-            <div class="dashboard-filter-reset" style="display: flex; align-items: end; justify-content: flex-end; gap: 8px; flex-wrap: wrap;">
-                <a href="{{ route('dashboard') }}" style="height: 34px; min-width: 150px; border-radius: 7px; background-color: #3b82f6; color: #ffffff; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; padding: 0 14px;">
-                    Reset Filter
-                </a>
-                <button
-                    type="button"
-                    class="dashboard-filter-export-btn"
-                    onclick="exportDashboardOverviewToExcel(this)"
-                    data-export-filename="status-of-projects-by-location.xls"
-                >
-                    Export Excel Data
-                </button>
-            </div>
-        </div>
-        </div>
-    </form>
-
     @include('projects.partials.project-section-tabs', ['activeTab' => $activeProjectTab ?? 'locally-funded'])
 
     <div class="dashboard-main-layout">
+        <form method="GET" action="{{ route('dashboard') }}" class="dashboard-card project-filter-form dashboard-main-layout-filter collapsed" style="background: #ffffff; padding: 16px 18px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 0;">
+            <button type="button" class="project-filter-toggle" onclick="toggleProjectFilter(this)" aria-expanded="false" aria-controls="project-filter-body">
+                <i class="fas fa-filter" aria-hidden="true" style="font-size: 16px;"></i>
+                <span>PROJECT FILTER</span>
+                <span class="project-filter-chevron">
+                    <i class="fas fa-chevron-up"></i>
+                </span>
+            </button>
+
+            <div id="project-filter-body" class="project-filter-body">
+                <div class="dashboard-filter-grid" style="display: grid; grid-template-columns: repeat(3, minmax(200px, 1fr)); gap: 12px 16px; align-items: end;">
+                <div>
+                    <label for="province" style="display: block; color: #1f2937; font-size: 12px; font-weight: 700; margin-bottom: 4px;">Province</label>
+                    <select id="province" name="province" onchange="this.form.submit()" style="width: 100%; height: 34px; border: 1px solid #d1d5db; border-radius: 7px; background-color: #ffffff; color: #111827; padding: 0 8px; font-size: 12px;">
+                        <option value="">All</option>
+                        @foreach (($filterOptions['provinces'] ?? collect()) as $option)
+                            <option value="{{ $option }}" @selected(($filters['province'] ?? '') === (string) $option)>{{ $option }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div>
+                    <label for="city_municipality" style="display: block; color: #1f2937; font-size: 12px; font-weight: 700; margin-bottom: 4px;">City/Municipality</label>
+                    <select id="city_municipality" name="city_municipality" onchange="this.form.submit()" style="width: 100%; height: 34px; border: 1px solid #d1d5db; border-radius: 7px; background-color: #ffffff; color: #111827; padding: 0 8px; font-size: 12px;">
+                        <option value="">All</option>
+                        @foreach (($filterOptions['cities'] ?? collect()) as $option)
+                            <option value="{{ $option }}" @selected(($filters['city_municipality'] ?? '') === (string) $option)>{{ $option }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div>
+                    <label for="barangay" style="display: block; color: #1f2937; font-size: 12px; font-weight: 700; margin-bottom: 4px;">Barangay</label>
+                    <select id="barangay" name="barangay" onchange="this.form.submit()" style="width: 100%; height: 34px; border: 1px solid #d1d5db; border-radius: 7px; background-color: #ffffff; color: #111827; padding: 0 8px; font-size: 12px;">
+                        <option value="">All</option>
+                        @foreach (($filterOptions['barangays'] ?? collect()) as $option)
+                            <option value="{{ $option }}" @selected(($filters['barangay'] ?? '') === (string) $option)>{{ $option }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div
+                    class="dashboard-stacked-filter"
+                    data-stacked-filter
+                    data-source-select-id="program"
+                    data-badge-container-id="program_badges"
+                    data-dropdown-toggle-id="program_dropdown_toggle"
+                    data-dropdown-menu-id="program_dropdown_menu"
+                >
+                    <label for="program_dropdown_toggle" style="display: block; color: #1f2937; font-size: 12px; font-weight: 700; margin-bottom: 4px;">Program</label>
+                    <div class="dashboard-stacked-filter-dropdown">
+                        <div
+                            id="program_dropdown_toggle"
+                            class="dashboard-stacked-filter-toggle"
+                            role="button"
+                            tabindex="0"
+                            aria-haspopup="listbox"
+                            aria-expanded="false"
+                            aria-controls="program_dropdown_menu"
+                        >
+                            <div id="program_badges" class="dashboard-filter-badge-list" aria-live="polite"></div>
+                            <span class="dashboard-stacked-filter-chevron">
+                                <i class="fas fa-chevron-down"></i>
+                            </span>
+                        </div>
+                        <div id="program_dropdown_menu" class="dashboard-stacked-filter-menu" role="listbox" aria-multiselectable="true"></div>
+                    </div>
+                    <select
+                        id="program"
+                        name="program[]"
+                        multiple
+                        class="dashboard-stacked-filter-source"
+                        data-filter-label="Program"
+                        aria-hidden="true"
+                    >
+                        @foreach (($filterOptions['programs'] ?? collect()) as $option)
+                            <option value="{{ $option }}" @selected(in_array((string) $option, ($filters['programs'] ?? []), true))>{{ $option }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div>
+                    <label for="funding_year" style="display: block; color: #1f2937; font-size: 12px; font-weight: 700; margin-bottom: 4px;">Funding Year</label>
+                    <select id="funding_year" name="funding_year" onchange="this.form.submit()" style="width: 100%; height: 34px; border: 1px solid #d1d5db; border-radius: 7px; background-color: #ffffff; color: #111827; padding: 0 8px; font-size: 12px;">
+                        <option value="">All</option>
+                        @foreach (($filterOptions['funding_years'] ?? collect()) as $option)
+                            <option value="{{ $option }}" @selected(($filters['funding_year'] ?? '') === (string) $option)>{{ $option }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div>
+                    <label for="project_type" style="display: block; color: #1f2937; font-size: 12px; font-weight: 700; margin-bottom: 4px;">Project Type</label>
+                    <select id="project_type" name="project_type" onchange="this.form.submit()" style="width: 100%; height: 34px; border: 1px solid #d1d5db; border-radius: 7px; background-color: #ffffff; color: #111827; padding: 0 8px; font-size: 12px;">
+                        <option value="">All</option>
+                        @foreach (($filterOptions['project_types'] ?? collect()) as $option)
+                            <option value="{{ $option }}" @selected(($filters['project_type'] ?? '') === (string) $option)>{{ $option }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div>
+                    <label for="project_status" style="display: block; color: #1f2937; font-size: 12px; font-weight: 700; margin-bottom: 4px;">Project Status</label>
+                    <select id="project_status" name="project_status" onchange="this.form.submit()" style="width: 100%; height: 34px; border: 1px solid #d1d5db; border-radius: 7px; background-color: #ffffff; color: #111827; padding: 0 8px; font-size: 12px;">
+                        <option value="">All</option>
+                        @foreach (($filterOptions['project_statuses'] ?? collect()) as $option)
+                            <option value="{{ $option }}" @selected(($filters['project_status'] ?? '') === (string) $option)>{{ $option }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="dashboard-filter-reset" style="display: flex; align-items: end; justify-content: flex-end; gap: 8px; flex-wrap: wrap;">
+                    <a href="{{ route('dashboard') }}" class="dashboard-filter-reset-link" style="height: 34px; min-width: 150px; border-radius: 7px; background: linear-gradient(180deg, #003a99 0%, #002c76 100%); color: #ffffff; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-size: 13px; font-weight: 600; padding: 0 14px;">
+                        <i class="fas fa-rotate-left" aria-hidden="true"></i>
+                        Reset Filter
+                    </a>
+                    <button
+                        type="button"
+                        class="dashboard-filter-export-btn"
+                        onclick="exportDashboardOverviewToExcel(this)"
+                        data-export-filename="status-of-projects-by-location.xls"
+                    >
+                        <i class="fas fa-file-excel" aria-hidden="true"></i>
+                        Export Report
+                    </button>
+                </div>
+            </div>
+            </div>
+        </form>
+
         <div class="dashboard-top-cards" style="display: grid; gap: 20px; margin-bottom: 0;">
             <div class="dashboard-card total-projects-card" style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; flex-direction: column;">
                 <h2 style="color: #002C76; font-size: 16px; margin: 0 0 16px; display: flex; align-items: center; gap: 8px;">
@@ -222,7 +224,7 @@
                     @foreach ($fundSourceCounts as $fundSource => $count)
                         @php
                             $fundSourceIcon = $fundSourceIconMap[$fundSource] ?? 'fa-coins';
-                            $fundSourceStyles = $fundSourceStyleMap[$fundSource] ?? ['bg' => '#f9fafb', 'border' => '#e5e7eb', 'iconBg' => '#e5e7eb', 'iconColor' => '#4b5563', 'labelColor' => '#6b7280'];
+                            $fundSourceStyles = $fundSourceStyleMap[$fundSource] ?? ['bg' => 'linear-gradient(180deg, #ffffff 0%, #f9fafb 100%)', 'border' => '#e5e7eb', 'iconBg' => 'linear-gradient(180deg, #f3f4f6 0%, #e5e7eb 100%)', 'iconColor' => '#4b5563', 'labelColor' => '#6b7280'];
                             $fundSourceModalKey = trim((string) preg_replace('/[^a-z0-9]+/i', '-', (string) $fundSource), '-');
                             $fundSourceModalId = 'fund-source-' . ($fundSourceModalKey !== '' ? $fundSourceModalKey : 'unspecified') . '-modal';
                             $projectCodeKeyword = strtoupper(trim((string) $fundSource)) === 'FALGU'
@@ -242,7 +244,7 @@
                                 'padding: 12px',
                                 'border: 1px solid ' . $fundSourceStyles['border'],
                                 'border-radius: 6px',
-                                'background-color: ' . $fundSourceStyles['bg'],
+                                'background: ' . $fundSourceStyles['bg'],
                                 'text-align: center',
                                 'color: inherit',
                                 'display: block',
@@ -267,7 +269,7 @@
                                         'width: 20px',
                                         'height: 20px',
                                         'border-radius: 999px',
-                                        'background-color: ' . $fundSourceStyles['iconBg'],
+                                        'background: ' . $fundSourceStyles['iconBg'],
                                         'color: ' . $fundSourceStyles['iconColor'],
                                         'display: inline-flex',
                                         'align-items: center',
@@ -2140,6 +2142,10 @@
             margin-bottom: 24px;
         }
 
+        .dashboard-main-layout-filter {
+            grid-column: 1 / -1;
+        }
+
         .dashboard-main-layout > * {
             min-width: 0;
         }
@@ -3084,24 +3090,45 @@
             grid-column: 3;
         }
 
+        .dashboard-filter-reset-link {
+            box-shadow: 0 4px 10px rgba(0, 44, 118, 0.18);
+            transition: box-shadow 0.18s ease, transform 0.18s ease;
+        }
+
+        .dashboard-filter-reset-link:hover {
+            box-shadow: 0 6px 14px rgba(0, 44, 118, 0.24);
+            transform: translateY(-1px);
+        }
+
+        .dashboard-filter-reset-link:focus-visible {
+            outline: 2px solid rgba(96, 165, 250, 0.9);
+            outline-offset: 2px;
+            box-shadow: 0 6px 14px rgba(0, 44, 118, 0.24);
+        }
+
         .dashboard-filter-export-btn {
             height: 34px;
             min-width: 150px;
             border-radius: 7px;
             border: 0;
-            background-color: #16a34a;
+            background: linear-gradient(180deg, #0a8a52 0%, #007542 100%);
             color: #ffffff;
             display: inline-flex;
             align-items: center;
             justify-content: center;
+            gap: 8px;
             font-size: 13px;
             font-weight: 600;
             padding: 0 14px;
             cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0, 117, 66, 0.18);
+            transition: background 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
         }
 
         .dashboard-filter-export-btn:hover {
-            background-color: #15803d;
+            background: linear-gradient(180deg, #0b9a5b 0%, #00693b 100%);
+            box-shadow: 0 6px 14px rgba(0, 117, 66, 0.24);
+            transform: translateY(-1px);
         }
 
         .clickable-dashboard-card {

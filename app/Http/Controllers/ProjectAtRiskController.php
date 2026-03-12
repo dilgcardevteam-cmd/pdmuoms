@@ -14,6 +14,28 @@ class ProjectAtRiskController extends Controller
 {
     private const IMPORT_HISTORY_TABLE = 'project_at_risk_import_histories';
     private const IMPORT_STORAGE_DIRECTORY = 'project-at-risk-imports';
+    private const TEMPLATE_HEADERS = [
+        'Project Code',
+        'LGU',
+        'Region',
+        'Province',
+        'City/Municipality',
+        'Barangays',
+        'Funding Year',
+        'Program',
+        'Project Title',
+        'Procurement Type',
+        'National Subsidy (Original Allocation)',
+        'Status',
+        'Target',
+        'Actual',
+        'Slippage',
+        'Date of Accomplishment',
+        'Date of Extraction',
+        'Aging',
+        'Risk Level as to Slippage',
+        'Risk Level as to Aging',
+    ];
 
     public function index(Request $request)
     {
@@ -105,6 +127,18 @@ class ProjectAtRiskController extends Controller
             'tableMissing' => $tableMissing,
             'importHistoryRows' => $importHistoryRows,
             'importHistoryTableMissing' => $importHistoryTableMissing,
+        ]);
+    }
+
+    public function downloadTemplate()
+    {
+        return response()->streamDownload(function () {
+            echo "\xEF\xBB\xBF";
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, self::TEMPLATE_HEADERS);
+            fclose($handle);
+        }, 'project-at-risk-template.csv', [
+            'Content-Type' => 'text/csv; charset=UTF-8',
         ]);
     }
 

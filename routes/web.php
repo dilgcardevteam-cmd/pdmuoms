@@ -1629,6 +1629,8 @@ Route::middleware(['auth'])->group(function () {
         return $renderProjectDashboard('sglgif');
     })->name('projects.sglgif');
 
+    Route::get('/projects/rlip-lime/dashboard', [RlipLimeProjectController::class, 'dashboard'])
+        ->name('projects.rlip-lime.dashboard');
     Route::get('/projects/rlip-lime', [RlipLimeProjectController::class, 'index'])->name('projects.rlip-lime');
     Route::get('/projects/rlip-lime/{rowNumber}', [RlipLimeProjectController::class, 'show'])
         ->whereNumber('rowNumber')
@@ -1640,10 +1642,14 @@ Route::middleware(['auth'])->group(function () {
         })->name('system-management.index');
         Route::get('/system-management/upload-subaybayan', [SystemManagementController::class, 'uploadSubaybayan'])
             ->name('system-management.upload-subaybayan');
+        Route::get('/system-management/upload-subaybayan/template', [SystemManagementController::class, 'downloadSubaybayanTemplate'])
+            ->name('system-management.upload-subaybayan.template');
         Route::view('/system-management/upload-rlip-lime', 'system-management.upload-rlip-lime')
             ->name('system-management.upload-rlip-lime');
         Route::get('/system-management/upload-project-at-risk', [App\Http\Controllers\ProjectAtRiskController::class, 'uploadManager'])
             ->name('system-management.upload-project-at-risk');
+        Route::get('/system-management/upload-project-at-risk/template', [App\Http\Controllers\ProjectAtRiskController::class, 'downloadTemplate'])
+            ->name('system-management.upload-project-at-risk.template');
         Route::post('/system-management/upload-project-at-risk/import', [App\Http\Controllers\ProjectAtRiskController::class, 'import'])
             ->name('system-management.upload-project-at-risk.import');
         Route::post('/system-management/upload-project-at-risk/import/{importId}/load', [App\Http\Controllers\ProjectAtRiskController::class, 'loadImport'])
