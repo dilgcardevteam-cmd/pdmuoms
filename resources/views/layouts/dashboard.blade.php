@@ -1301,6 +1301,12 @@
                 </a>
                 <ul id="utilitiesMenu" class="submenu" style="display: {{ $utilitiesMenuActive ? 'block' : 'none' }};">
                     <li>
+                        <a href="{{ route('utilities.system-setup.index') }}" class="@if(request()->routeIs('utilities.system-setup.*')) active @endif">
+                            <i class="fas fa-sliders-h"></i>
+                            <span>System Setup</span>
+                        </a>
+                    </li>
+                    <li>
                         <a href="{{ route('utilities.backup-and-restore.index') }}" class="@if(request()->routeIs('utilities.backup-and-restore.*')) active @endif">
                             <i class="fas fa-server"></i>
                             <span>Backup and Restore</span>

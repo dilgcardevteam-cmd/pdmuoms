@@ -1555,6 +1555,25 @@ Route::middleware(['auth'])->group(function () {
     // User Management routes (superadmin only)
     Route::middleware('superadmin')->group(function () {
         Route::resource('users', App\Http\Controllers\UserManagementController::class);
+        Route::get('/utilities/system-setup', [App\Http\Controllers\DatabaseUtilityController::class, 'systemSetup'])
+            ->name('utilities.system-setup.index');
+        Route::get('/utilities/location-configuration', [App\Http\Controllers\DatabaseUtilityController::class, 'locationConfiguration'])
+            ->name('utilities.location-configuration.index');
+        Route::post('/utilities/location-configuration/import/{dataset}', [App\Http\Controllers\DatabaseUtilityController::class, 'importLocationDataset'])
+            ->whereIn('dataset', ['regions', 'provinces', 'city-municipalities'])
+            ->name('utilities.location-configuration.import');
+        Route::post('/utilities/location-configuration/import/{dataset}/{importId}/load', [App\Http\Controllers\DatabaseUtilityController::class, 'loadLocationDatasetImport'])
+            ->whereIn('dataset', ['regions', 'provinces', 'city-municipalities'])
+            ->whereNumber('importId')
+            ->name('utilities.location-configuration.load');
+        Route::get('/utilities/location-configuration/import/{dataset}/{importId}/download', [App\Http\Controllers\DatabaseUtilityController::class, 'downloadLocationDatasetImport'])
+            ->whereIn('dataset', ['regions', 'provinces', 'city-municipalities'])
+            ->whereNumber('importId')
+            ->name('utilities.location-configuration.download');
+        Route::delete('/utilities/location-configuration/import/{dataset}/{importId}', [App\Http\Controllers\DatabaseUtilityController::class, 'deleteLocationDatasetImport'])
+            ->whereIn('dataset', ['regions', 'provinces', 'city-municipalities'])
+            ->whereNumber('importId')
+            ->name('utilities.location-configuration.delete');
         Route::get('/utilities/backup-and-restore', [App\Http\Controllers\DatabaseUtilityController::class, 'index'])
             ->name('utilities.backup-and-restore.index');
         Route::get('/utilities/backup-and-restore/download', [App\Http\Controllers\DatabaseUtilityController::class, 'downloadBackup'])
