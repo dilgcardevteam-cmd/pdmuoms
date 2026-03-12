@@ -89,6 +89,199 @@ class SystemManagementController extends Controller
 
     public function uploadSubaybayan()
     {
+        return $this->renderSubaybayanUploadManager(
+            $this->resolveSubaybayanUploadPage('system-management.upload-subaybayan')
+        );
+    }
+
+    public function uploadSglgif()
+    {
+        return $this->renderSubaybayanUploadManager(
+            $this->resolveSubaybayanUploadPage('system-management.upload-sglgif')
+        );
+    }
+
+    public function downloadSubaybayanTemplate(Request $request)
+    {
+        $uploadPage = $this->resolveSubaybayanUploadPage($request->route()?->getName());
+
+        return response()->streamDownload(function () {
+            echo "\xEF\xBB\xBF";
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, self::TEMPLATE_HEADERS);
+            fclose($handle);
+        }, $uploadPage['templateFileName'], [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
+    }
+
+    public function importSubaybayan(Request $request)
+    {
+        $uploadPage = $this->resolveSubaybayanUploadPage($request->route()?->getName());
+
+        if (!Schema::hasTable('subay_project_profiles')) {
+            return back()->with('error', $uploadPage['entityLabel'] . ' data table is not available yet.');
+        }
+
+        $request->validate(
+            [
+                'file' => ['required', 'file', 'mimes:csv,txt', 'max:51200'],
+            ],
+            [
+                'file.mimes' => 'Please upload a CSV file. If your data is in Excel, save it as CSV first.',
+            ]
+        );
+
+        $file = $request->file('file');
+        if (!$file) {
+            return back()->with('error', 'No file was uploaded.');
+        }
+
+        $originalFileName = (string) $file->getClientOriginalName();
+        $storageFileName = $this->generateImportStorageFileName($originalFileName, $uploadPage['storageSlug']);
+        $storedPath = $file->storeAs('subaybayan-imports', $storageFileName, 'local');
+        if (!$storedPath) {
+            return back()->with('error', 'Unable to store the uploaded file.');
+        }
+
+        if (!Schema::hasTable(self::IMPORT_HISTORY_TABLE)) {
+            Storage::disk('local')->delete($storedPath);
+            return back()->with('error', 'Import history table is not available yet. Please run migration first.');
+        }
+
+        $now = now();
+        DB::table(self::IMPORT_HISTORY_TABLE)->insert([
+            'original_file_name' => $originalFileName !== '' ? $originalFileName : basename($storedPath),
+            'stored_file_path' => $storedPath,
+            'file_size_bytes' => $file->getSize(),
+            'imported_at' => $now,
+            'last_loaded_at' => null,
+            'created_by' => auth()->id(),
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+
+        return back()->with('success', 'CSV file added to import history. Click Load to import it into ' . $uploadPage['entityLabel'] . ' data.');
+    }
+
+    public function loadSubaybayanImport(Request $request, $importId)
+    {
+        $uploadPage = $this->resolveSubaybayanUploadPage($request->route()?->getName());
+
+        if (!Schema::hasTable('subay_project_profiles')) {
+            return back()->with('error', $uploadPage['entityLabel'] . ' data table is not available yet.');
+        }
+
+        if (!Schema::hasTable(self::IMPORT_HISTORY_TABLE)) {
+            return back()->with('error', 'Import history table is not available yet. Please run migration first.');
+        }
+
+        $record = DB::table(self::IMPORT_HISTORY_TABLE)
+            ->where('id', (int) $importId)
+            ->first();
+
+        if (!$record) {
+            return back()->with('error', 'Selected import record was not found.');
+        }
+
+        $storedPath = (string) ($record->stored_file_path ?? '');
+        if ($storedPath === '' || !Storage::disk('local')->exists($storedPath)) {
+            return back()->with('error', 'The selected imported file is no longer available.');
+        }
+
+        $absolutePath = Storage::disk('local')->path($storedPath);
+        try {
+            $inserted = $this->importCsvSnapshot($absolutePath);
+        } catch (\RuntimeException $exception) {
+            return back()->with('error', $exception->getMessage());
+        }
+
+        if ($inserted === 0) {
+            return back()->with('error', 'No valid rows were loaded from the selected import file.');
+        }
+
+        DB::table(self::IMPORT_HISTORY_TABLE)
+            ->where('id', (int) $importId)
+            ->update([
+                'last_loaded_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+        $displayName = trim((string) ($record->original_file_name ?? ''));
+        if ($displayName === '') {
+            $displayName = basename($storedPath);
+        }
+
+        return back()->with('success', "Loaded {$inserted} rows from {$displayName}.");
+    }
+
+    public function deleteSubaybayanImport(Request $request, $importId)
+    {
+        if (!Schema::hasTable(self::IMPORT_HISTORY_TABLE)) {
+            return back()->with('error', 'Import history table is not available yet. Please run migration first.');
+        }
+
+        $record = DB::table(self::IMPORT_HISTORY_TABLE)
+            ->where('id', (int) $importId)
+            ->first();
+
+        if (!$record) {
+            return back()->with('error', 'Selected import record was not found.');
+        }
+
+        $storedPath = (string) ($record->stored_file_path ?? '');
+        if ($storedPath !== '' && Storage::disk('local')->exists($storedPath)) {
+            Storage::disk('local')->delete($storedPath);
+        }
+
+        DB::table(self::IMPORT_HISTORY_TABLE)
+            ->where('id', (int) $importId)
+            ->delete();
+
+        return back()->with('success', 'Imported file record deleted successfully.');
+    }
+
+    public function downloadSubaybayanImport(Request $request, $importId)
+    {
+        if (!Schema::hasTable(self::IMPORT_HISTORY_TABLE)) {
+            return back()->with('error', 'Import history table is not available yet. Please run migration first.');
+        }
+
+        $record = DB::table(self::IMPORT_HISTORY_TABLE)
+            ->where('id', (int) $importId)
+            ->first();
+
+        if (!$record) {
+            return back()->with('error', 'Selected import record was not found.');
+        }
+
+        $storedPath = (string) ($record->stored_file_path ?? '');
+        if ($storedPath === '' || !Storage::disk('local')->exists($storedPath)) {
+            return back()->with('error', 'The selected imported file is no longer available.');
+        }
+
+        $downloadName = trim((string) ($record->original_file_name ?? ''));
+        if ($downloadName === '') {
+            $downloadName = basename($storedPath);
+        }
+        $downloadName = basename($downloadName);
+
+        $extension = strtolower(pathinfo($downloadName, PATHINFO_EXTENSION));
+        $contentType = in_array($extension, ['csv', 'txt'], true)
+            ? 'text/csv; charset=UTF-8'
+            : 'application/octet-stream';
+
+        return response()->download(
+            Storage::disk('local')->path($storedPath),
+            $downloadName,
+            [
+                'Content-Type' => $contentType,
+            ]
+        );
+    }
+
+    private function renderSubaybayanUploadManager(array $uploadPage)
+    {
         if (!Schema::hasTable('subay_project_profiles')) {
             return view('system-management.upload-subaybayan', [
                 'tableMissing' => true,
@@ -96,6 +289,7 @@ class SystemManagementController extends Controller
                 'filterOptions' => [],
                 'importHistoryRows' => collect(),
                 'importHistoryTableMissing' => !Schema::hasTable(self::IMPORT_HISTORY_TABLE),
+                'uploadPage' => $uploadPage,
             ]);
         }
 
@@ -210,180 +404,39 @@ class SystemManagementController extends Controller
             'filterOptions' => $filterOptions,
             'importHistoryRows' => $importHistoryRows,
             'importHistoryTableMissing' => $importHistoryTableMissing,
+            'uploadPage' => $uploadPage,
         ]);
     }
 
-    public function downloadSubaybayanTemplate()
+    private function resolveSubaybayanUploadPage(?string $routeName = null): array
     {
-        return response()->streamDownload(function () {
-            echo "\xEF\xBB\xBF";
-            $handle = fopen('php://output', 'w');
-            fputcsv($handle, self::TEMPLATE_HEADERS);
-            fclose($handle);
-        }, 'subaybayan-template.csv', [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-        ]);
-    }
-
-    public function importSubaybayan(Request $request)
-    {
-        if (!Schema::hasTable('subay_project_profiles')) {
-            return back()->with('error', 'SubayBAYAN data table is not available yet.');
+        if (Str::startsWith((string) $routeName, 'system-management.upload-sglgif')) {
+            return [
+                'title' => 'Upload SGLGIF Data',
+                'pageTitle' => 'Upload SGLGIF Data',
+                'heading' => 'Upload SGLGIF Data',
+                'description' => 'Upload SGLGIF data files for system processing.',
+                'listTitle' => 'Imported SGLGIF Files',
+                'entityLabel' => 'SGLGIF',
+                'modalTitle' => 'Import SGLGIF Data (CSV)',
+                'routeBase' => 'system-management.upload-sglgif',
+                'templateFileName' => 'sglgif-template.csv',
+                'storageSlug' => 'sglgif',
+            ];
         }
 
-        $request->validate(
-            [
-                'file' => ['required', 'file', 'mimes:csv,txt', 'max:51200'],
-            ],
-            [
-                'file.mimes' => 'Please upload a CSV file. If your data is in Excel, save it as CSV first.',
-            ]
-        );
-
-        $file = $request->file('file');
-        if (!$file) {
-            return back()->with('error', 'No file was uploaded.');
-        }
-
-        $originalFileName = (string) $file->getClientOriginalName();
-        $storageFileName = $this->generateImportStorageFileName($originalFileName);
-        $storedPath = $file->storeAs('subaybayan-imports', $storageFileName, 'local');
-        if (!$storedPath) {
-            return back()->with('error', 'Unable to store the uploaded file.');
-        }
-
-        if (!Schema::hasTable(self::IMPORT_HISTORY_TABLE)) {
-            Storage::disk('local')->delete($storedPath);
-            return back()->with('error', 'Import history table is not available yet. Please run migration first.');
-        }
-
-        $now = now();
-        DB::table(self::IMPORT_HISTORY_TABLE)->insert([
-            'original_file_name' => $originalFileName !== '' ? $originalFileName : basename($storedPath),
-            'stored_file_path' => $storedPath,
-            'file_size_bytes' => $file->getSize(),
-            'imported_at' => $now,
-            'last_loaded_at' => null,
-            'created_by' => auth()->id(),
-            'created_at' => $now,
-            'updated_at' => $now,
-        ]);
-
-        return back()->with('success', 'CSV file added to import history. Click Load to import it into SubayBAYAN data.');
-    }
-
-    public function loadSubaybayanImport($importId)
-    {
-        if (!Schema::hasTable('subay_project_profiles')) {
-            return back()->with('error', 'SubayBAYAN data table is not available yet.');
-        }
-
-        if (!Schema::hasTable(self::IMPORT_HISTORY_TABLE)) {
-            return back()->with('error', 'Import history table is not available yet. Please run migration first.');
-        }
-
-        $record = DB::table(self::IMPORT_HISTORY_TABLE)
-            ->where('id', (int) $importId)
-            ->first();
-
-        if (!$record) {
-            return back()->with('error', 'Selected import record was not found.');
-        }
-
-        $storedPath = (string) ($record->stored_file_path ?? '');
-        if ($storedPath === '' || !Storage::disk('local')->exists($storedPath)) {
-            return back()->with('error', 'The selected imported file is no longer available.');
-        }
-
-        $absolutePath = Storage::disk('local')->path($storedPath);
-        try {
-            $inserted = $this->importCsvSnapshot($absolutePath);
-        } catch (\RuntimeException $exception) {
-            return back()->with('error', $exception->getMessage());
-        }
-
-        if ($inserted === 0) {
-            return back()->with('error', 'No valid rows were loaded from the selected import file.');
-        }
-
-        DB::table(self::IMPORT_HISTORY_TABLE)
-            ->where('id', (int) $importId)
-            ->update([
-                'last_loaded_at' => now(),
-                'updated_at' => now(),
-            ]);
-
-        $displayName = trim((string) ($record->original_file_name ?? ''));
-        if ($displayName === '') {
-            $displayName = basename($storedPath);
-        }
-
-        return back()->with('success', "Loaded {$inserted} rows from {$displayName}.");
-    }
-
-    public function deleteSubaybayanImport($importId)
-    {
-        if (!Schema::hasTable(self::IMPORT_HISTORY_TABLE)) {
-            return back()->with('error', 'Import history table is not available yet. Please run migration first.');
-        }
-
-        $record = DB::table(self::IMPORT_HISTORY_TABLE)
-            ->where('id', (int) $importId)
-            ->first();
-
-        if (!$record) {
-            return back()->with('error', 'Selected import record was not found.');
-        }
-
-        $storedPath = (string) ($record->stored_file_path ?? '');
-        if ($storedPath !== '' && Storage::disk('local')->exists($storedPath)) {
-            Storage::disk('local')->delete($storedPath);
-        }
-
-        DB::table(self::IMPORT_HISTORY_TABLE)
-            ->where('id', (int) $importId)
-            ->delete();
-
-        return back()->with('success', 'Imported file record deleted successfully.');
-    }
-
-    public function downloadSubaybayanImport($importId)
-    {
-        if (!Schema::hasTable(self::IMPORT_HISTORY_TABLE)) {
-            return back()->with('error', 'Import history table is not available yet. Please run migration first.');
-        }
-
-        $record = DB::table(self::IMPORT_HISTORY_TABLE)
-            ->where('id', (int) $importId)
-            ->first();
-
-        if (!$record) {
-            return back()->with('error', 'Selected import record was not found.');
-        }
-
-        $storedPath = (string) ($record->stored_file_path ?? '');
-        if ($storedPath === '' || !Storage::disk('local')->exists($storedPath)) {
-            return back()->with('error', 'The selected imported file is no longer available.');
-        }
-
-        $downloadName = trim((string) ($record->original_file_name ?? ''));
-        if ($downloadName === '') {
-            $downloadName = basename($storedPath);
-        }
-        $downloadName = basename($downloadName);
-
-        $extension = strtolower(pathinfo($downloadName, PATHINFO_EXTENSION));
-        $contentType = in_array($extension, ['csv', 'txt'], true)
-            ? 'text/csv; charset=UTF-8'
-            : 'application/octet-stream';
-
-        return response()->download(
-            Storage::disk('local')->path($storedPath),
-            $downloadName,
-            [
-                'Content-Type' => $contentType,
-            ]
-        );
+        return [
+            'title' => 'Upload SubayBAYAN Data',
+            'pageTitle' => 'Upload SubayBAYAN Data',
+            'heading' => 'Upload SubayBAYAN Data',
+            'description' => 'Upload SubayBAYAN data files for system processing.',
+            'listTitle' => 'Imported SubayBAYAN Files',
+            'entityLabel' => 'SubayBAYAN',
+            'modalTitle' => 'Import SubayBAYAN Data (CSV)',
+            'routeBase' => 'system-management.upload-subaybayan',
+            'templateFileName' => 'subaybayan-template.csv',
+            'storageSlug' => 'subaybayan',
+        ];
     }
 
     public function uploadRlipLime()

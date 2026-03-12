@@ -43,21 +43,20 @@
         
         /* Sidebar Styles */
         .sidebar {
-            --sidebar-base: #002C76;
-            --sidebar-deep: #00163f;
-            --sidebar-mid: #003d99;
-            --sidebar-glow: rgba(125, 211, 252, 0.16);
-            --sidebar-highlight: rgba(255, 255, 255, 0.14);
+            --sidebar-start: #00163f;
+            --sidebar-mid: #002c76;
+            --sidebar-end: #0b4fb3;
+            --sidebar-glow: rgba(125, 211, 252, 0.18);
+            --sidebar-highlight: rgba(255, 255, 255, 0.16);
             position: fixed;
             left: 0;
             top: 0;
             height: 100vh;
             width: 250px;
-            background-color: var(--sidebar-base);
-            background-image:
+            background:
                 radial-gradient(circle at top left, var(--sidebar-highlight) 0%, transparent 34%),
                 radial-gradient(circle at bottom right, var(--sidebar-glow) 0%, transparent 30%),
-                linear-gradient(180deg, var(--sidebar-deep) 0%, var(--sidebar-base) 42%, var(--sidebar-mid) 100%);
+                linear-gradient(180deg, var(--sidebar-start) 0%, var(--sidebar-mid) 48%, var(--sidebar-end) 100%);
             padding: 20px;
             overflow-y: auto;
             transition: transform 280ms cubic-bezier(0.2, 0.8, 0.2, 1), width 280ms cubic-bezier(0.2, 0.8, 0.2, 1), padding 280ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 280ms cubic-bezier(0.2, 0.8, 0.2, 1);

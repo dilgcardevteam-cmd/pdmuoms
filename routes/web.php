@@ -1644,12 +1644,14 @@ Route::middleware(['auth'])->group(function () {
             ->name('system-management.upload-subaybayan');
         Route::get('/system-management/upload-subaybayan/template', [SystemManagementController::class, 'downloadSubaybayanTemplate'])
             ->name('system-management.upload-subaybayan.template');
+        Route::get('/system-management/upload-sglgif', [SystemManagementController::class, 'uploadSglgif'])
+            ->name('system-management.upload-sglgif');
+        Route::get('/system-management/upload-sglgif/template', [SystemManagementController::class, 'downloadSubaybayanTemplate'])
+            ->name('system-management.upload-sglgif.template');
         Route::get('/system-management/upload-rlip-lime', [SystemManagementController::class, 'uploadRlipLime'])
             ->name('system-management.upload-rlip-lime');
         Route::get('/system-management/upload-project-at-risk', [App\Http\Controllers\ProjectAtRiskController::class, 'uploadManager'])
             ->name('system-management.upload-project-at-risk');
-        Route::view('/system-management/upload-sglgif', 'system-management.upload-sglgif')
-            ->name('system-management.upload-sglgif');
         Route::get('/system-management/upload-project-at-risk/template', [App\Http\Controllers\ProjectAtRiskController::class, 'downloadTemplate'])
             ->name('system-management.upload-project-at-risk.template');
         Route::post('/system-management/upload-project-at-risk/import', [App\Http\Controllers\ProjectAtRiskController::class, 'import'])
@@ -1668,6 +1670,14 @@ Route::middleware(['auth'])->group(function () {
             ->name('system-management.upload-subaybayan.download');
         Route::delete('/system-management/upload-subaybayan/import/{importId}', [SystemManagementController::class, 'deleteSubaybayanImport'])
             ->name('system-management.upload-subaybayan.delete');
+        Route::post('/system-management/upload-sglgif/import', [SystemManagementController::class, 'importSubaybayan'])
+            ->name('system-management.upload-sglgif.import');
+        Route::post('/system-management/upload-sglgif/import/{importId}/load', [SystemManagementController::class, 'loadSubaybayanImport'])
+            ->name('system-management.upload-sglgif.load');
+        Route::get('/system-management/upload-sglgif/import/{importId}/download', [SystemManagementController::class, 'downloadSubaybayanImport'])
+            ->name('system-management.upload-sglgif.download');
+        Route::delete('/system-management/upload-sglgif/import/{importId}', [SystemManagementController::class, 'deleteSubaybayanImport'])
+            ->name('system-management.upload-sglgif.delete');
         Route::post('/system-management/upload-rlip-lime/import', [SystemManagementController::class, 'importRlipLime'])
             ->name('system-management.upload-rlip-lime.import');
         Route::post('/system-management/upload-rlip-lime/import/{importId}/load', [SystemManagementController::class, 'loadRlipLimeImport'])
