@@ -4,6 +4,7 @@
 @section('page-title', 'Update RBIS Annual Certification')
 
 @section('content')
+    <div class="ops-detail-page">
     <div class="content-header" style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap;">
         <div>
             <h1>Update - {{ $officeName }}</h1>
@@ -420,6 +421,21 @@
                 if (!panel) return;
 
                 const isOpen = panel.style.display === 'block';
+
+                if (!isOpen) {
+                    document.querySelectorAll('.rbis-accordion-toggle').forEach(function (otherBtn) {
+                        if (otherBtn === button) return;
+                        const otherId = otherBtn.getAttribute('data-target');
+                        const otherPanel = document.getElementById(otherId);
+                        if (otherPanel && otherPanel.style.display === 'block') {
+                            otherPanel.style.display = 'none';
+                            otherBtn.setAttribute('aria-expanded', 'false');
+                            const otherIcon = otherBtn.querySelector('.fa-chevron-down');
+                            if (otherIcon) otherIcon.style.transform = 'rotate(0deg)';
+                        }
+                    });
+                }
+
                 panel.style.display = isOpen ? 'none' : 'block';
                 button.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
 
@@ -656,4 +672,5 @@
             }
         });
     </script>
+    </div>
 @endsection

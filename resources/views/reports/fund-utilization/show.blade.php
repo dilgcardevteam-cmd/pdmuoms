@@ -4,6 +4,7 @@
 @section('page-title', 'Fund Utilization Report Details')
 
 @section('content')
+    <div class="ops-detail-page">
     <div class="content-header" style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;">
         <div>
             <h1>{{ $report->project_code }}</h1>
@@ -1818,23 +1819,26 @@
         .modal {
             display: none;
             position: fixed;
-            z-index: 1000;
+            z-index: 1300;
             left: 0;
             top: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.4);
+            background-color: rgba(15, 23, 42, 0.55);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
         }
 
         .modal-content {
-            background-color: #fefefe;
-            margin: 10% auto;
+            background-color: #ffffff;
+            margin: 6% auto;
             padding: 30px;
             border: 1px solid #e5e7eb;
-            border-radius: 10px;
+            border-radius: 12px;
             width: 90%;
             max-width: 500px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 20px 48px rgba(15, 23, 42, 0.22);
+            position: relative;
         }
 
         .modal-header {
@@ -2099,17 +2103,29 @@
         function toggleAccordion(elementId) {
             const element = document.getElementById(elementId);
             const icon = document.getElementById('icon-' + elementId);
-            
-            if (element.style.display === 'none' || element.style.display === '') {
+            if (!element) return;
+
+            const isOpen = !(element.style.display === 'none' || element.style.display === '');
+
+            // Collapse other quarter panels when opening one
+            if (!isOpen && elementId.startsWith('quarter-')) {
+                document.querySelectorAll('[id^="quarter-"]').forEach(function (otherPanel) {
+                    if (otherPanel === element) return;
+                    if (otherPanel.style.display === 'block') {
+                        otherPanel.style.display = 'none';
+                        const otherId = otherPanel.getAttribute('id');
+                        const otherIcon = document.getElementById('icon-' + otherId);
+                        if (otherIcon) otherIcon.style.transform = 'rotate(0deg)';
+                    }
+                });
+            }
+
+            if (!isOpen) {
                 element.style.display = 'block';
-                if (icon) {
-                    icon.style.transform = 'rotate(180deg)';
-                }
+                if (icon) icon.style.transform = 'rotate(180deg)';
             } else {
                 element.style.display = 'none';
-                if (icon) {
-                    icon.style.transform = 'rotate(0deg)';
-                }
+                if (icon) icon.style.transform = 'rotate(0deg)';
             }
         }
 
@@ -2327,14 +2343,22 @@
         }
     </script>
 
-    <!-- Floating Log History Button -->
-    <button onclick="openLogsModal()" style="position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px; background-color: #002C76; color: white; border: none; border-radius: 50%; cursor: pointer; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); z-index: 1000; display: flex; align-items: center; justify-content: center; font-size: 20px; transition: all 0.3s ease;" onmouseover="this.style.transform='scale(1.1)'; this.style.boxShadow='0 6px 16px rgba(0, 0, 0, 0.4)';" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(0, 0, 0, 0.3)';">
-        <i class="fas fa-history"></i>
+    <!-- Floating Activity Logs Button -->
+    <button onclick="openLogsModal()" id="activityLogsFab" style="position: fixed; bottom: 24px; right: 24px; display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; background-color: #002C76; color: white; border: none; border-radius: 999px; cursor: pointer; font-size: 13px; font-weight: 600; box-shadow: 0 8px 20px rgba(0, 44, 118, 0.35); z-index: 1200; transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease; white-space: nowrap;" onmouseover="this.style.backgroundColor='#003d9e'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 12px 24px rgba(0, 44, 118, 0.4)';" onmouseout="this.style.backgroundColor='#002C76'; this.style.transform='translateY(0)'; this.style.boxShadow='0 8px 20px rgba(0, 44, 118, 0.35)';">
+        <i class="fas fa-clipboard-list" style="font-size: 14px;"></i>
+        <span>Activity Logs</span>
     </button>
 
+    <style>
+        @media (max-width: 640px) {
+            #activityLogsFab span { display: none; }
+            #activityLogsFab { padding: 14px; border-radius: 50%; }
+        }
+    </style>
 
+
+    </div>
 @endsection
-
 
 
 
