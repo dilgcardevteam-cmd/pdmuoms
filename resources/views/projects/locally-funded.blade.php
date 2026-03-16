@@ -9,8 +9,6 @@
         <p>{{ $pageDescription ?? 'Manage and review locally funded project records.' }}</p>
     </div>
 
-    @include('projects.partials.project-section-tabs', ['activeTab' => $activeProjectTab ?? 'locally-funded'])
-
     <div style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
         <!-- Header with Create Button -->
         <div class="projects-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">

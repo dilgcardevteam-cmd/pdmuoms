@@ -152,8 +152,6 @@
         </p>
     </div>
 
-    @include('projects.partials.project-section-tabs', ['activeTab' => $activeTab ?? 'sglgif'])
-
     <div class="dashboard-main-layout sglgif-dashboard-shell">
         <form method="GET" action="{{ route('projects.sglgif') }}" class="dashboard-card project-filter-form dashboard-main-layout-filter collapsed" style="background: #ffffff; padding: 16px 18px; border-radius: 12px; box-shadow: 0 8px 24px rgba(15,23,42,0.08); margin-bottom: 0;">
             <button type="button" class="project-filter-toggle" onclick="toggleProjectFilter(this)" aria-expanded="false" aria-controls="sglgif-filter-body">

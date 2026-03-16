@@ -1629,12 +1629,6 @@
                     </div>
                 </div>
 
-                <div class="flex flex-col">
-                    <div class="profile-menu-name">{{ Auth::user()->fname ?? 'User' }} {{ Auth::user()->lname ?? '' }}</div>
-                    <div class="profile-menu-role">{{ Auth::user()->roleLabel() }}</div>
-                </div>
-
-
                 <div class="profile-menu" id="profileMenu">
                     <div class="profile-menu-header">
                         <div class="profile-menu-name">{{ Auth::user()->fname ?? 'User' }} {{ Auth::user()->lname ?? '' }}</div>
