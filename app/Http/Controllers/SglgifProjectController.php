@@ -154,7 +154,20 @@ class SglgifProjectController extends Controller
 
         $provinceFundingBreakdown = $this->buildFundingBreakdown($rows, 'province', 6);
         $categoryFundingBreakdown = $this->buildFundingBreakdown($rows, 'sub_type_of_project', 6);
-        $topLguFundingBreakdown = $this->buildFundingBreakdown($rows, 'city_municipality', 8);
+        $provinceProjectsModalMap = $provinceBreakdown
+            ->pluck('label')
+            ->mapWithKeys(function (string $provinceLabel) use ($rows) {
+                $items = $rows
+                    ->filter(function (array $row) use ($provinceLabel) {
+                        $label = trim((string) ($row['province'] ?? ''));
+                        $normalizedLabel = $label !== '' ? $label : 'Unspecified';
+
+                        return $normalizedLabel === $provinceLabel;
+                    })
+                    ->values();
+
+                return [$provinceLabel => $items];
+            });
 
         $fundingYearBreakdown = $rows
             ->groupBy(fn (array $row) => trim((string) ($row['funding_year'] ?? '')) !== '' ? $row['funding_year'] : 'Unspecified')
@@ -298,12 +311,12 @@ class SglgifProjectController extends Controller
             'needsAttentionCount' => $needsAttentionCount,
             'statusBreakdown' => $statusBreakdown,
             'provinceBreakdown' => $provinceBreakdown,
+            'provinceProjectsModalMap' => $provinceProjectsModalMap,
             'categoryBreakdown' => $categoryBreakdown,
             'typeBreakdown' => $typeBreakdown,
             'levelBreakdown' => $levelBreakdown,
             'provinceFundingBreakdown' => $provinceFundingBreakdown,
             'categoryFundingBreakdown' => $categoryFundingBreakdown,
-            'topLguFundingBreakdown' => $topLguFundingBreakdown,
             'fundingYearBreakdown' => $fundingYearBreakdown,
             'progressBandBreakdown' => $progressBandBreakdown,
             'riskBreakdown' => $riskBreakdown,
@@ -349,12 +362,12 @@ class SglgifProjectController extends Controller
             'needsAttentionCount' => 0,
             'statusBreakdown' => collect(),
             'provinceBreakdown' => collect(),
+            'provinceProjectsModalMap' => collect(),
             'categoryBreakdown' => collect(),
             'typeBreakdown' => collect(),
             'levelBreakdown' => collect(),
             'provinceFundingBreakdown' => collect(),
             'categoryFundingBreakdown' => collect(),
-            'topLguFundingBreakdown' => collect(),
             'fundingYearBreakdown' => collect(),
             'progressBandBreakdown' => collect(),
             'riskBreakdown' => collect(),

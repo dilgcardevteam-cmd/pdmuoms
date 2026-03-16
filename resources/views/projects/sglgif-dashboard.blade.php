@@ -20,7 +20,6 @@
         $topProvinceCount = (int) ($provinceBreakdown->first()['count'] ?? 0);
         $topProvinceFundingAmount = (float) ($provinceFundingBreakdown->first()['amount'] ?? 0);
         $topYearFundingAmount = (float) ($fundingYearBreakdown->max('amount') ?? 0);
-        $topLguFundingAmount = (float) ($topLguFundingBreakdown->first()['amount'] ?? 0);
         $progressTotal = (int) (($progressBandBreakdown ?? collect())->sum('count') ?? 0);
         $avgSubsidyPerProject = $totalProjects > 0 ? $totalSubsidyAmount / $totalProjects : 0;
 
@@ -54,6 +53,77 @@
             'Completed' => ['color' => '#166534', 'bg' => '#dcfce7', 'border' => '#86efac'],
             'Ongoing' => ['color' => '#1d4ed8', 'bg' => '#dbeafe', 'border' => '#93c5fd'],
         ];
+
+        $buildMixChart = function (string $ariaLabel, array $segments): array {
+            $filteredSegments = array_values(array_filter($segments, function (array $segment) {
+                return (int) ($segment['count'] ?? 0) > 0;
+            }));
+
+            $total = array_sum(array_map(function (array $segment) {
+                return (int) ($segment['count'] ?? 0);
+            }, $filteredSegments));
+
+            $preparedSegments = [];
+            $sweepDurationMs = 1400.0;
+            $minSegmentDurationMs = 120.0;
+            $calloutStepMs = 140.0;
+            $sweepEndMs = 0.0;
+
+            if ($total > 0) {
+                $segmentCount = count($filteredSegments);
+                $gapPercent = $segmentCount > 1 ? 0.8 : 0.0;
+                $availablePercent = max(0.0, 100.0 - ($segmentCount * $gapPercent));
+                $runningPercent = 0.0;
+
+                foreach ($filteredSegments as $segment) {
+                    $count = (int) ($segment['count'] ?? 0);
+                    $segmentRawPercent = ($count / $total) * 100;
+                    $segmentLength = ($segmentRawPercent / 100) * $availablePercent;
+                    if ($segmentLength <= 0.01) {
+                        continue;
+                    }
+
+                    $segmentDelayMs = ($runningPercent / 100) * $sweepDurationMs;
+                    $segmentDurationMs = max(
+                        $minSegmentDurationMs,
+                        ($segmentLength / 100) * $sweepDurationMs
+                    );
+                    $sweepEndMs = max($sweepEndMs, $segmentDelayMs + $segmentDurationMs);
+
+                    $preparedSegments[] = [
+                        'start' => $runningPercent,
+                        'length' => $segmentLength,
+                        'color' => $segment['color'],
+                        'label' => $segment['label'],
+                        'count' => $count,
+                        'percentage' => $segmentRawPercent,
+                        'segmentDelayMs' => $segmentDelayMs,
+                        'segmentDurationMs' => $segmentDurationMs,
+                    ];
+
+                    $runningPercent += $segmentLength + $gapPercent;
+                }
+            }
+
+            return [
+                'ariaLabel' => $ariaLabel,
+                'segments' => $preparedSegments,
+                'total' => $total,
+                'calloutStartDelayMs' => $sweepEndMs + 120.0,
+                'calloutStepMs' => $calloutStepMs,
+            ];
+        };
+
+        $typeMixChart = $buildMixChart('SGLGIF project type split donut chart', [
+            ['label' => 'Infrastructure', 'count' => $infrastructureCount, 'color' => '#2563eb'],
+            ['label' => 'Non-Infrastructure', 'count' => $nonInfrastructureCount, 'color' => '#f59e0b'],
+        ]);
+
+        $levelMixChart = $buildMixChart('SGLGIF implementation level split donut chart', [
+            ['label' => 'Municipality', 'count' => $municipalityCount, 'color' => '#0f766e'],
+            ['label' => 'Province', 'count' => $provinceLevelCount, 'color' => '#7c3aed'],
+            ['label' => 'City', 'count' => $cityLevelCount, 'color' => '#ea580c'],
+        ]);
     @endphp
 
     <div class="content-header">
@@ -172,41 +242,6 @@
         </form>
 
         <div class="dashboard-top-cards">
-            <section class="dashboard-card sglgif-hero-card">
-                <div class="sglgif-hero-copy">
-                    <span class="sglgif-kicker">Portfolio Pulse</span>
-                    <h2>SGLGIF delivery is concentrated in local infrastructure, with a strong completion rate and a small set of active projects requiring focused follow-through.</h2>
-                    <p>The current filter scope covers {{ number_format($totalProjects) }} SGLGIF projects, averaging {{ number_format($averageOverallPercent, 2) }}% overall accomplishment and {{ number_format($subsidyUtilizationPercent, 2) }}% cost absorption versus subsidy.</p>
-                </div>
-                <div class="sglgif-hero-metrics">
-                    <a href="{{ route('projects.sglgif.table', request()->query()) }}" class="sglgif-hero-tile">
-                        <span>Total Projects</span>
-                        <strong>{{ number_format($totalProjects) }}</strong>
-                        <small>{{ number_format($uniqueLguCount) }} LGUs / {{ number_format($uniqueProvinceCount) }} provinces</small>
-                    </a>
-                    <div class="sglgif-hero-tile">
-                        <span>Total Subsidy</span>
-                        <strong>&#8369; {{ number_format($totalSubsidyAmount, 2) }}</strong>
-                        <small>Average per project: &#8369; {{ number_format($avgSubsidyPerProject, 2) }}</small>
-                    </div>
-                    <div class="sglgif-hero-tile">
-                        <span>Average Overall</span>
-                        <strong>{{ number_format($averageOverallPercent, 2) }}%</strong>
-                        <small>Financial {{ number_format($averageFinancialPercent, 2) }}% / Physical {{ number_format($averagePhysicalPercent, 2) }}%</small>
-                    </div>
-                    <div class="sglgif-hero-tile">
-                        <span>Delivery Rate</span>
-                        <strong>{{ number_format($completedRatePercent, 2) }}%</strong>
-                        <small>{{ number_format($completedProjects) }} completed / {{ number_format($ongoingProjects) }} ongoing</small>
-                    </div>
-                </div>
-                <div class="sglgif-hero-ribbon">
-                    <span><i class="fas fa-shield-heart"></i> {{ number_format($uniqueCategoryCount) }} strategic focus categories</span>
-                    <span><i class="fas fa-city"></i> Municipality-led projects: {{ number_format($municipalityCount) }}</span>
-                    <span><i class="fas fa-folder-open"></i> Attachment readiness average: {{ number_format($averageAttachmentPercent, 2) }}%</span>
-                </div>
-            </section>
-
             <section class="dashboard-card sglgif-card">
                 <div class="sglgif-card-head">
                     <div>
@@ -215,23 +250,162 @@
                     </div>
                 </div>
 
-                <div class="sglgif-stat-strip">
-                    <div class="sglgif-mini-stat">
-                        <span>Infrastructure</span>
-                        <strong>{{ number_format($infrastructureCount) }}</strong>
-                    </div>
-                    <div class="sglgif-mini-stat">
-                        <span>Non-Infrastructure</span>
-                        <strong>{{ number_format($nonInfrastructureCount) }}</strong>
-                    </div>
-                    <div class="sglgif-mini-stat">
-                        <span>Municipality Level</span>
-                        <strong>{{ number_format($municipalityCount) }}</strong>
-                    </div>
-                    <div class="sglgif-mini-stat">
-                        <span>Province/City Level</span>
-                        <strong>{{ number_format($provinceLevelCount + $cityLevelCount) }}</strong>
-                    </div>
+                <div class="sglgif-mix-chart-grid">
+                    <article class="sglgif-mix-chart-card">
+                        <div class="sglgif-mix-chart-head">
+                            <div>
+                                <h3>Project Type Split</h3>
+                                <p>Infrastructure versus non-infrastructure projects in the current scope.</p>
+                            </div>
+                            <strong>{{ number_format($typeMixChart['total']) }} projects</strong>
+                        </div>
+                        <div class="sglgif-mix-chart-body">
+                            @if(!empty($typeMixChart['segments']))
+                                <div class="sglgif-mix-donut-layout">
+                                    <div class="sglgif-mix-donut-wrap">
+                                        <svg
+                                            class="sglgif-mix-donut"
+                                            viewBox="0 0 100 100"
+                                            preserveAspectRatio="xMidYMid meet"
+                                            aria-label="{{ $typeMixChart['ariaLabel'] }}"
+                                        >
+                                            <circle class="sglgif-mix-donut-track" cx="50" cy="50" r="36" pathLength="100"></circle>
+                                            @foreach($typeMixChart['segments'] as $segment)
+                                                @php
+                                                    $segmentMidAngle = (($segment['start'] + ($segment['length'] / 2)) * 3.6) - 90;
+                                                    $segmentMidRadians = deg2rad($segmentMidAngle);
+                                                    $segmentHoverOffset = 2.2;
+                                                    $segmentHoverX = $segmentHoverOffset * cos($segmentMidRadians);
+                                                    $segmentHoverY = $segmentHoverOffset * sin($segmentMidRadians);
+                                                @endphp
+                                                <circle
+                                                    class="sglgif-mix-donut-segment"
+                                                    cx="50"
+                                                    cy="50"
+                                                    r="36"
+                                                    pathLength="100"
+                                                    @style([
+                                                        '--segment-length: ' . number_format($segment['length'], 4, '.', ''),
+                                                        '--segment-delay: ' . number_format($segment['segmentDelayMs'], 2, '.', '') . 'ms',
+                                                        '--segment-duration: ' . number_format($segment['segmentDurationMs'], 2, '.', '') . 'ms',
+                                                        '--segment-hover-x: ' . number_format($segmentHoverX, 3, '.', '') . 'px',
+                                                        '--segment-hover-y: ' . number_format($segmentHoverY, 3, '.', '') . 'px',
+                                                        'stroke: ' . $segment['color'],
+                                                        'stroke-dashoffset: -' . number_format($segment['start'], 4, '.', ''),
+                                                    ])
+                                                >
+                                                    <title>{{ $segment['label'] }}: {{ number_format((float) ($segment['percentage'] ?? 0), 2) }}%</title>
+                                                </circle>
+                                            @endforeach
+                                        </svg>
+                                        <div class="sglgif-mix-donut-center">
+                                            <strong>{{ number_format($typeMixChart['total']) }}</strong>
+                                            <span>Total</span>
+                                        </div>
+                                    </div>
+                                    <div class="sglgif-mix-donut-labels" aria-hidden="true">
+                                        @foreach($typeMixChart['segments'] as $segment)
+                                            <span class="sglgif-mix-donut-label">
+                                                <span class="sglgif-mix-donut-label-dot" style="background: {{ $segment['color'] }};"></span>
+                                                <span>{{ $segment['label'] }}</span>
+                                            </span>
+                                        @endforeach
+                                    </div>
+                                </div>
+                                <div class="sglgif-mix-chart-legend">
+                                    @foreach($typeMixChart['segments'] as $segment)
+                                        <div class="sglgif-mix-chart-legend-item">
+                                            <span class="sglgif-mix-chart-dot" style="background: {{ $segment['color'] }};"></span>
+                                            <div>
+                                                <strong>{{ $segment['label'] }}</strong>
+                                                <p>{{ number_format((int) ($segment['count'] ?? 0)) }} projects · {{ number_format((float) ($segment['percentage'] ?? 0), 1) }}%</p>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @else
+                                <p class="sglgif-empty">No type data for this filter set.</p>
+                            @endif
+                        </div>
+                    </article>
+
+                    <article class="sglgif-mix-chart-card">
+                        <div class="sglgif-mix-chart-head">
+                            <div>
+                                <h3>Implementation Level Split</h3>
+                                <p>Municipality, province, and city level distribution for filtered projects.</p>
+                            </div>
+                            <strong>{{ number_format($levelMixChart['total']) }} projects</strong>
+                        </div>
+                        <div class="sglgif-mix-chart-body">
+                            @if(!empty($levelMixChart['segments']))
+                                <div class="sglgif-mix-donut-layout">
+                                    <div class="sglgif-mix-donut-wrap">
+                                        <svg
+                                            class="sglgif-mix-donut"
+                                            viewBox="0 0 100 100"
+                                            preserveAspectRatio="xMidYMid meet"
+                                            aria-label="{{ $levelMixChart['ariaLabel'] }}"
+                                        >
+                                            <circle class="sglgif-mix-donut-track" cx="50" cy="50" r="36" pathLength="100"></circle>
+                                            @foreach($levelMixChart['segments'] as $segment)
+                                                @php
+                                                    $segmentMidAngle = (($segment['start'] + ($segment['length'] / 2)) * 3.6) - 90;
+                                                    $segmentMidRadians = deg2rad($segmentMidAngle);
+                                                    $segmentHoverOffset = 2.2;
+                                                    $segmentHoverX = $segmentHoverOffset * cos($segmentMidRadians);
+                                                    $segmentHoverY = $segmentHoverOffset * sin($segmentMidRadians);
+                                                @endphp
+                                                <circle
+                                                    class="sglgif-mix-donut-segment"
+                                                    cx="50"
+                                                    cy="50"
+                                                    r="36"
+                                                    pathLength="100"
+                                                    @style([
+                                                        '--segment-length: ' . number_format($segment['length'], 4, '.', ''),
+                                                        '--segment-delay: ' . number_format($segment['segmentDelayMs'], 2, '.', '') . 'ms',
+                                                        '--segment-duration: ' . number_format($segment['segmentDurationMs'], 2, '.', '') . 'ms',
+                                                        '--segment-hover-x: ' . number_format($segmentHoverX, 3, '.', '') . 'px',
+                                                        '--segment-hover-y: ' . number_format($segmentHoverY, 3, '.', '') . 'px',
+                                                        'stroke: ' . $segment['color'],
+                                                        'stroke-dashoffset: -' . number_format($segment['start'], 4, '.', ''),
+                                                    ])
+                                                >
+                                                    <title>{{ $segment['label'] }}: {{ number_format((float) ($segment['percentage'] ?? 0), 2) }}%</title>
+                                                </circle>
+                                            @endforeach
+                                        </svg>
+                                        <div class="sglgif-mix-donut-center">
+                                            <strong>{{ number_format($levelMixChart['total']) }}</strong>
+                                            <span>Total</span>
+                                        </div>
+                                    </div>
+                                    <div class="sglgif-mix-donut-labels" aria-hidden="true">
+                                        @foreach($levelMixChart['segments'] as $segment)
+                                            <span class="sglgif-mix-donut-label">
+                                                <span class="sglgif-mix-donut-label-dot" style="background: {{ $segment['color'] }};"></span>
+                                                <span>{{ $segment['label'] }}</span>
+                                            </span>
+                                        @endforeach
+                                    </div>
+                                </div>
+                                <div class="sglgif-mix-chart-legend">
+                                    @foreach($levelMixChart['segments'] as $segment)
+                                        <div class="sglgif-mix-chart-legend-item">
+                                            <span class="sglgif-mix-chart-dot" style="background: {{ $segment['color'] }};"></span>
+                                            <div>
+                                                <strong>{{ $segment['label'] }}</strong>
+                                                <p>{{ number_format((int) ($segment['count'] ?? 0)) }} projects · {{ number_format((float) ($segment['percentage'] ?? 0), 1) }}%</p>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @else
+                                <p class="sglgif-empty">No level data for this filter set.</p>
+                            @endif
+                        </div>
+                    </article>
                 </div>
 
                 <div class="sglgif-dual-panel">
@@ -432,20 +606,33 @@
             <section class="dashboard-card sglgif-card">
                 <div class="sglgif-card-head">
                     <div>
-                        <h2>PROVINCIAL DEPLOYMENT</h2>
-                        <p>Switch between project counts and subsidy intensity, then compare leading LGUs.</p>
+                        <h2>NUMBER OF PROJECTS</h2>
+                        <p>Switch between provincial project counts and subsidy intensity.</p>
                     </div>
                 </div>
 
                 <div class="sglgif-switch" data-sg-switch-group="province-footprint">
-                    <button type="button" class="is-active" data-sg-switch-target="count">By Count</button>
-                    <button type="button" data-sg-switch-target="funding">By Funding</button>
+                    <button type="button" class="is-active" data-sg-switch-target="count">BY PROVINCE</button>
+                    <button type="button" data-sg-switch-target="funding">BY AMOUNT</button>
                 </div>
 
                 <div class="sglgif-switch-panel is-active" data-sg-switch-panel="province-footprint:count">
                     @forelse($provinceBreakdown as $item)
+                        @php
+                            $provinceLabel = (string) ($item['label'] ?? 'Unspecified');
+                            $provinceModalKey = trim((string) preg_replace('/[^a-z0-9]+/i', '-', $provinceLabel), '-');
+                            $provinceModalId = 'sglgif-province-' . ($provinceModalKey !== '' ? $provinceModalKey : 'unspecified') . '-modal';
+                        @endphp
                         @php $barWidth = $topProvinceCount > 0 ? round(($item['count'] / $topProvinceCount) * 100, 2) : 0; @endphp
-                        <div class="sglgif-bar-row">
+                        <div
+                            class="sglgif-bar-row sglgif-bar-trigger"
+                            role="button"
+                            tabindex="0"
+                            aria-haspopup="dialog"
+                            aria-controls="{{ $provinceModalId }}"
+                            data-sglgif-modal-target="{{ $provinceModalId }}"
+                            title="View {{ $provinceLabel }} projects"
+                        >
                             <div class="sglgif-bar-head"><span>{{ $item['label'] }}</span><strong>{{ number_format($item['count']) }}</strong></div>
                             <div class="sglgif-bar-track"><div style="width: {{ $barWidth }}%; background: linear-gradient(90deg, #1d4ed8, #0ea5e9);"></div></div>
                         </div>
@@ -467,19 +654,6 @@
                     @endforelse
                 </div>
 
-                <div class="sglgif-panel-head" style="margin-top: 18px;">
-                    <h3>Top LGUs by Subsidy</h3>
-                </div>
-                @forelse($topLguFundingBreakdown as $item)
-                    @php $barWidth = $topLguFundingAmount > 0 ? round((($item['amount'] ?? 0) / $topLguFundingAmount) * 100, 2) : 0; @endphp
-                    <div class="sglgif-bar-row">
-                        <div class="sglgif-bar-head"><span>{{ $item['label'] }}</span><strong>&#8369; {{ number_format((float) ($item['amount'] ?? 0), 2) }}</strong></div>
-                        <div class="sglgif-bar-track"><div style="width: {{ $barWidth }}%; background: linear-gradient(90deg, #f59e0b, #f97316);"></div></div>
-                        <div class="sglgif-note">{{ number_format((int) ($item['count'] ?? 0)) }} projects</div>
-                    </div>
-                @empty
-                    <p class="sglgif-empty">No LGU funding data for this filter set.</p>
-                @endforelse
             </section>
 
             <section class="dashboard-card sglgif-card">
@@ -544,6 +718,71 @@
                 </div>
             </section>
         </div>
+
+        @foreach($provinceBreakdown as $item)
+            @php
+                $provinceLabel = (string) ($item['label'] ?? 'Unspecified');
+                $provinceModalKey = trim((string) preg_replace('/[^a-z0-9]+/i', '-', $provinceLabel), '-');
+                $provinceModalId = 'sglgif-province-' . ($provinceModalKey !== '' ? $provinceModalKey : 'unspecified') . '-modal';
+                $provinceModalTitleId = $provinceModalId . '-title';
+                $provinceProjects = collect(($provinceProjectsModalMap ?? collect())->get($provinceLabel, collect()));
+            @endphp
+            <div id="{{ $provinceModalId }}" class="sglgif-modal" aria-hidden="true">
+                <div class="sglgif-modal-backdrop" data-sglgif-close-modal></div>
+                <div class="sglgif-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="{{ $provinceModalTitleId }}">
+                    <div class="sglgif-modal-header">
+                        <h3 id="{{ $provinceModalTitleId }}">{{ $provinceLabel }} Projects</h3>
+                        <button type="button" class="sglgif-modal-close" data-sglgif-close-modal aria-label="Close">
+                            <i class="fas fa-times" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                    <p class="sglgif-modal-subtitle">
+                        {{ number_format((int) ($item['count'] ?? 0)) }} SGLGIF projects in {{ $provinceLabel }} for the current dashboard filters.
+                    </p>
+                    <div class="sglgif-modal-body">
+                        @if ($provinceProjects->isNotEmpty())
+                            <div class="sglgif-modal-table-wrap">
+                                <table class="sglgif-modal-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Project</th>
+                                            <th>LGU</th>
+                                            <th>Status</th>
+                                            <th>Funding Year</th>
+                                            <th>Subsidy</th>
+                                            <th>Overall</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach ($provinceProjects as $projectRow)
+                                            <tr>
+                                                <td>
+                                                    <strong>{{ $projectRow['project_title'] !== '' ? $projectRow['project_title'] : 'Untitled Project' }}</strong>
+                                                    <div class="sglgif-subline">{{ $projectRow['project_code'] !== '' ? $projectRow['project_code'] : '-' }}</div>
+                                                </td>
+                                                <td>{{ $projectRow['city_municipality'] !== '' ? $projectRow['city_municipality'] : '-' }}</td>
+                                                <td>{{ $projectRow['status'] !== '' ? $projectRow['status'] : '-' }}</td>
+                                                <td>{{ $projectRow['funding_year'] !== '' ? $projectRow['funding_year'] : '-' }}</td>
+                                                <td>&#8369; {{ number_format((float) ($projectRow['subsidy_value'] ?? 0), 2) }}</td>
+                                                <td>
+                                                    @if (($projectRow['overall_pct'] ?? null) !== null)
+                                                        {{ number_format((float) $projectRow['overall_pct'], 2) }}%
+                                                    @else
+                                                        -
+                                                    @endif
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        @else
+                            <div class="sglgif-modal-empty-state">No projects found for this province.</div>
+                        @endif
+                    </div>
+                </div>
+            </div>
+        @endforeach
     </div>
 
     <style>
@@ -707,73 +946,13 @@
             background: linear-gradient(135deg, #0f766e, #115e59);
         }
 
-        .sglgif-card,
-        .sglgif-hero-card {
+        .sglgif-card {
             background: #ffffff;
             border-radius: 16px;
             box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
             padding: 20px;
         }
 
-        .sglgif-hero-card {
-            background:
-                radial-gradient(circle at top left, rgba(255, 215, 128, 0.28), transparent 34%),
-                linear-gradient(135deg, #082f49 0%, #0f172a 48%, #7c2d12 100%);
-            color: #fff7ed;
-            padding: 24px;
-        }
-
-        .sglgif-kicker {
-            display: inline-flex;
-            align-items: center;
-            padding: 6px 10px;
-            border-radius: 999px;
-            background: rgba(255, 255, 255, 0.12);
-            color: #fde68a;
-            font-size: 11px;
-            font-weight: 800;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-        }
-
-        .sglgif-hero-copy h2 {
-            margin: 12px 0 10px;
-            font-size: 28px;
-            line-height: 1.18;
-            color: #ffffff;
-        }
-
-        .sglgif-hero-copy p {
-            margin: 0;
-            color: rgba(255, 247, 237, 0.88);
-            font-size: 14px;
-            line-height: 1.6;
-        }
-
-        .sglgif-hero-metrics {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 12px;
-            margin-top: 20px;
-        }
-
-        .sglgif-hero-tile {
-            display: block;
-            padding: 16px;
-            border-radius: 14px;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            color: inherit;
-            text-decoration: none;
-            transition: transform 0.18s ease, background 0.18s ease;
-        }
-
-        .sglgif-hero-tile:hover {
-            transform: translateY(-2px);
-            background: rgba(255, 255, 255, 0.14);
-        }
-
-        .sglgif-hero-tile span,
         .sglgif-mini-stat span,
         .sglgif-financial-tile span,
         .sglgif-alert-card span,
@@ -783,45 +962,6 @@
             font-weight: 800;
             letter-spacing: 0.08em;
             text-transform: uppercase;
-        }
-
-        .sglgif-hero-tile span {
-            color: #fde68a;
-            margin-bottom: 8px;
-        }
-
-        .sglgif-hero-tile strong {
-            display: block;
-            font-size: 24px;
-            line-height: 1.15;
-            color: #ffffff;
-        }
-
-        .sglgif-hero-tile small {
-            display: block;
-            margin-top: 8px;
-            font-size: 12px;
-            color: rgba(255, 247, 237, 0.8);
-            line-height: 1.45;
-        }
-
-        .sglgif-hero-ribbon {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-top: 18px;
-        }
-
-        .sglgif-hero-ribbon span {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 12px;
-            border-radius: 999px;
-            background: rgba(255, 255, 255, 0.1);
-            color: #fff7ed;
-            font-size: 12px;
-            font-weight: 600;
         }
 
         .sglgif-card-head {
@@ -846,7 +986,7 @@
             line-height: 1.55;
         }
 
-        .sglgif-stat-strip,
+        .sglgif-mix-chart-grid,
         .sglgif-alert-grid,
         .sglgif-risk-grid,
         .sglgif-status-grid,
@@ -855,10 +995,14 @@
             gap: 12px;
         }
 
-        .sglgif-stat-strip,
         .sglgif-alert-grid,
         .sglgif-risk-grid {
             grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+
+        .sglgif-mix-chart-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            margin-bottom: 16px;
         }
 
         .sglgif-status-grid {
@@ -870,7 +1014,7 @@
             margin-top: 16px;
         }
 
-        .sglgif-mini-stat,
+        .sglgif-mix-chart-card,
         .sglgif-alert-card,
         .sglgif-financial-tile,
         .sglgif-risk-tile {
@@ -880,7 +1024,6 @@
             background: #f8fafc;
         }
 
-        .sglgif-mini-stat strong,
         .sglgif-alert-card strong,
         .sglgif-financial-tile strong,
         .sglgif-risk-tile strong {
@@ -891,8 +1034,231 @@
             line-height: 1.12;
         }
 
-        .sglgif-mini-stat span {
+        .sglgif-mix-chart-card {
+            padding: 18px;
+            background: linear-gradient(180deg, #fbfdff 0%, #f8fafc 100%);
+            overflow: hidden;
+            min-width: 0;
+        }
+
+        .sglgif-mix-chart-head {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+
+        .sglgif-mix-chart-head h3 {
+            margin: 0;
+            color: #0f172a;
+            font-size: 15px;
+            font-weight: 800;
+        }
+
+        .sglgif-mix-chart-head p {
+            margin: 6px 0 0;
             color: #475569;
+            font-size: 12px;
+            line-height: 1.55;
+        }
+
+        .sglgif-mix-chart-head > strong {
+            color: #1d4ed8;
+            font-size: 13px;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        .sglgif-mix-chart-body {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 14px;
+            align-items: start;
+        }
+
+        .sglgif-mix-chart-body > .sglgif-empty {
+            grid-column: 1 / -1;
+        }
+
+        .sglgif-mix-donut-layout {
+            display: grid;
+            place-items: center;
+            width: 100%;
+            min-height: 240px;
+            padding: 16px 14px;
+            gap: 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+            overflow: hidden;
+        }
+
+        .sglgif-mix-donut-wrap {
+            position: relative;
+            width: min(220px, 100%);
+            aspect-ratio: 1 / 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .sglgif-mix-donut {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .sglgif-mix-donut-track {
+            fill: none;
+            stroke: #ffffff;
+            stroke-width: 20;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+
+        .sglgif-mix-donut-segment {
+            fill: none;
+            stroke-width: 20;
+            stroke-linecap: butt;
+            shape-rendering: geometricPrecision;
+            cursor: default;
+            filter: drop-shadow(0 1.4px 1.5px rgba(15, 23, 42, 0.24)) drop-shadow(0 0 3px rgba(15, 23, 42, 0.16));
+            stroke-dasharray: 0 100;
+            animation-name: sglgif-donut-sweep;
+            animation-timing-function: linear;
+            animation-fill-mode: forwards;
+            animation-duration: var(--segment-duration, 0ms);
+            animation-delay: var(--segment-delay, 0ms);
+            transition: transform 180ms ease-out, filter 180ms ease-out;
+            transform: translate(var(--segment-shift-x, 0px), var(--segment-shift-y, 0px)) rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+
+        .sglgif-mix-donut-segment:hover {
+            --segment-shift-x: var(--segment-hover-x, 0px);
+            --segment-shift-y: var(--segment-hover-y, 0px);
+            filter: drop-shadow(0 2.2px 2.4px rgba(15, 23, 42, 0.26)) drop-shadow(0 0 4.5px rgba(15, 23, 42, 0.18));
+        }
+
+        .sglgif-mix-donut-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 84px;
+            height: 84px;
+            border-radius: 999px;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.96);
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12), inset 0 0 0 1px rgba(226, 232, 240, 0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            z-index: 1;
+        }
+
+        .sglgif-mix-donut-center strong {
+            display: block;
+            color: #0f172a;
+            font-size: 28px;
+            line-height: 1;
+            font-weight: 800;
+        }
+
+        .sglgif-mix-donut-center span {
+            display: block;
+            margin-top: 6px;
+            color: #64748b;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .sglgif-mix-donut-labels {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            width: 100%;
+        }
+
+        .sglgif-mix-donut-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            min-width: 0;
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.92);
+            border: 1px solid #dbe5f1;
+            color: #334155;
+            font-size: 11px;
+            font-weight: 700;
+            line-height: 1;
+            box-shadow: 0 6px 14px rgba(15, 23, 42, 0.06);
+        }
+
+        .sglgif-mix-donut-label-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 999px;
+            flex: 0 0 10px;
+        }
+
+        @keyframes sglgif-donut-sweep {
+            from {
+                stroke-dasharray: 0 100;
+            }
+
+            to {
+                stroke-dasharray: var(--segment-length, 0) 100;
+            }
+        }
+
+        .sglgif-mix-chart-legend {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            min-width: 0;
+        }
+
+        .sglgif-mix-chart-legend-item {
+            display: grid;
+            grid-template-columns: 12px minmax(0, 1fr);
+            gap: 10px;
+            align-items: start;
+            padding: 10px 12px;
+            border-radius: 12px;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            min-width: 0;
+        }
+
+        .sglgif-mix-chart-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 999px;
+            margin-top: 3px;
+        }
+
+        .sglgif-mix-chart-legend-item strong {
+            display: block;
+            margin: 0;
+            color: #0f172a;
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        .sglgif-mix-chart-legend-item p {
+            margin: 4px 0 0;
+            color: #64748b;
+            font-size: 11px;
+            line-height: 1.5;
+            word-break: break-word;
         }
 
         .sglgif-dual-panel {
@@ -960,6 +1326,33 @@
 
         .sglgif-bar-row {
             margin-bottom: 10px;
+        }
+
+        .sglgif-bar-grid {
+            display: grid;
+            gap: 14px 16px;
+        }
+
+        .sglgif-bar-trigger {
+            padding: 10px 12px;
+            border: 1px solid transparent;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background-color 0.18s ease;
+        }
+
+        .sglgif-bar-trigger:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 18px rgba(15, 23, 42, 0.08);
+            border-color: #bfdbfe;
+            background: #f8fbff;
+        }
+
+        .sglgif-bar-trigger:focus-visible {
+            outline: 2px solid #2563eb;
+            outline-offset: 2px;
+            border-color: #93c5fd;
+            background: #eff6ff;
         }
 
         .sglgif-bar-head {
@@ -1138,6 +1531,138 @@
             padding: 16px 10px;
         }
 
+        .sglgif-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 1300;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .sglgif-modal.is-open {
+            display: flex;
+        }
+
+        .sglgif-modal-backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.48);
+        }
+
+        .sglgif-modal-dialog {
+            position: relative;
+            width: min(1180px, calc(100vw - 40px));
+            max-height: calc(100vh - 40px);
+            border-radius: 14px;
+            background: #ffffff;
+            box-shadow: 0 24px 48px rgba(15, 23, 42, 0.24);
+            border: 1px solid #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .sglgif-modal-header {
+            padding: 14px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .sglgif-modal-header h3 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 800;
+            color: #0f172a;
+        }
+
+        .sglgif-modal-close {
+            margin-left: auto;
+            width: 32px;
+            height: 32px;
+            border-radius: 999px;
+            border: 1px solid #cbd5e1;
+            background: #ffffff;
+            color: #475569;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+        }
+
+        .sglgif-modal-close:hover {
+            background: #f8fafc;
+            color: #0f172a;
+            border-color: #94a3b8;
+        }
+
+        .sglgif-modal-subtitle {
+            margin: 0;
+            padding: 10px 16px;
+            font-size: 12px;
+            color: #475569;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .sglgif-modal-body {
+            padding: 0;
+            overflow: auto;
+        }
+
+        .sglgif-modal-table-wrap {
+            overflow: auto;
+        }
+
+        .sglgif-modal-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+
+        .sglgif-modal-table thead th {
+            position: sticky;
+            top: 0;
+            background: #f8fafc;
+            color: #334155;
+            text-align: left;
+            padding: 10px 12px;
+            border-bottom: 1px solid #cbd5e1;
+            white-space: nowrap;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-size: 11px;
+        }
+
+        .sglgif-modal-table tbody td {
+            padding: 10px 12px;
+            color: #334155;
+            border-bottom: 1px solid #e2e8f0;
+            vertical-align: top;
+        }
+
+        .sglgif-modal-table tbody td strong {
+            color: #0f172a;
+        }
+
+        .sglgif-modal-empty-state {
+            padding: 20px 16px;
+            color: #64748b;
+            font-size: 13px;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .sglgif-mix-donut-segment {
+                animation: none;
+                stroke-dasharray: var(--segment-length, 0) 100;
+                transition: none;
+            }
+        }
+
         @media (max-width: 1280px) {
             .dashboard-main-layout {
                 grid-template-columns: 1fr;
@@ -1146,8 +1671,7 @@
 
         @media (max-width: 1080px) {
             .sglgif-filter-grid,
-            .sglgif-hero-metrics,
-            .sglgif-stat-strip,
+            .sglgif-mix-chart-grid,
             .sglgif-alert-grid,
             .sglgif-risk-grid,
             .sglgif-gauge-grid,
@@ -1160,8 +1684,7 @@
 
         @media (max-width: 760px) {
             .sglgif-filter-grid,
-            .sglgif-hero-metrics,
-            .sglgif-stat-strip,
+            .sglgif-mix-chart-grid,
             .sglgif-alert-grid,
             .sglgif-risk-grid,
             .sglgif-status-grid,
@@ -1183,18 +1706,85 @@
                 width: 100%;
             }
 
-            .sglgif-hero-copy h2 {
-                font-size: 23px;
-            }
-
             .sglgif-gauge {
                 width: 112px;
                 height: 112px;
+            }
+
+            .sglgif-mix-chart-body {
+                grid-template-columns: 1fr;
+            }
+
+            .sglgif-mix-chart-head {
+                flex-direction: column;
+            }
+
+            .sglgif-mix-donut-layout {
+                min-height: 0;
+                padding: 12px;
+            }
+
+            .sglgif-mix-donut-wrap {
+                width: min(200px, 100%);
+            }
+
+            .sglgif-mix-donut-center {
+                width: 72px;
+                height: 72px;
+            }
+
+            .sglgif-mix-donut-center strong {
+                font-size: 20px;
+            }
+
+            .sglgif-mix-donut-center span {
+                font-size: 9px;
+            }
+
+            .sglgif-mix-donut-label {
+                font-size: 10px;
+                padding: 5px 9px;
+            }
+
+            .sglgif-mix-chart-legend {
+                grid-template-columns: 1fr;
+            }
+
+            .sglgif-modal {
+                padding: 12px;
+            }
+
+            .sglgif-modal-dialog {
+                width: calc(100vw - 24px);
+                max-height: calc(100vh - 24px);
             }
         }
     </style>
 
     <script>
+        function openSglgifModal(modalElement) {
+            if (!modalElement) {
+                return;
+            }
+
+            modalElement.classList.add('is-open');
+            modalElement.setAttribute('aria-hidden', 'false');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeSglgifModal(modalElement) {
+            if (!modalElement) {
+                return;
+            }
+
+            modalElement.classList.remove('is-open');
+            modalElement.setAttribute('aria-hidden', 'true');
+
+            if (!document.querySelector('.sglgif-modal.is-open')) {
+                document.body.style.overflow = '';
+            }
+        }
+
         function toggleProjectFilter(button) {
             const form = button.closest('.project-filter-form');
             if (!form) {
@@ -1239,6 +1829,46 @@
                         });
                     });
                 });
+            });
+
+            document.querySelectorAll('.sglgif-bar-trigger[data-sglgif-modal-target]').forEach((trigger) => {
+                const modalTargetId = trigger.getAttribute('data-sglgif-modal-target');
+                const modalElement = modalTargetId ? document.getElementById(modalTargetId) : null;
+                if (!modalElement) {
+                    return;
+                }
+
+                trigger.addEventListener('click', () => {
+                    openSglgifModal(modalElement);
+                });
+
+                trigger.addEventListener('keydown', (event) => {
+                    if (event.key !== 'Enter' && event.key !== ' ') {
+                        return;
+                    }
+
+                    event.preventDefault();
+                    openSglgifModal(modalElement);
+                });
+            });
+
+            document.querySelectorAll('.sglgif-modal').forEach((modalElement) => {
+                modalElement.querySelectorAll('[data-sglgif-close-modal]').forEach((closeControl) => {
+                    closeControl.addEventListener('click', () => {
+                        closeSglgifModal(modalElement);
+                    });
+                });
+            });
+
+            document.addEventListener('keydown', (event) => {
+                if (event.key !== 'Escape') {
+                    return;
+                }
+
+                const openModal = document.querySelector('.sglgif-modal.is-open');
+                if (openModal) {
+                    closeSglgifModal(openModal);
+                }
             });
         });
     </script>
