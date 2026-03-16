@@ -1,21 +1,25 @@
 @extends('layouts.dashboard')
 
-@section('title', 'Locally Funded Projects')
-@section('page-title', 'Locally Funded Projects')
+@section('title', $pageTitle ?? 'Locally Funded Projects')
+@section('page-title', $pageTitle ?? 'Locally Funded Projects')
 
 @section('content')
     <div class="content-header">
-        <h1>Locally Funded Projects</h1>
-        <p>Manage and review locally funded project records.</p>
+        <h1>{{ $pageTitle ?? 'Locally Funded Projects' }}</h1>
+        <p>{{ $pageDescription ?? 'Manage and review locally funded project records.' }}</p>
     </div>
+
+    @include('projects.partials.project-section-tabs', ['activeTab' => $activeProjectTab ?? 'locally-funded'])
 
     <div style="background: white; padding: 24px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
         <!-- Header with Create Button -->
         <div class="projects-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h2 style="color: #002C76; font-size: 18px; margin: 0;">Projects</h2>
+            <h2 style="color: #002C76; font-size: 18px; margin: 0;">{{ $tableTitle ?? 'Projects' }}</h2>
         </div>
 
         @php
+            $listRouteName = $listRouteName ?? 'projects.locally-funded';
+            $forceFundSource = trim((string) ($forceFundSource ?? ''));
             $activeFilters = array_merge([
                 'search' => '',
                 'project_code' => '',
@@ -90,10 +94,13 @@
                 <span class="lfp-filters-summary-icon" aria-hidden="true"></span>
             </summary>
             <div class="lfp-filters-body">
-                <form id="lfp-filters-form" method="GET" action="{{ route('projects.locally-funded') }}" style="display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; margin-bottom: 16px;">
+                <form id="lfp-filters-form" method="GET" action="{{ route($listRouteName) }}" style="display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; margin-bottom: 16px;">
                     <input type="hidden" name="sort_by" value="{{ $sortBy ?? 'funding_year' }}">
                     <input type="hidden" name="sort_dir" value="{{ $sortDir ?? 'asc' }}">
                     <input type="hidden" name="per_page" value="{{ $perPage ?? 10 }}">
+                    @if($forceFundSource !== '')
+                        <input type="hidden" name="fund_source" value="{{ $forceFundSource }}">
+                    @endif
                     @if($activeFilters['project_code'] !== '')
                         <input type="hidden" name="project_code" value="{{ $activeFilters['project_code'] }}">
                     @endif
@@ -113,15 +120,24 @@
                             @endforeach
                         </select>
                     </div>
-                    <div style="min-width: 160px;">
-                        <label for="filter-fund-source" style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 6px;">Fund Source</label>
-                        <select id="filter-fund-source" name="fund_source" style="width: 100%; padding: 6px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px;">
-                            <option value="">All</option>
-                            @foreach($fundSources as $source)
-                                <option value="{{ $source }}" {{ (string) $activeFilters['fund_source'] === (string) $source ? 'selected' : '' }}>{{ $source }}</option>
-                            @endforeach
-                        </select>
-                    </div>
+                    @if($forceFundSource === '')
+                        <div style="min-width: 160px;">
+                            <label for="filter-fund-source" style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 6px;">Fund Source</label>
+                            <select id="filter-fund-source" name="fund_source" style="width: 100%; padding: 6px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px;">
+                                <option value="">All</option>
+                                @foreach($fundSources as $source)
+                                    <option value="{{ $source }}" {{ (string) $activeFilters['fund_source'] === (string) $source ? 'selected' : '' }}>{{ $source }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    @else
+                        <div style="min-width: 160px;">
+                            <label style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 6px;">Fund Source</label>
+                            <div style="width: 100%; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px; color: #111827; background: #f8fafc; font-weight: 700;">
+                                {{ $forceFundSource }}
+                            </div>
+                        </div>
+                    @endif
                     <div style="min-width: 170px;">
                         <label for="filter-province" style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 6px;">Province</label>
                         <select id="filter-province" name="province" style="width: 100%; padding: 6px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px;">
@@ -158,7 +174,7 @@
                             @endforeach
                         </select>
                     </div>
-                    <a href="{{ route('projects.locally-funded', ['sort_by' => $sortBy ?? 'funding_year', 'sort_dir' => $sortDir ?? 'asc', 'per_page' => $perPage ?? 10]) }}" style="padding: 8px 12px; background-color: #6b7280; color: white; border-radius: 6px; font-size: 12px; font-weight: 600; text-decoration: none;">
+                    <a href="{{ route($listRouteName, ['sort_by' => $sortBy ?? 'funding_year', 'sort_dir' => $sortDir ?? 'asc', 'per_page' => $perPage ?? 10]) }}" style="padding: 8px 12px; background-color: #6b7280; color: white; border-radius: 6px; font-size: 12px; font-weight: 600; text-decoration: none;">
                         Clear
                     </a>
                 </form>
@@ -184,7 +200,7 @@
         </details>
 
         @if($projects->isEmpty())
-            @if(Auth::user()->agency === 'DILG' && Auth::user()->province === 'Regional Office')
+            @if($forceFundSource === '' && Auth::user()->agency === 'DILG' && Auth::user()->province === 'Regional Office')
             <p style="margin: 0; color: #6b7280; text-align: center; padding: 40px 0;">No projects found. <a href="{{ route('locally-funded-project.create') }}" style="color: #002C76; text-decoration: none; font-weight: 600;">Create one now</a></p>
             @else
             <p style="margin: 0; color: #6b7280; text-align: center; padding: 40px 0;">No projects found.</p>
@@ -211,14 +227,14 @@
                     return $currentSortDir === 'asc' ? '▲' : '▼';
                 };
 
-                $sortUrl = function (string $column, string $defaultDirection = 'asc') use ($nextSortDirection): string {
+                $sortUrl = function (string $column, string $defaultDirection = 'asc') use ($nextSortDirection, $listRouteName): string {
                     $query = array_merge(request()->query(), [
                         'sort_by' => $column,
                         'sort_dir' => $nextSortDirection($column, $defaultDirection),
                     ]);
                     unset($query['page']);
 
-                    return route('projects.locally-funded', $query);
+                    return route($listRouteName, $query);
                 };
             @endphp
             <div class="lfp-table-wrap" role="region" aria-label="Locally Funded Projects table" tabindex="0">
@@ -530,7 +546,7 @@
                             Page {{ $projects->currentPage() }} of {{ $projects->lastPage() }} ·
                             Showing {{ $projects->firstItem() ?? 0 }}–{{ $projects->lastItem() ?? 0 }} of {{ $projects->total() }}
                         </div>
-                        <form method="GET" action="{{ route('projects.locally-funded') }}" style="display: inline-flex; align-items: center;">
+                        <form method="GET" action="{{ route($listRouteName) }}" style="display: inline-flex; align-items: center;">
                             <input type="hidden" name="search" value="{{ $activeFilters['search'] ?? '' }}">
                             <input type="hidden" name="project_code" value="{{ $activeFilters['project_code'] ?? '' }}">
                             <input type="hidden" name="funding_year" value="{{ $activeFilters['funding_year'] ?? '' }}">

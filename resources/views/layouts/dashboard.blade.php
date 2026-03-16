@@ -1306,7 +1306,8 @@
             <li>
                 @php
                     $dashboardTabRouteActive = request()->routeIs('projects.rssa')
-                        || request()->routeIs('projects.rlip-lime.dashboard');
+                        || request()->routeIs('projects.rlip-lime.dashboard')
+                        || request()->routeIs('projects.sglgif');
                     $dashboardMenuActive = Route::currentRouteName() == 'dashboard' || $dashboardTabRouteActive;
                 @endphp
                 <a href="{{ route('dashboard') }}" class="@if($dashboardMenuActive) active @endif">
@@ -1346,7 +1347,7 @@
                         </a>
                     </li>
                     <li>
-                        <a href="{{ route('projects.sglgif') }}" class="@if(Route::currentRouteName() == 'projects.sglgif') active @endif">
+                        <a href="{{ route('projects.sglgif.table') }}" class="@if(request()->routeIs('projects.sglgif.table')) active @endif">
                             <i class="fas fa-award"></i>
                             <span>SGLGIF Portal</span>
                         </a>

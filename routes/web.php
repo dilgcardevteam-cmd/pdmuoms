@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\DB;
 use App\Models\LocallyFundedProject;
 use Illuminate\Support\Facades\Schema;
 use App\Http\Controllers\RlipLimeProjectController;
+use App\Http\Controllers\SglgifProjectController;
 use App\Http\Controllers\SystemManagementController;
 
 Auth::routes(['reset' => false, 'register' => false]); // Disable default register routes
@@ -1046,6 +1047,7 @@ Route::middleware(['auth'])->group(function () {
 
                 $fundSourceFromProjectCodeExpr = "
                     CASE
+                        WHEN UPPER(TRIM(COALESCE(spp.program, ''))) = 'SGLGIF' THEN 'SGLGIF'
                         WHEN UPPER(TRIM(spp.project_code)) LIKE 'SBDP%' THEN 'SBDP'
                         WHEN UPPER(TRIM(spp.project_code)) LIKE 'FA-%' THEN 'FALGU'
                         WHEN UPPER(TRIM(spp.project_code)) LIKE 'FALGU%' THEN 'FALGU'
@@ -1648,9 +1650,10 @@ Route::middleware(['auth'])->group(function () {
         return $renderProjectDashboard('rssa');
     })->name('projects.rssa');
 
-    Route::get('/projects/sglgif', function () use ($renderProjectDashboard) {
-        return $renderProjectDashboard('sglgif');
-    })->name('projects.sglgif');
+    Route::get('/projects/sglgif', [SglgifProjectController::class, 'dashboard'])
+        ->name('projects.sglgif');
+    Route::get('/projects/sglgif/table', [App\Http\Controllers\LocallyFundedProjectController::class, 'index'])
+        ->name('projects.sglgif.table');
 
     Route::get('/projects/rlip-lime/dashboard', [RlipLimeProjectController::class, 'dashboard'])
         ->name('projects.rlip-lime.dashboard');

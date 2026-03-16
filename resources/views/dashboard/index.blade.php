@@ -230,11 +230,14 @@
                             $projectCodeKeyword = strtoupper(trim((string) $fundSource)) === 'FALGU'
                                 ? 'FA'
                                 : $fundSource;
-                            $fundSourceFilterUrl = route('projects.locally-funded', [
+                            $fundSourceFilterQuery = [
                                 'search' => $fundSource,
                                 'fund_source' => $fundSource,
-                                'project_code' => $projectCodeKeyword,
-                            ]);
+                            ];
+                            if (strtoupper(trim((string) $fundSource)) !== 'SGLGIF') {
+                                $fundSourceFilterQuery['project_code'] = $projectCodeKeyword;
+                            }
+                            $fundSourceFilterUrl = route('projects.locally-funded', $fundSourceFilterQuery);
                         @endphp
                         <div
                             class="dashboard-tile fund-source-link-tile clickable-dashboard-card"
@@ -3952,9 +3955,9 @@
                 return;
             }
 
-            const exportButtonOriginalText = button.textContent;
+            const exportButtonOriginalHtml = button.innerHTML;
             button.disabled = true;
-            button.textContent = 'Exporting...';
+            button.innerHTML = '<i class="fas fa-file-excel" aria-hidden="true"></i> Exporting...';
 
             try {
                 const filename = normalizeDashboardExcelFilename(button.dataset.exportFilename, 'status-of-projects-by-location');
@@ -4119,7 +4122,7 @@
                 window.alert('Unable to export dashboard report right now. Please try again.');
             } finally {
                 button.disabled = false;
-                button.textContent = exportButtonOriginalText;
+                button.innerHTML = exportButtonOriginalHtml;
             }
         }
 

@@ -40,7 +40,7 @@ class LocallyFundedProjectController extends Controller
         ];
 
         // Fund source and funding year options
-        $fundSources = ['SBDP', 'FALGU', 'CMGP', 'GEF', 'SAFPB'];
+        $fundSources = ['SBDP', 'FALGU', 'CMGP', 'GEF', 'SAFPB', 'SGLGIF'];
         $fundingYears = [2025, 2024, 2023, 2022, 2021];
 
         // Procurement types (mode of procurement)
@@ -431,6 +431,15 @@ class LocallyFundedProjectController extends Controller
     public function index()
     {
         $this->syncMissingFundUtilizationReports();
+        $isSglgifPortal = request()->routeIs('projects.sglgif*');
+        $listRouteName = $isSglgifPortal ? 'projects.sglgif.table' : 'projects.locally-funded';
+        $activeProjectTab = $isSglgifPortal ? 'sglgif' : 'locally-funded';
+        $pageTitle = $isSglgifPortal ? 'SGLGIF Project Table' : 'Locally Funded Projects';
+        $pageDescription = $isSglgifPortal
+            ? 'Detailed table of imported SGLGIF records.'
+            : 'Manage and review locally funded project records.';
+        $tableTitle = $isSglgifPortal ? 'SGLGIF Records' : 'Projects';
+        $forceFundSource = $isSglgifPortal ? 'SGLGIF' : '';
         $currentYear = now()->year;
         $currentMonth = now()->month;
         $user = Auth::user();
@@ -457,6 +466,12 @@ class LocallyFundedProjectController extends Controller
                 [
                     'projects' => collect(),
                     'physicalStatuses' => [],
+                    'listRouteName' => $listRouteName,
+                    'activeProjectTab' => $activeProjectTab,
+                    'pageTitle' => $pageTitle,
+                    'pageDescription' => $pageDescription,
+                    'tableTitle' => $tableTitle,
+                    'forceFundSource' => $forceFundSource,
                 ]
             ));
         }
@@ -625,7 +640,7 @@ class LocallyFundedProjectController extends Controller
             'search' => trim((string) request('search', '')),
             'project_code' => trim((string) request('project_code', '')),
             'funding_year' => trim((string) request('funding_year', '')),
-            'fund_source' => trim((string) request('fund_source', '')),
+            'fund_source' => $forceFundSource !== '' ? $forceFundSource : trim((string) request('fund_source', '')),
             'province' => trim((string) request('province', '')),
             'city' => trim((string) request('city', '')),
             'procurement' => trim((string) request('procurement', '')),
@@ -962,7 +977,20 @@ class LocallyFundedProjectController extends Controller
 
         return view('projects.locally-funded', array_merge(
             $options,
-            compact('projects', 'physicalStatuses', 'perPage', 'sortBy', 'sortDir', 'filters')
+            compact(
+                'projects',
+                'physicalStatuses',
+                'perPage',
+                'sortBy',
+                'sortDir',
+                'filters',
+                'listRouteName',
+                'activeProjectTab',
+                'pageTitle',
+                'pageDescription',
+                'tableTitle',
+                'forceFundSource'
+            )
         ));
     }
 

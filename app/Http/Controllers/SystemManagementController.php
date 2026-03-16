@@ -13,7 +13,7 @@ class SystemManagementController extends Controller
 {
     private const IMPORT_HISTORY_TABLE = 'subaybayan_import_histories';
     private const RLIP_LIME_IMPORT_HISTORY_TABLE = 'rlip_lime_import_histories';
-    private const TEMPLATE_HEADERS = [
+    private const SUBAYBAYAN_TEMPLATE_HEADERS = [
         'program',
         'project_code',
         'project_title',
@@ -86,6 +86,44 @@ class SystemManagementController extends Controller
         'project_billboard',
         'submission_of_certificate_on_the_receipt_of_funds',
     ];
+    private const SGLGIF_TEMPLATE_HEADERS = [
+        'LGU Reference Code',
+        'Beneficiaries',
+        'Year',
+        'Region',
+        'Province',
+        'LGU',
+        'Level',
+        'Subsidy',
+        'Title',
+        'Amount',
+        'Type',
+        'Category',
+        'Status',
+        'Financial',
+        'Physical',
+        'Attachment',
+        'Overall',
+    ];
+    private const SGLGIF_TEMPLATE_HEADER_MAP = [
+        'lgu_reference_code' => 'project_code',
+        'beneficiaries' => 'beneficiaries',
+        'year' => 'funding_year',
+        'region' => 'region',
+        'province' => 'province',
+        'lgu' => 'city_municipality',
+        'level' => 'sglgif_level',
+        'subsidy' => 'national_subsidy_original_allocation',
+        'title' => 'project_title',
+        'amount' => 'total_project_cost',
+        'type' => 'type_of_project',
+        'category' => 'sub_type_of_project',
+        'status' => 'status',
+        'financial' => 'sglgif_financial',
+        'physical' => 'total_accomplishment',
+        'attachment' => 'sglgif_attachment',
+        'overall' => 'sglgif_overall',
+    ];
 
     public function uploadSubaybayan()
     {
@@ -105,10 +143,10 @@ class SystemManagementController extends Controller
     {
         $uploadPage = $this->resolveSubaybayanUploadPage($request->route()?->getName());
 
-        return response()->streamDownload(function () {
+        return response()->streamDownload(function () use ($uploadPage) {
             echo "\xEF\xBB\xBF";
             $handle = fopen('php://output', 'w');
-            fputcsv($handle, self::TEMPLATE_HEADERS);
+            fputcsv($handle, $uploadPage['templateHeaders'] ?? self::SUBAYBAYAN_TEMPLATE_HEADERS);
             fclose($handle);
         }, $uploadPage['templateFileName'], [
             'Content-Type' => 'text/csv; charset=UTF-8',
@@ -139,7 +177,7 @@ class SystemManagementController extends Controller
 
         $originalFileName = (string) $file->getClientOriginalName();
         $storageFileName = $this->generateImportStorageFileName($originalFileName, $uploadPage['storageSlug']);
-        $storedPath = $file->storeAs('subaybayan-imports', $storageFileName, 'local');
+        $storedPath = $file->storeAs($uploadPage['storageFolder'], $storageFileName, 'local');
         if (!$storedPath) {
             return back()->with('error', 'Unable to store the uploaded file.');
         }
@@ -176,9 +214,7 @@ class SystemManagementController extends Controller
             return back()->with('error', 'Import history table is not available yet. Please run migration first.');
         }
 
-        $record = DB::table(self::IMPORT_HISTORY_TABLE)
-            ->where('id', (int) $importId)
-            ->first();
+        $record = $this->findImportHistoryRecord((int) $importId, $uploadPage);
 
         if (!$record) {
             return back()->with('error', 'Selected import record was not found.');
@@ -191,7 +227,7 @@ class SystemManagementController extends Controller
 
         $absolutePath = Storage::disk('local')->path($storedPath);
         try {
-            $inserted = $this->importCsvSnapshot($absolutePath);
+            $inserted = $this->importCsvSnapshot($absolutePath, $uploadPage);
         } catch (\RuntimeException $exception) {
             return back()->with('error', $exception->getMessage());
         }
@@ -217,13 +253,13 @@ class SystemManagementController extends Controller
 
     public function deleteSubaybayanImport(Request $request, $importId)
     {
+        $uploadPage = $this->resolveSubaybayanUploadPage($request->route()?->getName());
+
         if (!Schema::hasTable(self::IMPORT_HISTORY_TABLE)) {
             return back()->with('error', 'Import history table is not available yet. Please run migration first.');
         }
 
-        $record = DB::table(self::IMPORT_HISTORY_TABLE)
-            ->where('id', (int) $importId)
-            ->first();
+        $record = $this->findImportHistoryRecord((int) $importId, $uploadPage);
 
         if (!$record) {
             return back()->with('error', 'Selected import record was not found.');
@@ -243,13 +279,13 @@ class SystemManagementController extends Controller
 
     public function downloadSubaybayanImport(Request $request, $importId)
     {
+        $uploadPage = $this->resolveSubaybayanUploadPage($request->route()?->getName());
+
         if (!Schema::hasTable(self::IMPORT_HISTORY_TABLE)) {
             return back()->with('error', 'Import history table is not available yet. Please run migration first.');
         }
 
-        $record = DB::table(self::IMPORT_HISTORY_TABLE)
-            ->where('id', (int) $importId)
-            ->first();
+        $record = $this->findImportHistoryRecord((int) $importId, $uploadPage);
 
         if (!$record) {
             return back()->with('error', 'Selected import record was not found.');
@@ -393,6 +429,7 @@ class SystemManagementController extends Controller
         $importHistoryRows = $importHistoryTableMissing
             ? collect()
             : DB::table(self::IMPORT_HISTORY_TABLE)
+                ->where('stored_file_path', 'like', $uploadPage['storageFolder'] . '/%')
                 ->orderByDesc('imported_at')
                 ->orderByDesc('id')
                 ->paginate(15, ['*'], 'imports_page')
@@ -422,6 +459,13 @@ class SystemManagementController extends Controller
                 'routeBase' => 'system-management.upload-sglgif',
                 'templateFileName' => 'sglgif-template.csv',
                 'storageSlug' => 'sglgif',
+                'storageFolder' => 'sglgif-imports',
+                'templateHeaders' => self::SGLGIF_TEMPLATE_HEADERS,
+                'customHeaderMap' => self::SGLGIF_TEMPLATE_HEADER_MAP,
+                'rowDefaults' => [
+                    'program' => 'SGLGIF',
+                ],
+                'snapshotScope' => 'sglgif',
             ];
         }
 
@@ -436,6 +480,11 @@ class SystemManagementController extends Controller
             'routeBase' => 'system-management.upload-subaybayan',
             'templateFileName' => 'subaybayan-template.csv',
             'storageSlug' => 'subaybayan',
+            'storageFolder' => 'subaybayan-imports',
+            'templateHeaders' => self::SUBAYBAYAN_TEMPLATE_HEADERS,
+            'customHeaderMap' => [],
+            'rowDefaults' => [],
+            'snapshotScope' => 'subaybayan',
         ];
     }
 
@@ -678,7 +727,7 @@ class SystemManagementController extends Controller
         );
     }
 
-    private function importCsvSnapshot(string $path): int
+    private function importCsvSnapshot(string $path, array $uploadPage): int
     {
         if (!is_readable($path)) {
             throw new \RuntimeException('Unable to read the selected file.');
@@ -696,18 +745,19 @@ class SystemManagementController extends Controller
             }
 
             $columns = Schema::getColumnListing('subay_project_profiles');
-            $headerMap = $this->buildHeaderMap($headers, $columns);
+            $headerMap = $this->buildHeaderMap($headers, $columns, $uploadPage['customHeaderMap'] ?? []);
             if (empty($headerMap)) {
                 throw new \RuntimeException('No recognizable columns were found in the CSV file.');
             }
 
-            return DB::transaction(function () use ($handle, $headerMap) {
+            return DB::transaction(function () use ($handle, $headerMap, $uploadPage) {
                 $now = now();
                 $rows = [];
                 $inserted = 0;
+                $rowDefaults = $uploadPage['rowDefaults'] ?? [];
 
-                // Treat each load as the latest full snapshot to avoid duplicates.
-                DB::table('subay_project_profiles')->delete();
+                // Replace only the rows owned by the active import scope.
+                $this->clearImportScopeRows($uploadPage);
 
                 while (($data = fgetcsv($handle)) !== false) {
                     if ($this->rowIsEmpty($data)) {
@@ -721,6 +771,12 @@ class SystemManagementController extends Controller
                             $value = $this->sanitizeValue($value);
                         }
                         $row[$column] = $value === '' ? null : $value;
+                    }
+
+                    foreach ($rowDefaults as $column => $value) {
+                        if (!array_key_exists($column, $row) || $row[$column] === null || $row[$column] === '') {
+                            $row[$column] = $value;
+                        }
                     }
 
                     if (empty($row)) {
@@ -778,17 +834,17 @@ class SystemManagementController extends Controller
         return $fileName . ($extension !== '' ? '.' . $extension : '.' . $fallbackExtension);
     }
 
-    private function buildHeaderMap(array $headers, array $columns): array
+    private function buildHeaderMap(array $headers, array $columns, array $routeCustomMap = []): array
     {
         $columnLookup = array_fill_keys($columns, true);
-        $customMap = [
+        $customMap = array_merge([
             'barangay_s' => 'barangay',
             'barangays' => 'barangay',
             'amount' => 'obligation',
             'amount_2' => 'disbursement',
             'amount_3' => 'liquidations',
             'ded_pow_preparation_and_submission_of_notarized_lce_certification' => 'ded_pow_prep_notarized_lce_cert',
-        ];
+        ], $routeCustomMap);
 
         $headerMap = [];
         $counts = [];
@@ -821,6 +877,34 @@ class SystemManagementController extends Controller
         }
 
         return $headerMap;
+    }
+
+    private function findImportHistoryRecord(int $importId, array $uploadPage): ?object
+    {
+        return DB::table(self::IMPORT_HISTORY_TABLE)
+            ->where('id', $importId)
+            ->where('stored_file_path', 'like', $uploadPage['storageFolder'] . '/%')
+            ->first();
+    }
+
+    private function clearImportScopeRows(array $uploadPage): void
+    {
+        $scope = (string) ($uploadPage['snapshotScope'] ?? 'subaybayan');
+
+        if ($scope === 'sglgif') {
+            DB::table('subay_project_profiles')
+                ->whereRaw('UPPER(TRIM(COALESCE(program, ""))) = ?', ['SGLGIF'])
+                ->delete();
+
+            return;
+        }
+
+        DB::table('subay_project_profiles')
+            ->where(function ($query) {
+                $query->whereNull('program')
+                    ->orWhereRaw('UPPER(TRIM(COALESCE(program, ""))) <> ?', ['SGLGIF']);
+            })
+            ->delete();
     }
 
     private function normalizeHeader($value): string
