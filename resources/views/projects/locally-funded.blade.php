@@ -82,6 +82,36 @@
                     </div>
                 ';
             };
+
+            $statusBadgeClass = function ($value) {
+                $normalized = strtolower(trim((string) $value));
+
+                if ($normalized === '' || $normalized === '-') {
+                    return 'lfp-status-badge--neutral';
+                }
+
+                if (str_contains($normalized, 'complete') || str_contains($normalized, '100%') || str_contains($normalized, 'finished')) {
+                    return 'lfp-status-badge--complete';
+                }
+
+                if (str_contains($normalized, 'ongoing') || str_contains($normalized, 'progress') || str_contains($normalized, 'implement')) {
+                    return 'lfp-status-badge--ongoing';
+                }
+
+                if (str_contains($normalized, 'delay') || str_contains($normalized, 'slippage') || str_contains($normalized, 'issue')) {
+                    return 'lfp-status-badge--delayed';
+                }
+
+                if (str_contains($normalized, 'pending') || str_contains($normalized, 'for procurement') || str_contains($normalized, 'for bidding')) {
+                    return 'lfp-status-badge--pending';
+                }
+
+                if (str_contains($normalized, 'not started') || str_contains($normalized, 'not yet started')) {
+                    return 'lfp-status-badge--not-started';
+                }
+
+                return 'lfp-status-badge--default';
+            };
         @endphp
 
         <details id="lfp-filters-panel" class="lfp-filters-panel" open>
@@ -389,12 +419,12 @@
                                     {!! $renderProgressBar($subayAccomplishment, 'table') !!}
                                 </td>
                                 <td data-column-key="status_actual" style="padding: 12px; text-align: center;">
-                                    <span style="display: inline-block; padding: 4px 8px; background-color: #dbeafe; color: #0369a1; border-radius: 4px; font-size: 11px; font-weight: 600;">
+                                    <span class="lfp-status-badge {{ $statusBadgeClass($statusActual) }}">
                                         {{ $statusActual }}
                                     </span>
                                 </td>
                                 <td data-column-key="status_subaybayan" style="padding: 12px; text-align: center;">
-                                    <span style="display: inline-block; padding: 4px 8px; background-color: #dbeafe; color: #0369a1; border-radius: 4px; font-size: 11px; font-weight: 600;">
+                                    <span class="lfp-status-badge {{ $statusBadgeClass($statusSubaybayan) }}">
                                         {{ $statusSubaybayan }}
                                     </span>
                                 </td>
@@ -501,11 +531,11 @@
                                     </div>
                                     <div class="lfp-mobile-card-detail" data-column-key="status_actual">
                                         <span class="lfp-mobile-card-detail-label">Status (Actual)</span>
-                                        <strong>{{ $statusActual }}</strong>
+                                        <strong><span class="lfp-status-badge {{ $statusBadgeClass($statusActual) }}">{{ $statusActual }}</span></strong>
                                     </div>
                                     <div class="lfp-mobile-card-detail" data-column-key="status_subaybayan">
                                         <span class="lfp-mobile-card-detail-label">Status (Subaybayan)</span>
-                                        <strong>{{ $statusSubaybayan }}</strong>
+                                        <strong><span class="lfp-status-badge {{ $statusBadgeClass($statusSubaybayan) }}">{{ $statusSubaybayan }}</span></strong>
                                     </div>
                                     <div class="lfp-mobile-card-detail" data-column-key="last_updated_at">
                                         <span class="lfp-mobile-card-detail-label">Last Updated At</span>
@@ -828,6 +858,50 @@
             font-size: 12px;
             font-weight: 700;
             line-height: 1.2;
+        }
+
+        .lfp-status-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 5px 10px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+            line-height: 1.2;
+            text-align: center;
+            white-space: normal;
+        }
+
+        .lfp-status-badge--complete {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .lfp-status-badge--ongoing {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+
+        .lfp-status-badge--delayed {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+
+        .lfp-status-badge--pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .lfp-status-badge--not-started,
+        .lfp-status-badge--neutral {
+            background: #e5e7eb;
+            color: #4b5563;
+        }
+
+        .lfp-status-badge--default {
+            background: #e0f2fe;
+            color: #0369a1;
         }
 
         .lfp-progress--empty {
