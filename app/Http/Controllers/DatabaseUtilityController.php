@@ -5,7 +5,10 @@ namespace App\Http\Controllers;
 use App\Mail\AutomatedDatabaseBackupMail;
 use App\Models\BackupAutomationSetting;
 use App\Models\DatabaseBackupRun;
+use App\Models\RolePermissionSetting;
+use App\Models\User;
 use App\Services\DatabaseBackupService;
+use App\Support\RolePermissionRegistry;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -133,6 +136,12 @@ class DatabaseUtilityController extends Controller
         return view('admin.utilities.system-setup', [
             'systemSetupItems' => [
                 [
+                    'icon' => 'fas fa-user-shield',
+                    'title' => 'Role Configuration',
+                    'description' => 'Configure CRUD access by hierarchy role and apply it to every assigned user from one place.',
+                    'route' => route('utilities.role-configuration.index'),
+                ],
+                [
                     'icon' => 'fas fa-clock',
                     'title' => 'Location Configuration',
                     'description' => 'Review and manage the location-related configuration used across the application.',
@@ -152,6 +161,45 @@ class DatabaseUtilityController extends Controller
                 ],
             ],
         ]);
+    }
+
+    public function roleConfiguration(): View
+    {
+        return view('admin.utilities.role-configuration', [
+            'crudActionOptions' => RolePermissionRegistry::actionOptions(),
+            'accessGrantModules' => RolePermissionRegistry::modules(),
+            'roleDescriptions' => RolePermissionRegistry::roleDescriptions(),
+            'roleConfigurations' => $this->buildRoleConfigurations(),
+        ]);
+    }
+
+    public function updateRoleConfiguration(Request $request, string $role): RedirectResponse
+    {
+        $normalizedRole = strtolower(trim($role));
+
+        if (!in_array($normalizedRole, RolePermissionRegistry::configurableRoles(), true)) {
+            return redirect()
+                ->route('utilities.role-configuration.index')
+                ->with('error', 'That role cannot be configured from Role Configuration.');
+        }
+
+        $validated = $request->validate([
+            'crud_permissions' => ['nullable', 'array'],
+            'crud_permissions.*' => ['string'],
+        ]);
+
+        $permissions = RolePermissionRegistry::normalizePermissions($validated['crud_permissions'] ?? []);
+
+        RolePermissionSetting::query()->updateOrCreate(
+            ['role' => $normalizedRole],
+            ['permissions' => $permissions],
+        );
+
+        RolePermissionSetting::flushPermissionsCache();
+
+        return redirect()
+            ->route('utilities.role-configuration.index', ['role' => $normalizedRole])
+            ->with('success', 'Role configuration updated successfully.');
     }
 
     public function locationConfiguration(): View
@@ -553,6 +601,32 @@ class DatabaseUtilityController extends Controller
         abort_unless(array_key_exists($dataset, self::LOCATION_DATASETS), 404);
 
         return self::LOCATION_DATASETS[$dataset];
+    }
+
+    private function buildRoleConfigurations(): array
+    {
+        $rolePermissionSettings = RolePermissionSetting::query()
+            ->whereIn('role', RolePermissionRegistry::configurableRoles())
+            ->get()
+            ->keyBy(function (RolePermissionSetting $setting) {
+                return strtolower(trim((string) $setting->role));
+            });
+
+        return collect(RolePermissionRegistry::configurableRoles())
+            ->map(function (string $role) use ($rolePermissionSettings): array {
+                $setting = $rolePermissionSettings->get($role);
+                $configuredPermissions = $setting?->permissions;
+
+                return [
+                    'role' => $role,
+                    'label' => User::roleOptions()[$role] ?? $role,
+                    'description' => RolePermissionRegistry::roleDescriptions()[$role] ?? null,
+                    'permissions' => RolePermissionRegistry::permissionsForRole($role, $configuredPermissions),
+                    'uses_recommended_defaults' => $setting === null,
+                ];
+            })
+            ->values()
+            ->all();
     }
 
     private function findLocationImportRecord(string $dataset, int $importId): ?object

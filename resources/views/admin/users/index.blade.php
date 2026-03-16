@@ -11,7 +11,7 @@
 
     <div class="content-header">
         <h1>User Management</h1>
-        <p>Manage all system users, their roles, and their CRUD permissions.</p>
+        <p>Manage system users, their hierarchy roles, and the role-based access they inherit.</p>
     </div>
 
     @if (session('success'))
@@ -48,7 +48,7 @@
                 aria-controls="accessGrantsPanel"
                 aria-selected="{{ $activeUserTab === 'accessGrantsPanel' ? 'true' : 'false' }}"
             >
-                Access Grant
+                Role Access
             </button>
         @endif
     </div>
@@ -215,9 +215,9 @@
             <div style="background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; margin-bottom: 24px; flex-wrap: wrap;">
                     <div>
-                        <h2 style="color: #002C76; font-size: 18px; margin: 0 0 6px;">Access Grant</h2>
+                        <h2 style="color: #002C76; font-size: 18px; margin: 0 0 6px;">Role-Based Access</h2>
                         <p style="margin: 0; color: #6b7280; font-size: 13px; max-width: 700px;">
-                                            Grant per-feature record permissions. Role defaults come from the user's hierarchy level, and Access Grant adds extra module permissions beyond that baseline.
+                            Review the effective access each user inherits from the configured role matrix. All changes are managed centrally in Role Configuration.
                         </p>
                     </div>
                     <div style="padding: 10px 14px; border-radius: 10px; background: #eff6ff; color: #1d4ed8; font-size: 12px; font-weight: 700;">
@@ -244,11 +244,6 @@
                         </thead>
                         <tbody>
                             @foreach($users as $user)
-                                @php
-                                    $grantedPermissions = $user->grantedCrudPermissions();
-                                    $hasFullAccess = in_array('*', $grantedPermissions, true);
-                                    $isScopedAccess = $user->usesScopedCrudAccess();
-                                @endphp
                                 <tr class="access-grant-row">
                                     <td>
                                         <div class="access-grant-user">
@@ -263,18 +258,8 @@
                                         </span>
                                     </td>
                                     <td>
-                                        <span class="access-state-badge access-state-badge--{{ $user->isSuperAdmin() ? 'role' : ($isScopedAccess ? ($hasFullAccess ? 'all' : ($grantedPermissions === [] ? 'empty' : 'custom')) : 'legacy') }}">
-                                            @if($user->isSuperAdmin())
-                                                Full access by role
-                                            @elseif(!$isScopedAccess)
-                                                Role defaults only
-                                            @elseif($hasFullAccess)
-                                                All additional permissions
-                                            @elseif($grantedPermissions === [])
-                                                No additional grants
-                                            @else
-                                                Custom additional grants
-                                            @endif
+                                        <span class="access-state-badge access-state-badge--role">
+                                            {{ $user->isSuperAdmin() ? 'Full access by role' : 'Managed from Role Configuration' }}
                                         </span>
                                     </td>
                                     <td style="text-align: center;">
@@ -294,82 +279,63 @@
                                 <tr class="access-grant-detail-row" id="access-grant-{{ $user->idno }}" data-access-accordion-content hidden>
                                     <td colspan="5">
                                         <div class="access-grant-detail">
-                                            @if($user->isSuperAdmin())
-                                                <div class="access-grant-note">
-                                                    Superadmin accounts always keep full access and do not require CRUD permission grants.
-                                                </div>
-                                            @else
-                                                <form method="POST" action="{{ route('users.access.update', $user->idno) }}">
-                                                    @csrf
-                                                    @method('PUT')
+                                            <div class="access-grant-note" style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
+                                                <span>
+                                                    Access is now managed by role configuration. Update the <strong>{{ $user->roleLabel() }}</strong> role on the Role Configuration page to affect this user.
+                                                </span>
+                                                @if(!$user->isSuperAdmin())
+                                                    <a href="{{ route('utilities.role-configuration.index', ['role' => $user->role]) }}" style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; background-color: #002C76; color: white; border-radius: 8px; text-decoration: none; font-size: 12px; font-weight: 700;">
+                                                        Open Role Configuration
+                                                    </a>
+                                                @endif
+                                            </div>
 
-                                                    <div class="crud-permission-table-wrap">
-                                                        <table class="crud-permission-table">
-                                                            <thead>
+                                            <div class="crud-permission-table-wrap" style="margin-top: 16px;">
+                                                <table class="crud-permission-table">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Module</th>
+                                                            <th>Submodule</th>
+                                                            <th>Description</th>
+                                                            @foreach($crudActionOptions as $actionKey => $actionLabel)
+                                                                <th>{{ $actionLabel }}</th>
+                                                            @endforeach
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        @foreach($accessGrantModules as $module)
+                                                            @php
+                                                                $items = $module['items'] ?? [];
+                                                                $rowspan = count($items);
+                                                            @endphp
+                                                            @foreach($items as $itemIndex => $item)
                                                                 <tr>
-                                                                    <th>Module</th>
-                                                                    <th>Submodule</th>
-                                                                    <th>Description</th>
+                                                                    @if($itemIndex === 0)
+                                                                        <td rowspan="{{ $rowspan }}" class="crud-permission-module-cell">
+                                                                            <div class="crud-permission-module-title">{{ $module['module'] }}</div>
+                                                                            <div class="crud-permission-module-description">{{ $module['description'] }}</div>
+                                                                        </td>
+                                                                    @endif
+                                                                    <td class="crud-permission-submodule-cell">{{ $item['label'] }}</td>
+                                                                    <td class="crud-permission-description-cell">{{ $item['description'] }}</td>
                                                                     @foreach($crudActionOptions as $actionKey => $actionLabel)
-                                                                        <th>{{ $actionLabel }}</th>
+                                                                        <td class="crud-permission-check-cell">
+                                                                            <label class="crud-check-item crud-check-item--default">
+                                                                                <input
+                                                                                    type="checkbox"
+                                                                                    @checked($user->hasCrudPermission($item['aspect'], $actionKey))
+                                                                                    disabled
+                                                                                >
+                                                                                <span>{{ $user->isSuperAdmin() ? 'Full access' : 'Included in role' }}</span>
+                                                                            </label>
+                                                                        </td>
                                                                     @endforeach
                                                                 </tr>
-                                                            </thead>
-                                                            <tbody>
-                                                                @foreach($accessGrantModules as $module)
-                                                                    @php
-                                                                        $items = $module['items'] ?? [];
-                                                                        $rowspan = count($items);
-                                                                    @endphp
-                                                                    @foreach($items as $itemIndex => $item)
-                                                                        <tr>
-                                                                            @if($itemIndex === 0)
-                                                                                <td rowspan="{{ $rowspan }}" class="crud-permission-module-cell">
-                                                                                    <div class="crud-permission-module-title">{{ $module['module'] }}</div>
-                                                                                    <div class="crud-permission-module-description">{{ $module['description'] }}</div>
-                                                                                </td>
-                                                                            @endif
-                                                                            <td class="crud-permission-submodule-cell">{{ $item['label'] }}</td>
-                                                                            <td class="crud-permission-description-cell">{{ $item['description'] }}</td>
-                                                                            @foreach($crudActionOptions as $actionKey => $actionLabel)
-                                                                                @php
-                                                                                    $permissionKey = $item['aspect'] . '.' . $actionKey;
-                                                                                    $checked = $hasFullAccess || $user->hasCrudPermission($item['aspect'], $actionKey);
-                                                                                    $isDefaultPermission = !$hasFullAccess && $user->hasDefaultCrudPermission($item['aspect'], $actionKey);
-                                                                                @endphp
-                                                                                <td class="crud-permission-check-cell">
-                                                                                    <label class="crud-check-item {{ $isDefaultPermission ? 'crud-check-item--default' : '' }}">
-                                                                                        <input
-                                                                                            type="checkbox"
-                                                                                            name="crud_permissions[]"
-                                                                                            value="{{ $permissionKey }}"
-                                                                                            @checked($checked)
-                                                                                            @disabled($isDefaultPermission)
-                                                                                        >
-                                                                                        <span>{{ $isDefaultPermission ? 'Role default' : 'Grant' }}</span>
-                                                                                    </label>
-                                                                                    @if($isDefaultPermission)
-                                                                                        <input type="hidden" name="crud_permissions[]" value="{{ $permissionKey }}">
-                                                                                    @endif
-                                                                                </td>
-                                                                            @endforeach
-                                                                        </tr>
-                                                                    @endforeach
-                                                                @endforeach
-                                                            </tbody>
-                                                        </table>
-                                                    </div>
-
-                                                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 18px; flex-wrap: wrap;">
-                                                        <div style="font-size: 12px; color: #64748b;">
-                                                            Checked boxes marked as `Role default` come from the user's hierarchy role. Use unchecked boxes to add more access beyond that baseline.
-                                                        </div>
-                                                        <button type="submit" style="padding: 10px 16px; background-color: #002C76; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13px;">
-                                                            Save Permissions
-                                                        </button>
-                                                    </div>
-                                                </form>
-                                            @endif
+                                                            @endforeach
+                                                        @endforeach
+                                                    </tbody>
+                                                </table>
+                                            </div>
                                         </div>
                                     </td>
                                 </tr>

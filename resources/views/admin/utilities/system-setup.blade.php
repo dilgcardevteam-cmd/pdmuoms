@@ -4,9 +4,31 @@
 @section('page-title', 'System Setup')
 
 @section('content')
+    @if (session('success'))
+        <div style="margin-bottom: 18px; padding: 12px 16px; border-radius: 10px; border: 1px solid #a7f3d0; background: #ecfdf5; color: #166534; font-size: 13px; font-weight: 600;">
+            {{ session('success') }}
+        </div>
+    @endif
+
+    @if (session('error'))
+        <div style="margin-bottom: 18px; padding: 12px 16px; border-radius: 10px; border: 1px solid #fecaca; background: #fff1f2; color: #be123c; font-size: 13px; font-weight: 600;">
+            {{ session('error') }}
+        </div>
+    @endif
+
+    @if ($errors->any())
+        <div style="margin-bottom: 18px; padding: 14px 16px; border-radius: 10px; border: 1px solid #fecaca; background: #fff7f7; color: #991b1b;">
+            <ul style="margin: 0; padding-left: 18px;">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
     <div class="content-header">
         <h1>System Setup</h1>
-        <p>Central access point for core application setup tasks and configuration reviews.</p>
+        <p>Central access point for core application setup pages and configuration reviews.</p>
     </div>
 
     <section style="background: white; padding: 28px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08); margin-bottom: 20px;">
@@ -17,7 +39,7 @@
             <div>
                 <h2 style="margin: 0; color: #002C76; font-size: 20px;">Configuration Overview</h2>
                 <p style="margin: 6px 0 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
-                    This section is ready for future setup tools. For now, it gives administrators a dedicated area under Utilities for key system configuration concerns.
+                    Open a dedicated configuration page for each system area instead of managing everything from one screen.
                 </p>
             </div>
         </div>

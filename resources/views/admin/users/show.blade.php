@@ -7,9 +7,6 @@
     @php
         $roleOptions = \App\Models\User::roleOptions();
         $activeUserViewTab = request()->query('tab') === 'access-grant' ? 'userAccessGrantPanel' : 'userProfilePanel';
-        $grantedPermissions = $user->grantedCrudPermissions();
-        $hasFullAccess = in_array('*', $grantedPermissions, true);
-        $isScopedAccess = $user->usesScopedCrudAccess();
     @endphp
 
     <div class="content-header">
@@ -34,7 +31,7 @@
             User Profile
         </button>
         <button type="button" class="project-tab {{ $activeUserViewTab === 'userAccessGrantPanel' ? 'is-active' : '' }}" data-user-view-tab-target="userAccessGrantPanel" role="tab" aria-controls="userAccessGrantPanel" aria-selected="{{ $activeUserViewTab === 'userAccessGrantPanel' ? 'true' : 'false' }}">
-            Access Grant
+            Role Access
         </button>
     </div>
 
@@ -173,103 +170,73 @@
         <div style="background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; margin-bottom: 24px; flex-wrap: wrap;">
                 <div>
-                    <h2 style="color: #002C76; font-size: 18px; margin: 0 0 6px;">Access Grant</h2>
+                    <h2 style="color: #002C76; font-size: 18px; margin: 0 0 6px;">Role-Based Access</h2>
                     <p style="margin: 0; color: #6b7280; font-size: 13px; max-width: 700px;">
-                        Manage CRUD access for {{ $user->fname }} {{ $user->lname }} on system modules.
+                        {{ $user->fname }} {{ $user->lname }} inherits module access from the <strong>{{ $user->roleLabel() }}</strong> role configuration page.
                     </p>
                 </div>
-                <span style="padding: 6px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; background: {{ $user->isSuperAdmin() ? '#fee2e2' : ($isScopedAccess ? '#dcfce7' : '#f3f4f6') }}; color: {{ $user->isSuperAdmin() ? '#991b1b' : ($isScopedAccess ? '#166534' : '#475569') }};">
-                    @if($user->isSuperAdmin())
-                        Full access by role
-                    @elseif(!$isScopedAccess)
-                        Role defaults only
-                    @elseif($hasFullAccess)
-                        All additional permissions
-                    @elseif($grantedPermissions === [])
-                        No additional grants
-                    @else
-                        Custom additional grants
-                    @endif
+                <span style="padding: 6px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; background: {{ $user->isSuperAdmin() ? '#fee2e2' : '#dbeafe' }}; color: {{ $user->isSuperAdmin() ? '#991b1b' : '#1d4ed8' }};">
+                    {{ $user->isSuperAdmin() ? 'Full access by role' : 'Managed from Role Configuration' }}
                 </span>
             </div>
 
-            @if($user->isSuperAdmin())
-                <div style="padding: 14px; border: 1px solid #fecaca; background: #fff1f2; color: #9f1239; border-radius: 10px; font-size: 13px; line-height: 1.6;">
-                    Superadmin accounts always keep full access and do not require CRUD permission grants.
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 18px; flex-wrap: wrap;">
+                <div style="font-size: 12px; color: #64748b; line-height: 1.7;">
+                    This panel is read-only. Change the matrix for this role on the Role Configuration page to affect all users with the same role.
                 </div>
-            @else
-                <form method="POST" action="{{ route('users.access.update', $user->idno) }}">
-                    @csrf
-                    @method('PUT')
-                    <input type="hidden" name="redirect_to" value="{{ route('users.show', ['user' => $user->idno, 'tab' => 'access-grant']) }}">
+                @if(!$user->isSuperAdmin())
+                    <a href="{{ route('utilities.role-configuration.index', ['role' => $user->role]) }}" class="user-preview-primary-btn" style="text-decoration: none;">
+                        Open Role Configuration
+                    </a>
+                @endif
+            </div>
 
-                    <div class="crud-permission-table-wrap">
-                        <table class="crud-permission-table">
-                            <thead>
+            <div class="crud-permission-table-wrap">
+                <table class="crud-permission-table">
+                    <thead>
+                        <tr>
+                            <th>Module</th>
+                            <th>Submodule</th>
+                            <th>Description</th>
+                            @foreach($crudActionOptions as $actionKey => $actionLabel)
+                                <th>{{ $actionLabel }}</th>
+                            @endforeach
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($accessGrantModules as $module)
+                            @php
+                                $items = $module['items'] ?? [];
+                                $rowspan = count($items);
+                            @endphp
+                            @foreach($items as $itemIndex => $item)
                                 <tr>
-                                    <th>Module</th>
-                                    <th>Submodule</th>
-                                    <th>Description</th>
+                                    @if($itemIndex === 0)
+                                        <td rowspan="{{ $rowspan }}" class="crud-permission-module-cell">
+                                            <div class="crud-permission-module-title">{{ $module['module'] }}</div>
+                                            <div class="crud-permission-module-description">{{ $module['description'] }}</div>
+                                        </td>
+                                    @endif
+                                    <td class="crud-permission-submodule-cell">{{ $item['label'] }}</td>
+                                    <td class="crud-permission-description-cell">{{ $item['description'] }}</td>
                                     @foreach($crudActionOptions as $actionKey => $actionLabel)
-                                        <th>{{ $actionLabel }}</th>
+                                        <td class="crud-permission-check-cell">
+                                            <label class="crud-check-item crud-check-item--default">
+                                                <input
+                                                    type="checkbox"
+                                                    @checked($user->hasCrudPermission($item['aspect'], $actionKey))
+                                                    disabled
+                                                >
+                                                <span>{{ $user->isSuperAdmin() ? 'Full access' : 'Included in role' }}</span>
+                                            </label>
+                                        </td>
                                     @endforeach
                                 </tr>
-                            </thead>
-                            <tbody>
-                                @foreach($accessGrantModules as $module)
-                                    @php
-                                        $items = $module['items'] ?? [];
-                                        $rowspan = count($items);
-                                    @endphp
-                                    @foreach($items as $itemIndex => $item)
-                                        <tr>
-                                            @if($itemIndex === 0)
-                                                <td rowspan="{{ $rowspan }}" class="crud-permission-module-cell">
-                                                    <div class="crud-permission-module-title">{{ $module['module'] }}</div>
-                                                    <div class="crud-permission-module-description">{{ $module['description'] }}</div>
-                                                </td>
-                                            @endif
-                                            <td class="crud-permission-submodule-cell">{{ $item['label'] }}</td>
-                                            <td class="crud-permission-description-cell">{{ $item['description'] }}</td>
-                                            @foreach($crudActionOptions as $actionKey => $actionLabel)
-                                                @php
-                                                    $permissionKey = $item['aspect'] . '.' . $actionKey;
-                                                    $checked = $hasFullAccess || $user->hasCrudPermission($item['aspect'], $actionKey);
-                                                    $isDefaultPermission = !$hasFullAccess && $user->hasDefaultCrudPermission($item['aspect'], $actionKey);
-                                                @endphp
-                                                <td class="crud-permission-check-cell">
-                                                    <label class="crud-check-item {{ $isDefaultPermission ? 'crud-check-item--default' : '' }}">
-                                                        <input
-                                                            type="checkbox"
-                                                            name="crud_permissions[]"
-                                                            value="{{ $permissionKey }}"
-                                                            @checked($checked)
-                                                            @disabled($isDefaultPermission)
-                                                        >
-                                                        <span>{{ $isDefaultPermission ? 'Role default' : 'Grant' }}</span>
-                                                    </label>
-                                                    @if($isDefaultPermission)
-                                                        <input type="hidden" name="crud_permissions[]" value="{{ $permissionKey }}">
-                                                    @endif
-                                                </td>
-                                            @endforeach
-                                        </tr>
-                                    @endforeach
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 18px; flex-wrap: wrap;">
-                        <div style="font-size: 12px; color: #64748b;">
-                            Checked boxes marked as `Role default` come from the selected hierarchy role. Use unchecked boxes to add more access on top of that baseline.
-                        </div>
-                        <button type="submit" class="user-preview-primary-btn">
-                            Save Permissions
-                        </button>
-                    </div>
-                </form>
-            @endif
+                            @endforeach
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
         </div>
     </section>
 

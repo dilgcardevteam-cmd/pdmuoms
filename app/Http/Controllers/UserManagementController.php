@@ -3,35 +3,19 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Support\RolePermissionRegistry;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 
 class UserManagementController extends Controller
 {
-    private const CRUD_ACTION_OPTIONS = [
-        'view' => 'VIEW',
-        'add' => 'ADD',
-        'update' => 'UPDATE',
-        'delete' => 'DELETE',
-    ];
-
-    /**
-     * Create a new controller instance.
-     *
-     * @return void
-     */
     public function __construct()
     {
         $this->middleware('auth');
         $this->middleware('superadmin');
     }
 
-    /**
-     * Display a listing of all users.
-     *
-     * @return \Illuminate\View\View
-     */
     public function index()
     {
         $users = User::query()
@@ -51,15 +35,10 @@ class UserManagementController extends Controller
         return view('admin.users.index', [
             'users' => $users,
             'accessGrantModules' => $this->accessGrantModules(),
-            'crudActionOptions' => self::CRUD_ACTION_OPTIONS,
+            'crudActionOptions' => RolePermissionRegistry::actionOptions(),
         ]);
     }
 
-    /**
-     * Show the form for creating a new user.
-     *
-     * @return \Illuminate\View\View
-     */
     public function create()
     {
         return view('admin.users.create');
@@ -83,12 +62,6 @@ class UserManagementController extends Controller
         return $validated;
     }
 
-    /**
-     * Store a newly created user in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\RedirectResponse
-     */
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -116,12 +89,6 @@ class UserManagementController extends Controller
         return redirect()->route('users.index')->with('success', 'User created successfully!');
     }
 
-    /**
-     * Show the form for editing the specified user.
-     *
-     * @param  \App\Models\User  $user
-     * @return \Illuminate\View\View
-     */
     public function edit(User $user)
     {
         return view('admin.users.edit', compact('user'));
@@ -132,92 +99,15 @@ class UserManagementController extends Controller
         return view('admin.users.show', [
             'user' => $user,
             'accessGrantModules' => $this->accessGrantModules(),
-            'crudActionOptions' => self::CRUD_ACTION_OPTIONS,
+            'crudActionOptions' => RolePermissionRegistry::actionOptions(),
         ]);
     }
 
     private function accessGrantModules(): array
     {
-        return [
-            [
-                'module' => 'Project Monitoring',
-                'description' => 'Project monitoring modules for project profiles, updates, and accomplishment tracking.',
-                'items' => [
-                    [
-                        'aspect' => 'locally_funded_projects',
-                        'label' => 'Locally Funded Projects',
-                        'description' => 'View and manage locally funded project records, including profile details and monitoring updates within the user’s assigned scope.',
-                    ],
-                ],
-            ],
-            [
-                'module' => 'LGU Reportorial Requirements',
-                'description' => 'Annual, quarterly, and monthly LGU reportorial submissions handled by the current system.',
-                'items' => [
-                    [
-                        'aspect' => 'rbis_annual_certification',
-                        'label' => 'Annual / RBIS Annual Certification',
-                        'description' => 'Manage annual RBIS certification documents and related validation actions.',
-                    ],
-                    [
-                        'aspect' => 'fund_utilization_reports',
-                        'label' => 'Quarterly / Fund Utilization Report',
-                        'description' => 'Manage quarterly fund utilization records, MOV uploads, notices, and supporting reportorial documents.',
-                    ],
-                    [
-                        'aspect' => 'local_project_monitoring_committee',
-                        'label' => 'Quarterly / Local Project Monitoring Committee',
-                        'description' => 'Manage quarterly LPMC submissions, uploaded documents, and validation workflow.',
-                    ],
-                    [
-                        'aspect' => 'road_maintenance_status_reports',
-                        'label' => 'Quarterly / Road Maintenance Status Report',
-                        'description' => 'Manage quarterly road maintenance status submissions, document uploads, and validation steps.',
-                    ],
-                    [
-                        'aspect' => 'pd_no_pbbm_monthly_reports',
-                        'label' => 'Monthly / PD No. PBBM-2025-1572-1573',
-                        'description' => 'Manage monthly report submissions, uploaded files, and document approval actions.',
-                    ],
-                ],
-            ],
-            [
-                'module' => 'Pre-Implementation Documents',
-                'description' => 'Document requirements collected before implementation begins.',
-                'items' => [
-                    [
-                        'aspect' => 'pre_implementation_documents',
-                        'label' => 'SBDP Pre-Implementation Documents',
-                        'description' => 'View and add the pre-implementation document set required for SBDP projects before project execution.',
-                    ],
-                ],
-            ],
-        ];
+        return RolePermissionRegistry::modules();
     }
 
-    private function validPermissionKeys(): array
-    {
-        return collect($this->accessGrantModules())
-            ->flatMap(function (array $module) {
-                return collect($module['items'] ?? [])
-                    ->pluck('aspect');
-            })
-            ->flatMap(function (string $aspect) {
-                return collect(array_keys(self::CRUD_ACTION_OPTIONS))
-                    ->map(fn ($action) => $aspect . '.' . $action);
-            })
-            ->unique()
-            ->values()
-            ->all();
-    }
-
-    /**
-     * Update the specified user in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \App\Models\User  $user
-     * @return \Illuminate\Http\RedirectResponse
-     */
     public function update(Request $request, User $user)
     {
         $validated = $request->validate([
@@ -246,15 +136,8 @@ class UserManagementController extends Controller
         return redirect()->route('users.index')->with('success', 'User updated successfully!');
     }
 
-    /**
-     * Delete the specified user.
-     *
-     * @param  \App\Models\User  $user
-     * @return \Illuminate\Http\RedirectResponse
-     */
     public function destroy(User $user)
     {
-        // Prevent deleting yourself
         if ($user->idno === Auth::id()) {
             return back()->with('error', 'You cannot delete your own account.');
         }
@@ -289,38 +172,8 @@ class UserManagementController extends Controller
             ? $request->input('redirect_to')
             : route('users.index', ['tab' => 'access-grants']);
 
-        if ($user->isSuperAdmin()) {
-            return redirect()
-                ->to($redirectTo)
-                ->with('error', 'Superadmin accounts always keep full access.');
-        }
-
-        $validated = $request->validate([
-            'crud_permissions' => ['nullable', 'array'],
-            'crud_permissions.*' => ['string'],
-        ]);
-
-        $validPermissionKeys = $this->validPermissionKeys();
-
-        $permissions = collect($validated['crud_permissions'] ?? [])
-            ->map(fn ($permission) => strtolower(trim((string) $permission)))
-            ->filter(fn ($permission) => in_array($permission, $validPermissionKeys, true))
-            ->unique()
-            ->values()
-            ->all();
-
-        if (count($permissions) === count($validPermissionKeys)) {
-            $user->access = User::ACCESS_SCOPE_ALL;
-        } elseif ($permissions === []) {
-            $user->access = User::ACCESS_SCOPE_NONE;
-        } else {
-            $user->access = User::ACCESS_PERMISSION_PREFIX . implode(',', $permissions);
-        }
-
-        $user->save();
-
         return redirect()
             ->to($redirectTo)
-            ->with('success', 'Access grants updated successfully.');
+            ->with('error', 'User-specific access grants are now managed through the Role Configuration page.');
     }
 }

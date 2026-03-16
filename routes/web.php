@@ -1563,6 +1563,11 @@ Route::middleware(['auth'])->group(function () {
             ->name('users.access.update');
         Route::get('/utilities/system-setup', [App\Http\Controllers\DatabaseUtilityController::class, 'systemSetup'])
             ->name('utilities.system-setup.index');
+        Route::get('/utilities/role-configuration', [App\Http\Controllers\DatabaseUtilityController::class, 'roleConfiguration'])
+            ->name('utilities.role-configuration.index');
+        Route::put('/utilities/role-configuration/roles/{role}', [App\Http\Controllers\DatabaseUtilityController::class, 'updateRoleConfiguration'])
+            ->whereIn('role', ['user_regional', 'user_provincial', 'user_lgu'])
+            ->name('utilities.role-configuration.roles.update');
         Route::get('/utilities/location-configuration', [App\Http\Controllers\DatabaseUtilityController::class, 'locationConfiguration'])
             ->name('utilities.location-configuration.index');
         Route::post('/utilities/location-configuration/import/{dataset}', [App\Http\Controllers\DatabaseUtilityController::class, 'importLocationDataset'])
