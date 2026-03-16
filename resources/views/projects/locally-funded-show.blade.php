@@ -1074,6 +1074,16 @@
                         $hasProvinceInOptions = collect($provinces)->contains(function ($item) use ($selectedProvinceNorm) {
                             return strtolower(trim((string) $item)) === $selectedProvinceNorm;
                         });
+                        $selectedCityMunicipality = old('city_municipality', $project->city_municipality);
+                        $selectedCityMunicipalityNorm = strtolower(trim((string) $selectedCityMunicipality));
+                        $cityMunicipalityOptions = collect($provinceMunicipalities[$selectedProvince] ?? [])
+                            ->filter(function ($item) {
+                                return trim((string) $item) !== '';
+                            })
+                            ->values();
+                        $hasCityInOptions = $cityMunicipalityOptions->contains(function ($item) use ($selectedCityMunicipalityNorm) {
+                            return strtolower(trim((string) $item)) === $selectedCityMunicipalityNorm;
+                        });
 
                         $selectedFundingYear = (string) old('funding_year', $project->funding_year);
                         $hasFundingYearInOptions = collect($fundingYears)->contains(function ($item) use ($selectedFundingYear) {
@@ -1149,9 +1159,17 @@
 
                     <div>
                         <label for="city_municipality" style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">City/Municipality <span class="asterisk">*</span></label>
-                        <select id="city_municipality" name="city_municipality" required data-selected="{{ old('city_municipality', $project->city_municipality) }}"
+                        <select id="city_municipality" name="city_municipality" required data-selected="{{ $selectedCityMunicipality }}"
                                 style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; box-sizing: border-box; background-color: white;">
-                            <option value="">-- Select Province First --</option>
+                            <option value="">{{ $cityMunicipalityOptions->isNotEmpty() ? '-- Select City/Municipality --' : '-- Select Province First --' }}</option>
+                            @foreach($cityMunicipalityOptions as $cityMunicipalityOption)
+                                <option value="{{ $cityMunicipalityOption }}" {{ strtolower(trim((string) $cityMunicipalityOption)) === $selectedCityMunicipalityNorm ? 'selected' : '' }}>
+                                    {{ $cityMunicipalityOption }}
+                                </option>
+                            @endforeach
+                            @if(!$hasCityInOptions && trim((string) $selectedCityMunicipality) !== '')
+                                <option value="{{ $selectedCityMunicipality }}" selected>{{ $selectedCityMunicipality }}</option>
+                            @endif
                         </select>
                     </div>
 
