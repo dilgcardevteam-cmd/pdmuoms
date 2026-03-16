@@ -228,88 +228,126 @@
                     </div>
                 @endif
 
-                <div class="access-grant-grid">
-                    @foreach($users as $user)
-                        @php
-                            $grantedPermissions = $user->grantedCrudPermissions();
-                            $hasFullAccess = in_array('*', $grantedPermissions, true);
-                            $isScopedAccess = $user->usesScopedCrudAccess();
-                        @endphp
-                        <div class="access-grant-card">
-                            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; margin-bottom: 18px;">
-                                <div>
-                                    <h3 style="margin: 0 0 6px; color: #0f172a; font-size: 17px;">{{ $user->fname }} {{ $user->lname }}</h3>
-                                    <div style="font-size: 13px; color: #64748b;">{{ $user->emailaddress }}</div>
-                                    <div style="font-size: 12px; color: #94a3b8; margin-top: 4px;">{{ ucfirst($user->role) }} | {{ $user->username }}</div>
-                                </div>
-                                <span style="padding: 6px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; background: {{ $user->role === 'superadmin' ? '#fee2e2' : ($isScopedAccess ? '#dcfce7' : '#f3f4f6') }}; color: {{ $user->role === 'superadmin' ? '#991b1b' : ($isScopedAccess ? '#166534' : '#475569') }};">
-                                    @if($user->role === 'superadmin')
-                                        Full access by role
-                                    @elseif(!$isScopedAccess)
-                                        Legacy access
-                                    @elseif($hasFullAccess)
-                                        All CRUD permissions
-                                    @elseif($grantedPermissions === [])
-                                        No saved CRUD permissions
-                                    @else
-                                        Custom CRUD permissions
-                                    @endif
-                                </span>
-                            </div>
-
-                            @if($user->role === 'superadmin')
-                                <div style="padding: 14px; border: 1px solid #fecaca; background: #fff1f2; color: #9f1239; border-radius: 10px; font-size: 13px; line-height: 1.6;">
-                                    Superadmin accounts always keep full access and do not require CRUD permission grants.
-                                </div>
-                            @else
-                                <form method="POST" action="{{ route('users.access.update', $user->idno) }}">
-                                    @csrf
-                                    @method('PUT')
-
-                                    <div class="crud-permission-table-wrap">
-                                        <table class="crud-permission-table">
-                                            <thead>
-                                                <tr>
-                                                    <th>Aspect</th>
-                                                    @foreach($crudActionOptions as $actionKey => $actionLabel)
-                                                        <th>{{ $actionLabel }}</th>
-                                                    @endforeach
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                @foreach($crudPermissionOptions as $aspectKey => $aspectLabel)
-                                                    <tr>
-                                                        <td>{{ $aspectLabel }}</td>
-                                                        @foreach($crudActionOptions as $actionKey => $actionLabel)
-                                                            @php
-                                                                $permissionKey = $aspectKey . '.' . $actionKey;
-                                                                $checked = $hasFullAccess || in_array($permissionKey, $grantedPermissions, true);
-                                                            @endphp
-                                                            <td>
-                                                                <label class="crud-check-item">
-                                                                    <input type="checkbox" name="crud_permissions[]" value="{{ $permissionKey }}" @checked($checked)>
-                                                                    <span>{{ $actionLabel }}</span>
-                                                                </label>
-                                                            </td>
-                                                        @endforeach
-                                                    </tr>
-                                                @endforeach
-                                            </tbody>
-                                        </table>
-                                    </div>
-
-                                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 18px; flex-wrap: wrap;">
-                                        <div style="font-size: 12px; color: #64748b;">
-                                            Leave all unchecked to keep the user read-only for these CRUD-managed features.
+                <div class="access-grant-table-wrap">
+                    <table class="access-grant-table">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Access Status</th>
+                                <th style="width: 140px; text-align: center;">Permissions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($users as $user)
+                                @php
+                                    $grantedPermissions = $user->grantedCrudPermissions();
+                                    $hasFullAccess = in_array('*', $grantedPermissions, true);
+                                    $isScopedAccess = $user->usesScopedCrudAccess();
+                                @endphp
+                                <tr class="access-grant-row">
+                                    <td>
+                                        <div class="access-grant-user">
+                                            <div class="access-grant-user__name">{{ $user->fname }} {{ $user->lname }}</div>
+                                            <div class="access-grant-user__meta">{{ $user->username }}</div>
                                         </div>
-                                        <button type="submit" style="padding: 10px 16px; background-color: #002C76; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13px;">
-                                            Save Permissions
+                                    </td>
+                                    <td class="access-grant-cell-muted">{{ $user->emailaddress }}</td>
+                                    <td>
+                                        <span class="access-role-badge access-role-badge--{{ $user->role }}">
+                                            {{ ucfirst($user->role) }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="access-state-badge access-state-badge--{{ $user->role === 'superadmin' ? 'role' : ($isScopedAccess ? ($hasFullAccess ? 'all' : ($grantedPermissions === [] ? 'empty' : 'custom')) : 'legacy') }}">
+                                            @if($user->role === 'superadmin')
+                                                Full access by role
+                                            @elseif(!$isScopedAccess)
+                                                Legacy access
+                                            @elseif($hasFullAccess)
+                                                All CRUD permissions
+                                            @elseif($grantedPermissions === [])
+                                                No saved CRUD permissions
+                                            @else
+                                                Custom CRUD permissions
+                                            @endif
+                                        </span>
+                                    </td>
+                                    <td style="text-align: center;">
+                                        <button
+                                            type="button"
+                                            class="access-accordion-toggle"
+                                            data-access-accordion-toggle
+                                            data-target="access-grant-{{ $user->idno }}"
+                                            aria-expanded="false"
+                                            aria-controls="access-grant-{{ $user->idno }}"
+                                        >
+                                            <span>View Access</span>
+                                            <i class="fas fa-chevron-down" aria-hidden="true"></i>
                                         </button>
-                                    </div>
-                                </form>
-                            @endif
-                        </div>
-                    @endforeach
+                                    </td>
+                                </tr>
+                                <tr class="access-grant-detail-row" id="access-grant-{{ $user->idno }}" data-access-accordion-content hidden>
+                                    <td colspan="5">
+                                        <div class="access-grant-detail">
+                                            @if($user->role === 'superadmin')
+                                                <div class="access-grant-note">
+                                                    Superadmin accounts always keep full access and do not require CRUD permission grants.
+                                                </div>
+                                            @else
+                                                <form method="POST" action="{{ route('users.access.update', $user->idno) }}">
+                                                    @csrf
+                                                    @method('PUT')
+
+                                                    <div class="crud-permission-table-wrap">
+                                                        <table class="crud-permission-table">
+                                                            <thead>
+                                                                <tr>
+                                                                    <th>Aspect</th>
+                                                                    @foreach($crudActionOptions as $actionKey => $actionLabel)
+                                                                        <th>{{ $actionLabel }}</th>
+                                                                    @endforeach
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                @foreach($crudPermissionOptions as $aspectKey => $aspectLabel)
+                                                                    <tr>
+                                                                        <td>{{ $aspectLabel }}</td>
+                                                                        @foreach($crudActionOptions as $actionKey => $actionLabel)
+                                                                            @php
+                                                                                $permissionKey = $aspectKey . '.' . $actionKey;
+                                                                                $checked = $hasFullAccess || in_array($permissionKey, $grantedPermissions, true);
+                                                                            @endphp
+                                                                            <td>
+                                                                                <label class="crud-check-item">
+                                                                                    <input type="checkbox" name="crud_permissions[]" value="{{ $permissionKey }}" @checked($checked)>
+                                                                                    <span>{{ $actionLabel }}</span>
+                                                                                </label>
+                                                                            </td>
+                                                                        @endforeach
+                                                                    </tr>
+                                                                @endforeach
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+
+                                                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 18px; flex-wrap: wrap;">
+                                                        <div style="font-size: 12px; color: #64748b;">
+                                                            Leave all unchecked to keep the user read-only for these CRUD-managed features.
+                                                        </div>
+                                                        <button type="submit" style="padding: 10px 16px; background-color: #002C76; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13px;">
+                                                            Save Permissions
+                                                        </button>
+                                                    </div>
+                                                </form>
+                                            @endif
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
                 </div>
 
                 <div style="margin-top: 20px;">
@@ -357,12 +395,6 @@
 
         .project-tab-panel.is-active {
             display: block;
-        }
-
-        .access-grant-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 18px;
         }
 
         .user-management-panel {
@@ -542,11 +574,148 @@
             background: #f8fafc;
         }
 
-        .access-grant-card {
-            border: 1px solid #e5e7eb;
-            border-radius: 14px;
+        .access-grant-table-wrap {
+            overflow-x: auto;
+            border: 1px solid #dbe4f0;
+            border-radius: 16px;
+        }
+
+        .access-grant-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 860px;
+            background: #ffffff;
+        }
+
+        .access-grant-table th,
+        .access-grant-table td {
+            padding: 14px 16px;
+            border-bottom: 1px solid #e5e7eb;
+            vertical-align: middle;
+            text-align: left;
+        }
+
+        .access-grant-table th {
+            background: #f8fafc;
+            color: #334155;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .access-grant-row {
+            background: #ffffff;
+        }
+
+        .access-grant-detail-row[hidden] {
+            display: none;
+        }
+
+        .access-grant-detail-row td {
+            padding: 0;
+            background: #f8fbff;
+        }
+
+        .access-grant-user__name {
+            font-size: 14px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .access-grant-user__meta,
+        .access-grant-cell-muted {
+            font-size: 13px;
+            color: #64748b;
+        }
+
+        .access-role-badge,
+        .access-state-badge {
+            display: inline-flex;
+            align-items: center;
+            border-radius: 999px;
+            padding: 6px 10px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .access-role-badge {
+            background: #e2e8f0;
+            color: #334155;
+        }
+
+        .access-role-badge--superadmin {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .access-role-badge--admin {
+            background: #dbeafe;
+            color: #0c2d6b;
+        }
+
+        .access-role-badge--staff {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .access-state-badge--role {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .access-state-badge--legacy {
+            background: #f3f4f6;
+            color: #475569;
+        }
+
+        .access-state-badge--all,
+        .access-state-badge--custom {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .access-state-badge--empty {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .access-accordion-toggle {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            border: 1px solid #bfdbfe;
+            border-radius: 999px;
+            background: #eff6ff;
+            color: #1d4ed8;
+            padding: 8px 14px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .access-accordion-toggle i {
+            transition: transform 0.2s ease;
+        }
+
+        .access-accordion-toggle[aria-expanded="true"] i {
+            transform: rotate(180deg);
+        }
+
+        .access-grant-detail {
             padding: 20px;
-            background: #fcfdff;
+        }
+
+        .access-grant-note {
+            padding: 14px;
+            border: 1px solid #fecaca;
+            background: #fff1f2;
+            color: #9f1239;
+            border-radius: 10px;
+            font-size: 13px;
+            line-height: 1.6;
         }
 
         .crud-permission-table-wrap {
@@ -632,7 +801,6 @@
             }
 
             .user-management-panel,
-            .access-grant-card,
             #accessGrantsPanel > div[style*="background: white"] {
                 padding: 18px !important;
             }
@@ -674,8 +842,19 @@
                 justify-content: space-between;
             }
 
-            .access-grant-grid {
-                grid-template-columns: 1fr;
+            .access-grant-table-wrap {
+                margin-left: -6px;
+                margin-right: -6px;
+                border-radius: 12px;
+            }
+
+            .access-grant-table {
+                min-width: 720px;
+            }
+
+            .access-grant-table th,
+            .access-grant-table td {
+                padding: 12px;
             }
 
             .crud-permission-table-wrap {
@@ -752,6 +931,29 @@
                     toggle.setAttribute('aria-expanded', isExpanded ? 'false' : 'true');
                     content.hidden = isExpanded;
                     card.classList.toggle('is-expanded', !isExpanded);
+                });
+            });
+        }());
+
+        (function attachAccessGrantAccordion() {
+            const toggles = Array.from(document.querySelectorAll('[data-access-accordion-toggle]'));
+
+            if (toggles.length === 0) {
+                return;
+            }
+
+            toggles.forEach((toggle) => {
+                const targetId = toggle.dataset.target;
+                const content = targetId ? document.getElementById(targetId) : null;
+
+                if (!content) {
+                    return;
+                }
+
+                toggle.addEventListener('click', function () {
+                    const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
+                    toggle.setAttribute('aria-expanded', isExpanded ? 'false' : 'true');
+                    content.hidden = isExpanded;
                 });
             });
         }());
