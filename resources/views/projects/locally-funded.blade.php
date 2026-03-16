@@ -268,6 +268,7 @@
             </div>
         </details>
 
+        <div id="lfp-results-container" data-results-container>
         @if($projects->isEmpty())
             @if(Auth::user()->agency === 'DILG' && Auth::user()->province === 'Regional Office')
             <p style="margin: 0; color: #6b7280; text-align: center; padding: 40px 0;">No projects found. <a href="{{ route('locally-funded-project.create') }}" style="color: #002C76; text-decoration: none; font-weight: 600;">Create one now</a></p>
@@ -657,6 +658,7 @@
                 </div>
             @endif
         @endif
+        </div>
     </div>
     <style>
         table td {
@@ -1227,6 +1229,7 @@
             const filtersForm = document.getElementById('lfp-filters-form');
             const searchInput = document.getElementById('lfp-search');
             const searchField = searchInput ? searchInput.closest('.lfp-search-field') : null;
+            let resultsContainer = document.querySelector('[data-results-container]');
             const provinceSelect = document.getElementById('filter-province');
             const citySelect = document.getElementById('filter-city');
             const yearSelect = document.getElementById('filter-year');
@@ -1238,6 +1241,7 @@
             const locationData = @json($provinceMunicipalities);
             const columnToggleStorageKey = 'lfp-visible-columns';
             const selectedCity = citySelect ? (citySelect.dataset.selectedCity || '') : '';
+            let isFetchingResults = false;
 
             if (filtersPanel && window.matchMedia('(max-width: 768px)').matches) {
                 filtersPanel.removeAttribute('open');
@@ -1304,6 +1308,64 @@
                         callback.apply(null, args);
                     }, delay);
                 };
+            }
+
+            async function fetchResults(url, options) {
+                if (!resultsContainer || isFetchingResults) {
+                    return;
+                }
+
+                isFetchingResults = true;
+                setSearchLoading(true);
+                resultsContainer.setAttribute('aria-busy', 'true');
+                resultsContainer.style.opacity = '0.55';
+
+                try {
+                    const response = await fetch(url, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'text/html, application/xhtml+xml',
+                        },
+                        credentials: 'same-origin',
+                        ...options,
+                    });
+
+                    if (!response.ok) {
+                        window.location.assign(url);
+                        return;
+                    }
+
+                    const html = await response.text();
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    const nextResultsContainer = doc.querySelector('[data-results-container]');
+
+                    if (!nextResultsContainer) {
+                        window.location.assign(url);
+                        return;
+                    }
+
+                    resultsContainer.replaceWith(nextResultsContainer);
+                    resultsContainer = nextResultsContainer;
+                    window.history.replaceState({}, '', url);
+                    applyVisibleColumns(columnToggles
+                        .filter(function (toggle) {
+                            return toggle.checked;
+                        })
+                        .map(function (toggle) {
+                            return toggle.dataset.columnToggle || '';
+                        })
+                        .filter(Boolean));
+                } catch (error) {
+                    window.location.assign(url);
+                } finally {
+                    isFetchingResults = false;
+                    setSearchLoading(false);
+                    if (resultsContainer) {
+                        resultsContainer.removeAttribute('aria-busy');
+                        resultsContainer.style.opacity = '1';
+                    }
+                }
             }
 
             function applyVisibleColumns(visibleColumns) {
@@ -1382,8 +1444,18 @@
                 syncVisibleColumns();
             }
 
-            filtersForm.addEventListener('submit', function () {
-                setSearchLoading(true);
+            filtersForm.addEventListener('submit', function (event) {
+                event.preventDefault();
+                const formData = new FormData(filtersForm);
+                const params = new URLSearchParams();
+
+                formData.forEach(function (value, key) {
+                    if (String(value).trim() !== '') {
+                        params.append(key, String(value));
+                    }
+                });
+
+                fetchResults(filtersForm.action + (params.toString() ? '?' + params.toString() : ''));
             });
 
             window.addEventListener('pageshow', function () {
@@ -1392,7 +1464,6 @@
 
             if (searchInput) {
                 const debouncedSearch = debounce(function () {
-                    setSearchLoading(true);
                     submitFilters();
                 }, 450);
 
@@ -1423,6 +1494,48 @@
 
             populateCityOptions(provinceSelect.value, selectedCity);
             initializeColumnToggles();
+
+            document.addEventListener('click', function (event) {
+                const link = event.target.closest('.lfp-sort-link, .lfp-mobile-card-action, [data-results-container] a');
+                if (!link) {
+                    return;
+                }
+
+                const href = link.getAttribute('href');
+                if (!href) {
+                    return;
+                }
+
+                const isLocallyFundedNavigation = href.indexOf('{{ route('projects.locally-funded') }}') === 0;
+                const isPaginationLink = link.closest('[data-results-container]') && href.indexOf('page=') !== -1;
+                const isSortLink = link.classList.contains('lfp-sort-link');
+
+                if (!isLocallyFundedNavigation || (!isSortLink && !isPaginationLink)) {
+                    return;
+                }
+
+                event.preventDefault();
+                fetchResults(href);
+            });
+
+            document.addEventListener('submit', function (event) {
+                const perPageForm = event.target.closest('[data-results-container] form[method="GET"]');
+                if (!perPageForm || perPageForm === filtersForm) {
+                    return;
+                }
+
+                event.preventDefault();
+                const formData = new FormData(perPageForm);
+                const params = new URLSearchParams();
+
+                formData.forEach(function (value, key) {
+                    if (String(value).trim() !== '') {
+                        params.append(key, String(value));
+                    }
+                });
+
+                fetchResults(perPageForm.action + (params.toString() ? '?' + params.toString() : ''));
+            });
         });
     </script>
 @endsection
