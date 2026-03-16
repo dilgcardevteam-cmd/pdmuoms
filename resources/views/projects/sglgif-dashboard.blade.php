@@ -54,6 +54,22 @@
             'Ongoing' => ['color' => '#1d4ed8', 'bg' => '#dbeafe', 'border' => '#93c5fd'],
         ];
 
+        $graphPalette = [
+            'primary' => '#002C76',
+            'secondary' => '#FFDE15',
+            'tertiary' => '#C9282D',
+            'quaternary' => '#0E7490',
+            'quinary' => '#7C3AED',
+            'senary' => '#EA580C',
+        ];
+
+        $graphGradients = [
+            'primary' => 'linear-gradient(90deg, #002C76, #0A4BA8)',
+            'secondary' => 'linear-gradient(90deg, #FFDE15, #E3B600)',
+            'tertiary' => 'linear-gradient(90deg, #C9282D, #E05358)',
+            'quaternary' => 'linear-gradient(90deg, #0E7490, #14B8A6)',
+        ];
+
         $buildMixChart = function (string $ariaLabel, array $segments): array {
             $filteredSegments = array_values(array_filter($segments, function (array $segment) {
                 return (int) ($segment['count'] ?? 0) > 0;
@@ -115,14 +131,14 @@
         };
 
         $typeMixChart = $buildMixChart('SGLGIF project type split donut chart', [
-            ['label' => 'Infrastructure', 'count' => $infrastructureCount, 'color' => '#2563eb'],
-            ['label' => 'Non-Infrastructure', 'count' => $nonInfrastructureCount, 'color' => '#f59e0b'],
+            ['label' => 'Infrastructure', 'count' => $infrastructureCount, 'color' => $graphPalette['primary']],
+            ['label' => 'Non-Infrastructure', 'count' => $nonInfrastructureCount, 'color' => $graphPalette['secondary']],
         ]);
 
         $levelMixChart = $buildMixChart('SGLGIF implementation level split donut chart', [
-            ['label' => 'Municipality', 'count' => $municipalityCount, 'color' => '#0f766e'],
-            ['label' => 'Province', 'count' => $provinceLevelCount, 'color' => '#7c3aed'],
-            ['label' => 'City', 'count' => $cityLevelCount, 'color' => '#ea580c'],
+            ['label' => 'Municipality', 'count' => $municipalityCount, 'color' => $graphPalette['primary']],
+            ['label' => 'Province', 'count' => $provinceLevelCount, 'color' => $graphPalette['secondary']],
+            ['label' => 'City', 'count' => $cityLevelCount, 'color' => $graphPalette['tertiary']],
         ]);
     @endphp
 
@@ -303,14 +319,6 @@
                                             <span>Total</span>
                                         </div>
                                     </div>
-                                    <div class="sglgif-mix-donut-labels" aria-hidden="true">
-                                        @foreach($typeMixChart['segments'] as $segment)
-                                            <span class="sglgif-mix-donut-label">
-                                                <span class="sglgif-mix-donut-label-dot" style="background: {{ $segment['color'] }};"></span>
-                                                <span>{{ $segment['label'] }}</span>
-                                            </span>
-                                        @endforeach
-                                    </div>
                                 </div>
                                 <div class="sglgif-mix-chart-legend">
                                     @foreach($typeMixChart['segments'] as $segment)
@@ -381,14 +389,6 @@
                                             <span>Total</span>
                                         </div>
                                     </div>
-                                    <div class="sglgif-mix-donut-labels" aria-hidden="true">
-                                        @foreach($levelMixChart['segments'] as $segment)
-                                            <span class="sglgif-mix-donut-label">
-                                                <span class="sglgif-mix-donut-label-dot" style="background: {{ $segment['color'] }};"></span>
-                                                <span>{{ $segment['label'] }}</span>
-                                            </span>
-                                        @endforeach
-                                    </div>
                                 </div>
                                 <div class="sglgif-mix-chart-legend">
                                     @foreach($levelMixChart['segments'] as $segment)
@@ -423,7 +423,7 @@
                                 @php $barWidth = $topCategoryCount > 0 ? round(($item['count'] / $topCategoryCount) * 100, 2) : 0; @endphp
                                 <div class="sglgif-bar-row">
                                     <div class="sglgif-bar-head"><span>{{ $item['label'] }}</span><strong>{{ number_format($item['count']) }}</strong></div>
-                                    <div class="sglgif-bar-track"><div style="width: {{ $barWidth }}%; background: linear-gradient(90deg, #7c3aed, #4f46e5);"></div></div>
+                                    <div class="sglgif-bar-track"><div style="width: {{ $barWidth }}%; background: {{ $graphGradients['primary'] }};"></div></div>
                                 </div>
                             @empty
                                 <p class="sglgif-empty">No category data for this filter set.</p>
@@ -435,7 +435,7 @@
                                 @php $barWidth = $topCategoryFundingAmount > 0 ? round((($item['amount'] ?? 0) / $topCategoryFundingAmount) * 100, 2) : 0; @endphp
                                 <div class="sglgif-bar-row">
                                     <div class="sglgif-bar-head"><span>{{ $item['label'] }}</span><strong>&#8369; {{ number_format((float) ($item['amount'] ?? 0), 2) }}</strong></div>
-                                    <div class="sglgif-bar-track"><div style="width: {{ $barWidth }}%; background: linear-gradient(90deg, #0f766e, #10b981);"></div></div>
+                                    <div class="sglgif-bar-track"><div style="width: {{ $barWidth }}%; background: {{ $graphGradients['secondary'] }};"></div></div>
                                     <div class="sglgif-note">{{ number_format((int) ($item['count'] ?? 0)) }} projects</div>
                                 </div>
                             @empty
@@ -452,7 +452,7 @@
                             @php $barWidth = $topYearFundingAmount > 0 ? round((($item['amount'] ?? 0) / $topYearFundingAmount) * 100, 2) : 0; @endphp
                             <div class="sglgif-bar-row">
                                 <div class="sglgif-bar-head"><span>{{ $item['label'] }}</span><strong>&#8369; {{ number_format((float) ($item['amount'] ?? 0), 2) }}</strong></div>
-                                <div class="sglgif-bar-track"><div style="width: {{ $barWidth }}%; background: linear-gradient(90deg, #f59e0b, #f97316);"></div></div>
+                                <div class="sglgif-bar-track"><div style="width: {{ $barWidth }}%; background: {{ $graphGradients['tertiary'] }};"></div></div>
                                 <div class="sglgif-note">{{ number_format((int) ($item['count'] ?? 0)) }} projects</div>
                             </div>
                         @empty
@@ -472,28 +472,28 @@
 
                 <div class="sglgif-gauge-grid">
                     <article class="sglgif-gauge-card">
-                        <div class="sglgif-gauge" style="--p: {{ max(0, min(100, (float) $averageFinancialPercent)) }}; --c: #0f766e;">
+                        <div class="sglgif-gauge" style="--p: {{ max(0, min(100, (float) $averageFinancialPercent)) }}; --c: {{ $graphPalette['primary'] }};">
                             <span>{{ number_format($averageFinancialPercent, 2) }}%</span>
                         </div>
                         <h3>Financial</h3>
                         <p>Average financial accomplishment across filtered SGLGIF rows.</p>
                     </article>
                     <article class="sglgif-gauge-card">
-                        <div class="sglgif-gauge" style="--p: {{ max(0, min(100, (float) $averagePhysicalPercent)) }}; --c: #2563eb;">
+                        <div class="sglgif-gauge" style="--p: {{ max(0, min(100, (float) $averagePhysicalPercent)) }}; --c: {{ $graphPalette['secondary'] }};">
                             <span>{{ number_format($averagePhysicalPercent, 2) }}%</span>
                         </div>
                         <h3>Physical</h3>
                         <p>Average physical accomplishment from the uploaded project records.</p>
                     </article>
                     <article class="sglgif-gauge-card">
-                        <div class="sglgif-gauge" style="--p: {{ max(0, min(100, (float) $averageAttachmentPercent)) }}; --c: #d97706;">
+                        <div class="sglgif-gauge" style="--p: {{ max(0, min(100, (float) $averageAttachmentPercent)) }}; --c: {{ $graphPalette['tertiary'] }};">
                             <span>{{ number_format($averageAttachmentPercent, 2) }}%</span>
                         </div>
                         <h3>Attachment</h3>
                         <p>Readiness of required attachments and supporting documents.</p>
                     </article>
                     <article class="sglgif-gauge-card">
-                        <div class="sglgif-gauge" style="--p: {{ max(0, min(100, (float) $averageOverallPercent)) }}; --c: #7c3aed;">
+                        <div class="sglgif-gauge" style="--p: {{ max(0, min(100, (float) $averageOverallPercent)) }}; --c: {{ $graphPalette['quaternary'] }};">
                             <span>{{ number_format($averageOverallPercent, 2) }}%</span>
                         </div>
                         <h3>Overall</h3>
@@ -634,7 +634,7 @@
                             title="View {{ $provinceLabel }} projects"
                         >
                             <div class="sglgif-bar-head"><span>{{ $item['label'] }}</span><strong>{{ number_format($item['count']) }}</strong></div>
-                            <div class="sglgif-bar-track"><div style="width: {{ $barWidth }}%; background: linear-gradient(90deg, #1d4ed8, #0ea5e9);"></div></div>
+                            <div class="sglgif-bar-track"><div style="width: {{ $barWidth }}%; background: {{ $graphGradients['primary'] }};"></div></div>
                         </div>
                     @empty
                         <p class="sglgif-empty">No province counts for this filter set.</p>
@@ -646,7 +646,7 @@
                         @php $barWidth = $topProvinceFundingAmount > 0 ? round((($item['amount'] ?? 0) / $topProvinceFundingAmount) * 100, 2) : 0; @endphp
                         <div class="sglgif-bar-row">
                             <div class="sglgif-bar-head"><span>{{ $item['label'] }}</span><strong>&#8369; {{ number_format((float) ($item['amount'] ?? 0), 2) }}</strong></div>
-                            <div class="sglgif-bar-track"><div style="width: {{ $barWidth }}%; background: linear-gradient(90deg, #0f766e, #14b8a6);"></div></div>
+                            <div class="sglgif-bar-track"><div style="width: {{ $barWidth }}%; background: {{ $graphGradients['secondary'] }};"></div></div>
                             <div class="sglgif-note">{{ number_format((int) ($item['count'] ?? 0)) }} projects</div>
                         </div>
                     @empty
@@ -1064,7 +1064,7 @@
         }
 
         .sglgif-mix-chart-head > strong {
-            color: #1d4ed8;
+            color: #002C76;
             font-size: 13px;
             font-weight: 800;
             white-space: nowrap;
@@ -1175,38 +1175,6 @@
             font-weight: 700;
             letter-spacing: 0.08em;
             text-transform: uppercase;
-        }
-
-        .sglgif-mix-donut-labels {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-wrap: wrap;
-            gap: 8px;
-            width: 100%;
-        }
-
-        .sglgif-mix-donut-label {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            min-width: 0;
-            padding: 6px 10px;
-            border-radius: 999px;
-            background: rgba(255, 255, 255, 0.92);
-            border: 1px solid #dbe5f1;
-            color: #334155;
-            font-size: 11px;
-            font-weight: 700;
-            line-height: 1;
-            box-shadow: 0 6px 14px rgba(15, 23, 42, 0.06);
-        }
-
-        .sglgif-mix-donut-label-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 999px;
-            flex: 0 0 10px;
         }
 
         @keyframes sglgif-donut-sweep {
@@ -1403,7 +1371,7 @@
 
         .sglgif-gauge {
             --p: 0;
-            --c: #2563eb;
+            --c: #002C76;
             width: 126px;
             height: 126px;
             margin: 0 auto 12px;
@@ -1739,11 +1707,6 @@
 
             .sglgif-mix-donut-center span {
                 font-size: 9px;
-            }
-
-            .sglgif-mix-donut-label {
-                font-size: 10px;
-                padding: 5px 9px;
             }
 
             .sglgif-mix-chart-legend {
