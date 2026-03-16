@@ -565,6 +565,14 @@
             color: #6b7280;
             margin-top: 2px;
         }
+
+        .profile-menu-role {
+            font-size: 12px;
+            color: #1d4ed8;
+            margin-top: 6px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+        }
         
         .profile-menu-item {
             padding: 12px 20px;
@@ -945,6 +953,10 @@
             }
             
             .profile-menu-email {
+                font-size: 11px;
+            }
+
+            .profile-menu-role {
                 font-size: 11px;
             }
         }
@@ -1478,7 +1490,7 @@
                     </ul>
                 </li>
             @endif
-            @if(Auth::user()->role === 'superadmin')
+            @if(Auth::user()->isSuperAdmin())
             <li>
                 <a href="{{ route('users.index') }}" class="@if(Route::currentRouteName() == 'users.index') active @endif">
                     <i class="fas fa-user-shield"></i>
@@ -1587,6 +1599,7 @@
                     <div class="profile-menu-header">
                         <div class="profile-menu-name">{{ Auth::user()->fname ?? 'User' }} {{ Auth::user()->lname ?? '' }}</div>
                         <div class="profile-menu-email">{{ Auth::user()->emailaddress ?? 'user@example.com' }}</div>
+                        <div class="profile-menu-role">{{ Auth::user()->roleLabel() }}</div>
                     </div>
                     <a href="{{ route('profile.show') }}" class="profile-menu-item">
                         <i class="fas fa-user-circle"></i>

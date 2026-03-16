@@ -443,10 +443,13 @@ class LocallyFundedProjectController extends Controller
         $regionLower = strtolower($region);
         $officeBaseLower = trim((string) preg_replace('/,.*$/', '', $officeLower));
         $officeComparableLower = trim((string) preg_replace('/^(municipality|city)\s+of\s+/i', '', $officeBaseLower));
-        $isRegionalOfficeUser = $agency === 'DILG'
-            && (
-                str_contains($provinceLower, 'regional office')
-                || str_contains($officeLower, 'regional office')
+        $isRegionalOfficeUser = $user->isRegionalUser()
+            || (
+                $agency === 'DILG'
+                && (
+                    str_contains($provinceLower, 'regional office')
+                    || str_contains($officeLower, 'regional office')
+                )
             );
 
         if (!Schema::hasTable('subay_project_profiles')) {
@@ -533,9 +536,8 @@ class LocallyFundedProjectController extends Controller
             });
         };
 
-        // Filter based on user's agency, province, and office.
-        if ($agency === 'LGU') {
-            // LGU users can only see projects from their specific office.
+        // Filter based on the user's hierarchical role and assigned geography.
+        if ($user->isLguUser() || $agency === 'LGU') {
             if ($office !== '') {
                 if ($province !== '') {
                     $query->whereRaw('LOWER(TRIM(COALESCE(spp.province, ""))) = ?', [$provinceLower]);
@@ -547,18 +549,26 @@ class LocallyFundedProjectController extends Controller
                 // If no office is specified for LGU, show their province.
                 $query->whereRaw('LOWER(TRIM(COALESCE(spp.province, ""))) = ?', [$provinceLower]);
             }
-        } elseif ($agency === 'DILG') {
-            // DILG users filtering.
-            if ($isRegionalOfficeUser) {
-                // Regional Office users can see all projects.
-            } elseif ($province !== '') {
-                // DILG with specific province: show all projects in that province.
+        } elseif ($user->isProvincialUser()) {
+            if ($province !== '') {
                 $query->whereRaw('LOWER(TRIM(COALESCE(spp.province, ""))) = ?', [$provinceLower]);
             } elseif ($region !== '') {
-                // DILG with region set (no province): show all projects in that region.
                 $query->whereRaw('LOWER(TRIM(COALESCE(spp.region, ""))) = ?', [$regionLower]);
             }
-            // If neither province nor region is set, show all projects (superadmin behavior).
+        } elseif ($user->isRegionalUser()) {
+            if ($region !== '') {
+                $query->whereRaw('LOWER(TRIM(COALESCE(spp.region, ""))) = ?', [$regionLower]);
+            }
+        } elseif ($agency === 'DILG') {
+            if ($isRegionalOfficeUser) {
+                if ($region !== '') {
+                    $query->whereRaw('LOWER(TRIM(COALESCE(spp.region, ""))) = ?', [$regionLower]);
+                }
+            } elseif ($province !== '') {
+                $query->whereRaw('LOWER(TRIM(COALESCE(spp.province, ""))) = ?', [$provinceLower]);
+            } elseif ($region !== '') {
+                $query->whereRaw('LOWER(TRIM(COALESCE(spp.region, ""))) = ?', [$regionLower]);
+            }
         }
 
         $select = [
@@ -2195,7 +2205,7 @@ class LocallyFundedProjectController extends Controller
         $canEditProjectProfile = $user
             && strtoupper(trim((string) ($user->agency ?? ''))) === 'DILG'
             && trim((string) ($user->province ?? '')) === 'Regional Office'
-            && strtolower(trim((string) ($user->role ?? ''))) === 'superadmin';
+            && $user->isSuperAdmin();
 
         if ($section === 'profile' && !$canEditProjectProfile) {
             abort(403, 'Unauthorized');

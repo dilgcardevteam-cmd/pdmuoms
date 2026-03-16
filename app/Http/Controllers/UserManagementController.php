@@ -17,7 +17,9 @@ class UserManagementController extends Controller
     ];
 
     private const CRUD_ACTION_OPTIONS = [
+        'view' => 'VIEW',
         'add' => 'ADD',
+        'upload' => 'UPLOAD',
         'update' => 'UPDATE',
         'delete' => 'DELETE',
     ];
@@ -40,7 +42,19 @@ class UserManagementController extends Controller
      */
     public function index()
     {
-        $users = User::paginate(15);
+        $users = User::query()
+            ->orderByRaw("
+                CASE LOWER(TRIM(COALESCE(role, '')))
+                    WHEN '" . User::ROLE_SUPERADMIN . "' THEN 1
+                    WHEN '" . User::ROLE_REGIONAL . "' THEN 2
+                    WHEN '" . User::ROLE_PROVINCIAL . "' THEN 3
+                    WHEN '" . User::ROLE_LGU . "' THEN 4
+                    ELSE 5
+                END
+            ")
+            ->orderBy('lname')
+            ->orderBy('fname')
+            ->paginate(15);
 
         return view('admin.users.index', [
             'users' => $users,
@@ -57,6 +71,24 @@ class UserManagementController extends Controller
     public function create()
     {
         return view('admin.users.create');
+    }
+
+    private function roleValidationRule(): array
+    {
+        return ['required', 'in:' . implode(',', array_keys(User::roleOptions()))];
+    }
+
+    private function normalizeUserPayload(array $validated): array
+    {
+        $role = strtolower(trim((string) ($validated['role'] ?? '')));
+
+        if ($role === User::ROLE_LGU) {
+            $validated['agency'] = 'LGU';
+        } elseif (in_array($role, [User::ROLE_REGIONAL, User::ROLE_PROVINCIAL], true)) {
+            $validated['agency'] = 'DILG';
+        }
+
+        return $validated;
     }
 
     /**
@@ -79,10 +111,11 @@ class UserManagementController extends Controller
             'province' => ['required', 'string'],
             'office' => ['nullable', 'string'],
             'mobileno' => ['required', 'digits:11'],
-            'role' => ['required', 'in:user,admin,superadmin'],
+            'role' => $this->roleValidationRule(),
             'status' => ['required', 'in:active,inactive'],
         ]);
 
+        $validated = $this->normalizeUserPayload($validated);
         $validated['password'] = Hash::make($validated['password']);
         $validated['email_verified_at'] = now();
 
@@ -131,7 +164,7 @@ class UserManagementController extends Controller
             'province' => ['required', 'string'],
             'office' => ['nullable', 'string'],
             'mobileno' => ['required', 'digits:11'],
-            'role' => ['required', 'in:user,admin,superadmin'],
+            'role' => $this->roleValidationRule(),
             'status' => ['required', 'in:active,inactive'],
         ]);
 
@@ -140,6 +173,7 @@ class UserManagementController extends Controller
             $validated['password'] = Hash::make($request->password);
         }
 
+        $validated = $this->normalizeUserPayload($validated);
         $user->update($validated);
 
         return redirect()->route('users.index')->with('success', 'User updated successfully!');
@@ -188,7 +222,7 @@ class UserManagementController extends Controller
             ? $request->input('redirect_to')
             : route('users.index', ['tab' => 'access-grants']);
 
-        if (strtolower(trim((string) $user->role)) === 'superadmin') {
+        if ($user->isSuperAdmin()) {
             return redirect()
                 ->to($redirectTo)
                 ->with('error', 'Superadmin accounts always keep full access.');

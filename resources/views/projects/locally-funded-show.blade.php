@@ -918,11 +918,10 @@
     @php
         $userAgency = strtoupper(trim((string) (Auth::user()->agency ?? '')));
         $userProvince = trim((string) (Auth::user()->province ?? ''));
-        $userRole = strtolower(trim((string) (Auth::user()->role ?? '')));
         $isLguAgencyUser = $userAgency === 'LGU';
         $canEditProjectProfile = $userAgency === 'DILG'
             && $userProvince === 'Regional Office'
-            && $userRole === 'superadmin';
+            && Auth::user()->isSuperAdmin();
     @endphp
 
     <div style="background: #f8fafc; padding: 24px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">

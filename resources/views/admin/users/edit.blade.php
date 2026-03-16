@@ -4,6 +4,7 @@
 @section('page-title', 'Edit User')
 
 @section('content')
+    @php($roleOptions = \App\Models\User::roleOptions())
     <div class="content-header">
         <h1>Edit User</h1>
         <p>Update user information and settings</p>
@@ -183,11 +184,12 @@
                     <!-- Role -->
                     <div>
                         <label style="display: block; margin-bottom: 8px; color: #374151; font-weight: 500; font-size: 14px;">Role <span style="color: #dc2626;">*</span></label>
-                        <select name="role" required style="width: 100%; padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; @error('role') border-color: #dc2626; @enderror">
-                            <option value="user" @selected($user->role === 'user')>User</option>
-                            <option value="admin" @selected($user->role === 'admin')>Admin</option>
-                            <option value="superadmin" @selected($user->role === 'superadmin')>Super Admin</option>
+                        <select id="roleSelect" name="role" required style="width: 100%; padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; @error('role') border-color: #dc2626; @enderror">
+                            @foreach($roleOptions as $roleValue => $roleLabel)
+                                <option value="{{ $roleValue }}" @selected($user->role === $roleValue)>{{ $roleLabel }}</option>
+                            @endforeach
                         </select>
+                        <p style="color: #64748b; font-size: 12px; margin-top: 6px;">Regional users oversee their region, Provincial users their province, and LGU users stay at local scope.</p>
                         @error('role')
                             <p style="color: #dc2626; font-size: 12px; margin-top: 4px;">{{ $message }}</p>
                         @enderror
@@ -317,9 +319,30 @@
         };
 
         const agencySelect = document.getElementById('agencySelect');
+        const roleSelect = document.getElementById('roleSelect');
         const positionSelect = document.getElementById('positionSelect');
         const provinceSelect = document.getElementById('provinceSelect');
         const officeSelect = document.getElementById('officeSelect');
+
+        function syncAgencyWithRole() {
+            if (!roleSelect) {
+                return;
+            }
+
+            const role = roleSelect.value;
+            let nextAgency = '';
+
+            if (role === 'user_lgu') {
+                nextAgency = 'LGU';
+            } else if (role === 'user_regional' || role === 'user_provincial') {
+                nextAgency = 'DILG';
+            }
+
+            if (nextAgency !== '' && agencySelect.value !== nextAgency) {
+                agencySelect.value = nextAgency;
+                agencySelect.dispatchEvent(new Event('change'));
+            }
+        }
 
         // Update position dropdown
         agencySelect.addEventListener('change', function() {
@@ -393,7 +416,9 @@
         agencySelect.addEventListener('change', updateOfficeDropdown);
         provinceSelect.addEventListener('change', updateOfficeDropdown);
 
+        roleSelect?.addEventListener('change', syncAgencyWithRole);
         // Trigger change events to populate if data is pre-selected
+        syncAgencyWithRole();
         if (agencySelect.value) {
             agencySelect.dispatchEvent(new Event('change'));
         }

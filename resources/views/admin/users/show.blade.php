@@ -5,6 +5,7 @@
 
 @section('content')
     @php
+        $roleOptions = \App\Models\User::roleOptions();
         $activeUserViewTab = request()->query('tab') === 'access-grant' ? 'userAccessGrantPanel' : 'userProfilePanel';
         $grantedPermissions = $user->grantedCrudPermissions();
         $hasFullAccess = in_array('*', $grantedPermissions, true);
@@ -102,10 +103,10 @@
                         </div>
                         <div>
                             <label class="user-preview-label">Role <span class="user-preview-required">*</span></label>
-                            <select name="role" required class="user-preview-input" data-editable>
-                                <option value="user" @selected($user->role === 'user')>User</option>
-                                <option value="admin" @selected($user->role === 'admin')>Admin</option>
-                                <option value="superadmin" @selected($user->role === 'superadmin')>Super Admin</option>
+                            <select id="roleSelect" name="role" required class="user-preview-input" data-editable>
+                                @foreach($roleOptions as $roleValue => $roleLabel)
+                                    <option value="{{ $roleValue }}" @selected($user->role === $roleValue)>{{ $roleLabel }}</option>
+                                @endforeach
                             </select>
                         </div>
                         <div>
@@ -177,22 +178,22 @@
                         Manage CRUD access for {{ $user->fname }} {{ $user->lname }} on system modules.
                     </p>
                 </div>
-                <span style="padding: 6px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; background: {{ $user->role === 'superadmin' ? '#fee2e2' : ($isScopedAccess ? '#dcfce7' : '#f3f4f6') }}; color: {{ $user->role === 'superadmin' ? '#991b1b' : ($isScopedAccess ? '#166534' : '#475569') }};">
-                    @if($user->role === 'superadmin')
+                <span style="padding: 6px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; background: {{ $user->isSuperAdmin() ? '#fee2e2' : ($isScopedAccess ? '#dcfce7' : '#f3f4f6') }}; color: {{ $user->isSuperAdmin() ? '#991b1b' : ($isScopedAccess ? '#166534' : '#475569') }};">
+                    @if($user->isSuperAdmin())
                         Full access by role
                     @elseif(!$isScopedAccess)
-                        Legacy access
+                        Role defaults only
                     @elseif($hasFullAccess)
-                        All CRUD permissions
+                        All additional permissions
                     @elseif($grantedPermissions === [])
-                        No saved CRUD permissions
+                        No additional grants
                     @else
-                        Custom CRUD permissions
+                        Custom additional grants
                     @endif
                 </span>
             </div>
 
-            @if($user->role === 'superadmin')
+            @if($user->isSuperAdmin())
                 <div style="padding: 14px; border: 1px solid #fecaca; background: #fff1f2; color: #9f1239; border-radius: 10px; font-size: 13px; line-height: 1.6;">
                     Superadmin accounts always keep full access and do not require CRUD permission grants.
                 </div>
@@ -236,7 +237,7 @@
 
                     <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 18px; flex-wrap: wrap;">
                         <div style="font-size: 12px; color: #64748b;">
-                            Leave all unchecked to keep the user read-only for these CRUD-managed features.
+                            Leave all unchecked to keep the user's role-based defaults only. Add checks here to extend access beyond the default role scope.
                         </div>
                         <button type="submit" class="user-preview-primary-btn">
                             Save Permissions
@@ -483,6 +484,7 @@
             const cancelBtn = document.getElementById('userCancelBtn');
             const editableFields = Array.from(form.querySelectorAll('[data-editable]'));
             const agencySelect = document.getElementById('agencySelect');
+            const roleSelect = document.getElementById('roleSelect');
             const positionSelect = document.getElementById('positionSelect');
             const provinceSelect = document.getElementById('provinceSelect');
             const officeSelect = document.getElementById('officeSelect');
@@ -591,6 +593,25 @@
                         }
                         positionSelect.appendChild(option);
                     });
+                }
+            }
+
+            function syncAgencyWithRole() {
+                if (!roleSelect) {
+                    return;
+                }
+
+                const role = roleSelect.value;
+                let nextAgency = '';
+
+                if (role === 'user_lgu') {
+                    nextAgency = 'LGU';
+                } else if (role === 'user_regional' || role === 'user_provincial') {
+                    nextAgency = 'DILG';
+                }
+
+                if (nextAgency !== '' && agencySelect.value !== nextAgency) {
+                    agencySelect.value = nextAgency;
                 }
             }
 
@@ -718,6 +739,14 @@
                 refreshSaveState();
             });
 
+            roleSelect?.addEventListener('change', function () {
+                syncAgencyWithRole();
+                updatePositionDropdown(false);
+                updateProvinceDropdown(false);
+                updateOfficeDropdown(false);
+                refreshSaveState();
+            });
+
             provinceSelect.addEventListener('change', function () {
                 updateOfficeDropdown(false);
                 refreshSaveState();
@@ -734,6 +763,7 @@
                 });
             });
 
+            syncAgencyWithRole();
             syncDependentFields(true);
             initialSnapshot = snapshotForm();
             setEditMode(false);
