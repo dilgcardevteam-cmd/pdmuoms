@@ -560,38 +560,41 @@ class LocallyFundedProjectController extends Controller
             });
         };
 
-        // Filter based on the user's hierarchical role and assigned geography.
-        if ($user->isLguUser() || $agency === 'LGU') {
-            if ($office !== '') {
+        // Superadmins should see the full listing regardless of their profile geography.
+        if (!$user->isSuperAdmin()) {
+            // Filter based on the user's hierarchical role and assigned geography.
+            if ($user->isLguUser() || $agency === 'LGU') {
+                if ($office !== '') {
+                    if ($province !== '') {
+                        $query->whereRaw('LOWER(TRIM(COALESCE(spp.province, ""))) = ?', [$provinceLower]);
+                        $applyOfficeScopeToSubay($query);
+                    } else {
+                        $applyOfficeScopeToSubay($query);
+                    }
+                } elseif ($province !== '') {
+                    // If no office is specified for LGU, show their province.
+                    $query->whereRaw('LOWER(TRIM(COALESCE(spp.province, ""))) = ?', [$provinceLower]);
+                }
+            } elseif ($user->isProvincialUser()) {
                 if ($province !== '') {
                     $query->whereRaw('LOWER(TRIM(COALESCE(spp.province, ""))) = ?', [$provinceLower]);
-                    $applyOfficeScopeToSubay($query);
-                } else {
-                    $applyOfficeScopeToSubay($query);
+                } elseif ($region !== '') {
+                    $query->whereRaw('LOWER(TRIM(COALESCE(spp.region, ""))) = ?', [$regionLower]);
                 }
-            } elseif ($province !== '') {
-                // If no office is specified for LGU, show their province.
-                $query->whereRaw('LOWER(TRIM(COALESCE(spp.province, ""))) = ?', [$provinceLower]);
-            }
-        } elseif ($user->isProvincialUser()) {
-            if ($province !== '') {
-                $query->whereRaw('LOWER(TRIM(COALESCE(spp.province, ""))) = ?', [$provinceLower]);
-            } elseif ($region !== '') {
-                $query->whereRaw('LOWER(TRIM(COALESCE(spp.region, ""))) = ?', [$regionLower]);
-            }
-        } elseif ($user->isRegionalUser()) {
-            if ($region !== '') {
-                $query->whereRaw('LOWER(TRIM(COALESCE(spp.region, ""))) = ?', [$regionLower]);
-            }
-        } elseif ($agency === 'DILG') {
-            if ($isRegionalOfficeUser) {
+            } elseif ($user->isRegionalUser()) {
                 if ($region !== '') {
                     $query->whereRaw('LOWER(TRIM(COALESCE(spp.region, ""))) = ?', [$regionLower]);
                 }
-            } elseif ($province !== '') {
-                $query->whereRaw('LOWER(TRIM(COALESCE(spp.province, ""))) = ?', [$provinceLower]);
-            } elseif ($region !== '') {
-                $query->whereRaw('LOWER(TRIM(COALESCE(spp.region, ""))) = ?', [$regionLower]);
+            } elseif ($agency === 'DILG') {
+                if ($isRegionalOfficeUser) {
+                    if ($region !== '') {
+                        $query->whereRaw('LOWER(TRIM(COALESCE(spp.region, ""))) = ?', [$regionLower]);
+                    }
+                } elseif ($province !== '') {
+                    $query->whereRaw('LOWER(TRIM(COALESCE(spp.province, ""))) = ?', [$provinceLower]);
+                } elseif ($region !== '') {
+                    $query->whereRaw('LOWER(TRIM(COALESCE(spp.region, ""))) = ?', [$regionLower]);
+                }
             }
         }
 

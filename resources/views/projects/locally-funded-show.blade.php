@@ -872,6 +872,17 @@
 @endsection
 
 @section('content')
+    @php
+        $userAgency = strtoupper(trim((string) (Auth::user()->agency ?? '')));
+        $userProvince = trim((string) (Auth::user()->province ?? ''));
+        $isLguAgencyUser = $userAgency === 'LGU';
+        $canUpdateLocallyFundedProject = Auth::user()->hasCrudPermission('locally_funded_projects', 'update');
+        $canDeleteLocallyFundedProject = Auth::user()->hasCrudPermission('locally_funded_projects', 'delete');
+        $canEditProjectProfile = $userAgency === 'DILG'
+            && $userProvince === 'Regional Office'
+            && Auth::user()->isSuperAdmin();
+    @endphp
+
     <div class="lfp-mobile-shell">
         <div class="lfp-mobile-canvas">
     <div class="content-header" style="display: flex; justify-content: space-between; align-items: center; gap: 12px;">
@@ -914,15 +925,6 @@
             }, 3000);
         </script>
     @endif
-
-    @php
-        $userAgency = strtoupper(trim((string) (Auth::user()->agency ?? '')));
-        $userProvince = trim((string) (Auth::user()->province ?? ''));
-        $isLguAgencyUser = $userAgency === 'LGU';
-        $canEditProjectProfile = $userAgency === 'DILG'
-            && $userProvince === 'Regional Office'
-            && Auth::user()->isSuperAdmin();
-    @endphp
 
     <div style="background: #f8fafc; padding: 24px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
         
@@ -1256,7 +1258,7 @@
         <div id="contractInfoSection" class="project-tab-panel" data-tab-key="contract" role="tabpanel" aria-labelledby="tab-contract-info" style="margin-bottom: 24px; padding: 20px; border: 1px solid #00267C; border-radius: 10px; background-color: #ffffff;">
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 2px solid #00267C; padding-bottom: 10px;">
                 <h3 style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Contract Information</h3>
-                @if(!$isLguAgencyUser)
+                @if($canUpdateLocallyFundedProject)
                     <a href="#" class="lfp-inline-edit-trigger" data-toggle="inline-edit" data-target="editContractForm"><i class="fas fa-edit" aria-hidden="true"></i>Update</a>
                 @endif
             </div>
@@ -1623,7 +1625,7 @@
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 2px solid #00267C; padding-bottom: 10px;">
                 <h3 class="lfp-physical-section-title" style="color: #00267C; font-size: clamp(14px, 4vw, 18px); font-weight: 700; margin: 0;">Physical Accomplishment</h3>
                 <div style="display: flex; gap: 8px; align-items: center;">
-                    @if(!$isLguAgencyUser)
+                    @if($canUpdateLocallyFundedProject)
                         <a href="#" class="lfp-inline-edit-trigger" data-toggle="inline-edit" data-target="editPhysicalForm" data-physical-toggle="true"><i class="fas fa-edit" aria-hidden="true"></i>Update</a>
                     @endif
                 </div>
@@ -2203,7 +2205,7 @@
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 2px solid #00267C; padding-bottom: 10px;">
                 <h3 class="lfp-physical-section-title" style="color: #00267C; font-size: clamp(14px, 4vw, 18px); font-weight: 700; margin: 0;">Financial Accomplishment (based on Subaybayan)</h3>
                 <div class="lfp-financial-section-actions" style="display: flex; gap: 8px; align-items: center;">
-                    @if(!$isLguAgencyUser)
+                    @if($canUpdateLocallyFundedProject)
                         <a href="#" class="lfp-inline-edit-trigger" data-toggle="inline-edit" data-target="editFinancialForm" data-financial-toggle="true"><i class="fas fa-edit" aria-hidden="true"></i>Update</a>
                     @endif
                 </div>
@@ -2507,7 +2509,7 @@
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 2px solid #00267C; padding-bottom: 10px;">
                 <h3 data-inline-section-heading="true" data-view-title="Monitoring/Inspection Activities" data-edit-title="Edit Monitoring/Inspection Activities" style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Monitoring/Inspection Activities</h3>
                 <div style="display: flex; gap: 8px; align-items: center;">
-                    @if(!$isLguAgencyUser)
+                    @if($canUpdateLocallyFundedProject)
                         <a href="#" class="lfp-inline-edit-trigger" data-toggle="inline-edit" data-target="editMonitoringForm" data-monitoring-toggle="true"><i class="fas fa-edit" aria-hidden="true"></i>Update</a>
                     @endif
                     <button type="button" class="lfp-inline-modal-close lfp-inline-modal-section-close" data-toggle="inline-cancel" data-target="editMonitoringForm" aria-label="Close monitoring editor">&times;</button>
@@ -2638,7 +2640,7 @@
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 2px solid #00267C; padding-bottom: 10px;">
                 <h3 data-inline-section-heading="true" data-view-title="Post Implementation Requirements" data-edit-title="Edit Post Implementation Requirements" style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Post Implementation Requirements</h3>
                 <div style="display: flex; gap: 8px; align-items: center;">
-                    @if(!$isLguAgencyUser)
+                    @if($canUpdateLocallyFundedProject)
                         <a href="#" class="lfp-inline-edit-trigger" data-toggle="inline-edit" data-target="editPostImplementationForm" data-post-implementation-toggle="true"><i class="fas fa-edit" aria-hidden="true"></i>Update</a>
                     @endif
                     <button type="button" class="lfp-inline-modal-close lfp-inline-modal-section-close" data-toggle="inline-cancel" data-target="editPostImplementationForm" aria-label="Close post implementation editor">&times;</button>

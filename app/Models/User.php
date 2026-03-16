@@ -363,6 +363,51 @@ class User extends Authenticatable implements MustVerifyEmail
         return array_values(array_filter(array_map('trim', explode(',', $permissions))));
     }
 
+    public function permissionCandidateKeys(string $aspect, string $action): array
+    {
+        $normalizedAspect = strtolower(trim($aspect));
+        $normalizedAction = strtolower(trim($action));
+        $candidateActions = array_values(array_unique(array_filter([
+            $normalizedAction,
+            $normalizedAction === 'upload' ? 'add' : null,
+            $normalizedAction === 'add' ? 'upload' : null,
+            $normalizedAction === 'view' ? 'add' : null,
+            $normalizedAction === 'view' ? 'upload' : null,
+            $normalizedAction === 'view' ? 'update' : null,
+            $normalizedAction === 'view' ? 'delete' : null,
+        ])));
+
+        return array_map(function ($candidateAction) use ($normalizedAspect) {
+            return $normalizedAspect . '.' . $candidateAction;
+        }, $candidateActions);
+    }
+
+    public function hasDefaultCrudPermission(string $aspect, string $action): bool
+    {
+        $defaultPermissions = $this->defaultCrudPermissions();
+
+        if (in_array('*', $defaultPermissions, true)) {
+            return true;
+        }
+
+        return count(array_intersect($this->permissionCandidateKeys($aspect, $action), $defaultPermissions)) > 0;
+    }
+
+    public function hasExplicitCrudPermission(string $aspect, string $action): bool
+    {
+        $access = strtolower(trim((string) $this->access));
+
+        if ($access === self::ACCESS_SCOPE_ALL) {
+            return true;
+        }
+
+        if (!$this->usesScopedCrudAccess() || $access === self::ACCESS_SCOPE_NONE) {
+            return false;
+        }
+
+        return count(array_intersect($this->permissionCandidateKeys($aspect, $action), $this->grantedCrudPermissions())) > 0;
+    }
+
     public function hasCrudPermission(string $aspect, string $action): bool
     {
         if ($this->isSuperAdmin()) {
@@ -380,21 +425,7 @@ class User extends Authenticatable implements MustVerifyEmail
             return true;
         }
 
-        $normalizedAspect = strtolower(trim($aspect));
-        $normalizedAction = strtolower(trim($action));
-        $candidateActions = array_values(array_unique(array_filter([
-            $normalizedAction,
-            $normalizedAction === 'upload' ? 'add' : null,
-            $normalizedAction === 'add' ? 'upload' : null,
-            $normalizedAction === 'view' ? 'add' : null,
-            $normalizedAction === 'view' ? 'upload' : null,
-            $normalizedAction === 'view' ? 'update' : null,
-            $normalizedAction === 'view' ? 'delete' : null,
-        ])));
-
-        $permissionKeys = array_map(function ($candidateAction) use ($normalizedAspect) {
-            return $normalizedAspect . '.' . $candidateAction;
-        }, $candidateActions);
+        $permissionKeys = $this->permissionCandidateKeys($aspect, $action);
 
         if (count(array_intersect($permissionKeys, $defaultPermissions)) > 0) {
             return true;
