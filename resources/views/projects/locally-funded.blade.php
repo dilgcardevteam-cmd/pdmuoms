@@ -112,6 +112,25 @@
 
                 return 'lfp-status-badge--default';
             };
+
+            $searchTerm = trim((string) ($activeFilters['search'] ?? ''));
+            $highlightSearch = function ($value) use ($searchTerm) {
+                $text = trim((string) $value);
+
+                if ($text === '') {
+                    return '-';
+                }
+
+                $escapedText = e($text);
+
+                if ($searchTerm === '') {
+                    return $escapedText;
+                }
+
+                $pattern = '/' . preg_quote($searchTerm, '/') . '/i';
+
+                return preg_replace($pattern, '<mark class="lfp-search-highlight">$0</mark>', $escapedText) ?: $escapedText;
+            };
         @endphp
 
         <details id="lfp-filters-panel" class="lfp-filters-panel" open>
@@ -132,7 +151,10 @@
                     @endif
                     <div style="min-width: 220px; flex: 1;">
                         <label for="lfp-search" style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 6px;">Search</label>
-                        <input id="lfp-search" name="search" type="text" value="{{ $activeFilters['search'] }}" placeholder="Search project code, title, province, fund source..." style="width: 100%; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px;">
+                        <div class="lfp-search-field">
+                            <input id="lfp-search" name="search" type="text" value="{{ $activeFilters['search'] }}" placeholder="Search project code, title, province, fund source..." autocomplete="off" class="lfp-search-input" style="width: 100%; padding: 8px 36px 8px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px;">
+                            <span id="lfp-search-spinner" class="lfp-search-spinner" aria-hidden="true"></span>
+                        </div>
                     </div>
                     <div style="min-width: 150px;">
                         <label for="filter-year" style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 6px;">Funding Year</label>
@@ -363,16 +385,16 @@
                                 data-status-subaybayan="{{ e($statusSubaybayan) }}"
                                 data-last-updated-ts="{{ $project->updated_at ? $project->updated_at->timestamp : '' }}"
                             >
-                                <td style="padding: 12px; color: #374151; font-weight: 500;">{{ $project->subaybayan_project_code }}</td>
+                                <td style="padding: 12px; color: #374151; font-weight: 500;">{!! $highlightSearch($project->subaybayan_project_code) !!}</td>
                                 <td style="padding: 12px; color: #374151; min-width: 240px;">
                                     <span class="wrap-text" title="{{ $project->project_name }}" style="display: block; max-width: 240px; white-space: normal; overflow-wrap: anywhere; word-break: break-word;">
-                                        {{ $project->project_name }}
+                                        {!! $highlightSearch($project->project_name) !!}
                                     </span>
                                 </td>
                                 <td style="padding: 12px; color: #374151; min-width: 220px;">
                                     <div class="wrap-text" style="font-size: 12px; line-height: 1.4; white-space: normal; max-width: 220px;">
-                                        <strong>Province:</strong> {{ $project->province }}<br>
-                                        <strong>City/Mun:</strong> {{ $project->city_municipality }}<br>
+                                        <strong>Province:</strong> {!! $highlightSearch($project->province) !!}<br>
+                                        <strong>City/Mun:</strong> {!! $highlightSearch($project->city_municipality) !!}<br>
                                         @php
                                             $barangays = array_filter(array_map('trim', explode(',', (string) $project->barangay)));
                                         @endphp
@@ -380,7 +402,7 @@
                                         @if(count($barangays))
                                             <ul style="margin: 4px 0 0 16px; padding: 0;">
                                                 @foreach($barangays as $barangay)
-                                                    <li style="margin: 0; list-style: disc;">{{ $barangay }}</li>
+                                                    <li style="margin: 0; list-style: disc;">{!! $highlightSearch($barangay) !!}</li>
                                                 @endforeach
                                             </ul>
                                         @else
@@ -389,7 +411,7 @@
                                     </div>
                                 </td>
                                 <td data-column-key="funding_year" style="padding: 12px; color: #374151; text-align: center;">{{ $project->funding_year }}</td>
-                                <td data-column-key="fund_source" style="padding: 12px; color: #374151; text-align: center;">{{ $project->fund_source }}</td>
+                                <td data-column-key="fund_source" style="padding: 12px; color: #374151; text-align: center;">{!! $highlightSearch($project->fund_source) !!}</td>
                                 <td data-column-key="procurement_type" style="padding: 12px; color: #374151; text-align: center;">{{ $project->mode_of_procurement }}</td>
                                 <td data-column-key="lgsf_allocation" style="padding: 12px; color: #374151; text-align: center;">
                                     @if($project->lgsf_allocation !== null)
@@ -468,8 +490,8 @@
                     <details class="lfp-mobile-card">
                         <summary class="lfp-mobile-card-summary">
                             <div class="lfp-mobile-card-summary-main">
-                                <div class="lfp-mobile-card-code">{{ $project->subaybayan_project_code }}</div>
-                                <h3 class="lfp-mobile-card-title">{{ $project->project_name }}</h3>
+                                <div class="lfp-mobile-card-code">{!! $highlightSearch($project->subaybayan_project_code) !!}</div>
+                                <h3 class="lfp-mobile-card-title">{!! $highlightSearch($project->project_name) !!}</h3>
                             </div>
                             <span class="lfp-mobile-card-chevron" aria-hidden="true"></span>
                         </summary>
@@ -483,14 +505,14 @@
                                 <div class="lfp-mobile-card-section">
                                     <div class="lfp-mobile-card-section-label">Location</div>
                                     <div class="lfp-mobile-card-location">
-                                        <div><strong>Province:</strong> {{ $project->province }}</div>
-                                        <div><strong>City/Mun:</strong> {{ $project->city_municipality }}</div>
+                                        <div><strong>Province:</strong> {!! $highlightSearch($project->province) !!}</div>
+                                        <div><strong>City/Mun:</strong> {!! $highlightSearch($project->city_municipality) !!}</div>
                                         <div>
                                             <strong>Barangay:</strong>
                                             @if(count($barangays))
                                                 <ul class="lfp-mobile-card-list">
                                                     @foreach($barangays as $barangay)
-                                                        <li>{{ $barangay }}</li>
+                                                        <li>{!! $highlightSearch($barangay) !!}</li>
                                                     @endforeach
                                                 </ul>
                                             @else
@@ -507,7 +529,7 @@
                                     </div>
                                     <div class="lfp-mobile-card-detail" data-column-key="fund_source">
                                         <span class="lfp-mobile-card-detail-label">Fund Source</span>
-                                        <strong>{{ $project->fund_source ?: '-' }}</strong>
+                                        <strong>{!! $highlightSearch($project->fund_source) !!}</strong>
                                     </div>
                                     <div class="lfp-mobile-card-detail" data-column-key="procurement_type">
                                         <span class="lfp-mobile-card-detail-label">Procurement Type</span>
@@ -1017,6 +1039,41 @@
             font-weight: 600;
         }
 
+        .lfp-search-field {
+            position: relative;
+        }
+
+        .lfp-search-spinner {
+            position: absolute;
+            top: 50%;
+            right: 12px;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #cbd5e1;
+            border-top-color: #2563eb;
+            border-radius: 999px;
+            transform: translateY(-50%);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.18s ease;
+            animation: lfp-search-spin 0.75s linear infinite;
+        }
+
+        .lfp-search-field.is-loading .lfp-search-spinner {
+            opacity: 1;
+        }
+
+        .lfp-search-field.is-loading .lfp-search-input {
+            background-color: #f8fafc;
+        }
+
+        .lfp-search-highlight {
+            background: #fef08a;
+            color: inherit;
+            border-radius: 3px;
+            padding: 0 2px;
+        }
+
         #lfp-table [data-column-key].is-column-hidden {
             display: none;
         }
@@ -1028,6 +1085,16 @@
 
         #lfp-table tbody tr {
             cursor: pointer;
+        }
+
+        @keyframes lfp-search-spin {
+            from {
+                transform: translateY(-50%) rotate(0deg);
+            }
+
+            to {
+                transform: translateY(-50%) rotate(360deg);
+            }
         }
 
         @media (max-width: 1024px) {
@@ -1126,6 +1193,7 @@
             const filtersPanel = document.getElementById('lfp-filters-panel');
             const filtersForm = document.getElementById('lfp-filters-form');
             const searchInput = document.getElementById('lfp-search');
+            const searchField = searchInput ? searchInput.closest('.lfp-search-field') : null;
             const provinceSelect = document.getElementById('filter-province');
             const citySelect = document.getElementById('filter-city');
             const yearSelect = document.getElementById('filter-year');
@@ -1137,7 +1205,6 @@
             const locationData = @json($provinceMunicipalities);
             const columnToggleStorageKey = 'lfp-visible-columns';
             const selectedCity = citySelect ? (citySelect.dataset.selectedCity || '') : '';
-            let searchTimer = null;
 
             if (filtersPanel && window.matchMedia('(max-width: 768px)').matches) {
                 filtersPanel.removeAttribute('open');
@@ -1184,6 +1251,26 @@
 
             function submitFilters() {
                 filtersForm.requestSubmit();
+            }
+
+            function setSearchLoading(isLoading) {
+                if (!searchField) {
+                    return;
+                }
+
+                searchField.classList.toggle('is-loading', isLoading);
+            }
+
+            function debounce(callback, delay) {
+                let timerId;
+
+                return function () {
+                    const args = arguments;
+                    clearTimeout(timerId);
+                    timerId = window.setTimeout(function () {
+                        callback.apply(null, args);
+                    }, delay);
+                };
             }
 
             function applyVisibleColumns(visibleColumns) {
@@ -1262,10 +1349,30 @@
                 syncVisibleColumns();
             }
 
+            filtersForm.addEventListener('submit', function () {
+                setSearchLoading(true);
+            });
+
+            window.addEventListener('pageshow', function () {
+                setSearchLoading(false);
+            });
+
             if (searchInput) {
+                const debouncedSearch = debounce(function () {
+                    setSearchLoading(true);
+                    submitFilters();
+                }, 450);
+
                 searchInput.addEventListener('input', function () {
-                    clearTimeout(searchTimer);
-                    searchTimer = setTimeout(submitFilters, 450);
+                    const hasValue = searchInput.value.trim() !== '';
+
+                    if (hasValue) {
+                        setSearchLoading(true);
+                    } else {
+                        setSearchLoading(false);
+                    }
+
+                    debouncedSearch();
                 });
             }
 
