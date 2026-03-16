@@ -85,7 +85,7 @@ class RegisterController extends Controller
             'mobileno' => $data['mobileno'],
             'username' => $data['username'],
             'password' => Hash::make($data['password']),
-            'role' => $data['role'] ?? 'user',
+            'role' => $data['role'] ?? User::ROLE_LGU,
             'status' => $data['status'] ?? 'active',
             'access' => $data['access'] ?? 'limited',
         ]);

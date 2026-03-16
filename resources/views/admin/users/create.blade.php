@@ -4,6 +4,7 @@
 @section('page-title', 'Create User')
 
 @section('content')
+    @php($roleOptions = \App\Models\User::roleOptions())
     <div class="content-header">
         <h1>Create New User</h1>
         <p>Add a new user to the system</p>
@@ -174,12 +175,13 @@
                     <!-- Role -->
                     <div>
                         <label style="display: block; margin-bottom: 8px; color: #374151; font-weight: 500; font-size: 14px;">Role <span style="color: #dc2626;">*</span></label>
-                        <select name="role" required style="width: 100%; padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; @error('role') border-color: #dc2626; @enderror">
+                        <select id="roleSelect" name="role" required style="width: 100%; padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; @error('role') border-color: #dc2626; @enderror">
                             <option value="" disabled selected>Select Role</option>
-                            <option value="user" @selected(old('role') === 'user')>User</option>
-                            <option value="admin" @selected(old('role') === 'admin')>Admin</option>
-                            <option value="superadmin" @selected(old('role') === 'superadmin')>Super Admin</option>
+                            @foreach($roleOptions as $roleValue => $roleLabel)
+                                <option value="{{ $roleValue }}" @selected(old('role') === $roleValue)>{{ $roleLabel }}</option>
+                            @endforeach
                         </select>
+                        <p style="color: #64748b; font-size: 12px; margin-top: 6px;">Regional oversees region, Provincial oversees province, LGU is the lowest scope. Access Grant can add module access later.</p>
                         @error('role')
                             <p style="color: #dc2626; font-size: 12px; margin-top: 4px;">{{ $message }}</p>
                         @enderror
@@ -315,9 +317,30 @@
         };
 
         const agencySelect = document.getElementById('agencySelect');
+        const roleSelect = document.getElementById('roleSelect');
         const positionSelect = document.getElementById('positionSelect');
         const provinceSelect = document.getElementById('provinceSelect');
         const officeSelect = document.getElementById('officeSelect');
+
+        function syncAgencyWithRole() {
+            if (!roleSelect) {
+                return;
+            }
+
+            const role = roleSelect.value;
+            let nextAgency = '';
+
+            if (role === 'user_lgu') {
+                nextAgency = 'LGU';
+            } else if (role === 'user_regional' || role === 'user_provincial') {
+                nextAgency = 'DILG';
+            }
+
+            if (nextAgency !== '' && agencySelect.value !== nextAgency) {
+                agencySelect.value = nextAgency;
+                agencySelect.dispatchEvent(new Event('change'));
+            }
+        }
 
         // Update position dropdown based on agency
         agencySelect.addEventListener('change', function() {
@@ -391,7 +414,9 @@
             }
         });
 
+        roleSelect?.addEventListener('change', syncAgencyWithRole);
         // Trigger change event to populate position if agency is pre-selected
+        syncAgencyWithRole();
         if (agencySelect.value) {
             agencySelect.dispatchEvent(new Event('change'));
         }

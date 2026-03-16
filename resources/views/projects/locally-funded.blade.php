@@ -86,6 +86,88 @@
                     </div>
                 ';
             };
+
+            $statusBadgeClass = function ($value) {
+                $normalized = strtolower(trim((string) $value));
+
+                if ($normalized === '' || $normalized === '-') {
+                    return 'lfp-status-badge--neutral';
+                }
+
+                if (str_contains($normalized, 'complete') || str_contains($normalized, '100%') || str_contains($normalized, 'finished')) {
+                    return 'lfp-status-badge--complete';
+                }
+
+                if (str_contains($normalized, 'ongoing') || str_contains($normalized, 'progress') || str_contains($normalized, 'implement')) {
+                    return 'lfp-status-badge--ongoing';
+                }
+
+                if (str_contains($normalized, 'delay') || str_contains($normalized, 'slippage') || str_contains($normalized, 'issue')) {
+                    return 'lfp-status-badge--delayed';
+                }
+
+                if (str_contains($normalized, 'pending') || str_contains($normalized, 'for procurement') || str_contains($normalized, 'for bidding')) {
+                    return 'lfp-status-badge--pending';
+                }
+
+                if (str_contains($normalized, 'not started') || str_contains($normalized, 'not yet started')) {
+                    return 'lfp-status-badge--not-started';
+                }
+
+                return 'lfp-status-badge--default';
+            };
+
+            $searchTerm = trim((string) ($activeFilters['search'] ?? ''));
+            $highlightSearch = function ($value) use ($searchTerm) {
+                $text = trim((string) $value);
+
+                if ($text === '') {
+                    return '-';
+                }
+
+                $escapedText = e($text);
+
+                if ($searchTerm === '') {
+                    return $escapedText;
+                }
+
+                $pattern = '/' . preg_quote($searchTerm, '/') . '/i';
+
+                return preg_replace($pattern, '<mark class="lfp-search-highlight">$0</mark>', $escapedText) ?: $escapedText;
+            };
+
+            $parseBarangays = function ($value) {
+                if (is_array($value)) {
+                    return collect($value)
+                        ->map(fn ($item) => trim((string) $item))
+                        ->filter()
+                        ->values()
+                        ->all();
+                }
+
+                $text = trim((string) $value);
+
+                if ($text === '') {
+                    return [];
+                }
+
+                $decoded = json_decode($text, true);
+                if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                    return collect($decoded)
+                        ->map(fn ($item) => trim((string) $item))
+                        ->filter()
+                        ->values()
+                        ->all();
+                }
+
+                $normalized = preg_replace('/[\r\n;|]+/', ',', $text);
+
+                return collect(explode(',', (string) $normalized))
+                    ->map(fn ($item) => trim((string) $item))
+                    ->filter()
+                    ->values()
+                    ->all();
+            };
         @endphp
 
         <details id="lfp-filters-panel" class="lfp-filters-panel" open>
@@ -109,7 +191,10 @@
                     @endif
                     <div style="min-width: 220px; flex: 1;">
                         <label for="lfp-search" style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 6px;">Search</label>
-                        <input id="lfp-search" name="search" type="text" value="{{ $activeFilters['search'] }}" placeholder="Search project code, title, province, fund source..." style="width: 100%; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px;">
+                        <div class="lfp-search-field">
+                            <input id="lfp-search" name="search" type="text" value="{{ $activeFilters['search'] }}" placeholder="Search project code, title, province, fund source..." autocomplete="off" class="lfp-search-input" style="width: 100%; padding: 8px 36px 8px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px;">
+                            <span id="lfp-search-spinner" class="lfp-search-spinner" aria-hidden="true"></span>
+                        </div>
                     </div>
                     <div style="min-width: 150px;">
                         <label for="filter-year" style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 6px;">Funding Year</label>
@@ -199,6 +284,7 @@
             </div>
         </details>
 
+        <div id="lfp-results-container" data-results-container>
         @if($projects->isEmpty())
             @if($forceFundSource === '' && Auth::user()->agency === 'DILG' && Auth::user()->province === 'Regional Office')
             <p style="margin: 0; color: #6b7280; text-align: center; padding: 40px 0;">No projects found. <a href="{{ route('locally-funded-project.create') }}" style="color: #002C76; text-decoration: none; font-weight: 600;">Create one now</a></p>
@@ -349,24 +435,24 @@
                                 data-status-subaybayan="{{ e($statusSubaybayan) }}"
                                 data-last-updated-ts="{{ $project->updated_at ? $project->updated_at->timestamp : '' }}"
                             >
-                                <td style="padding: 12px; color: #374151; font-weight: 500;">{{ $project->subaybayan_project_code }}</td>
+                                <td style="padding: 12px; color: #374151; font-weight: 500;">{!! $highlightSearch($project->subaybayan_project_code) !!}</td>
                                 <td style="padding: 12px; color: #374151; min-width: 240px;">
                                     <span class="wrap-text" title="{{ $project->project_name }}" style="display: block; max-width: 240px; white-space: normal; overflow-wrap: anywhere; word-break: break-word;">
-                                        {{ $project->project_name }}
+                                        {!! $highlightSearch($project->project_name) !!}
                                     </span>
                                 </td>
                                 <td style="padding: 12px; color: #374151; min-width: 220px;">
                                     <div class="wrap-text" style="font-size: 12px; line-height: 1.4; white-space: normal; max-width: 220px;">
-                                        <strong>Province:</strong> {{ $project->province }}<br>
-                                        <strong>City/Mun:</strong> {{ $project->city_municipality }}<br>
+                                        <strong>Province:</strong> {!! $highlightSearch($project->province) !!}<br>
+                                        <strong>City/Mun:</strong> {!! $highlightSearch($project->city_municipality) !!}<br>
                                         @php
-                                            $barangays = array_filter(array_map('trim', explode(',', (string) $project->barangay)));
+                                            $barangays = $parseBarangays($project->barangay);
                                         @endphp
                                         <strong>Barangay:</strong>
                                         @if(count($barangays))
                                             <ul style="margin: 4px 0 0 16px; padding: 0;">
                                                 @foreach($barangays as $barangay)
-                                                    <li style="margin: 0; list-style: disc;">{{ $barangay }}</li>
+                                                    <li style="margin: 0; list-style: disc;">{!! $highlightSearch($barangay) !!}</li>
                                                 @endforeach
                                             </ul>
                                         @else
@@ -375,7 +461,7 @@
                                     </div>
                                 </td>
                                 <td data-column-key="funding_year" style="padding: 12px; color: #374151; text-align: center;">{{ $project->funding_year }}</td>
-                                <td data-column-key="fund_source" style="padding: 12px; color: #374151; text-align: center;">{{ $project->fund_source }}</td>
+                                <td data-column-key="fund_source" style="padding: 12px; color: #374151; text-align: center;">{!! $highlightSearch($project->fund_source) !!}</td>
                                 <td data-column-key="procurement_type" style="padding: 12px; color: #374151; text-align: center;">{{ $project->mode_of_procurement }}</td>
                                 <td data-column-key="lgsf_allocation" style="padding: 12px; color: #374151; text-align: center;">
                                     @if($project->lgsf_allocation !== null)
@@ -405,12 +491,12 @@
                                     {!! $renderProgressBar($subayAccomplishment, 'table') !!}
                                 </td>
                                 <td data-column-key="status_actual" style="padding: 12px; text-align: center;">
-                                    <span style="display: inline-block; padding: 4px 8px; background-color: #dbeafe; color: #0369a1; border-radius: 4px; font-size: 11px; font-weight: 600;">
+                                    <span class="lfp-status-badge {{ $statusBadgeClass($statusActual) }}">
                                         {{ $statusActual }}
                                     </span>
                                 </td>
                                 <td data-column-key="status_subaybayan" style="padding: 12px; text-align: center;">
-                                    <span style="display: inline-block; padding: 4px 8px; background-color: #dbeafe; color: #0369a1; border-radius: 4px; font-size: 11px; font-weight: 600;">
+                                    <span class="lfp-status-badge {{ $statusBadgeClass($statusSubaybayan) }}">
                                         {{ $statusSubaybayan }}
                                     </span>
                                 </td>
@@ -433,9 +519,9 @@
                 </table>
             </div>
             <div class="lfp-mobile-cards" aria-label="Locally Funded Projects cards">
-                @foreach($projects as $project)
-                    @php
-                        $lfpId = $project->lfp_id ?? null;
+                    @foreach($projects as $project)
+                        @php
+                            $lfpId = $project->lfp_id ?? null;
                         $statusActual = $lfpId && isset($physicalStatuses[$lfpId]['status_actual'])
                             ? $physicalStatuses[$lfpId]['status_actual']
                             : 'Pending';
@@ -446,16 +532,16 @@
                             ? $physicalStatuses[$lfpId]['accomplishment_pct_ro']
                             : ($project->subay_accomplishment_pct ?? null);
                         $hasLfp = !empty($lfpId);
-                        $viewUrl = $hasLfp
+                            $viewUrl = $hasLfp
                             ? route('locally-funded-project.show', $lfpId)
                             : route('locally-funded-project.ensure', $project->subaybayan_project_code);
-                        $barangays = array_filter(array_map('trim', explode(',', (string) $project->barangay)));
+                        $barangays = $parseBarangays($project->barangay);
                     @endphp
                     <details class="lfp-mobile-card">
                         <summary class="lfp-mobile-card-summary">
                             <div class="lfp-mobile-card-summary-main">
-                                <div class="lfp-mobile-card-code">{{ $project->subaybayan_project_code }}</div>
-                                <h3 class="lfp-mobile-card-title">{{ $project->project_name }}</h3>
+                                <div class="lfp-mobile-card-code">{!! $highlightSearch($project->subaybayan_project_code) !!}</div>
+                                <h3 class="lfp-mobile-card-title">{!! $highlightSearch($project->project_name) !!}</h3>
                             </div>
                             <span class="lfp-mobile-card-chevron" aria-hidden="true"></span>
                         </summary>
@@ -469,14 +555,14 @@
                                 <div class="lfp-mobile-card-section">
                                     <div class="lfp-mobile-card-section-label">Location</div>
                                     <div class="lfp-mobile-card-location">
-                                        <div><strong>Province:</strong> {{ $project->province }}</div>
-                                        <div><strong>City/Mun:</strong> {{ $project->city_municipality }}</div>
+                                        <div><strong>Province:</strong> {!! $highlightSearch($project->province) !!}</div>
+                                        <div><strong>City/Mun:</strong> {!! $highlightSearch($project->city_municipality) !!}</div>
                                         <div>
                                             <strong>Barangay:</strong>
                                             @if(count($barangays))
                                                 <ul class="lfp-mobile-card-list">
                                                     @foreach($barangays as $barangay)
-                                                        <li>{{ $barangay }}</li>
+                                                        <li>{!! $highlightSearch($barangay) !!}</li>
                                                     @endforeach
                                                 </ul>
                                             @else
@@ -493,7 +579,7 @@
                                     </div>
                                     <div class="lfp-mobile-card-detail" data-column-key="fund_source">
                                         <span class="lfp-mobile-card-detail-label">Fund Source</span>
-                                        <strong>{{ $project->fund_source ?: '-' }}</strong>
+                                        <strong>{!! $highlightSearch($project->fund_source) !!}</strong>
                                     </div>
                                     <div class="lfp-mobile-card-detail" data-column-key="procurement_type">
                                         <span class="lfp-mobile-card-detail-label">Procurement Type</span>
@@ -517,11 +603,11 @@
                                     </div>
                                     <div class="lfp-mobile-card-detail" data-column-key="status_actual">
                                         <span class="lfp-mobile-card-detail-label">Status (Actual)</span>
-                                        <strong>{{ $statusActual }}</strong>
+                                        <strong><span class="lfp-status-badge {{ $statusBadgeClass($statusActual) }}">{{ $statusActual }}</span></strong>
                                     </div>
                                     <div class="lfp-mobile-card-detail" data-column-key="status_subaybayan">
                                         <span class="lfp-mobile-card-detail-label">Status (Subaybayan)</span>
-                                        <strong>{{ $statusSubaybayan }}</strong>
+                                        <strong><span class="lfp-status-badge {{ $statusBadgeClass($statusSubaybayan) }}">{{ $statusSubaybayan }}</span></strong>
                                     </div>
                                     <div class="lfp-mobile-card-detail" data-column-key="last_updated_at">
                                         <span class="lfp-mobile-card-detail-label">Last Updated At</span>
@@ -588,6 +674,7 @@
                 </div>
             @endif
         @endif
+        </div>
     </div>
     <style>
         table td {
@@ -846,6 +933,50 @@
             line-height: 1.2;
         }
 
+        .lfp-status-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 5px 10px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+            line-height: 1.2;
+            text-align: center;
+            white-space: normal;
+        }
+
+        .lfp-status-badge--complete {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .lfp-status-badge--ongoing {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+
+        .lfp-status-badge--delayed {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+
+        .lfp-status-badge--pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .lfp-status-badge--not-started,
+        .lfp-status-badge--neutral {
+            background: #e5e7eb;
+            color: #4b5563;
+        }
+
+        .lfp-status-badge--default {
+            background: #e0f2fe;
+            color: #0369a1;
+        }
+
         .lfp-progress--empty {
             width: auto;
             min-width: 0;
@@ -959,6 +1090,41 @@
             font-weight: 600;
         }
 
+        .lfp-search-field {
+            position: relative;
+        }
+
+        .lfp-search-spinner {
+            position: absolute;
+            top: 50%;
+            right: 12px;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #cbd5e1;
+            border-top-color: #2563eb;
+            border-radius: 999px;
+            transform: translateY(-50%);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.18s ease;
+            animation: lfp-search-spin 0.75s linear infinite;
+        }
+
+        .lfp-search-field.is-loading .lfp-search-spinner {
+            opacity: 1;
+        }
+
+        .lfp-search-field.is-loading .lfp-search-input {
+            background-color: #f8fafc;
+        }
+
+        .lfp-search-highlight {
+            background: #fef08a;
+            color: inherit;
+            border-radius: 3px;
+            padding: 0 2px;
+        }
+
         #lfp-table [data-column-key].is-column-hidden {
             display: none;
         }
@@ -970,6 +1136,16 @@
 
         #lfp-table tbody tr {
             cursor: pointer;
+        }
+
+        @keyframes lfp-search-spin {
+            from {
+                transform: translateY(-50%) rotate(0deg);
+            }
+
+            to {
+                transform: translateY(-50%) rotate(360deg);
+            }
         }
 
         @media (max-width: 1024px) {
@@ -1068,6 +1244,8 @@
             const filtersPanel = document.getElementById('lfp-filters-panel');
             const filtersForm = document.getElementById('lfp-filters-form');
             const searchInput = document.getElementById('lfp-search');
+            const searchField = searchInput ? searchInput.closest('.lfp-search-field') : null;
+            let resultsContainer = document.querySelector('[data-results-container]');
             const provinceSelect = document.getElementById('filter-province');
             const citySelect = document.getElementById('filter-city');
             const yearSelect = document.getElementById('filter-year');
@@ -1079,7 +1257,7 @@
             const locationData = @json($provinceMunicipalities);
             const columnToggleStorageKey = 'lfp-visible-columns';
             const selectedCity = citySelect ? (citySelect.dataset.selectedCity || '') : '';
-            let searchTimer = null;
+            let isFetchingResults = false;
 
             if (filtersPanel && window.matchMedia('(max-width: 768px)').matches) {
                 filtersPanel.removeAttribute('open');
@@ -1126,6 +1304,84 @@
 
             function submitFilters() {
                 filtersForm.requestSubmit();
+            }
+
+            function setSearchLoading(isLoading) {
+                if (!searchField) {
+                    return;
+                }
+
+                searchField.classList.toggle('is-loading', isLoading);
+            }
+
+            function debounce(callback, delay) {
+                let timerId;
+
+                return function () {
+                    const args = arguments;
+                    clearTimeout(timerId);
+                    timerId = window.setTimeout(function () {
+                        callback.apply(null, args);
+                    }, delay);
+                };
+            }
+
+            async function fetchResults(url, options) {
+                if (!resultsContainer || isFetchingResults) {
+                    return;
+                }
+
+                isFetchingResults = true;
+                setSearchLoading(true);
+                resultsContainer.setAttribute('aria-busy', 'true');
+                resultsContainer.style.opacity = '0.55';
+
+                try {
+                    const response = await fetch(url, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'text/html, application/xhtml+xml',
+                        },
+                        credentials: 'same-origin',
+                        ...options,
+                    });
+
+                    if (!response.ok) {
+                        window.location.assign(url);
+                        return;
+                    }
+
+                    const html = await response.text();
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    const nextResultsContainer = doc.querySelector('[data-results-container]');
+
+                    if (!nextResultsContainer) {
+                        window.location.assign(url);
+                        return;
+                    }
+
+                    resultsContainer.replaceWith(nextResultsContainer);
+                    resultsContainer = nextResultsContainer;
+                    window.history.replaceState({}, '', url);
+                    applyVisibleColumns(columnToggles
+                        .filter(function (toggle) {
+                            return toggle.checked;
+                        })
+                        .map(function (toggle) {
+                            return toggle.dataset.columnToggle || '';
+                        })
+                        .filter(Boolean));
+                } catch (error) {
+                    window.location.assign(url);
+                } finally {
+                    isFetchingResults = false;
+                    setSearchLoading(false);
+                    if (resultsContainer) {
+                        resultsContainer.removeAttribute('aria-busy');
+                        resultsContainer.style.opacity = '1';
+                    }
+                }
             }
 
             function applyVisibleColumns(visibleColumns) {
@@ -1204,10 +1460,39 @@
                 syncVisibleColumns();
             }
 
+            filtersForm.addEventListener('submit', function (event) {
+                event.preventDefault();
+                const formData = new FormData(filtersForm);
+                const params = new URLSearchParams();
+
+                formData.forEach(function (value, key) {
+                    if (String(value).trim() !== '') {
+                        params.append(key, String(value));
+                    }
+                });
+
+                fetchResults(filtersForm.action + (params.toString() ? '?' + params.toString() : ''));
+            });
+
+            window.addEventListener('pageshow', function () {
+                setSearchLoading(false);
+            });
+
             if (searchInput) {
+                const debouncedSearch = debounce(function () {
+                    submitFilters();
+                }, 450);
+
                 searchInput.addEventListener('input', function () {
-                    clearTimeout(searchTimer);
-                    searchTimer = setTimeout(submitFilters, 450);
+                    const hasValue = searchInput.value.trim() !== '';
+
+                    if (hasValue) {
+                        setSearchLoading(true);
+                    } else {
+                        setSearchLoading(false);
+                    }
+
+                    debouncedSearch();
                 });
             }
 
@@ -1225,6 +1510,48 @@
 
             populateCityOptions(provinceSelect.value, selectedCity);
             initializeColumnToggles();
+
+            document.addEventListener('click', function (event) {
+                const link = event.target.closest('.lfp-sort-link, .lfp-mobile-card-action, [data-results-container] a');
+                if (!link) {
+                    return;
+                }
+
+                const href = link.getAttribute('href');
+                if (!href) {
+                    return;
+                }
+
+                const isLocallyFundedNavigation = href.indexOf('{{ route('projects.locally-funded') }}') === 0;
+                const isPaginationLink = link.closest('[data-results-container]') && href.indexOf('page=') !== -1;
+                const isSortLink = link.classList.contains('lfp-sort-link');
+
+                if (!isLocallyFundedNavigation || (!isSortLink && !isPaginationLink)) {
+                    return;
+                }
+
+                event.preventDefault();
+                fetchResults(href);
+            });
+
+            document.addEventListener('submit', function (event) {
+                const perPageForm = event.target.closest('[data-results-container] form[method="GET"]');
+                if (!perPageForm || perPageForm === filtersForm) {
+                    return;
+                }
+
+                event.preventDefault();
+                const formData = new FormData(perPageForm);
+                const params = new URLSearchParams();
+
+                formData.forEach(function (value, key) {
+                    if (String(value).trim() !== '') {
+                        params.append(key, String(value));
+                    }
+                });
+
+                fetchResults(perPageForm.action + (params.toString() ? '?' + params.toString() : ''));
+            });
         });
     </script>
 @endsection

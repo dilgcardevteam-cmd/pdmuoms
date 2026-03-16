@@ -6,6 +6,7 @@
 @section('content')
     @php
         $activeUserTab = request()->query('tab') === 'access-grants' ? 'accessGrantsPanel' : 'usersPanel';
+        $viewerIsSuperAdmin = Auth::user()->isSuperAdmin();
     @endphp
 
     <div class="content-header">
@@ -38,7 +39,7 @@
         >
             Users
         </button>
-        @if(Auth::user()->role === 'superadmin')
+        @if($viewerIsSuperAdmin)
             <button
                 type="button"
                 class="project-tab {{ $activeUserTab === 'accessGrantsPanel' ? 'is-active' : '' }}"
@@ -83,10 +84,11 @@
                                 <td style="padding: 15px 12px; color: #6b7280; font-size: 13px;">{{ $user->username }}</td>
                                 <td style="padding: 15px 12px;">
                                     <span style="padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;
-                                        @if($user->role === 'superadmin') background-color: #fee2e2; color: #991b1b;
-                                        @elseif($user->role === 'admin') background-color: #dbeafe; color: #0c2d6b;
+                                        @if($user->isSuperAdmin()) background-color: #fee2e2; color: #991b1b;
+                                        @elseif($user->isRegionalUser()) background-color: #dbeafe; color: #1d4ed8;
+                                        @elseif($user->isProvincialUser()) background-color: #ede9fe; color: #6d28d9;
                                         @else background-color: #dcfce7; color: #166534; @endif">
-                                        {{ ucfirst($user->role) }}
+                                        {{ $user->roleLabel() }}
                                     </span>
                                 </td>
                                 <td style="padding: 15px 12px;">
@@ -141,10 +143,11 @@
                                 <div class="user-mobile-card__summary">
                                     <div class="user-mobile-card__badges">
                                         <span style="padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;
-                                            @if($user->role === 'superadmin') background-color: #fee2e2; color: #991b1b;
-                                            @elseif($user->role === 'admin') background-color: #dbeafe; color: #0c2d6b;
+                                            @if($user->isSuperAdmin()) background-color: #fee2e2; color: #991b1b;
+                                            @elseif($user->isRegionalUser()) background-color: #dbeafe; color: #1d4ed8;
+                                            @elseif($user->isProvincialUser()) background-color: #ede9fe; color: #6d28d9;
                                             @else background-color: #dcfce7; color: #166534; @endif">
-                                            {{ ucfirst($user->role) }}
+                                            {{ $user->roleLabel() }}
                                         </span>
                                         <span style="padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;
                                             @if($user->status === 'active') background-color: #d1fae5; color: #065f46;
@@ -207,14 +210,14 @@
         </div>
     </section>
 
-    @if(Auth::user()->role === 'superadmin')
+    @if($viewerIsSuperAdmin)
         <section id="accessGrantsPanel" class="project-tab-panel {{ $activeUserTab === 'accessGrantsPanel' ? 'is-active' : '' }}" role="tabpanel">
             <div style="background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; margin-bottom: 24px; flex-wrap: wrap;">
                     <div>
                         <h2 style="color: #002C76; font-size: 18px; margin: 0 0 6px;">Access Grant</h2>
                         <p style="margin: 0; color: #6b7280; font-size: 13px; max-width: 700px;">
-                            Grant per-feature record permissions. Existing users without saved CRUD permissions keep their legacy unrestricted access until you save permissions here.
+                                            Grant per-feature record permissions. Role defaults come from the user's hierarchy level, and Access Grant adds extra module permissions beyond that baseline.
                         </p>
                     </div>
                     <div style="padding: 10px 14px; border-radius: 10px; background: #eff6ff; color: #1d4ed8; font-size: 12px; font-weight: 700;">
@@ -256,21 +259,21 @@
                                     <td class="access-grant-cell-muted">{{ $user->emailaddress }}</td>
                                     <td>
                                         <span class="access-role-badge access-role-badge--{{ $user->role }}">
-                                            {{ ucfirst($user->role) }}
+                                            {{ $user->roleLabel() }}
                                         </span>
                                     </td>
                                     <td>
-                                        <span class="access-state-badge access-state-badge--{{ $user->role === 'superadmin' ? 'role' : ($isScopedAccess ? ($hasFullAccess ? 'all' : ($grantedPermissions === [] ? 'empty' : 'custom')) : 'legacy') }}">
-                                            @if($user->role === 'superadmin')
+                                        <span class="access-state-badge access-state-badge--{{ $user->isSuperAdmin() ? 'role' : ($isScopedAccess ? ($hasFullAccess ? 'all' : ($grantedPermissions === [] ? 'empty' : 'custom')) : 'legacy') }}">
+                                            @if($user->isSuperAdmin())
                                                 Full access by role
                                             @elseif(!$isScopedAccess)
-                                                Legacy access
+                                                Role defaults only
                                             @elseif($hasFullAccess)
-                                                All CRUD permissions
+                                                All additional permissions
                                             @elseif($grantedPermissions === [])
-                                                No saved CRUD permissions
+                                                No additional grants
                                             @else
-                                                Custom CRUD permissions
+                                                Custom additional grants
                                             @endif
                                         </span>
                                     </td>
@@ -291,7 +294,7 @@
                                 <tr class="access-grant-detail-row" id="access-grant-{{ $user->idno }}" data-access-accordion-content hidden>
                                     <td colspan="5">
                                         <div class="access-grant-detail">
-                                            @if($user->role === 'superadmin')
+                                            @if($user->isSuperAdmin())
                                                 <div class="access-grant-note">
                                                     Superadmin accounts always keep full access and do not require CRUD permission grants.
                                                 </div>
@@ -334,7 +337,7 @@
 
                                                     <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 18px; flex-wrap: wrap;">
                                                         <div style="font-size: 12px; color: #64748b;">
-                                                            Leave all unchecked to keep the user read-only for these CRUD-managed features.
+                                                            Leave all unchecked to keep the user's role-based defaults only. Use these checks to add permissions the role does not grant by default.
                                                         </div>
                                                         <button type="submit" style="padding: 10px 16px; background-color: #002C76; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13px;">
                                                             Save Permissions
@@ -649,12 +652,17 @@
             color: #991b1b;
         }
 
-        .access-role-badge--admin {
+        .access-role-badge--user_regional {
             background: #dbeafe;
-            color: #0c2d6b;
+            color: #1d4ed8;
         }
 
-        .access-role-badge--staff {
+        .access-role-badge--user_provincial {
+            background: #ede9fe;
+            color: #6d28d9;
+        }
+
+        .access-role-badge--user_lgu {
             background: #dcfce7;
             color: #166534;
         }

@@ -14,6 +14,11 @@ class User extends Authenticatable implements MustVerifyEmail
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
 
+    public const ROLE_SUPERADMIN = 'superadmin';
+    public const ROLE_REGIONAL = 'user_regional';
+    public const ROLE_PROVINCIAL = 'user_provincial';
+    public const ROLE_LGU = 'user_lgu';
+
     public const ACCESS_SCOPE_ALL = 'crud:*';
     public const ACCESS_SCOPE_NONE = 'crud:none';
     public const ACCESS_PERMISSION_PREFIX = 'crud:';
@@ -236,6 +241,86 @@ class User extends Authenticatable implements MustVerifyEmail
         return static::where('username', $username)->first();
     }
 
+    public static function roleOptions(): array
+    {
+        return [
+            self::ROLE_SUPERADMIN => 'Superadmin',
+            self::ROLE_REGIONAL => 'Regional User',
+            self::ROLE_PROVINCIAL => 'Provincial User',
+            self::ROLE_LGU => 'LGU User',
+        ];
+    }
+
+    public function normalizedRole(): string
+    {
+        return strtolower(trim((string) $this->role));
+    }
+
+    public function roleLabel(): string
+    {
+        return self::roleOptions()[$this->normalizedRole()] ?? ucwords(str_replace('_', ' ', $this->normalizedRole()));
+    }
+
+    public function isSuperAdmin(): bool
+    {
+        return $this->normalizedRole() === self::ROLE_SUPERADMIN;
+    }
+
+    public function isRegionalUser(): bool
+    {
+        return $this->normalizedRole() === self::ROLE_REGIONAL;
+    }
+
+    public function isProvincialUser(): bool
+    {
+        return $this->normalizedRole() === self::ROLE_PROVINCIAL;
+    }
+
+    public function isLguUser(): bool
+    {
+        return $this->normalizedRole() === self::ROLE_LGU;
+    }
+
+    public function defaultCrudPermissions(): array
+    {
+        if ($this->isSuperAdmin()) {
+            return ['*'];
+        }
+
+        $reportorialPermissions = [
+            'fund_utilization_reports.view',
+            'fund_utilization_reports.add',
+            'fund_utilization_reports.upload',
+            'fund_utilization_reports.update',
+            'fund_utilization_reports.delete',
+            'local_project_monitoring_committee.view',
+            'local_project_monitoring_committee.add',
+            'local_project_monitoring_committee.upload',
+            'local_project_monitoring_committee.update',
+            'local_project_monitoring_committee.delete',
+            'road_maintenance_status_reports.view',
+            'road_maintenance_status_reports.add',
+            'road_maintenance_status_reports.upload',
+            'road_maintenance_status_reports.update',
+            'road_maintenance_status_reports.delete',
+        ];
+
+        if ($this->isRegionalUser() || $this->isProvincialUser()) {
+            return array_merge($reportorialPermissions, [
+                'locally_funded_projects.view',
+                'locally_funded_projects.update',
+            ]);
+        }
+
+        if ($this->isLguUser()) {
+            return array_merge($reportorialPermissions, [
+                'locally_funded_projects.view',
+            ]);
+        }
+
+        return [];
+    }
+
     public function usesScopedCrudAccess(): bool
     {
         $access = strtolower(trim((string) $this->access));
@@ -264,25 +349,29 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function hasCrudPermission(string $aspect, string $action): bool
     {
-        if (strtolower(trim((string) $this->role)) === 'superadmin') {
-            return true;
-        }
-
-        if (!$this->usesScopedCrudAccess()) {
+        if ($this->isSuperAdmin()) {
             return true;
         }
 
         $access = strtolower(trim((string) $this->access));
+        $defaultPermissions = $this->defaultCrudPermissions();
+
+        if (in_array('*', $defaultPermissions, true)) {
+            return true;
+        }
 
         if ($access === self::ACCESS_SCOPE_ALL) {
             return true;
         }
 
-        if ($access === self::ACCESS_SCOPE_NONE) {
-            return false;
+        $permissionKey = strtolower(trim($aspect)) . '.' . strtolower(trim($action));
+        if (in_array($permissionKey, $defaultPermissions, true)) {
+            return true;
         }
 
-        $permissionKey = strtolower(trim($aspect)) . '.' . strtolower(trim($action));
+        if (!$this->usesScopedCrudAccess() || $access === self::ACCESS_SCOPE_NONE) {
+            return false;
+        }
 
         return in_array($permissionKey, $this->grantedCrudPermissions(), true);
     }

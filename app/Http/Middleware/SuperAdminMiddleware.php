@@ -15,11 +15,10 @@ class SuperAdminMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (auth()->check() && auth()->user()->role === 'superadmin') {
+        if (auth()->check() && auth()->user()->isSuperAdmin()) {
             return $next($request);
         }
 
         return response()->view('errors.restricted', [], 403);
     }
 }
-
