@@ -15,6 +15,14 @@ use Illuminate\Support\Str;
 
 class PdNoPbbmMonthlyReportController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('auth');
+        $this->middleware('crud_permission:pd_no_pbbm_monthly_reports,view')->only(['index', 'edit', 'viewDocument']);
+        $this->middleware('crud_permission:pd_no_pbbm_monthly_reports,add')->only(['upload']);
+        $this->middleware('crud_permission:pd_no_pbbm_monthly_reports,update')->only(['approveDocument']);
+    }
+
     private function getOffices(): array
     {
         return [

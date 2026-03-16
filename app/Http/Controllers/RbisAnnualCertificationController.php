@@ -15,6 +15,14 @@ use Illuminate\Support\Str;
 
 class RbisAnnualCertificationController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('auth');
+        $this->middleware('crud_permission:rbis_annual_certification,view')->only(['index', 'edit', 'viewDocument']);
+        $this->middleware('crud_permission:rbis_annual_certification,add')->only(['upload']);
+        $this->middleware('crud_permission:rbis_annual_certification,update')->only(['approveDocument']);
+    }
+
     private function getOffices(): array
     {
         return [

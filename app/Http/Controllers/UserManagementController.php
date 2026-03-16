@@ -11,6 +11,9 @@ class UserManagementController extends Controller
 {
     private const CRUD_PERMISSION_OPTIONS = [
         'locally_funded_projects' => 'Locally Funded Projects',
+        'pre_implementation_documents' => 'Pre-Implementation Documents',
+        'rbis_annual_certification' => 'RBIS Annual Certification',
+        'pd_no_pbbm_monthly_reports' => 'PD No. PBBM Monthly Reports',
         'fund_utilization_reports' => 'Fund Utilization Report',
         'local_project_monitoring_committee' => 'Local Project Monitoring Committee',
         'road_maintenance_status_reports' => 'Road Maintenance Status Report',

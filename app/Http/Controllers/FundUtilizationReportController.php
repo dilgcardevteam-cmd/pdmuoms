@@ -19,6 +19,15 @@ use Illuminate\Support\Facades\Storage;
 
 class FundUtilizationReportController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('auth');
+        $this->middleware('crud_permission:fund_utilization_reports,view')->only(['index', 'edit', 'show', 'viewDocument']);
+        $this->middleware('crud_permission:fund_utilization_reports,add')->only(['create', 'store', 'uploadMOV', 'uploadWrittenNotice', 'uploadFDP']);
+        $this->middleware('crud_permission:fund_utilization_reports,update')->only(['update', 'approveUpload']);
+        $this->middleware('crud_permission:fund_utilization_reports,delete')->only(['deleteDocument']);
+    }
+
     private function syncMissingLfpReports(): void
     {
         if (!Schema::hasTable('tbfur')) {
@@ -2516,4 +2525,3 @@ class FundUtilizationReportController extends Controller
         }
     }
 }
-

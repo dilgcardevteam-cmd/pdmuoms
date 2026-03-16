@@ -15,6 +15,15 @@ use Illuminate\Support\Carbon;
 
 class LocallyFundedProjectController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('auth');
+        $this->middleware('crud_permission:locally_funded_projects,view')->only(['index', 'showSubaybayan', 'show']);
+        $this->middleware('crud_permission:locally_funded_projects,add')->only(['create', 'store']);
+        $this->middleware('crud_permission:locally_funded_projects,update')->only(['edit', 'update']);
+        $this->middleware('crud_permission:locally_funded_projects,delete')->only(['destroy']);
+    }
+
     private function getProjectFormOptions(): array
     {
         // Cordillera Administrative Region (CAR) provinces
