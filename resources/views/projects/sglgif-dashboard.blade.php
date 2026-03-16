@@ -501,20 +501,6 @@
                     </article>
                 </div>
 
-                <div class="sglgif-financial-summary">
-                    <div class="sglgif-financial-tile">
-                        <span>Original Subsidy Allocation</span>
-                        <strong>&#8369; {{ number_format($totalSubsidyAmount, 2) }}</strong>
-                    </div>
-                    <div class="sglgif-financial-tile">
-                        <span>Total Project Cost</span>
-                        <strong>&#8369; {{ number_format($totalProjectCostAmount, 2) }}</strong>
-                    </div>
-                    <div class="sglgif-financial-tile">
-                        <span>Cost Absorption</span>
-                        <strong>{{ number_format($subsidyUtilizationPercent, 2) }}%</strong>
-                    </div>
-                </div>
             </section>
 
         </div>
@@ -577,6 +563,31 @@
                     @empty
                         <p class="sglgif-empty">No status data for this filter set.</p>
                     @endforelse
+                </div>
+
+            </section>
+
+            <section class="dashboard-card sglgif-card sglgif-financial-status-card">
+                <div class="sglgif-financial-status-head">
+                    <div>
+                        <h3>FINANCIAL STATUS</h3>
+                        <p>Allocation, project cost, and portfolio absorption for the current dashboard scope.</p>
+                    </div>
+                </div>
+
+                <div class="sglgif-financial-summary">
+                    <div class="sglgif-financial-tile">
+                        <span>Original Subsidy Allocation</span>
+                        <strong>&#8369; {{ number_format($totalSubsidyAmount, 2) }}</strong>
+                    </div>
+                    <div class="sglgif-financial-tile">
+                        <span>Total Project Cost</span>
+                        <strong>&#8369; {{ number_format($totalProjectCostAmount, 2) }}</strong>
+                    </div>
+                    <div class="sglgif-financial-tile">
+                        <span>Cost Absorption</span>
+                        <strong>{{ number_format($subsidyUtilizationPercent, 2) }}%</strong>
+                    </div>
                 </div>
             </section>
 
@@ -874,9 +885,13 @@
 
         .dashboard-status-row {
             gap: 16px;
+            min-width: 0;
         }
 
         .dashboard-status-row .sglgif-card {
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
             padding: 16px 16px 14px;
             border-radius: 15px;
         }
@@ -1014,12 +1029,18 @@
         }
 
         .sglgif-status-card-head {
-            align-items: center;
+            align-items: flex-start;
+            flex-wrap: wrap;
             margin-bottom: 18px;
         }
 
+        .sglgif-status-card-head > div:first-child {
+            flex: 1 1 220px;
+            min-width: 0;
+        }
+
         .dashboard-status-row .sglgif-status-card-head {
-            margin-bottom: 14px;
+            margin-bottom: 10px;
         }
 
         .sglgif-status-kicker {
@@ -1058,6 +1079,9 @@
         }
 
         .dashboard-status-row .sglgif-status-total-badge {
+            flex: 0 0 auto;
+            align-self: flex-start;
+            max-width: 100%;
             min-width: 78px;
             padding: 10px 12px;
             border-radius: 14px;
@@ -1082,6 +1106,47 @@
 
         .dashboard-status-row .sglgif-status-total-badge strong {
             font-size: 21px;
+        }
+
+        .sglgif-financial-status-card {
+            position: relative;
+            overflow: hidden;
+            padding: 14px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.68);
+            background:
+                linear-gradient(160deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.42)),
+                radial-gradient(circle at top right, rgba(219, 234, 254, 0.46), transparent 68%);
+            box-shadow:
+                inset 0 1px 0 rgba(255, 255, 255, 0.82),
+                0 14px 28px rgba(15, 23, 42, 0.07);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        .sglgif-financial-status-card > * {
+            position: relative;
+            z-index: 1;
+        }
+
+        .sglgif-financial-status-head {
+            margin-bottom: 10px;
+        }
+
+        .sglgif-financial-status-head h3 {
+            margin: 0;
+            color: #0f172a;
+            font-size: 13px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .sglgif-financial-status-head p {
+            margin: 5px 0 0;
+            color: #64748b;
+            font-size: 11px;
+            line-height: 1.45;
         }
 
         .sglgif-mini-stat span,
@@ -1134,7 +1199,19 @@
         }
 
         .dashboard-status-row .sglgif-status-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 10px;
+        }
+
+        .dashboard-status-row .sglgif-financial-summary {
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            margin-top: 0;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
             gap: 10px;
         }
 
@@ -1168,6 +1245,27 @@
             color: #0f172a;
             font-size: 24px;
             line-height: 1.12;
+        }
+
+        .dashboard-status-row .sglgif-financial-tile {
+            min-width: 0;
+            padding: 12px;
+            border-radius: 12px;
+            background:
+                linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.88));
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
+        }
+
+        .dashboard-status-row .sglgif-financial-tile span {
+            font-size: 10px;
+            line-height: 1.35;
+        }
+
+        .dashboard-status-row .sglgif-financial-tile strong {
+            margin-top: 8px;
+            font-size: 18px;
+            line-height: 1.2;
+            overflow-wrap: anywhere;
         }
 
         .sglgif-mix-chart-card {
@@ -1625,6 +1723,9 @@
         }
 
         .dashboard-status-row .sglgif-status-tile {
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
             padding: 14px;
             border-radius: 16px;
         }
@@ -1714,6 +1815,7 @@
 
         .dashboard-status-row .sglgif-status-tile-main {
             gap: 5px;
+            min-width: 0;
         }
 
         .sglgif-status-label {
@@ -1790,6 +1892,7 @@
             gap: 10px;
             margin-top: 8px;
             font-size: 11px;
+            min-width: 0;
         }
 
         .sglgif-status-footer span {
@@ -1801,6 +1904,8 @@
 
         .dashboard-status-row .sglgif-status-footer span {
             font-size: 10px;
+            min-width: 0;
+            overflow-wrap: anywhere;
         }
 
         .sglgif-status-footer i {
