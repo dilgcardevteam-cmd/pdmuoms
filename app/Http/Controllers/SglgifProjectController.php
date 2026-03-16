@@ -156,6 +156,9 @@ class SglgifProjectController extends Controller
         $categoryFundingBreakdown = $this->buildFundingBreakdown($rows, 'sub_type_of_project', 6);
         $provinceProjectsModalMap = $provinceBreakdown
             ->pluck('label')
+            ->merge($provinceFundingBreakdown->pluck('label'))
+            ->filter(fn ($label) => trim((string) $label) !== '')
+            ->unique()
             ->mapWithKeys(function (string $provinceLabel) use ($rows) {
                 $items = $rows
                     ->filter(function (array $row) use ($provinceLabel) {
@@ -214,37 +217,6 @@ class SglgifProjectController extends Controller
             ],
         ])->values();
 
-        $riskBreakdown = collect([
-            [
-                'label' => 'Stable',
-                'count' => $rows->filter(fn (array $row) => $this->classifyRisk($row) === 'Stable')->count(),
-                'color' => '#15803d',
-                'bg' => '#dcfce7',
-                'copy' => 'Completed or already beyond 90% overall.',
-            ],
-            [
-                'label' => 'Watch',
-                'count' => $rows->filter(fn (array $row) => $this->classifyRisk($row) === 'Watch')->count(),
-                'color' => '#2563eb',
-                'bg' => '#dbeafe',
-                'copy' => 'Active projects moving, but not yet near delivery.',
-            ],
-            [
-                'label' => 'Priority',
-                'count' => $rows->filter(fn (array $row) => $this->classifyRisk($row) === 'Priority')->count(),
-                'color' => '#d97706',
-                'bg' => '#ffedd5',
-                'copy' => 'Projects in the 50% to 74% range that need closer follow-through.',
-            ],
-            [
-                'label' => 'Critical',
-                'count' => $rows->filter(fn (array $row) => $this->classifyRisk($row) === 'Critical')->count(),
-                'color' => '#dc2626',
-                'bg' => '#fee2e2',
-                'copy' => 'Ongoing projects with very low movement or zero financial/physical values.',
-            ],
-        ])->values();
-
         $watchlistRows = $rows
             ->filter(fn (array $row) => $row['status_lc'] === 'ongoing')
             ->sort(function (array $left, array $right) {
@@ -255,22 +227,6 @@ class SglgifProjectController extends Controller
                 }
 
                 return $leftOverall <=> $rightOverall;
-            })
-            ->take(6)
-            ->values();
-
-        $statusReviewRows = $rows
-            ->filter(function (array $row) {
-                $overall = $row['overall_pct'];
-                if ($overall === null) {
-                    return false;
-                }
-
-                return ($row['status_lc'] === 'completed' && $overall < 100)
-                    || ($row['status_lc'] === 'ongoing' && $overall >= 90);
-            })
-            ->sort(function (array $left, array $right) {
-                return ($left['overall_pct'] ?? 0) <=> ($right['overall_pct'] ?? 0);
             })
             ->take(6)
             ->values();
@@ -319,9 +275,7 @@ class SglgifProjectController extends Controller
             'categoryFundingBreakdown' => $categoryFundingBreakdown,
             'fundingYearBreakdown' => $fundingYearBreakdown,
             'progressBandBreakdown' => $progressBandBreakdown,
-            'riskBreakdown' => $riskBreakdown,
             'watchlistRows' => $watchlistRows,
-            'statusReviewRows' => $statusReviewRows,
             'latestUpdateAt' => $latestUpdateAt,
         ]);
     }
@@ -370,9 +324,7 @@ class SglgifProjectController extends Controller
             'categoryFundingBreakdown' => collect(),
             'fundingYearBreakdown' => collect(),
             'progressBandBreakdown' => collect(),
-            'riskBreakdown' => collect(),
             'watchlistRows' => collect(),
-            'statusReviewRows' => collect(),
             'latestUpdateAt' => null,
         ];
     }
@@ -552,28 +504,6 @@ class SglgifProjectController extends Controller
             ->values();
 
         return $limit !== null ? $items->take($limit)->values() : $items->values();
-    }
-
-    private function classifyRisk(array $row): string
-    {
-        $status = $row['status_lc'] ?? '';
-        $overall = (float) ($row['overall_pct'] ?? 0);
-        $financial = (float) ($row['financial_pct'] ?? 0);
-        $physical = (float) ($row['physical_pct'] ?? 0);
-
-        if ($status === 'completed' || $overall >= 90) {
-            return 'Stable';
-        }
-
-        if ($overall < 50 || $financial <= 0 || $physical <= 0) {
-            return 'Critical';
-        }
-
-        if ($overall < 75) {
-            return 'Priority';
-        }
-
-        return 'Watch';
     }
 
     private function extractNumeric(mixed $value): ?float

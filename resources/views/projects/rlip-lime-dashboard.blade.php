@@ -14,6 +14,8 @@
         </p>
     </div>
 
+    @include('projects.partials.project-section-tabs', ['activeTab' => $activeTab ?? 'rlip-lime'])
+
     <div style="background: #ffffff; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px; box-shadow: 0 2px 8px rgba(15,23,42,0.06);">
         @php
             $activeFilters = array_merge([

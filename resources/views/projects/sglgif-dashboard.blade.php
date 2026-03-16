@@ -152,6 +152,8 @@
         </p>
     </div>
 
+    @include('projects.partials.project-section-tabs', ['activeTab' => $activeTab ?? 'sglgif'])
+
     <div class="dashboard-main-layout sglgif-dashboard-shell">
         <form method="GET" action="{{ route('projects.sglgif') }}" class="dashboard-card project-filter-form dashboard-main-layout-filter collapsed" style="background: #ffffff; padding: 16px 18px; border-radius: 12px; box-shadow: 0 8px 24px rgba(15,23,42,0.08); margin-bottom: 0;">
             <button type="button" class="project-filter-toggle" onclick="toggleProjectFilter(this)" aria-expanded="false" aria-controls="sglgif-filter-body">
@@ -268,7 +270,7 @@
                     <article class="sglgif-mix-chart-card">
                         <div class="sglgif-mix-chart-head">
                             <div>
-                                <h3>Project Type Split</h3>
+                                <h3>Project Types</h3>
                                 <p>Infrastructure versus non-infrastructure projects in the current scope.</p>
                             </div>
                             <strong>{{ number_format($typeMixChart['total']) }} projects</strong>
@@ -318,7 +320,7 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="sglgif-mix-chart-legend">
+                                <div class="sglgif-mix-chart-legend" style="--sglgif-legend-columns: {{ max(1, count($typeMixChart['segments'])) }};">
                                     @foreach($typeMixChart['segments'] as $segment)
                                         <div class="sglgif-mix-chart-legend-item">
                                             <span class="sglgif-mix-chart-dot" style="background: {{ $segment['color'] }};"></span>
@@ -338,7 +340,7 @@
                     <article class="sglgif-mix-chart-card">
                         <div class="sglgif-mix-chart-head">
                             <div>
-                                <h3>Implementation Level Split</h3>
+                                <h3>Implementation Level</h3>
                                 <p>Municipality, province, and city level distribution for filtered projects.</p>
                             </div>
                             <strong>{{ number_format($levelMixChart['total']) }} projects</strong>
@@ -388,7 +390,7 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="sglgif-mix-chart-legend">
+                                <div class="sglgif-mix-chart-legend" style="--sglgif-legend-columns: {{ max(1, count($levelMixChart['segments'])) }};">
                                     @foreach($levelMixChart['segments'] as $segment)
                                         <div class="sglgif-mix-chart-legend-item">
                                             <span class="sglgif-mix-chart-dot" style="background: {{ $segment['color'] }};"></span>
@@ -409,7 +411,7 @@
                 <div class="sglgif-dual-panel">
                     <div class="sglgif-panel">
                         <div class="sglgif-panel-head">
-                            <h3>Category Focus</h3>
+                            <h3>Project Status by Category</h3>
                             <div class="sglgif-switch" data-sg-switch-group="category-focus">
                                 <button type="button" class="is-active" data-sg-switch-target="count">Count</button>
                                 <button type="button" data-sg-switch-target="funding">Funding</button>
@@ -463,36 +465,36 @@
             <section class="dashboard-card sglgif-card">
                 <div class="sglgif-card-head">
                     <div>
-                        <h2>FINANCIAL SNAPSHOT</h2>
+                        <h2>ACCOMPLISHMENT STATUS</h2>
                         <p>Read the portfolio through allocation, delivery, documentation, and overall accomplishment.</p>
                     </div>
                 </div>
 
                 <div class="sglgif-gauge-grid">
                     <article class="sglgif-gauge-card">
-                        <div class="sglgif-gauge" style="--p: {{ max(0, min(100, (float) $averageFinancialPercent)) }}; --c: {{ $graphPalette['primary'] }};">
-                            <span>{{ number_format($averageFinancialPercent, 2) }}%</span>
+                        <div class="sglgif-gauge" data-sg-gauge data-sg-gauge-value="{{ max(0, min(100, (float) $averageFinancialPercent)) }}" style="--p: {{ max(0, min(100, (float) $averageFinancialPercent)) }}; --c: {{ $graphPalette['primary'] }};">
+                            <span data-sg-gauge-label>{{ number_format($averageFinancialPercent, 2) }}%</span>
                         </div>
                         <h3>Financial</h3>
                         <p>Average financial accomplishment across filtered SGLGIF rows.</p>
                     </article>
                     <article class="sglgif-gauge-card">
-                        <div class="sglgif-gauge" style="--p: {{ max(0, min(100, (float) $averagePhysicalPercent)) }}; --c: {{ $graphPalette['secondary'] }};">
-                            <span>{{ number_format($averagePhysicalPercent, 2) }}%</span>
+                        <div class="sglgif-gauge" data-sg-gauge data-sg-gauge-value="{{ max(0, min(100, (float) $averagePhysicalPercent)) }}" style="--p: {{ max(0, min(100, (float) $averagePhysicalPercent)) }}; --c: {{ $graphPalette['secondary'] }};">
+                            <span data-sg-gauge-label>{{ number_format($averagePhysicalPercent, 2) }}%</span>
                         </div>
                         <h3>Physical</h3>
                         <p>Average physical accomplishment from the uploaded project records.</p>
                     </article>
                     <article class="sglgif-gauge-card">
-                        <div class="sglgif-gauge" style="--p: {{ max(0, min(100, (float) $averageAttachmentPercent)) }}; --c: {{ $graphPalette['tertiary'] }};">
-                            <span>{{ number_format($averageAttachmentPercent, 2) }}%</span>
+                        <div class="sglgif-gauge" data-sg-gauge data-sg-gauge-value="{{ max(0, min(100, (float) $averageAttachmentPercent)) }}" style="--p: {{ max(0, min(100, (float) $averageAttachmentPercent)) }}; --c: {{ $graphPalette['tertiary'] }};">
+                            <span data-sg-gauge-label>{{ number_format($averageAttachmentPercent, 2) }}%</span>
                         </div>
                         <h3>Attachment</h3>
                         <p>Readiness of required attachments and supporting documents.</p>
                     </article>
                     <article class="sglgif-gauge-card">
-                        <div class="sglgif-gauge" style="--p: {{ max(0, min(100, (float) $averageOverallPercent)) }}; --c: {{ $graphPalette['quaternary'] }};">
-                            <span>{{ number_format($averageOverallPercent, 2) }}%</span>
+                        <div class="sglgif-gauge" data-sg-gauge data-sg-gauge-value="{{ max(0, min(100, (float) $averageOverallPercent)) }}" style="--p: {{ max(0, min(100, (float) $averageOverallPercent)) }}; --c: {{ $graphPalette['quaternary'] }};">
+                            <span data-sg-gauge-label>{{ number_format($averageOverallPercent, 2) }}%</span>
                         </div>
                         <h3>Overall</h3>
                         <p>Composite delivery score from the SGLGIF overall field.</p>
@@ -513,6 +515,147 @@
                         <strong>{{ number_format($subsidyUtilizationPercent, 2) }}%</strong>
                     </div>
                 </div>
+            </section>
+
+        </div>
+
+        <div class="dashboard-status-row">
+            <section class="dashboard-card sglgif-card sglgif-status-card">
+                <div class="sglgif-card-head sglgif-status-card-head">
+                    <div>
+                        <span class="sglgif-status-kicker">Portfolio Status</span>
+                        <h2>STATUS OF PROJECT</h2>
+                        <p>Click a tile to open the filtered SGLGIF table directly from the dashboard.</p>
+                    </div>
+                    <div class="sglgif-status-total-badge">
+                        <span>Tracked</span>
+                        <strong>{{ number_format($totalProjects) }}</strong>
+                    </div>
+                </div>
+
+                <div class="sglgif-status-grid">
+                    @forelse($statusBreakdown as $item)
+                        @php
+                            $statusStyle = $statusStyles[$item['label']] ?? ['color' => '#334155', 'bg' => '#f8fafc', 'border' => '#cbd5e1'];
+                            $statusUrl = route('projects.sglgif.table', array_merge(request()->query(), ['status' => $item['label']]));
+                            $statusCount = (int) ($item['count'] ?? 0);
+                            $statusPercent = $totalProjects > 0 ? round(($statusCount / $totalProjects) * 100, 1) : 0;
+                            $statusMeta = [
+                                'Completed' => [
+                                    'icon' => 'fa-circle-check',
+                                    'copy' => 'Projects already tagged as delivered.',
+                                ],
+                                'Ongoing' => [
+                                    'icon' => 'fa-hourglass-half',
+                                    'copy' => 'Projects still active in implementation.',
+                                ],
+                            ][$item['label']] ?? [
+                                'icon' => 'fa-diagram-project',
+                                'copy' => 'Projects within the current dashboard scope.',
+                            ];
+                        @endphp
+                        <a href="{{ $statusUrl }}" class="sglgif-status-tile" style="--status-color: {{ $statusStyle['color'] }}; --status-bg: {{ $statusStyle['bg'] }}; --status-border: {{ $statusStyle['border'] }};">
+                            <div class="sglgif-status-tile-top">
+                                <span class="sglgif-status-icon" aria-hidden="true">
+                                    <i class="fas {{ $statusMeta['icon'] }}"></i>
+                                </span>
+                                <span class="sglgif-status-pill">{{ number_format($statusPercent, 1) }}%</span>
+                            </div>
+                            <div class="sglgif-status-tile-main">
+                                <span class="sglgif-status-label">{{ $item['label'] }}</span>
+                                <strong>{{ number_format($statusCount) }}</strong>
+                                <small>{{ $statusMeta['copy'] }}</small>
+                            </div>
+                            <div class="sglgif-status-meter" aria-hidden="true">
+                                <div style="width: {{ $statusPercent }}%;"></div>
+                            </div>
+                            <div class="sglgif-status-footer">
+                                <span>{{ number_format($statusPercent, 1) }}% of portfolio</span>
+                                <i class="fas fa-arrow-right" aria-hidden="true"></i>
+                            </div>
+                        </a>
+                    @empty
+                        <p class="sglgif-empty">No status data for this filter set.</p>
+                    @endforelse
+                </div>
+            </section>
+
+            <section class="dashboard-card sglgif-card">
+                <div class="sglgif-card-head">
+                    <div>
+                        <h2>NUMBER OF PROJECTS</h2>
+                        <p>Switch between provincial project counts and subsidy intensity.</p>
+                    </div>
+                </div>
+
+                <div class="sglgif-switch" data-sg-switch-group="province-footprint">
+                    <button type="button" class="is-active" data-sg-switch-target="count">BY PROVINCE</button>
+                    <button type="button" data-sg-switch-target="funding">BY AMOUNT</button>
+                </div>
+
+                <div class="sglgif-switch-panel is-active" data-sg-switch-panel="province-footprint:count">
+                    @forelse($provinceBreakdown as $item)
+                        @php
+                            $provinceLabel = (string) ($item['label'] ?? 'Unspecified');
+                            $provinceModalKey = trim((string) preg_replace('/[^a-z0-9]+/i', '-', $provinceLabel), '-');
+                            $provinceModalId = 'sglgif-province-' . ($provinceModalKey !== '' ? $provinceModalKey : 'unspecified') . '-modal';
+                        @endphp
+                        @php $barWidth = $topProvinceCount > 0 ? round(($item['count'] / $topProvinceCount) * 100, 2) : 0; @endphp
+                        <div
+                            class="sglgif-bar-row sglgif-bar-trigger"
+                            role="button"
+                            tabindex="0"
+                            aria-haspopup="dialog"
+                            aria-controls="{{ $provinceModalId }}"
+                            data-sglgif-modal-target="{{ $provinceModalId }}"
+                            data-sg-bar-animate="count"
+                            title="View {{ $provinceLabel }} projects"
+                        >
+                            <div class="sglgif-bar-head">
+                                <span>{{ $item['label'] }}</span>
+                                <strong data-sg-bar-number data-format="integer" data-value="{{ (int) ($item['count'] ?? 0) }}">{{ number_format($item['count']) }}</strong>
+                            </div>
+                            <div class="sglgif-bar-track">
+                                <div data-sg-bar-fill data-target-width="{{ $barWidth }}" style="width: {{ $barWidth }}%; background: {{ $graphGradients['primary'] }};"></div>
+                            </div>
+                        </div>
+                    @empty
+                        <p class="sglgif-empty">No province counts for this filter set.</p>
+                    @endforelse
+                </div>
+
+                <div class="sglgif-switch-panel" data-sg-switch-panel="province-footprint:funding">
+                    @forelse($provinceFundingBreakdown as $item)
+                        @php
+                            $provinceLabel = (string) ($item['label'] ?? 'Unspecified');
+                            $provinceModalKey = trim((string) preg_replace('/[^a-z0-9]+/i', '-', $provinceLabel), '-');
+                            $provinceModalId = 'sglgif-province-' . ($provinceModalKey !== '' ? $provinceModalKey : 'unspecified') . '-modal';
+                        @endphp
+                        @php $barWidth = $topProvinceFundingAmount > 0 ? round((($item['amount'] ?? 0) / $topProvinceFundingAmount) * 100, 2) : 0; @endphp
+                        <div
+                            class="sglgif-bar-row sglgif-bar-trigger"
+                            role="button"
+                            tabindex="0"
+                            aria-haspopup="dialog"
+                            aria-controls="{{ $provinceModalId }}"
+                            data-sglgif-modal-target="{{ $provinceModalId }}"
+                            data-sg-bar-animate="funding"
+                            title="View {{ $provinceLabel }} projects"
+                        >
+                            <div class="sglgif-bar-head">
+                                <span>{{ $item['label'] }}</span>
+                                <strong data-sg-bar-number data-format="currency" data-value="{{ (float) ($item['amount'] ?? 0) }}">&#8369; {{ number_format((float) ($item['amount'] ?? 0), 2) }}</strong>
+                            </div>
+                            <div class="sglgif-bar-track">
+                                <div data-sg-bar-fill data-target-width="{{ $barWidth }}" style="width: {{ $barWidth }}%; background: {{ $graphGradients['secondary'] }};"></div>
+                            </div>
+                            <div class="sglgif-note"><span data-sg-bar-number data-format="integer" data-value="{{ (int) ($item['count'] ?? 0) }}">{{ number_format((int) ($item['count'] ?? 0)) }}</span> projects</div>
+                        </div>
+                    @empty
+                        <p class="sglgif-empty">No province funding data for this filter set.</p>
+                    @endforelse
+                </div>
+
             </section>
 
             <section class="dashboard-card sglgif-card">
@@ -575,155 +718,24 @@
                 </div>
             </section>
 
-            <section class="dashboard-card sglgif-card">
-                <div class="sglgif-card-head">
-                    <div>
-                        <h2>STATUS OF PROJECT</h2>
-                        <p>Click a tile to open the filtered SGLGIF table directly from the dashboard.</p>
-                    </div>
-                </div>
-
-                <div class="sglgif-status-grid">
-                    @forelse($statusBreakdown as $item)
-                        @php
-                            $statusStyle = $statusStyles[$item['label']] ?? ['color' => '#334155', 'bg' => '#f8fafc', 'border' => '#cbd5e1'];
-                            $statusUrl = route('projects.sglgif.table', array_merge(request()->query(), ['status' => $item['label']]));
-                        @endphp
-                        <a href="{{ $statusUrl }}" class="sglgif-status-tile" style="--status-color: {{ $statusStyle['color'] }}; --status-bg: {{ $statusStyle['bg'] }}; --status-border: {{ $statusStyle['border'] }};">
-                            <span>{{ $item['label'] }}</span>
-                            <strong>{{ number_format($item['count']) }}</strong>
-                        </a>
-                    @empty
-                        <p class="sglgif-empty">No status data for this filter set.</p>
-                    @endforelse
-                </div>
-            </section>
         </div>
 
-        <div class="dashboard-status-row">
-            <section class="dashboard-card sglgif-card">
-                <div class="sglgif-card-head">
-                    <div>
-                        <h2>NUMBER OF PROJECTS</h2>
-                        <p>Switch between provincial project counts and subsidy intensity.</p>
-                    </div>
-                </div>
-
-                <div class="sglgif-switch" data-sg-switch-group="province-footprint">
-                    <button type="button" class="is-active" data-sg-switch-target="count">BY PROVINCE</button>
-                    <button type="button" data-sg-switch-target="funding">BY AMOUNT</button>
-                </div>
-
-                <div class="sglgif-switch-panel is-active" data-sg-switch-panel="province-footprint:count">
-                    @forelse($provinceBreakdown as $item)
-                        @php
-                            $provinceLabel = (string) ($item['label'] ?? 'Unspecified');
-                            $provinceModalKey = trim((string) preg_replace('/[^a-z0-9]+/i', '-', $provinceLabel), '-');
-                            $provinceModalId = 'sglgif-province-' . ($provinceModalKey !== '' ? $provinceModalKey : 'unspecified') . '-modal';
-                        @endphp
-                        @php $barWidth = $topProvinceCount > 0 ? round(($item['count'] / $topProvinceCount) * 100, 2) : 0; @endphp
-                        <div
-                            class="sglgif-bar-row sglgif-bar-trigger"
-                            role="button"
-                            tabindex="0"
-                            aria-haspopup="dialog"
-                            aria-controls="{{ $provinceModalId }}"
-                            data-sglgif-modal-target="{{ $provinceModalId }}"
-                            title="View {{ $provinceLabel }} projects"
-                        >
-                            <div class="sglgif-bar-head"><span>{{ $item['label'] }}</span><strong>{{ number_format($item['count']) }}</strong></div>
-                            <div class="sglgif-bar-track"><div style="width: {{ $barWidth }}%; background: {{ $graphGradients['primary'] }};"></div></div>
-                        </div>
-                    @empty
-                        <p class="sglgif-empty">No province counts for this filter set.</p>
-                    @endforelse
-                </div>
-
-                <div class="sglgif-switch-panel" data-sg-switch-panel="province-footprint:funding">
-                    @forelse($provinceFundingBreakdown as $item)
-                        @php $barWidth = $topProvinceFundingAmount > 0 ? round((($item['amount'] ?? 0) / $topProvinceFundingAmount) * 100, 2) : 0; @endphp
-                        <div class="sglgif-bar-row">
-                            <div class="sglgif-bar-head"><span>{{ $item['label'] }}</span><strong>&#8369; {{ number_format((float) ($item['amount'] ?? 0), 2) }}</strong></div>
-                            <div class="sglgif-bar-track"><div style="width: {{ $barWidth }}%; background: {{ $graphGradients['secondary'] }};"></div></div>
-                            <div class="sglgif-note">{{ number_format((int) ($item['count'] ?? 0)) }} projects</div>
-                        </div>
-                    @empty
-                        <p class="sglgif-empty">No province funding data for this filter set.</p>
-                    @endforelse
-                </div>
-
-            </section>
-
-            <section class="dashboard-card sglgif-card">
-                <div class="sglgif-card-head">
-                    <div>
-                        <h2>DELIVERY RISK REVIEW</h2>
-                        <p>Portfolio attention signals based on low overall movement, zero progress markers, and status-alignment checks.</p>
-                    </div>
-                </div>
-
-                <div class="sglgif-risk-grid">
-                    @forelse($riskBreakdown as $item)
-                        <div class="sglgif-risk-tile" style="--risk-color: {{ $item['color'] }}; --risk-bg: {{ $item['bg'] }};">
-                            <span>{{ $item['label'] }}</span>
-                            <strong>{{ number_format($item['count']) }}</strong>
-                            <small>{{ $item['copy'] }}</small>
-                        </div>
-                    @empty
-                        <p class="sglgif-empty">No delivery-risk data for this filter set.</p>
-                    @endforelse
-                </div>
-
-                <div class="sglgif-panel-head" style="margin-top: 18px;">
-                    <h3>Status Alignment Review</h3>
-                </div>
-                <div class="sglgif-table-wrap">
-                    <table class="sglgif-table">
-                        <thead>
-                            <tr>
-                                <th>Project</th>
-                                <th>Status</th>
-                                <th>Overall</th>
-                                <th>Review Note</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($statusReviewRows as $row)
-                                <tr>
-                                    <td>
-                                        <strong>{{ $row['project_title'] ?: $row['project_code'] }}</strong>
-                                        <div class="sglgif-subline">{{ $row['project_code'] }} · {{ $row['city_municipality'] ?: '-' }}</div>
-                                    </td>
-                                    <td>{{ $row['status'] ?: '-' }}</td>
-                                    <td>{{ $row['overall_pct'] !== null ? number_format($row['overall_pct'], 2) . '%' : '-' }}</td>
-                                    <td>
-                                        @if($row['status_lc'] === 'completed' && ($row['overall_pct'] ?? 0) < 100)
-                                            Completed tag but overall is below 100%.
-                                        @elseif($row['status_lc'] === 'ongoing' && ($row['overall_pct'] ?? 0) >= 90)
-                                            Ongoing tag despite already high overall completion.
-                                        @else
-                                            Review status and overall alignment.
-                                        @endif
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="4" class="sglgif-empty-cell">No alignment issues detected for the current filter set.</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-            </section>
-        </div>
-
-        @foreach($provinceBreakdown as $item)
+        @php
+            $provinceModalLabels = collect($provinceBreakdown ?? collect())
+                ->pluck('label')
+                ->merge(collect($provinceFundingBreakdown ?? collect())->pluck('label'))
+                ->filter(fn ($label) => trim((string) $label) !== '')
+                ->unique()
+                ->values();
+        @endphp
+        @foreach($provinceModalLabels as $provinceLabel)
             @php
-                $provinceLabel = (string) ($item['label'] ?? 'Unspecified');
+                $provinceLabel = (string) $provinceLabel;
                 $provinceModalKey = trim((string) preg_replace('/[^a-z0-9]+/i', '-', $provinceLabel), '-');
                 $provinceModalId = 'sglgif-province-' . ($provinceModalKey !== '' ? $provinceModalKey : 'unspecified') . '-modal';
                 $provinceModalTitleId = $provinceModalId . '-title';
                 $provinceProjects = collect(($provinceProjectsModalMap ?? collect())->get($provinceLabel, collect()));
+                $provinceSubsidyTotal = (float) $provinceProjects->sum('subsidy_value');
             @endphp
             <div id="{{ $provinceModalId }}" class="sglgif-modal" aria-hidden="true">
                 <div class="sglgif-modal-backdrop" data-sglgif-close-modal></div>
@@ -735,7 +747,8 @@
                         </button>
                     </div>
                     <p class="sglgif-modal-subtitle">
-                        {{ number_format((int) ($item['count'] ?? 0)) }} SGLGIF projects in {{ $provinceLabel }} for the current dashboard filters.
+                        {{ number_format($provinceProjects->count()) }} SGLGIF projects in {{ $provinceLabel }} for the current dashboard filters.
+                        Total subsidy: &#8369; {{ number_format($provinceSubsidyTotal, 2) }}.
                     </p>
                     <div class="sglgif-modal-body">
                         @if ($provinceProjects->isNotEmpty())
@@ -859,6 +872,25 @@
             grid-template-columns: 1fr;
         }
 
+        .dashboard-status-row {
+            gap: 16px;
+        }
+
+        .dashboard-status-row .sglgif-card {
+            padding: 16px 16px 14px;
+            border-radius: 15px;
+        }
+
+        .dashboard-status-row .sglgif-card-head {
+            margin-bottom: 12px;
+        }
+
+        .dashboard-status-row .sglgif-card-head p {
+            margin-top: 4px;
+            font-size: 11px;
+            line-height: 1.45;
+        }
+
         .sglgif-filter-grid {
             display: grid;
             grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -951,10 +983,110 @@
             padding: 20px;
         }
 
+        .sglgif-status-card {
+            position: relative;
+            overflow: hidden;
+            background:
+                linear-gradient(145deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.46)),
+                radial-gradient(circle at top right, rgba(255, 255, 255, 0.42), transparent 42%);
+            border: 1px solid rgba(255, 255, 255, 0.62);
+            box-shadow:
+                0 20px 40px rgba(15, 23, 42, 0.10),
+                inset 0 1px 0 rgba(255, 255, 255, 0.72);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+        }
+
+        .sglgif-status-card::before {
+            content: '';
+            position: absolute;
+            inset: -30% auto auto -18%;
+            width: 220px;
+            height: 220px;
+            border-radius: 999px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.34), transparent 68%);
+            pointer-events: none;
+        }
+
+        .sglgif-status-card > * {
+            position: relative;
+            z-index: 1;
+        }
+
+        .sglgif-status-card-head {
+            align-items: center;
+            margin-bottom: 18px;
+        }
+
+        .dashboard-status-row .sglgif-status-card-head {
+            margin-bottom: 14px;
+        }
+
+        .sglgif-status-kicker {
+            display: inline-block;
+            margin-bottom: 8px;
+            padding: 5px 10px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.58);
+            border: 1px solid rgba(255, 255, 255, 0.72);
+            color: #002C76;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+        }
+
+        .dashboard-status-row .sglgif-status-kicker {
+            margin-bottom: 6px;
+            padding: 4px 9px;
+            font-size: 9px;
+        }
+
+        .sglgif-status-total-badge {
+            min-width: 92px;
+            padding: 12px 14px;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.50);
+            border: 1px solid rgba(255, 255, 255, 0.72);
+            box-shadow:
+                0 16px 28px rgba(15, 23, 42, 0.08),
+                inset 0 1px 0 rgba(255, 255, 255, 0.78);
+            text-align: right;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        .dashboard-status-row .sglgif-status-total-badge {
+            min-width: 78px;
+            padding: 10px 12px;
+            border-radius: 14px;
+        }
+
+        .sglgif-status-total-badge span {
+            display: block;
+            color: #64748b;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+
+        .sglgif-status-total-badge strong {
+            display: block;
+            margin-top: 6px;
+            color: #0f172a;
+            font-size: 24px;
+            line-height: 1;
+        }
+
+        .dashboard-status-row .sglgif-status-total-badge strong {
+            font-size: 21px;
+        }
+
         .sglgif-mini-stat span,
         .sglgif-financial-tile span,
-        .sglgif-alert-card span,
-        .sglgif-risk-tile span {
+        .sglgif-alert-card span {
             display: block;
             font-size: 11px;
             font-weight: 800;
@@ -986,16 +1118,24 @@
 
         .sglgif-mix-chart-grid,
         .sglgif-alert-grid,
-        .sglgif-risk-grid,
         .sglgif-status-grid,
         .sglgif-financial-summary {
             display: grid;
             gap: 12px;
         }
 
-        .sglgif-alert-grid,
-        .sglgif-risk-grid {
+        .sglgif-alert-grid {
             grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+
+        .dashboard-status-row .sglgif-alert-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .dashboard-status-row .sglgif-status-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
         }
 
         .sglgif-mix-chart-grid {
@@ -1014,8 +1154,7 @@
 
         .sglgif-mix-chart-card,
         .sglgif-alert-card,
-        .sglgif-financial-tile,
-        .sglgif-risk-tile {
+        .sglgif-financial-tile {
             padding: 14px;
             border-radius: 14px;
             border: 1px solid #e2e8f0;
@@ -1023,8 +1162,7 @@
         }
 
         .sglgif-alert-card strong,
-        .sglgif-financial-tile strong,
-        .sglgif-risk-tile strong {
+        .sglgif-financial-tile strong {
             display: block;
             margin-top: 10px;
             color: #0f172a;
@@ -1187,7 +1325,7 @@
 
         .sglgif-mix-chart-legend {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            grid-template-columns: repeat(var(--sglgif-legend-columns, 1), minmax(0, 1fr));
             gap: 10px;
             min-width: 0;
         }
@@ -1265,6 +1403,10 @@
             border: 1px solid #bfdbfe;
         }
 
+        .dashboard-status-row .sglgif-switch {
+            padding: 3px;
+        }
+
         .sglgif-switch button {
             border: none;
             background: transparent;
@@ -1274,6 +1416,11 @@
             font-size: 11px;
             font-weight: 800;
             cursor: pointer;
+        }
+
+        .dashboard-status-row .sglgif-switch button {
+            padding: 6px 10px;
+            font-size: 10px;
         }
 
         .sglgif-switch button.is-active {
@@ -1294,6 +1441,10 @@
             margin-bottom: 10px;
         }
 
+        .dashboard-status-row .sglgif-bar-row {
+            margin-bottom: 8px;
+        }
+
         .sglgif-bar-grid {
             display: grid;
             gap: 14px 16px;
@@ -1305,6 +1456,10 @@
             border-radius: 12px;
             cursor: pointer;
             transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background-color 0.18s ease;
+        }
+
+        .dashboard-status-row .sglgif-bar-trigger {
+            padding: 8px 10px;
         }
 
         .sglgif-bar-trigger:hover {
@@ -1330,8 +1485,19 @@
             font-size: 12px;
         }
 
+        .dashboard-status-row .sglgif-bar-head {
+            margin-bottom: 3px;
+            font-size: 11px;
+        }
+
         .sglgif-bar-head strong {
             color: #0f172a;
+        }
+
+        .sglgif-bar-head span,
+        .sglgif-table td strong,
+        .sglgif-modal-table tbody td strong {
+            overflow-wrap: anywhere;
         }
 
         .sglgif-bar-track {
@@ -1339,6 +1505,10 @@
             border-radius: 999px;
             background: #e2e8f0;
             overflow: hidden;
+        }
+
+        .dashboard-status-row .sglgif-bar-track {
+            height: 7px;
         }
 
         .sglgif-bar-track > div {
@@ -1351,6 +1521,12 @@
             margin-top: 4px;
             color: #64748b;
             font-size: 11px;
+        }
+
+        .dashboard-status-row .sglgif-note,
+        .dashboard-status-row .sglgif-subline {
+            margin-top: 3px;
+            font-size: 10px;
         }
 
         .sglgif-gauge-grid {
@@ -1369,6 +1545,7 @@
 
         .sglgif-gauge {
             --p: 0;
+            --gauge-progress: 0;
             --c: #002C76;
             width: 126px;
             height: 126px;
@@ -1378,7 +1555,7 @@
             place-items: center;
             background:
                 radial-gradient(closest-side, #ffffff 69%, transparent 71% 100%),
-                conic-gradient(var(--c) calc(var(--p) * 1%), #e2e8f0 0);
+                conic-gradient(var(--c) calc(var(--gauge-progress) * 1%), #e2e8f0 0);
         }
 
         .sglgif-gauge span {
@@ -1394,8 +1571,7 @@
             font-weight: 800;
         }
 
-        .sglgif-gauge-card p,
-        .sglgif-risk-tile small {
+        .sglgif-gauge-card p {
             margin: 0;
             color: #475569;
             font-size: 12px;
@@ -1406,66 +1582,252 @@
             background: linear-gradient(180deg, #fffaf0 0%, #ffffff 100%);
         }
 
+        .dashboard-status-row .sglgif-alert-card {
+            padding: 12px;
+            border-radius: 12px;
+        }
+
         .sglgif-alert-card span {
             color: #92400e;
+        }
+
+        .dashboard-status-row .sglgif-alert-card span {
+            font-size: 10px;
         }
 
         .sglgif-alert-card strong {
             color: #7c2d12;
         }
 
+        .dashboard-status-row .sglgif-alert-card strong {
+            margin-top: 8px;
+            font-size: 20px;
+        }
+
         .sglgif-status-tile {
             display: block;
-            padding: 16px;
-            border-radius: 14px;
-            border: 1px solid var(--status-border);
-            background: var(--status-bg);
+            position: relative;
+            overflow: hidden;
+            padding: 18px;
+            border-radius: 18px;
+            border: 1px solid color-mix(in srgb, var(--status-border) 72%, white);
+            background:
+                linear-gradient(155deg, rgba(255, 255, 255, 0.84), rgba(255, 255, 255, 0.36)),
+                radial-gradient(circle at top right, color-mix(in srgb, var(--status-bg) 86%, white), transparent 74%);
             color: var(--status-color);
             text-decoration: none;
-            transition: transform 0.18s ease, box-shadow 0.18s ease;
+            box-shadow:
+                0 20px 34px rgba(15, 23, 42, 0.08),
+                inset 0 1px 0 rgba(255, 255, 255, 0.82);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+        }
+
+        .dashboard-status-row .sglgif-status-tile {
+            padding: 14px;
+            border-radius: 16px;
         }
 
         .sglgif-status-tile:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08);
+            transform: translateY(-4px);
+            border-color: var(--status-color);
+            box-shadow:
+                0 24px 38px rgba(15, 23, 42, 0.14),
+                inset 0 1px 0 rgba(255, 255, 255, 0.90);
         }
 
-        .sglgif-status-tile span {
+        .sglgif-status-tile::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.26), transparent 58%);
+            pointer-events: none;
+        }
+
+        .sglgif-status-tile > * {
+            position: relative;
+            z-index: 1;
+        }
+
+        .sglgif-status-tile-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            margin-bottom: 14px;
+        }
+
+        .dashboard-status-row .sglgif-status-tile-top {
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .sglgif-status-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 42px;
+            height: 42px;
+            border-radius: 14px;
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.86), var(--status-bg));
+            border: 1px solid color-mix(in srgb, var(--status-border) 65%, white);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+            font-size: 16px;
+        }
+
+        .dashboard-status-row .sglgif-status-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 12px;
+            font-size: 14px;
+        }
+
+        .sglgif-status-pill,
+        .sglgif-status-label,
+        .sglgif-status-footer span {
             display: block;
-            font-size: 12px;
             font-weight: 800;
-            letter-spacing: 0.08em;
+        }
+
+        .sglgif-status-pill {
+            padding: 7px 10px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.66);
+            border: 1px solid rgba(255, 255, 255, 0.84);
+            color: var(--status-color);
+            font-size: 10px;
+            letter-spacing: 0.12em;
             text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .dashboard-status-row .sglgif-status-pill {
+            padding: 6px 8px;
+            font-size: 9px;
+        }
+
+        .sglgif-status-tile-main {
+            display: grid;
+            gap: 8px;
+        }
+
+        .dashboard-status-row .sglgif-status-tile-main {
+            gap: 5px;
+        }
+
+        .sglgif-status-label {
+            font-size: 12px;
+            letter-spacing: 0.10em;
+            text-transform: uppercase;
+        }
+
+        .dashboard-status-row .sglgif-status-label {
+            font-size: 11px;
         }
 
         .sglgif-status-tile strong {
             display: block;
-            margin-top: 10px;
-            font-size: 28px;
-            line-height: 1.1;
-        }
-
-        .sglgif-risk-tile {
-            background: var(--risk-bg);
-            border-color: transparent;
-        }
-
-        .sglgif-risk-tile span {
-            color: var(--risk-color);
-        }
-
-        .sglgif-risk-tile strong {
+            margin-top: 0;
             color: #0f172a;
+            font-size: 34px;
+            line-height: 0.98;
+        }
+
+        .dashboard-status-row .sglgif-status-tile strong {
+            font-size: 28px;
+        }
+
+        .sglgif-status-tile small {
+            display: block;
+            color: #475569;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .dashboard-status-row .sglgif-status-tile small {
+            font-size: 11px;
+            line-height: 1.35;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .sglgif-status-meter {
+            height: 10px;
+            margin-top: 14px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.48);
+            border: 1px solid rgba(255, 255, 255, 0.64);
+            overflow: hidden;
+            box-shadow: inset 0 1px 3px rgba(15, 23, 42, 0.08);
+        }
+
+        .dashboard-status-row .sglgif-status-meter {
+            height: 8px;
+            margin-top: 10px;
+        }
+
+        .sglgif-status-meter div {
+            height: 100%;
+            border-radius: inherit;
+            background: linear-gradient(90deg, var(--status-color), color-mix(in srgb, var(--status-color) 58%, white));
+            box-shadow: 0 6px 18px color-mix(in srgb, var(--status-color) 24%, transparent);
+        }
+
+        .sglgif-status-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-top: 12px;
+            color: #475569;
+            font-size: 12px;
+        }
+
+        .dashboard-status-row .sglgif-status-footer {
+            gap: 10px;
+            margin-top: 8px;
+            font-size: 11px;
+        }
+
+        .sglgif-status-footer span {
+            color: #475569;
+            font-size: 11px;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+
+        .dashboard-status-row .sglgif-status-footer span {
+            font-size: 10px;
+        }
+
+        .sglgif-status-footer i {
+            font-size: 13px;
+            color: var(--status-color);
         }
 
         .sglgif-table-wrap {
             overflow-x: auto;
         }
 
+        .dashboard-status-row .sglgif-table-wrap {
+            max-height: 244px;
+            overflow: auto;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            background: #ffffff;
+        }
+
         .sglgif-table {
             width: 100%;
             border-collapse: collapse;
             font-size: 12px;
+        }
+
+        .dashboard-status-row .sglgif-table {
+            font-size: 11px;
         }
 
         .sglgif-table th,
@@ -1477,6 +1839,11 @@
             color: #334155;
         }
 
+        .dashboard-status-row .sglgif-table th,
+        .dashboard-status-row .sglgif-table td {
+            padding: 8px 7px;
+        }
+
         .sglgif-table th {
             color: #0f172a;
             font-size: 11px;
@@ -1484,6 +1851,12 @@
             letter-spacing: 0.05em;
             text-transform: uppercase;
             background: #f8fafc;
+        }
+
+        .dashboard-status-row .sglgif-table th {
+            position: sticky;
+            top: 0;
+            z-index: 1;
         }
 
         .sglgif-empty,
@@ -1495,6 +1868,10 @@
         .sglgif-empty-cell {
             text-align: center;
             padding: 16px 10px;
+        }
+
+        .dashboard-status-row .sglgif-empty-cell {
+            padding: 14px 8px;
         }
 
         .sglgif-modal {
@@ -1629,35 +2006,168 @@
             }
         }
 
+        @media (max-width: 1360px) {
+            .dashboard-main-layout {
+                grid-template-columns: minmax(0, 1fr) minmax(320px, 0.92fr);
+                padding: 20px;
+            }
+        }
+
         @media (max-width: 1280px) {
             .dashboard-main-layout {
                 grid-template-columns: 1fr;
+                padding: 20px;
             }
-        }
 
-        @media (max-width: 1080px) {
-            .sglgif-filter-grid,
+            .dashboard-top-cards,
+            .dashboard-status-row {
+                gap: 18px;
+            }
+
+            .sglgif-filter-grid {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+
+            .sglgif-filter-field--search {
+                grid-column: 1 / -1;
+            }
+
             .sglgif-mix-chart-grid,
-            .sglgif-alert-grid,
-            .sglgif-risk-grid,
-            .sglgif-gauge-grid,
-            .sglgif-financial-summary,
             .sglgif-dual-panel {
+                grid-template-columns: 1fr;
+            }
+
+            .sglgif-gauge-grid,
+            .sglgif-financial-summary {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
-
         }
 
-        @media (max-width: 760px) {
-            .sglgif-filter-grid,
+        @media (max-width: 1024px) {
+            .dashboard-main-layout {
+                padding: 18px;
+                gap: 18px;
+            }
+
+            .sglgif-filter-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 12px 14px;
+            }
+
+            .sglgif-filter-actions {
+                grid-column: 1 / -1;
+                justify-content: stretch;
+            }
+
+            .sglgif-action-btn {
+                flex: 1 1 calc(50% - 8px);
+                min-width: 0;
+            }
+
+            .sglgif-panel-head,
+            .sglgif-mix-chart-head {
+                flex-wrap: wrap;
+            }
+
+            .sglgif-bar-head {
+                gap: 8px;
+            }
+
+            .sglgif-gauge {
+                width: 116px;
+                height: 116px;
+            }
+        }
+
+        @media (max-width: 820px) {
+            .dashboard-main-layout {
+                padding: 16px;
+                gap: 16px;
+                border-radius: 16px;
+            }
+
+            .sglgif-card,
+            .dashboard-status-row .sglgif-card {
+                padding: 15px 14px;
+            }
+
+            .sglgif-card-head,
+            .sglgif-status-card-head,
+            .sglgif-mix-chart-head,
+            .sglgif-panel-head {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .sglgif-status-total-badge {
+                align-self: flex-start;
+                text-align: left;
+            }
+
+            .dashboard-status-row .sglgif-status-grid,
+            .dashboard-status-row .sglgif-alert-grid,
             .sglgif-mix-chart-grid,
-            .sglgif-alert-grid,
-            .sglgif-risk-grid,
-            .sglgif-status-grid,
             .sglgif-gauge-grid,
             .sglgif-financial-summary,
             .sglgif-dual-panel {
                 grid-template-columns: 1fr;
+            }
+
+            .sglgif-switch {
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            .sglgif-switch button {
+                flex: 1 1 0;
+                text-align: center;
+            }
+
+            .sglgif-mix-donut-layout {
+                min-height: 0;
+                padding: 14px 12px;
+            }
+
+            .sglgif-mix-chart-legend {
+                grid-template-columns: 1fr;
+            }
+
+            .sglgif-modal {
+                padding: 14px;
+            }
+
+            .sglgif-modal-dialog {
+                width: calc(100vw - 28px);
+                max-height: calc(100vh - 28px);
+            }
+        }
+
+        @media (max-width: 640px) {
+            .dashboard-main-layout {
+                padding: 12px;
+                gap: 12px;
+                border-radius: 14px;
+            }
+
+            .dashboard-top-cards,
+            .dashboard-status-row {
+                gap: 12px;
+            }
+
+            .sglgif-filter-grid,
+            .sglgif-mix-chart-grid,
+            .sglgif-alert-grid,
+            .sglgif-status-grid,
+            .dashboard-status-row .sglgif-status-grid,
+            .dashboard-status-row .sglgif-alert-grid,
+            .sglgif-gauge-grid,
+            .sglgif-financial-summary,
+            .sglgif-dual-panel {
+                grid-template-columns: 1fr;
+            }
+
+            .sglgif-filter-grid {
+                gap: 10px;
             }
 
             .sglgif-filter-field--search {
@@ -1665,38 +2175,78 @@
             }
 
             .sglgif-filter-actions {
-                justify-content: stretch;
+                flex-direction: column;
+                align-items: stretch;
             }
 
             .sglgif-action-btn {
                 width: 100%;
+                flex: 1 1 auto;
             }
 
-            .sglgif-gauge {
-                width: 112px;
-                height: 112px;
+            .sglgif-card,
+            .dashboard-status-row .sglgif-card {
+                padding: 14px 12px;
+                border-radius: 14px;
             }
 
-            .sglgif-mix-chart-body {
-                grid-template-columns: 1fr;
+            .sglgif-card-head h2,
+            .sglgif-panel-head h3 {
+                font-size: 14px;
             }
 
-            .sglgif-mix-chart-head {
-                flex-direction: column;
+            .sglgif-card-head p,
+            .dashboard-status-row .sglgif-card-head p {
+                font-size: 11px;
+                line-height: 1.4;
             }
 
-            .sglgif-mix-donut-layout {
-                min-height: 0;
+            .sglgif-status-total-badge {
+                width: 100%;
+            }
+
+            .dashboard-status-row .sglgif-status-tile {
                 padding: 12px;
             }
 
+            .dashboard-status-row .sglgif-status-tile strong {
+                font-size: 24px;
+            }
+
+            .dashboard-status-row .sglgif-status-footer span {
+                font-size: 9px;
+            }
+
+            .dashboard-status-row .sglgif-table-wrap {
+                max-height: 220px;
+            }
+
+            .sglgif-bar-head {
+                flex-direction: column;
+                align-items: flex-start;
+                margin-bottom: 6px;
+            }
+
+            .sglgif-bar-head strong {
+                align-self: flex-start;
+            }
+
+            .sglgif-gauge {
+                width: 100px;
+                height: 100px;
+            }
+
+            .sglgif-gauge span {
+                font-size: 16px;
+            }
+
             .sglgif-mix-donut-wrap {
-                width: min(200px, 100%);
+                width: min(190px, 100%);
             }
 
             .sglgif-mix-donut-center {
-                width: 72px;
-                height: 72px;
+                width: 70px;
+                height: 70px;
             }
 
             .sglgif-mix-donut-center strong {
@@ -1707,10 +2257,6 @@
                 font-size: 9px;
             }
 
-            .sglgif-mix-chart-legend {
-                grid-template-columns: 1fr;
-            }
-
             .sglgif-modal {
                 padding: 12px;
             }
@@ -1718,6 +2264,28 @@
             .sglgif-modal-dialog {
                 width: calc(100vw - 24px);
                 max-height: calc(100vh - 24px);
+                border-radius: 12px;
+            }
+
+            .sglgif-modal-header,
+            .sglgif-modal-subtitle {
+                padding-left: 12px;
+                padding-right: 12px;
+            }
+
+            .sglgif-modal-header h3 {
+                font-size: 14px;
+            }
+
+            .sglgif-modal-subtitle,
+            .sglgif-modal-table,
+            .sglgif-modal-empty-state {
+                font-size: 11px;
+            }
+
+            .sglgif-modal-table thead th,
+            .sglgif-modal-table tbody td {
+                padding: 8px 10px;
             }
         }
     </style>
@@ -1775,6 +2343,140 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
+            const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            const integerFormatter = new Intl.NumberFormat('en-US', {
+                maximumFractionDigits: 0,
+            });
+            const currencyFormatter = new Intl.NumberFormat('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+            });
+            const formatAnimatedBarValue = (value, format) => {
+                if (format === 'currency') {
+                    return `₱ ${currencyFormatter.format(value)}`;
+                }
+
+                return integerFormatter.format(Math.round(value));
+            };
+            const animateGauge = (gaugeElement, index) => {
+                const targetValue = Number.parseFloat(gaugeElement.getAttribute('data-sg-gauge-value') || '0');
+                const labelElement = gaugeElement.querySelector('[data-sg-gauge-label]');
+
+                if (!Number.isFinite(targetValue)) {
+                    return;
+                }
+
+                if (prefersReducedMotion) {
+                    gaugeElement.style.setProperty('--gauge-progress', targetValue.toFixed(2));
+                    if (labelElement) {
+                        labelElement.textContent = `${targetValue.toFixed(2)}%`;
+                    }
+                    return;
+                }
+
+                const durationMs = 1200;
+                const delayMs = index * 130;
+                const startAnimation = () => {
+                    const startTime = performance.now();
+                    const easeOutCubic = (progress) => 1 - Math.pow(1 - progress, 3);
+
+                    const updateFrame = (now) => {
+                        const rawProgress = Math.min((now - startTime) / durationMs, 1);
+                        const easedProgress = easeOutCubic(rawProgress);
+                        const currentValue = targetValue * easedProgress;
+
+                        gaugeElement.style.setProperty('--gauge-progress', currentValue.toFixed(2));
+                        if (labelElement) {
+                            labelElement.textContent = `${currentValue.toFixed(2)}%`;
+                        }
+
+                        if (rawProgress < 1) {
+                            window.requestAnimationFrame(updateFrame);
+                        }
+                    };
+
+                    gaugeElement.style.setProperty('--gauge-progress', '0');
+                    if (labelElement) {
+                        labelElement.textContent = '0.00%';
+                    }
+                    window.requestAnimationFrame(updateFrame);
+                };
+
+                window.setTimeout(startAnimation, delayMs);
+            };
+
+            document.querySelectorAll('[data-sg-gauge]').forEach((gaugeElement, index) => {
+                animateGauge(gaugeElement, index);
+            });
+
+            const animateProvinceBars = (panelElement) => {
+                if (!panelElement) {
+                    return;
+                }
+
+                const animatedRows = Array.from(panelElement.querySelectorAll('[data-sg-bar-animate]'));
+                if (!animatedRows.length) {
+                    return;
+                }
+
+                animatedRows.forEach((rowElement, index) => {
+                    const fillElement = rowElement.querySelector('[data-sg-bar-fill]');
+                    const numberElements = Array.from(rowElement.querySelectorAll('[data-sg-bar-number]'));
+
+                    if (prefersReducedMotion) {
+                        if (fillElement) {
+                            fillElement.style.width = `${Number.parseFloat(fillElement.getAttribute('data-target-width') || '0')}%`;
+                        }
+
+                        numberElements.forEach((numberElement) => {
+                            const targetValue = Number.parseFloat(numberElement.getAttribute('data-value') || '0');
+                            const format = numberElement.getAttribute('data-format') || 'integer';
+                            numberElement.textContent = formatAnimatedBarValue(targetValue, format);
+                        });
+
+                        return;
+                    }
+
+                    const durationMs = 1000;
+                    const delayMs = index * 90;
+                    window.setTimeout(() => {
+                        const startTime = performance.now();
+                        const easeOutCubic = (progress) => 1 - Math.pow(1 - progress, 3);
+                        const targetWidth = fillElement ? Number.parseFloat(fillElement.getAttribute('data-target-width') || '0') : 0;
+
+                        if (fillElement) {
+                            fillElement.style.width = '0%';
+                        }
+
+                        numberElements.forEach((numberElement) => {
+                            const format = numberElement.getAttribute('data-format') || 'integer';
+                            numberElement.textContent = formatAnimatedBarValue(0, format);
+                        });
+
+                        const updateFrame = (now) => {
+                            const rawProgress = Math.min((now - startTime) / durationMs, 1);
+                            const easedProgress = easeOutCubic(rawProgress);
+
+                            if (fillElement) {
+                                fillElement.style.width = `${(targetWidth * easedProgress).toFixed(2)}%`;
+                            }
+
+                            numberElements.forEach((numberElement) => {
+                                const targetValue = Number.parseFloat(numberElement.getAttribute('data-value') || '0');
+                                const format = numberElement.getAttribute('data-format') || 'integer';
+                                numberElement.textContent = formatAnimatedBarValue(targetValue * easedProgress, format);
+                            });
+
+                            if (rawProgress < 1) {
+                                window.requestAnimationFrame(updateFrame);
+                            }
+                        };
+
+                        window.requestAnimationFrame(updateFrame);
+                    }, delayMs);
+                });
+            };
+
             document.querySelectorAll('[data-sg-switch-group]').forEach((switchGroup) => {
                 const groupName = switchGroup.getAttribute('data-sg-switch-group');
                 const buttons = Array.from(switchGroup.querySelectorAll('[data-sg-switch-target]'));
@@ -1788,8 +2490,14 @@
                         panels.forEach((panel) => {
                             panel.classList.toggle('is-active', panel.getAttribute('data-sg-switch-panel') === `${groupName}:${target}`);
                         });
+
+                        const activePanel = panels.find((panel) => panel.getAttribute('data-sg-switch-panel') === `${groupName}:${target}`);
+                        animateProvinceBars(activePanel);
                     });
                 });
+
+                const defaultPanel = panels.find((panel) => panel.classList.contains('is-active'));
+                animateProvinceBars(defaultPanel);
             });
 
             document.querySelectorAll('.sglgif-bar-trigger[data-sglgif-modal-target]').forEach((trigger) => {
