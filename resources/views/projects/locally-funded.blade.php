@@ -131,6 +131,39 @@
 
                 return preg_replace($pattern, '<mark class="lfp-search-highlight">$0</mark>', $escapedText) ?: $escapedText;
             };
+
+            $parseBarangays = function ($value) {
+                if (is_array($value)) {
+                    return collect($value)
+                        ->map(fn ($item) => trim((string) $item))
+                        ->filter()
+                        ->values()
+                        ->all();
+                }
+
+                $text = trim((string) $value);
+
+                if ($text === '') {
+                    return [];
+                }
+
+                $decoded = json_decode($text, true);
+                if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                    return collect($decoded)
+                        ->map(fn ($item) => trim((string) $item))
+                        ->filter()
+                        ->values()
+                        ->all();
+                }
+
+                $normalized = preg_replace('/[\r\n;|]+/', ',', $text);
+
+                return collect(explode(',', (string) $normalized))
+                    ->map(fn ($item) => trim((string) $item))
+                    ->filter()
+                    ->values()
+                    ->all();
+            };
         @endphp
 
         <details id="lfp-filters-panel" class="lfp-filters-panel" open>
@@ -396,7 +429,7 @@
                                         <strong>Province:</strong> {!! $highlightSearch($project->province) !!}<br>
                                         <strong>City/Mun:</strong> {!! $highlightSearch($project->city_municipality) !!}<br>
                                         @php
-                                            $barangays = array_filter(array_map('trim', explode(',', (string) $project->barangay)));
+                                            $barangays = $parseBarangays($project->barangay);
                                         @endphp
                                         <strong>Barangay:</strong>
                                         @if(count($barangays))
@@ -469,9 +502,9 @@
                 </table>
             </div>
             <div class="lfp-mobile-cards" aria-label="Locally Funded Projects cards">
-                @foreach($projects as $project)
-                    @php
-                        $lfpId = $project->lfp_id ?? null;
+                    @foreach($projects as $project)
+                        @php
+                            $lfpId = $project->lfp_id ?? null;
                         $statusActual = $lfpId && isset($physicalStatuses[$lfpId]['status_actual'])
                             ? $physicalStatuses[$lfpId]['status_actual']
                             : 'Pending';
@@ -482,10 +515,10 @@
                             ? $physicalStatuses[$lfpId]['accomplishment_pct_ro']
                             : ($project->subay_accomplishment_pct ?? null);
                         $hasLfp = !empty($lfpId);
-                        $viewUrl = $hasLfp
+                            $viewUrl = $hasLfp
                             ? route('locally-funded-project.show', $lfpId)
                             : route('locally-funded-project.ensure', $project->subaybayan_project_code);
-                        $barangays = array_filter(array_map('trim', explode(',', (string) $project->barangay)));
+                        $barangays = $parseBarangays($project->barangay);
                     @endphp
                     <details class="lfp-mobile-card">
                         <summary class="lfp-mobile-card-summary">
