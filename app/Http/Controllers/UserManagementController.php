@@ -9,17 +9,9 @@ use Illuminate\Support\Facades\Hash;
 
 class UserManagementController extends Controller
 {
-    private const CRUD_PERMISSION_OPTIONS = [
-        'locally_funded_projects' => 'Locally Funded Projects',
-        'fund_utilization_reports' => 'Fund Utilization Report',
-        'local_project_monitoring_committee' => 'Local Project Monitoring Committee',
-        'road_maintenance_status_reports' => 'Road Maintenance Status Report',
-    ];
-
     private const CRUD_ACTION_OPTIONS = [
         'view' => 'VIEW',
         'add' => 'ADD',
-        'upload' => 'UPLOAD',
         'update' => 'UPDATE',
         'delete' => 'DELETE',
     ];
@@ -58,7 +50,7 @@ class UserManagementController extends Controller
 
         return view('admin.users.index', [
             'users' => $users,
-            'crudPermissionOptions' => self::CRUD_PERMISSION_OPTIONS,
+            'accessGrantModules' => $this->accessGrantModules(),
             'crudActionOptions' => self::CRUD_ACTION_OPTIONS,
         ]);
     }
@@ -139,9 +131,84 @@ class UserManagementController extends Controller
     {
         return view('admin.users.show', [
             'user' => $user,
-            'crudPermissionOptions' => self::CRUD_PERMISSION_OPTIONS,
+            'accessGrantModules' => $this->accessGrantModules(),
             'crudActionOptions' => self::CRUD_ACTION_OPTIONS,
         ]);
+    }
+
+    private function accessGrantModules(): array
+    {
+        return [
+            [
+                'module' => 'Project Monitoring',
+                'description' => 'Project monitoring modules for project profiles, updates, and accomplishment tracking.',
+                'items' => [
+                    [
+                        'aspect' => 'locally_funded_projects',
+                        'label' => 'Locally Funded Projects',
+                        'description' => 'View and manage locally funded project records, including profile details and monitoring updates within the user’s assigned scope.',
+                    ],
+                ],
+            ],
+            [
+                'module' => 'LGU Reportorial Requirements',
+                'description' => 'Annual, quarterly, and monthly LGU reportorial submissions handled by the current system.',
+                'items' => [
+                    [
+                        'aspect' => 'rbis_annual_certification',
+                        'label' => 'Annual / RBIS Annual Certification',
+                        'description' => 'Manage annual RBIS certification documents and related validation actions.',
+                    ],
+                    [
+                        'aspect' => 'fund_utilization_reports',
+                        'label' => 'Quarterly / Fund Utilization Report',
+                        'description' => 'Manage quarterly fund utilization records, MOV uploads, notices, and supporting reportorial documents.',
+                    ],
+                    [
+                        'aspect' => 'local_project_monitoring_committee',
+                        'label' => 'Quarterly / Local Project Monitoring Committee',
+                        'description' => 'Manage quarterly LPMC submissions, uploaded documents, and validation workflow.',
+                    ],
+                    [
+                        'aspect' => 'road_maintenance_status_reports',
+                        'label' => 'Quarterly / Road Maintenance Status Report',
+                        'description' => 'Manage quarterly road maintenance status submissions, document uploads, and validation steps.',
+                    ],
+                    [
+                        'aspect' => 'pd_no_pbbm_monthly_reports',
+                        'label' => 'Monthly / PD No. PBBM-2025-1572-1573',
+                        'description' => 'Manage monthly report submissions, uploaded files, and document approval actions.',
+                    ],
+                ],
+            ],
+            [
+                'module' => 'Pre-Implementation Documents',
+                'description' => 'Document requirements collected before implementation begins.',
+                'items' => [
+                    [
+                        'aspect' => 'pre_implementation_documents',
+                        'label' => 'SBDP Pre-Implementation Documents',
+                        'description' => 'View and add the pre-implementation document set required for SBDP projects before project execution.',
+                    ],
+                ],
+            ],
+        ];
+    }
+
+    private function validPermissionKeys(): array
+    {
+        return collect($this->accessGrantModules())
+            ->flatMap(function (array $module) {
+                return collect($module['items'] ?? [])
+                    ->pluck('aspect');
+            })
+            ->flatMap(function (string $aspect) {
+                return collect(array_keys(self::CRUD_ACTION_OPTIONS))
+                    ->map(fn ($action) => $aspect . '.' . $action);
+            })
+            ->unique()
+            ->values()
+            ->all();
     }
 
     /**
@@ -233,12 +300,7 @@ class UserManagementController extends Controller
             'crud_permissions.*' => ['string'],
         ]);
 
-        $validPermissionKeys = collect(array_keys(self::CRUD_PERMISSION_OPTIONS))
-            ->flatMap(function ($aspect) {
-                return collect(array_keys(self::CRUD_ACTION_OPTIONS))
-                    ->map(fn ($action) => $aspect . '.' . $action);
-            })
-            ->all();
+        $validPermissionKeys = $this->validPermissionKeys();
 
         $permissions = collect($validated['crud_permissions'] ?? [])
             ->map(fn ($permission) => strtolower(trim((string) $permission)))

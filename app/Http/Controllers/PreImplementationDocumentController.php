@@ -17,6 +17,14 @@ use Illuminate\Support\Str;
 
 class PreImplementationDocumentController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('auth');
+        $this->middleware('crud_permission:pre_implementation_documents,view')->only(['index', 'show']);
+        $this->middleware('crud_permission:pre_implementation_documents,add')->only(['save']);
+        $this->middleware('crud_permission:pre_implementation_documents,update')->only(['validateDocument']);
+    }
+
     public function index(Request $request)
     {
         $perPage = (int) $request->input('per_page', 10);
@@ -793,4 +801,3 @@ class PreImplementationDocumentController extends Controller
         ];
     }
 }
-

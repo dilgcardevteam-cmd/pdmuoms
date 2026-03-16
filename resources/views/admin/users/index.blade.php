@@ -307,29 +307,54 @@
                                                         <table class="crud-permission-table">
                                                             <thead>
                                                                 <tr>
-                                                                    <th>Aspect</th>
+                                                                    <th>Module</th>
+                                                                    <th>Submodule</th>
+                                                                    <th>Description</th>
                                                                     @foreach($crudActionOptions as $actionKey => $actionLabel)
                                                                         <th>{{ $actionLabel }}</th>
                                                                     @endforeach
                                                                 </tr>
                                                             </thead>
                                                             <tbody>
-                                                                @foreach($crudPermissionOptions as $aspectKey => $aspectLabel)
-                                                                    <tr>
-                                                                        <td>{{ $aspectLabel }}</td>
-                                                                        @foreach($crudActionOptions as $actionKey => $actionLabel)
-                                                                            @php
-                                                                                $permissionKey = $aspectKey . '.' . $actionKey;
-                                                                                $checked = $hasFullAccess || in_array($permissionKey, $grantedPermissions, true);
-                                                                            @endphp
-                                                                            <td>
-                                                                                <label class="crud-check-item">
-                                                                                    <input type="checkbox" name="crud_permissions[]" value="{{ $permissionKey }}" @checked($checked)>
-                                                                                    <span>{{ $actionLabel }}</span>
-                                                                                </label>
-                                                                            </td>
-                                                                        @endforeach
-                                                                    </tr>
+                                                                @foreach($accessGrantModules as $module)
+                                                                    @php
+                                                                        $items = $module['items'] ?? [];
+                                                                        $rowspan = count($items);
+                                                                    @endphp
+                                                                    @foreach($items as $itemIndex => $item)
+                                                                        <tr>
+                                                                            @if($itemIndex === 0)
+                                                                                <td rowspan="{{ $rowspan }}" class="crud-permission-module-cell">
+                                                                                    <div class="crud-permission-module-title">{{ $module['module'] }}</div>
+                                                                                    <div class="crud-permission-module-description">{{ $module['description'] }}</div>
+                                                                                </td>
+                                                                            @endif
+                                                                            <td class="crud-permission-submodule-cell">{{ $item['label'] }}</td>
+                                                                            <td class="crud-permission-description-cell">{{ $item['description'] }}</td>
+                                                                            @foreach($crudActionOptions as $actionKey => $actionLabel)
+                                                                                @php
+                                                                                    $permissionKey = $item['aspect'] . '.' . $actionKey;
+                                                                                    $checked = $hasFullAccess || $user->hasCrudPermission($item['aspect'], $actionKey);
+                                                                                    $isDefaultPermission = !$hasFullAccess && $user->hasDefaultCrudPermission($item['aspect'], $actionKey);
+                                                                                @endphp
+                                                                                <td class="crud-permission-check-cell">
+                                                                                    <label class="crud-check-item {{ $isDefaultPermission ? 'crud-check-item--default' : '' }}">
+                                                                                        <input
+                                                                                            type="checkbox"
+                                                                                            name="crud_permissions[]"
+                                                                                            value="{{ $permissionKey }}"
+                                                                                            @checked($checked)
+                                                                                            @disabled($isDefaultPermission)
+                                                                                        >
+                                                                                        <span>{{ $isDefaultPermission ? 'Role default' : 'Grant' }}</span>
+                                                                                    </label>
+                                                                                    @if($isDefaultPermission)
+                                                                                        <input type="hidden" name="crud_permissions[]" value="{{ $permissionKey }}">
+                                                                                    @endif
+                                                                                </td>
+                                                                            @endforeach
+                                                                        </tr>
+                                                                    @endforeach
                                                                 @endforeach
                                                             </tbody>
                                                         </table>
@@ -337,7 +362,7 @@
 
                                                     <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 18px; flex-wrap: wrap;">
                                                         <div style="font-size: 12px; color: #64748b;">
-                                                            Leave all unchecked to keep the user's role-based defaults only. Use these checks to add permissions the role does not grant by default.
+                                                            Checked boxes marked as `Role default` come from the user's hierarchy role. Use unchecked boxes to add more access beyond that baseline.
                                                         </div>
                                                         <button type="submit" style="padding: 10px 16px; background-color: #002C76; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13px;">
                                                             Save Permissions
@@ -735,7 +760,7 @@
         .crud-permission-table {
             width: 100%;
             border-collapse: collapse;
-            min-width: 520px;
+            min-width: 1120px;
             background: #ffffff;
         }
 
@@ -759,11 +784,45 @@
 
         .crud-check-item {
             display: inline-flex;
-            align-items: center;
-            gap: 8px;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 6px;
             color: #334155;
             font-size: 12px;
             font-weight: 600;
+        }
+
+        .crud-check-item--default span {
+            color: #2563eb;
+        }
+
+        .crud-permission-module-cell {
+            background: #f8fbff;
+            min-width: 200px;
+            vertical-align: top;
+        }
+
+        .crud-permission-module-title,
+        .crud-permission-submodule-cell {
+            color: #0f172a;
+            font-weight: 700;
+            font-size: 13px;
+        }
+
+        .crud-permission-module-description,
+        .crud-permission-description-cell {
+            color: #64748b;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .crud-permission-description-cell {
+            min-width: 280px;
+        }
+
+        .crud-permission-check-cell {
+            min-width: 110px;
+            text-align: center;
         }
 
         table tbody tr:hover {

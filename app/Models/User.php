@@ -290,31 +290,47 @@ class User extends Authenticatable implements MustVerifyEmail
         $reportorialPermissions = [
             'fund_utilization_reports.view',
             'fund_utilization_reports.add',
-            'fund_utilization_reports.upload',
             'fund_utilization_reports.update',
             'fund_utilization_reports.delete',
             'local_project_monitoring_committee.view',
             'local_project_monitoring_committee.add',
-            'local_project_monitoring_committee.upload',
             'local_project_monitoring_committee.update',
             'local_project_monitoring_committee.delete',
             'road_maintenance_status_reports.view',
             'road_maintenance_status_reports.add',
-            'road_maintenance_status_reports.upload',
             'road_maintenance_status_reports.update',
             'road_maintenance_status_reports.delete',
+            'rbis_annual_certification.view',
+            'rbis_annual_certification.add',
+            'rbis_annual_certification.update',
+            'rbis_annual_certification.delete',
+            'pd_no_pbbm_monthly_reports.view',
+            'pd_no_pbbm_monthly_reports.add',
+            'pd_no_pbbm_monthly_reports.update',
+            'pd_no_pbbm_monthly_reports.delete',
         ];
 
         if ($this->isRegionalUser() || $this->isProvincialUser()) {
-            return array_merge($reportorialPermissions, [
+            $permissions = array_merge($reportorialPermissions, [
                 'locally_funded_projects.view',
                 'locally_funded_projects.update',
             ]);
+
+            if ($this->isProvincialUser()) {
+                $permissions = array_merge($permissions, [
+                    'pre_implementation_documents.view',
+                    'pre_implementation_documents.add',
+                ]);
+            }
+
+            return $permissions;
         }
 
         if ($this->isLguUser()) {
             return array_merge($reportorialPermissions, [
                 'locally_funded_projects.view',
+                'pre_implementation_documents.view',
+                'pre_implementation_documents.add',
             ]);
         }
 
@@ -347,6 +363,51 @@ class User extends Authenticatable implements MustVerifyEmail
         return array_values(array_filter(array_map('trim', explode(',', $permissions))));
     }
 
+    public function permissionCandidateKeys(string $aspect, string $action): array
+    {
+        $normalizedAspect = strtolower(trim($aspect));
+        $normalizedAction = strtolower(trim($action));
+        $candidateActions = array_values(array_unique(array_filter([
+            $normalizedAction,
+            $normalizedAction === 'upload' ? 'add' : null,
+            $normalizedAction === 'add' ? 'upload' : null,
+            $normalizedAction === 'view' ? 'add' : null,
+            $normalizedAction === 'view' ? 'upload' : null,
+            $normalizedAction === 'view' ? 'update' : null,
+            $normalizedAction === 'view' ? 'delete' : null,
+        ])));
+
+        return array_map(function ($candidateAction) use ($normalizedAspect) {
+            return $normalizedAspect . '.' . $candidateAction;
+        }, $candidateActions);
+    }
+
+    public function hasDefaultCrudPermission(string $aspect, string $action): bool
+    {
+        $defaultPermissions = $this->defaultCrudPermissions();
+
+        if (in_array('*', $defaultPermissions, true)) {
+            return true;
+        }
+
+        return count(array_intersect($this->permissionCandidateKeys($aspect, $action), $defaultPermissions)) > 0;
+    }
+
+    public function hasExplicitCrudPermission(string $aspect, string $action): bool
+    {
+        $access = strtolower(trim((string) $this->access));
+
+        if ($access === self::ACCESS_SCOPE_ALL) {
+            return true;
+        }
+
+        if (!$this->usesScopedCrudAccess() || $access === self::ACCESS_SCOPE_NONE) {
+            return false;
+        }
+
+        return count(array_intersect($this->permissionCandidateKeys($aspect, $action), $this->grantedCrudPermissions())) > 0;
+    }
+
     public function hasCrudPermission(string $aspect, string $action): bool
     {
         if ($this->isSuperAdmin()) {
@@ -364,8 +425,9 @@ class User extends Authenticatable implements MustVerifyEmail
             return true;
         }
 
-        $permissionKey = strtolower(trim($aspect)) . '.' . strtolower(trim($action));
-        if (in_array($permissionKey, $defaultPermissions, true)) {
+        $permissionKeys = $this->permissionCandidateKeys($aspect, $action);
+
+        if (count(array_intersect($permissionKeys, $defaultPermissions)) > 0) {
             return true;
         }
 
@@ -373,6 +435,6 @@ class User extends Authenticatable implements MustVerifyEmail
             return false;
         }
 
-        return in_array($permissionKey, $this->grantedCrudPermissions(), true);
+        return count(array_intersect($permissionKeys, $this->grantedCrudPermissions())) > 0;
     }
 }

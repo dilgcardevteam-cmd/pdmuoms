@@ -15,11 +15,18 @@
         <!-- Header with Create Button -->
         <div class="projects-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <h2 style="color: #002C76; font-size: 18px; margin: 0;">{{ $tableTitle ?? 'Projects' }}</h2>
+            @if(Auth::user()->hasCrudPermission('locally_funded_projects', 'add'))
+                <a href="{{ route('locally-funded-project.create') }}" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; background-color: #002C76; color: white; border-radius: 8px; font-size: 13px; font-weight: 700; text-decoration: none; white-space: nowrap;">
+                    <i class="fas fa-plus"></i>
+                    <span>Add Project</span>
+                </a>
+            @endif
         </div>
 
         @php
             $listRouteName = $listRouteName ?? 'projects.locally-funded';
             $forceFundSource = trim((string) ($forceFundSource ?? ''));
+            $canAddLocallyFundedProject = Auth::user()->hasCrudPermission('locally_funded_projects', 'add');
             $activeFilters = array_merge([
                 'search' => '',
                 'project_code' => '',
@@ -286,7 +293,7 @@
 
         <div id="lfp-results-container" data-results-container>
         @if($projects->isEmpty())
-            @if($forceFundSource === '' && Auth::user()->agency === 'DILG' && Auth::user()->province === 'Regional Office')
+            @if($forceFundSource === '' && $canAddLocallyFundedProject)
             <p style="margin: 0; color: #6b7280; text-align: center; padding: 40px 0;">No projects found. <a href="{{ route('locally-funded-project.create') }}" style="color: #002C76; text-decoration: none; font-weight: 600;">Create one now</a></p>
             @else
             <p style="margin: 0; color: #6b7280; text-align: center; padding: 40px 0;">No projects found.</p>

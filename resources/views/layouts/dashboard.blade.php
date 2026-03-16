@@ -1327,6 +1327,20 @@
                     <span>Dashboard</span>
                 </a>
             </li>
+            @php
+                $canViewLocallyFundedProjects = Auth::user()->hasCrudPermission('locally_funded_projects', 'view');
+                $canViewPreImplementationDocuments = Auth::user()->hasCrudPermission('pre_implementation_documents', 'view');
+                $canViewRbisAnnualCertification = Auth::user()->hasCrudPermission('rbis_annual_certification', 'view');
+                $canViewPdNoPbbmMonthlyReports = Auth::user()->hasCrudPermission('pd_no_pbbm_monthly_reports', 'view');
+                $canViewFundUtilizationReports = Auth::user()->hasCrudPermission('fund_utilization_reports', 'view');
+                $canViewLpmcReports = Auth::user()->hasCrudPermission('local_project_monitoring_committee', 'view');
+                $canViewRoadMaintenanceReports = Auth::user()->hasCrudPermission('road_maintenance_status_reports', 'view');
+                $hasAnyReportorialAccess = $canViewRbisAnnualCertification
+                    || $canViewPdNoPbbmMonthlyReports
+                    || $canViewFundUtilizationReports
+                    || $canViewLpmcReports
+                    || $canViewRoadMaintenanceReports;
+            @endphp
             <li>
                 @php
                     $projectsMenuActive = (
@@ -1340,12 +1354,14 @@
                     <i class="fas fa-chevron-down submenu-chevron" style="margin-left: auto; font-size: 12px;"></i>
                 </a>
                 <ul id="projectsMenu" class="submenu" style="display: {{ $projectsMenuActive ? 'block' : 'none' }};">
-                    <li>
-                        <a href="{{ route('projects.locally-funded') }}" class="@if(Route::currentRouteName() == 'projects.locally-funded') active @endif">
-                            <i class="fas fa-hand-holding-usd"></i>
-                            <span>Locally Funded Projects</span>
-                        </a>
-                    </li>
+                    @if($canViewLocallyFundedProjects)
+                        <li>
+                            <a href="{{ route('projects.locally-funded') }}" class="@if(Route::currentRouteName() == 'projects.locally-funded') active @endif">
+                                <i class="fas fa-hand-holding-usd"></i>
+                                <span>Locally Funded Projects</span>
+                            </a>
+                        </li>
+                    @endif
                     <li>
                         <a href="{{ route('projects.rlip-lime') }}" class="@if(request()->routeIs('projects.rlip-lime*') && !$dashboardTabRouteActive) active @endif">
                             <i class="fas fa-leaf"></i>
@@ -1366,6 +1382,7 @@
                     </li>
                 </ul>
             </li>
+            @if($hasAnyReportorialAccess)
             <li>
                 @php
                     $reportsAnnualActive = request()->routeIs('rbis-annual-certification.*');
@@ -1384,71 +1401,86 @@
                     <i class="fas fa-chevron-down submenu-chevron" style="margin-left: auto; font-size: 12px;"></i>
                 </a>
                 <ul id="reportsMenu" class="submenu" style="display: {{ $reportsMenuActive ? 'block' : 'none' }};">
-                    <li>
-                        <a href="#" class="@if($reportsAnnualActive) active @endif submenu-toggle" onclick="toggleSubmenu(event, 'reportsAnnualMenu')">
-                            <i class="fas fa-calendar-alt"></i>
-                            <span>Annual</span>
-                            <i class="fas fa-chevron-down submenu-chevron" style="margin-left: auto; font-size: 11px;"></i>
-                        </a>
-                        <ul id="reportsAnnualMenu" class="submenu" style="display: {{ $reportsAnnualActive ? 'block' : 'none' }};">
-                            <li>
-                                <a href="{{ route('rbis-annual-certification.index') }}" class="@if(request()->routeIs('rbis-annual-certification.*')) active @endif">
-                                    <i class="fas fa-bridge"></i>
-                                    <span>RBIS Annual Certification</span>
-                                </a>
-                            </li>
-                        </ul>
-                    </li>
-                    <li>
-                        <a href="#" class="@if($reportsQuarterlyActive) active @endif submenu-toggle" onclick="toggleSubmenu(event, 'reportsQuarterlyMenu')">
-                            <i class="fas fa-calendar-check"></i>
-                            <span>Quarterly</span>
-                            <i class="fas fa-chevron-down submenu-chevron" style="margin-left: auto; font-size: 11px;"></i>
-                        </a>
-                        <ul id="reportsQuarterlyMenu" class="submenu" style="display: {{ $reportsQuarterlyActive ? 'block' : 'none' }};">
-                            <li>
-                                <a href="{{ route('fund-utilization.index') }}" class="@if(request()->routeIs('fund-utilization.*')) active @endif">
-                                    <i class="fas fa-coins"></i>
-                                    <span>Fund Utilization Report</span>
-                                </a>
-                            </li>
-                            <li>
-                                <a href="{{ route('local-project-monitoring-committee.index') }}" class="@if(request()->routeIs('local-project-monitoring-committee.*')) active @endif">
-                                    <i class="fas fa-users-cog"></i>
-                                    <span>Local Project Monitoring Committee</span>
-                                </a>
-                            </li>
-                            <li>
-                                <a href="{{ route('road-maintenance-status.index') }}" class="@if(request()->routeIs('road-maintenance-status.*')) active @endif">
-                                    <i class="fas fa-road"></i>
-                                    <span>Road Maintenance Status Report</span>
-                                </a>
-                            </li>
-                        </ul>
-                    </li>
-                    <li>
-                        <a href="#" class="@if($reportsMonthlyActive) active @endif submenu-toggle" onclick="toggleSubmenu(event, 'reportsMonthlyMenu')">
-                            <i class="fas fa-calendar-day"></i>
-                            <span>Monthly</span>
-                            <i class="fas fa-chevron-down submenu-chevron" style="margin-left: auto; font-size: 11px;"></i>
-                        </a>
-                        <ul id="reportsMonthlyMenu" class="submenu" style="display: {{ $reportsMonthlyActive ? 'block' : 'none' }};">
-                            <li>
-                                <a href="{{ route('reports.monthly.pd-no-pbbm-2025-1572-1573') }}" class="@if(request()->routeIs('reports.monthly.pd-no-pbbm-2025-1572-1573*')) active @endif">
-                                    <i class="fas fa-file-alt"></i>
-                                    <span>Report on PD No. PBBM-2025-1572-1573</span>
-                                </a>
-                            </li>
-                        </ul>
-                    </li>
+                    @if($canViewRbisAnnualCertification)
+                        <li>
+                            <a href="#" class="@if($reportsAnnualActive) active @endif submenu-toggle" onclick="toggleSubmenu(event, 'reportsAnnualMenu')">
+                                <i class="fas fa-calendar-alt"></i>
+                                <span>Annual</span>
+                                <i class="fas fa-chevron-down submenu-chevron" style="margin-left: auto; font-size: 11px;"></i>
+                            </a>
+                            <ul id="reportsAnnualMenu" class="submenu" style="display: {{ $reportsAnnualActive ? 'block' : 'none' }};">
+                                <li>
+                                    <a href="{{ route('rbis-annual-certification.index') }}" class="@if(request()->routeIs('rbis-annual-certification.*')) active @endif">
+                                        <i class="fas fa-bridge"></i>
+                                        <span>RBIS Annual Certification</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+                    @endif
+                    @if($canViewFundUtilizationReports || $canViewLpmcReports || $canViewRoadMaintenanceReports)
+                        <li>
+                            <a href="#" class="@if($reportsQuarterlyActive) active @endif submenu-toggle" onclick="toggleSubmenu(event, 'reportsQuarterlyMenu')">
+                                <i class="fas fa-calendar-check"></i>
+                                <span>Quarterly</span>
+                                <i class="fas fa-chevron-down submenu-chevron" style="margin-left: auto; font-size: 11px;"></i>
+                            </a>
+                            <ul id="reportsQuarterlyMenu" class="submenu" style="display: {{ $reportsQuarterlyActive ? 'block' : 'none' }};">
+                                @if($canViewFundUtilizationReports)
+                                    <li>
+                                        <a href="{{ route('fund-utilization.index') }}" class="@if(request()->routeIs('fund-utilization.*')) active @endif">
+                                            <i class="fas fa-coins"></i>
+                                            <span>Fund Utilization Report</span>
+                                        </a>
+                                    </li>
+                                @endif
+                                @if($canViewLpmcReports)
+                                    <li>
+                                        <a href="{{ route('local-project-monitoring-committee.index') }}" class="@if(request()->routeIs('local-project-monitoring-committee.*')) active @endif">
+                                            <i class="fas fa-users-cog"></i>
+                                            <span>Local Project Monitoring Committee</span>
+                                        </a>
+                                    </li>
+                                @endif
+                                @if($canViewRoadMaintenanceReports)
+                                    <li>
+                                        <a href="{{ route('road-maintenance-status.index') }}" class="@if(request()->routeIs('road-maintenance-status.*')) active @endif">
+                                            <i class="fas fa-road"></i>
+                                            <span>Road Maintenance Status Report</span>
+                                        </a>
+                                    </li>
+                                @endif
+                            </ul>
+                        </li>
+                    @endif
+                    @if($canViewPdNoPbbmMonthlyReports)
+                        <li>
+                            <a href="#" class="@if($reportsMonthlyActive) active @endif submenu-toggle" onclick="toggleSubmenu(event, 'reportsMonthlyMenu')">
+                                <i class="fas fa-calendar-day"></i>
+                                <span>Monthly</span>
+                                <i class="fas fa-chevron-down submenu-chevron" style="margin-left: auto; font-size: 11px;"></i>
+                            </a>
+                            <ul id="reportsMonthlyMenu" class="submenu" style="display: {{ $reportsMonthlyActive ? 'block' : 'none' }};">
+                                <li>
+                                    <a href="{{ route('reports.monthly.pd-no-pbbm-2025-1572-1573') }}" class="@if(request()->routeIs('reports.monthly.pd-no-pbbm-2025-1572-1573*')) active @endif">
+                                        <i class="fas fa-file-alt"></i>
+                                        <span>Report on PD No. PBBM-2025-1572-1573</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+                    @endif
                 </ul>
             </li>
-            <li>
-                <a href="{{ route('pre-implementation-documents.sbdp') }}" class="@if(Route::currentRouteName() == 'pre-implementation-documents.sbdp') active @endif">
-                    <i class="fas fa-folder-open"></i>
-                    <span>Pre-Implementation Documents(SBDP Projects)</span>
-                </a>
-            </li>
+            @endif
+            @if($canViewPreImplementationDocuments)
+                <li>
+                    <a href="{{ route('pre-implementation-documents.sbdp') }}" class="@if(Route::currentRouteName() == 'pre-implementation-documents.sbdp') active @endif">
+                        <i class="fas fa-folder-open"></i>
+                        <span>Pre-Implementation Documents(SBDP Projects)</span>
+                    </a>
+                </li>
+            @endif
             @php
                 $isRegionalDilg = strtoupper(trim((string) (Auth::user()->agency ?? ''))) === 'DILG'
                     && strtolower(trim((string) (Auth::user()->province ?? ''))) === 'regional office';
@@ -1596,6 +1628,13 @@
                         @endif
                     </div>
                 </div>
+
+                <div class="flex flex-col">
+                    <div class="profile-menu-name">{{ Auth::user()->fname ?? 'User' }} {{ Auth::user()->lname ?? '' }}</div>
+                    <div class="profile-menu-role">{{ Auth::user()->roleLabel() }}</div>
+                </div>
+
+
                 <div class="profile-menu" id="profileMenu">
                     <div class="profile-menu-header">
                         <div class="profile-menu-name">{{ Auth::user()->fname ?? 'User' }} {{ Auth::user()->lname ?? '' }}</div>

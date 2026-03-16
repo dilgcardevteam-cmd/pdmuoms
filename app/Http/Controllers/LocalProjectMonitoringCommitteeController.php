@@ -15,6 +15,15 @@ use App\Models\User;
 
 class LocalProjectMonitoringCommitteeController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('auth');
+        $this->middleware('crud_permission:local_project_monitoring_committee,view')->only(['index', 'show', 'edit', 'viewDocument']);
+        $this->middleware('crud_permission:local_project_monitoring_committee,add')->only(['create', 'store', 'upload']);
+        $this->middleware('crud_permission:local_project_monitoring_committee,update')->only(['update', 'approveDocument']);
+        $this->middleware('crud_permission:local_project_monitoring_committee,delete')->only(['destroy']);
+    }
+
     private function getOffices(): array
     {
         return [

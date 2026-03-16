@@ -15,6 +15,15 @@ use Illuminate\Support\Str;
 
 class RoadMaintenanceStatusReportController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('auth');
+        $this->middleware('crud_permission:road_maintenance_status_reports,view')->only(['index', 'show', 'edit', 'viewDocument']);
+        $this->middleware('crud_permission:road_maintenance_status_reports,add')->only(['create', 'store', 'upload']);
+        $this->middleware('crud_permission:road_maintenance_status_reports,update')->only(['update', 'approveDocument']);
+        $this->middleware('crud_permission:road_maintenance_status_reports,delete')->only(['destroy']);
+    }
+
     private function getOffices(): array
     {
         return [
