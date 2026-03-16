@@ -880,10 +880,14 @@
             <p>Full record for the selected locally funded project.</p>
         </div>
         <div style="display: flex; gap: 8px; align-items: center;">
-            <a href="{{ route('projects.locally-funded') }}" style="padding: 8px 16px; background-color: #002C76; color: white; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 13px;">
+            <a href="{{ route('projects.locally-funded') }}" class="lfp-header-action lfp-header-action--primary">
                 <i class="fas fa-arrow-left"></i>
                 Back to List
             </a>
+            <button id="activityLogFab" type="button" class="lfp-header-action lfp-header-action--secondary" aria-controls="activityLogSection" aria-expanded="false" data-state="closed">
+                <i class="fas fa-clipboard-list" aria-hidden="true"></i>
+                <span>Activity Logs</span>
+            </button>
         </div>
     </div>
 
@@ -2945,11 +2949,6 @@
 
         <div id="activityLogBackdrop" aria-hidden="true"></div>
 
-        <button id="activityLogFab" type="button" aria-controls="activityLogSection" aria-expanded="false" data-state="closed">
-            <i class="fas fa-clipboard-list" aria-hidden="true"></i>
-            <span>Activity Logs</span>
-        </button>
-
     <style>
         .asterisk {
             color: #dc2626;
@@ -2989,6 +2988,65 @@
 
         .project-copy-button i {
             font-size: 11px;
+        }
+
+        .lfp-header-action {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 9px 16px;
+            border-radius: 10px;
+            border: 1px solid transparent;
+            font-size: 13px;
+            font-weight: 700;
+            line-height: 1;
+            text-decoration: none;
+            cursor: pointer;
+            transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+            outline: none;
+        }
+
+        .lfp-header-action i {
+            font-size: 12px;
+        }
+
+        .lfp-header-action--primary {
+            background: linear-gradient(135deg, #002c76 0%, #003d9e 100%);
+            border-color: #002c76;
+            color: #ffffff;
+            box-shadow: 0 8px 18px rgba(0, 44, 118, 0.2);
+        }
+
+        .lfp-header-action--secondary {
+            background: #ffffff;
+            border-color: #bfd2f3;
+            color: #002c76;
+            box-shadow: 0 6px 14px rgba(15, 23, 42, 0.08);
+        }
+
+        .lfp-header-action--primary:hover {
+            background: linear-gradient(135deg, #00348d 0%, #0b4db8 100%);
+            border-color: #00348d;
+            transform: translateY(-1px);
+            box-shadow: 0 12px 22px rgba(0, 44, 118, 0.28);
+        }
+
+        .lfp-header-action--secondary:hover {
+            background: #eff6ff;
+            border-color: #93c5fd;
+            color: #0b4db8;
+            transform: translateY(-1px);
+            box-shadow: 0 10px 18px rgba(59, 130, 246, 0.16);
+        }
+
+        .lfp-header-action:focus-visible {
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.22), 0 10px 18px rgba(15, 23, 42, 0.12);
+        }
+
+        .lfp-header-action:active {
+            transform: translateY(0);
+            box-shadow: 0 4px 10px rgba(15, 23, 42, 0.12);
         }
         .content-header {
             flex-wrap: wrap;
@@ -3118,44 +3176,10 @@
             overflow: hidden;
         }
 
-        #activityLogFab {
-            position: fixed;
-            bottom: 24px;
-            right: 24px;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 12px 20px;
-            background-color: #002C76;
-            color: #ffffff;
-            border: none;
-            border-radius: 999px;
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            white-space: nowrap;
-            box-shadow: 0 8px 20px rgba(0, 44, 118, 0.35);
-            z-index: 1380;
-            transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
-        }
-
-        #activityLogFab:hover {
-            background-color: #003d9e;
-            transform: translateY(-2px);
-            box-shadow: 0 12px 24px rgba(0, 44, 118, 0.4);
-        }
-
-        #activityLogFab:active {
-            transform: translateY(0);
-        }
-
         #activityLogFab[data-state="open"] {
-            background-color: #0f172a;
-        }
-
-        @media (max-width: 640px) {
-            #activityLogFab span { display: none; }
-            #activityLogFab { padding: 14px; border-radius: 50%; }
+            background: #dbeafe;
+            border-color: #60a5fa;
+            color: #1d4ed8;
         }
 
         #physicalAccomplishmentSection [style*="font-size"] {
