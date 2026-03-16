@@ -104,7 +104,11 @@ class UserManagementController extends Controller
 
     public function show(User $user)
     {
-        return view('admin.users.show', compact('user'));
+        return view('admin.users.show', [
+            'user' => $user,
+            'crudPermissionOptions' => self::CRUD_PERMISSION_OPTIONS,
+            'crudActionOptions' => self::CRUD_ACTION_OPTIONS,
+        ]);
     }
 
     /**
@@ -180,9 +184,13 @@ class UserManagementController extends Controller
 
     public function updateAccess(Request $request, User $user)
     {
+        $redirectTo = $request->filled('redirect_to')
+            ? $request->input('redirect_to')
+            : route('users.index', ['tab' => 'access-grants']);
+
         if (strtolower(trim((string) $user->role)) === 'superadmin') {
             return redirect()
-                ->route('users.index', ['tab' => 'access-grants'])
+                ->to($redirectTo)
                 ->with('error', 'Superadmin accounts always keep full access.');
         }
 
@@ -216,7 +224,7 @@ class UserManagementController extends Controller
         $user->save();
 
         return redirect()
-            ->route('users.index', ['tab' => 'access-grants'])
+            ->to($redirectTo)
             ->with('success', 'Access grants updated successfully.');
     }
 }
