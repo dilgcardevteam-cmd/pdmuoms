@@ -2895,7 +2895,7 @@
         </div>
 
         @php
-            $galleryButtons = ['all', 'before', 'project billboard', 'community billboard', '20-40%', '50-70%', '90%', 'Completed', 'During'];
+            $galleryButtons = ['All', 'Before', 'Project Billboard', 'Community Billboard', '20-40%', '50-70%', '90%', 'Completed', 'During'];
         @endphp
         <div id="gallerySection" class="project-tab-panel" data-tab-key="gallery" role="tabpanel" aria-labelledby="tab-gallery" style="margin-bottom: 24px; padding: 20px; border: 1px solid #00267C; border-radius: 10px; background-color: #ffffff;">
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 2px solid #00267C; padding-bottom: 10px;">
@@ -2903,17 +2903,48 @@
             </div>
 
             <div class="lfp-gallery-layout">
-                <aside class="lfp-gallery-sidebar" aria-label="Gallery filters">
-                    <div class="lfp-gallery-sidebar-buttons">
+                <aside class="lfp-gallery-sidebar">
+                    <div class="lfp-gallery-sidebar-buttons" role="tablist" aria-label="Gallery categories">
                         @foreach ($galleryButtons as $index => $buttonLabel)
-                            <button type="button" class="lfp-gallery-sidebar-button{{ $index === 0 ? ' is-active' : '' }}">
+                            @php
+                                $gallerySlug = \Illuminate\Support\Str::slug($buttonLabel);
+                                $galleryTabId = 'gallery-tab-' . $gallerySlug;
+                                $galleryPanelId = 'gallery-panel-' . $gallerySlug;
+                            @endphp
+                            <button
+                                type="button"
+                                id="{{ $galleryTabId }}"
+                                class="lfp-gallery-sidebar-button{{ $index === 0 ? ' is-active' : '' }}"
+                                data-gallery-tab-target="{{ $galleryPanelId }}"
+                                role="tab"
+                                aria-controls="{{ $galleryPanelId }}"
+                                aria-selected="{{ $index === 0 ? 'true' : 'false' }}"
+                                tabindex="{{ $index === 0 ? '0' : '-1' }}"
+                            >
                                 {{ $buttonLabel }}
                             </button>
                         @endforeach
                     </div>
                 </aside>
 
-                <div class="lfp-gallery-stage" aria-hidden="true"></div>
+                <div class="lfp-gallery-stage">
+                    <div class="lfp-gallery-sidebar-buttons">
+                        @foreach ($galleryButtons as $index => $buttonLabel)
+                            @php
+                                $gallerySlug = \Illuminate\Support\Str::slug($buttonLabel);
+                                $galleryTabId = 'gallery-tab-' . $gallerySlug;
+                                $galleryPanelId = 'gallery-panel-' . $gallerySlug;
+                            @endphp
+                            <div
+                                id="{{ $galleryPanelId }}"
+                                class="lfp-gallery-panel{{ $index === 0 ? ' is-active' : '' }}"
+                                role="tabpanel"
+                                aria-labelledby="{{ $galleryTabId }}"
+                                aria-hidden="{{ $index === 0 ? 'false' : 'true' }}"
+                            ></div>
+                        @endforeach
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -3182,6 +3213,19 @@
             border: 1px dashed #cbd5e1;
             border-radius: 12px;
             background-color: #f8fafc;
+            padding: 12px;
+        }
+
+        .lfp-gallery-panel {
+            display: none;
+            min-height: 294px;
+            width: 100%;
+            border-radius: 10px;
+            background: #f8fafc;
+        }
+
+        .lfp-gallery-panel.is-active {
+            display: block;
         }
 
         #projectProfileSection,
@@ -3662,6 +3706,10 @@
 
             .lfp-mobile-canvas #gallerySection .lfp-gallery-stage {
                 min-height: 180px;
+            }
+
+            .lfp-mobile-canvas #gallerySection .lfp-gallery-panel {
+                min-height: 154px;
             }
 
             .lfp-mobile-canvas .lfp-financial-section-title {
@@ -5062,6 +5110,64 @@
                 : (oldPanelId || 'projectProfileSection');
 
             setActiveProjectPanel(initialPanelId);
+        }
+
+        const galleryTabs = Array.from(document.querySelectorAll('[data-gallery-tab-target]'));
+        const galleryPanels = Array.from(document.querySelectorAll('.lfp-gallery-panel'));
+
+        function setActiveGalleryPanel(panelId) {
+            galleryPanels.forEach((panel) => {
+                const isActive = panel.id === panelId;
+                panel.classList.toggle('is-active', isActive);
+                panel.setAttribute('aria-hidden', isActive ? 'false' : 'true');
+            });
+
+            galleryTabs.forEach((tab) => {
+                const isActive = tab.dataset.galleryTabTarget === panelId;
+                tab.classList.toggle('is-active', isActive);
+                tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
+                tab.setAttribute('tabindex', isActive ? '0' : '-1');
+            });
+        }
+
+        if (galleryTabs.length > 0 && galleryPanels.length > 0) {
+            galleryTabs.forEach((tab, index) => {
+                tab.addEventListener('click', () => {
+                    const panelId = tab.dataset.galleryTabTarget;
+                    if (panelId) {
+                        setActiveGalleryPanel(panelId);
+                    }
+                });
+
+                tab.addEventListener('keydown', (event) => {
+                    let nextIndex = index;
+
+                    if (event.key === 'ArrowDown' || event.key === 'ArrowRight') {
+                        nextIndex = (index + 1) % galleryTabs.length;
+                    } else if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') {
+                        nextIndex = (index - 1 + galleryTabs.length) % galleryTabs.length;
+                    } else if (event.key === 'Home') {
+                        nextIndex = 0;
+                    } else if (event.key === 'End') {
+                        nextIndex = galleryTabs.length - 1;
+                    } else {
+                        return;
+                    }
+
+                    event.preventDefault();
+                    const nextTab = galleryTabs[nextIndex];
+                    const panelId = nextTab ? nextTab.dataset.galleryTabTarget : '';
+                    if (nextTab && panelId) {
+                        setActiveGalleryPanel(panelId);
+                        nextTab.focus();
+                    }
+                });
+            });
+
+            const initialGalleryPanelId = galleryTabs[0].dataset.galleryTabTarget;
+            if (initialGalleryPanelId) {
+                setActiveGalleryPanel(initialGalleryPanelId);
+            }
         }
 
         const physicalCompareModalWrapper = document.getElementById('physicalCompareModalWrapper');
