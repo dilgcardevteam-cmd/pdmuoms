@@ -294,6 +294,7 @@
                                 accept=".pdf,application/pdf"
                                 required
                                 @disabled($disableUploadInput)
+                                class="ops-upload-input"
                                 style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 12px; margin-bottom: 8px; background-color: {{ $disableUploadInput ? '#f3f4f6' : '#ffffff' }}; cursor: {{ $disableUploadInput ? 'not-allowed' : 'auto' }};"
                                 onchange="showRoadMaintenanceSaveButton(this, '{{ $buttonId }}', '{{ $filenameId }}')"
                             >
@@ -323,10 +324,11 @@
                                     @endif
                                 </div>
                             @endif
-                            <div id="{{ $filenameId }}" style="display: none; margin-bottom: 8px; font-size: 12px; color: #6b7280;"></div>
+                            <div id="{{ $filenameId }}" class="ops-upload-filename" style="display: none; margin-bottom: 8px; font-size: 12px; color: #6b7280;"></div>
                             <button
                                 type="submit"
                                 id="{{ $buttonId }}"
+                                class="ops-upload-submit"
                                 style="width: 25%; padding: 8px 12px; background-color: #002C76; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12px; opacity: 0; pointer-events: none; transition: all 0.3s ease; display: block; margin-left: 0; margin-right: auto;"
                             >
                                 Upload
@@ -419,6 +421,46 @@
     </button>
 
     <script>
+        function initializeRoadMaintenanceUploadStyling() {
+            const fileInputs = document.querySelectorAll('.ops-detail-page input[type="file"]');
+
+            fileInputs.forEach(function (input) {
+                input.classList.add('ops-upload-input');
+
+                if (input.disabled) {
+                    input.classList.add('is-disabled');
+                }
+
+                ['dragenter', 'dragover'].forEach(function (evt) {
+                    input.addEventListener(evt, function (e) {
+                        e.preventDefault();
+                        if (!input.disabled) {
+                            input.classList.add('drag-active');
+                        }
+                    });
+                });
+
+                ['dragleave', 'drop', 'dragend'].forEach(function (evt) {
+                    input.addEventListener(evt, function () {
+                        input.classList.remove('drag-active');
+                    });
+                });
+            });
+
+            document.querySelectorAll('.ops-detail-page button[id^="road-maintenance-btn-"]').forEach(function (btn) {
+                btn.classList.add('ops-upload-submit');
+            });
+
+            document.querySelectorAll('.ops-detail-page div[id^="road-maintenance-file-"]').forEach(function (filenameDiv) {
+                filenameDiv.classList.add('ops-upload-filename');
+                if (filenameDiv.textContent && filenameDiv.textContent.trim().length > 0) {
+                    filenameDiv.classList.add('has-file');
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeRoadMaintenanceUploadStyling);
+
         document.querySelectorAll('.road-maintenance-accordion-toggle').forEach(function (button) {
             button.addEventListener('click', function () {
                 const targetId = button.getAttribute('data-target');
@@ -456,6 +498,9 @@
             const filenameDiv = document.getElementById(filenameId);
             if (!saveBtn || !filenameDiv) return;
 
+            saveBtn.classList.add('ops-upload-submit');
+            filenameDiv.classList.add('ops-upload-filename');
+
             if (fileInput && fileInput.files && fileInput.files.length > 0) {
                 const selectedFile = fileInput.files[0];
                 const fileName = selectedFile.name;
@@ -469,6 +514,7 @@
                     filenameDiv.textContent = 'Only PDF files are allowed.';
                     filenameDiv.style.color = '#dc2626';
                     filenameDiv.style.display = 'block';
+                    filenameDiv.classList.remove('has-file');
                     return;
                 }
 
@@ -479,25 +525,100 @@
                     filenameDiv.textContent = 'File size must not exceed 15MB.';
                     filenameDiv.style.color = '#dc2626';
                     filenameDiv.style.display = 'block';
+                    filenameDiv.classList.remove('has-file');
                     return;
                 }
 
                 saveBtn.style.opacity = '1';
                 saveBtn.style.pointerEvents = 'auto';
-                filenameDiv.textContent = `Selected: ${fileName}`;
+                filenameDiv.innerHTML = `<i class="fas fa-file" style="margin-right: 4px;"></i>Selected: ${fileName}`;
                 filenameDiv.style.color = '#6b7280';
                 filenameDiv.style.display = 'block';
+                filenameDiv.classList.add('has-file');
             } else {
                 saveBtn.style.opacity = '0';
                 saveBtn.style.pointerEvents = 'none';
                 if (!filenameDiv.textContent.trim()) {
                     filenameDiv.style.display = 'none';
+                    filenameDiv.classList.remove('has-file');
                 }
             }
         }
     </script>
 
     <style>
+        .ops-detail-page .ops-upload-input {
+            width: 100%;
+            padding: 10px 12px !important;
+            border: 1.5px dashed #9fb2d4 !important;
+            border-radius: 10px !important;
+            font-size: 12px !important;
+            line-height: 1.4;
+            color: #1f2937;
+            background: linear-gradient(180deg, #f8fbff 0%, #eef4ff 100%) !important;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+        }
+
+        .ops-detail-page .ops-upload-input:focus {
+            outline: none;
+            border-color: #2563eb !important;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+        }
+
+        .ops-detail-page .ops-upload-input.drag-active {
+            border-color: #1d4ed8 !important;
+            background: #e8f0ff !important;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+
+        .ops-detail-page .ops-upload-input.is-disabled {
+            cursor: not-allowed;
+            opacity: 0.65;
+            background: #f3f4f6 !important;
+            border-style: solid !important;
+        }
+
+        .ops-detail-page .ops-upload-input::-webkit-file-upload-button {
+            margin-right: 10px;
+            border: none;
+            border-radius: 999px;
+            padding: 6px 12px;
+            font-weight: 700;
+            font-size: 11px;
+            letter-spacing: 0.02em;
+            color: #1e3a8a;
+            background: #dbeafe;
+            cursor: pointer;
+        }
+
+        .ops-detail-page .ops-upload-submit {
+            background: linear-gradient(135deg, #059669, #047857) !important;
+            box-shadow: 0 8px 14px rgba(5, 150, 105, 0.2);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+        }
+
+        .ops-detail-page .ops-upload-submit:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 11px 18px rgba(5, 150, 105, 0.28);
+            filter: brightness(1.03);
+        }
+
+        .ops-detail-page .ops-upload-filename {
+            padding: 8px 10px;
+            border-radius: 8px;
+            border: 1px solid #d1d5db;
+            background: #f8fafc;
+            color: #334155;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .ops-detail-page .ops-upload-filename.has-file {
+            border-color: #86efac;
+            background: #ecfdf3;
+            color: #166534;
+        }
+
         #roadMaintenanceActivityLogBackdrop {
             position: fixed;
             inset: 0;
