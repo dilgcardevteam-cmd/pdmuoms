@@ -1012,7 +1012,7 @@
             <button type="button" class="project-tab" id="tab-financial-accomplishment" data-project-tab-target="financialAccomplishmentSection" role="tab" aria-controls="financialAccomplishmentSection" aria-selected="false">Financial Accomplishment</button>
             <button type="button" class="project-tab" id="tab-monitoring-inspection" data-project-tab-target="monitoringInspectionSection" role="tab" aria-controls="monitoringInspectionSection" aria-selected="false">Monitoring/Inspection Activities</button>
             <button type="button" class="project-tab" id="tab-post-implementation" data-project-tab-target="postImplementationSection" role="tab" aria-controls="postImplementationSection" aria-selected="false">Post Implementation</button>
-            <button type="button" class="project-tab" id="tab-gallery">Gallery</button>
+            <button type="button" class="project-tab" id="tab-gallery" data-project-tab-target="gallerySection" role="tab" aria-controls="gallerySection" aria-selected="false">Gallery</button>
         </div>
 
         <div id="projectProfileSection" class="project-tab-panel is-active" data-tab-key="profile" role="tabpanel" aria-labelledby="tab-project-profile" style="margin-bottom: 24px; padding: 20px; border: 1px solid #00267C; border-radius: 10px; background-color: #ffffff;">
@@ -2894,6 +2894,60 @@
             </div>
         </div>
 
+        @php
+            $galleryButtons = ['All', 'Before', 'Project Billboard', 'Community Billboard', '20-40%', '50-70%', '90%', 'Completed', 'During'];
+        @endphp
+        <div id="gallerySection" class="project-tab-panel" data-tab-key="gallery" role="tabpanel" aria-labelledby="tab-gallery" style="margin-bottom: 24px; padding: 20px; border: 1px solid #00267C; border-radius: 10px; background-color: #ffffff;">
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 2px solid #00267C; padding-bottom: 10px;">
+                <h3 style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Gallery</h3>
+            </div>
+
+            <div class="lfp-gallery-layout">
+                <aside class="lfp-gallery-sidebar">
+                    <div class="lfp-gallery-sidebar-buttons" role="tablist" aria-label="Gallery categories">
+                        @foreach ($galleryButtons as $index => $buttonLabel)
+                            @php
+                                $gallerySlug = \Illuminate\Support\Str::slug($buttonLabel);
+                                $galleryTabId = 'gallery-tab-' . $gallerySlug;
+                                $galleryPanelId = 'gallery-panel-' . $gallerySlug;
+                            @endphp
+                            <button
+                                type="button"
+                                id="{{ $galleryTabId }}"
+                                class="lfp-gallery-sidebar-button{{ $index === 0 ? ' is-active' : '' }}"
+                                data-gallery-tab-target="{{ $galleryPanelId }}"
+                                role="tab"
+                                aria-controls="{{ $galleryPanelId }}"
+                                aria-selected="{{ $index === 0 ? 'true' : 'false' }}"
+                                tabindex="{{ $index === 0 ? '0' : '-1' }}"
+                            >
+                                {{ $buttonLabel }}
+                            </button>
+                        @endforeach
+                    </div>
+                </aside>
+
+                <div class="lfp-gallery-stage">
+                    <div class="lfp-gallery-sidebar-buttons">
+                        @foreach ($galleryButtons as $index => $buttonLabel)
+                            @php
+                                $gallerySlug = \Illuminate\Support\Str::slug($buttonLabel);
+                                $galleryTabId = 'gallery-tab-' . $gallerySlug;
+                                $galleryPanelId = 'gallery-panel-' . $gallerySlug;
+                            @endphp
+                            <div
+                                id="{{ $galleryPanelId }}"
+                                class="lfp-gallery-panel{{ $index === 0 ? ' is-active' : '' }}"
+                                role="tabpanel"
+                                aria-labelledby="{{ $galleryTabId }}"
+                                aria-hidden="{{ $index === 0 ? 'false' : 'true' }}"
+                            ></div>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+        </div>
+
         </div>
     </div>
         <div id="activityLogSection" role="dialog" aria-modal="true" aria-labelledby="activityLogTitle" aria-hidden="true">
@@ -3100,12 +3154,87 @@
             display: block;
         }
 
+        .lfp-gallery-layout {
+            display: grid;
+            grid-template-columns: minmax(180px, 220px) minmax(0, 1fr);
+            gap: 20px;
+            align-items: start;
+            width: 100%;
+            min-width: 0;
+        }
+
+        .lfp-gallery-sidebar {
+            padding: 14px;
+            border: 1px solid #dbe3f0;
+            border-radius: 12px;
+            background: linear-gradient(180deg, #f8fbff 0%, #eef4ff 100%);
+        }
+
+        .lfp-gallery-sidebar-buttons {
+            display: grid;
+            gap: 10px;
+        }
+
+        .lfp-gallery-sidebar-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: flex-start;
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            background-color: #ffffff;
+            color: #1e293b;
+            font-size: 13px;
+            font-weight: 700;
+            line-height: 1.2;
+            text-align: left;
+            cursor: pointer;
+            transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .lfp-gallery-sidebar-button:hover {
+            border-color: #002c76;
+            color: #002c76;
+            box-shadow: 0 8px 18px rgba(0, 44, 118, 0.12);
+        }
+
+        .lfp-gallery-sidebar-button.is-active {
+            background-color: #002c76;
+            border-color: #002c76;
+            color: #ffffff;
+            box-shadow: 0 8px 18px rgba(0, 44, 118, 0.22);
+        }
+
+        .lfp-gallery-stage {
+            min-height: 320px;
+            width: 100%;
+            min-width: 0;
+            border: 1px dashed #cbd5e1;
+            border-radius: 12px;
+            background-color: #f8fafc;
+            padding: 12px;
+        }
+
+        .lfp-gallery-panel {
+            display: none;
+            min-height: 294px;
+            width: 100%;
+            border-radius: 10px;
+            background: #f8fafc;
+        }
+
+        .lfp-gallery-panel.is-active {
+            display: block;
+        }
+
         #projectProfileSection,
         #contractInfoSection,
         #physicalAccomplishmentSection,
         #financialAccomplishmentSection,
         #monitoringInspectionSection,
         #postImplementationSection,
+        #gallerySection,
         #activityLogSection {
             font-size: 0.9em;
             color: #374151;
@@ -3471,7 +3600,8 @@
             .lfp-mobile-canvas #physicalAccomplishmentSection,
             .lfp-mobile-canvas #financialAccomplishmentSection,
             .lfp-mobile-canvas #monitoringInspectionSection,
-            .lfp-mobile-canvas #postImplementationSection {
+            .lfp-mobile-canvas #postImplementationSection,
+            .lfp-mobile-canvas #gallerySection {
                 font-size: 0.78em;
             }
 
@@ -3568,6 +3698,18 @@
 
             .lfp-mobile-canvas #postImplementationSection > div:first-child > div {
                 margin-left: auto;
+            }
+
+            .lfp-mobile-canvas #gallerySection .lfp-gallery-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .lfp-mobile-canvas #gallerySection .lfp-gallery-stage {
+                min-height: 180px;
+            }
+
+            .lfp-mobile-canvas #gallerySection .lfp-gallery-panel {
+                min-height: 154px;
             }
 
             .lfp-mobile-canvas .lfp-financial-section-title {
@@ -3710,15 +3852,6 @@
     </style>
 
     <script>
-        document.getElementById("tab-gallery").addEventListener("click", function() {
-            if (typeof window.showSystemErrorModal === 'function') {
-                window.showSystemErrorModal('Gallery feature is coming soon!');
-                return;
-            }
-
-            alert('Gallery feature is coming soon!');
-        });
-
         function formatMoney(value) {
             return (Math.round((value + Number.EPSILON) * 100) / 100).toLocaleString('en-US', {
                 minimumFractionDigits: 2,
@@ -4942,6 +5075,7 @@
             financial: 'financialAccomplishmentSection',
             monitoring: 'monitoringInspectionSection',
             'post-implementation': 'postImplementationSection',
+            gallery: 'gallerySection',
         };
 
         function setActiveProjectPanel(panelId) {
@@ -4976,6 +5110,64 @@
                 : (oldPanelId || 'projectProfileSection');
 
             setActiveProjectPanel(initialPanelId);
+        }
+
+        const galleryTabs = Array.from(document.querySelectorAll('[data-gallery-tab-target]'));
+        const galleryPanels = Array.from(document.querySelectorAll('.lfp-gallery-panel'));
+
+        function setActiveGalleryPanel(panelId) {
+            galleryPanels.forEach((panel) => {
+                const isActive = panel.id === panelId;
+                panel.classList.toggle('is-active', isActive);
+                panel.setAttribute('aria-hidden', isActive ? 'false' : 'true');
+            });
+
+            galleryTabs.forEach((tab) => {
+                const isActive = tab.dataset.galleryTabTarget === panelId;
+                tab.classList.toggle('is-active', isActive);
+                tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
+                tab.setAttribute('tabindex', isActive ? '0' : '-1');
+            });
+        }
+
+        if (galleryTabs.length > 0 && galleryPanels.length > 0) {
+            galleryTabs.forEach((tab, index) => {
+                tab.addEventListener('click', () => {
+                    const panelId = tab.dataset.galleryTabTarget;
+                    if (panelId) {
+                        setActiveGalleryPanel(panelId);
+                    }
+                });
+
+                tab.addEventListener('keydown', (event) => {
+                    let nextIndex = index;
+
+                    if (event.key === 'ArrowDown' || event.key === 'ArrowRight') {
+                        nextIndex = (index + 1) % galleryTabs.length;
+                    } else if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') {
+                        nextIndex = (index - 1 + galleryTabs.length) % galleryTabs.length;
+                    } else if (event.key === 'Home') {
+                        nextIndex = 0;
+                    } else if (event.key === 'End') {
+                        nextIndex = galleryTabs.length - 1;
+                    } else {
+                        return;
+                    }
+
+                    event.preventDefault();
+                    const nextTab = galleryTabs[nextIndex];
+                    const panelId = nextTab ? nextTab.dataset.galleryTabTarget : '';
+                    if (nextTab && panelId) {
+                        setActiveGalleryPanel(panelId);
+                        nextTab.focus();
+                    }
+                });
+            });
+
+            const initialGalleryPanelId = galleryTabs[0].dataset.galleryTabTarget;
+            if (initialGalleryPanelId) {
+                setActiveGalleryPanel(initialGalleryPanelId);
+            }
         }
 
         const physicalCompareModalWrapper = document.getElementById('physicalCompareModalWrapper');

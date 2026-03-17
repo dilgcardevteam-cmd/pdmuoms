@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Notifications\VerifyEmailNotification;
+use App\Support\RolePermissionRegistry;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -283,58 +284,10 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function defaultCrudPermissions(): array
     {
-        if ($this->isSuperAdmin()) {
-            return ['*'];
-        }
-
-        $reportorialPermissions = [
-            'fund_utilization_reports.view',
-            'fund_utilization_reports.add',
-            'fund_utilization_reports.update',
-            'fund_utilization_reports.delete',
-            'local_project_monitoring_committee.view',
-            'local_project_monitoring_committee.add',
-            'local_project_monitoring_committee.update',
-            'local_project_monitoring_committee.delete',
-            'road_maintenance_status_reports.view',
-            'road_maintenance_status_reports.add',
-            'road_maintenance_status_reports.update',
-            'road_maintenance_status_reports.delete',
-            'rbis_annual_certification.view',
-            'rbis_annual_certification.add',
-            'rbis_annual_certification.update',
-            'rbis_annual_certification.delete',
-            'pd_no_pbbm_monthly_reports.view',
-            'pd_no_pbbm_monthly_reports.add',
-            'pd_no_pbbm_monthly_reports.update',
-            'pd_no_pbbm_monthly_reports.delete',
-        ];
-
-        if ($this->isRegionalUser() || $this->isProvincialUser()) {
-            $permissions = array_merge($reportorialPermissions, [
-                'locally_funded_projects.view',
-                'locally_funded_projects.update',
-            ]);
-
-            if ($this->isProvincialUser()) {
-                $permissions = array_merge($permissions, [
-                    'pre_implementation_documents.view',
-                    'pre_implementation_documents.add',
-                ]);
-            }
-
-            return $permissions;
-        }
-
-        if ($this->isLguUser()) {
-            return array_merge($reportorialPermissions, [
-                'locally_funded_projects.view',
-                'pre_implementation_documents.view',
-                'pre_implementation_documents.add',
-            ]);
-        }
-
-        return [];
+        return RolePermissionRegistry::permissionsForRole(
+            $this->normalizedRole(),
+            RolePermissionSetting::permissionsForRole($this->normalizedRole()),
+        );
     }
 
     public function usesScopedCrudAccess(): bool
@@ -395,46 +348,19 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function hasExplicitCrudPermission(string $aspect, string $action): bool
     {
-        $access = strtolower(trim((string) $this->access));
-
-        if ($access === self::ACCESS_SCOPE_ALL) {
-            return true;
-        }
-
-        if (!$this->usesScopedCrudAccess() || $access === self::ACCESS_SCOPE_NONE) {
-            return false;
-        }
-
-        return count(array_intersect($this->permissionCandidateKeys($aspect, $action), $this->grantedCrudPermissions())) > 0;
+        return false;
     }
 
     public function hasCrudPermission(string $aspect, string $action): bool
     {
-        if ($this->isSuperAdmin()) {
-            return true;
-        }
-
-        $access = strtolower(trim((string) $this->access));
         $defaultPermissions = $this->defaultCrudPermissions();
 
         if (in_array('*', $defaultPermissions, true)) {
             return true;
         }
 
-        if ($access === self::ACCESS_SCOPE_ALL) {
-            return true;
-        }
-
         $permissionKeys = $this->permissionCandidateKeys($aspect, $action);
 
-        if (count(array_intersect($permissionKeys, $defaultPermissions)) > 0) {
-            return true;
-        }
-
-        if (!$this->usesScopedCrudAccess() || $access === self::ACCESS_SCOPE_NONE) {
-            return false;
-        }
-
-        return count(array_intersect($permissionKeys, $this->grantedCrudPermissions())) > 0;
+        return count(array_intersect($permissionKeys, $defaultPermissions)) > 0;
     }
 }

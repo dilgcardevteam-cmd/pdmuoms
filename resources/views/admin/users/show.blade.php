@@ -4,13 +4,7 @@
 @section('page-title', 'View User')
 
 @section('content')
-    @php
-        $roleOptions = \App\Models\User::roleOptions();
-        $activeUserViewTab = request()->query('tab') === 'access-grant' ? 'userAccessGrantPanel' : 'userProfilePanel';
-        $grantedPermissions = $user->grantedCrudPermissions();
-        $hasFullAccess = in_array('*', $grantedPermissions, true);
-        $isScopedAccess = $user->usesScopedCrudAccess();
-    @endphp
+    @php($roleOptions = \App\Models\User::roleOptions())
 
     <div class="content-header">
         <h1>View User</h1>
@@ -29,16 +23,7 @@
         </div>
     @endif
 
-    <div class="project-tabs" role="tablist" aria-label="User detail sections" style="margin-top: 28px;">
-        <button type="button" class="project-tab {{ $activeUserViewTab === 'userProfilePanel' ? 'is-active' : '' }}" data-user-view-tab-target="userProfilePanel" role="tab" aria-controls="userProfilePanel" aria-selected="{{ $activeUserViewTab === 'userProfilePanel' ? 'true' : 'false' }}">
-            User Profile
-        </button>
-        <button type="button" class="project-tab {{ $activeUserViewTab === 'userAccessGrantPanel' ? 'is-active' : '' }}" data-user-view-tab-target="userAccessGrantPanel" role="tab" aria-controls="userAccessGrantPanel" aria-selected="{{ $activeUserViewTab === 'userAccessGrantPanel' ? 'true' : 'false' }}">
-            Access Grant
-        </button>
-    </div>
-
-    <section id="userProfilePanel" class="project-tab-panel {{ $activeUserViewTab === 'userProfilePanel' ? 'is-active' : '' }}" role="tabpanel">
+    <section>
         <form action="{{ route('users.update', $user->idno) }}" method="POST" id="userPreviewForm">
             @csrf
             @method('PUT')
@@ -169,150 +154,7 @@
         </form>
     </section>
 
-    <section id="userAccessGrantPanel" class="project-tab-panel {{ $activeUserViewTab === 'userAccessGrantPanel' ? 'is-active' : '' }}" role="tabpanel">
-        <div style="background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; margin-bottom: 24px; flex-wrap: wrap;">
-                <div>
-                    <h2 style="color: #002C76; font-size: 18px; margin: 0 0 6px;">Access Grant</h2>
-                    <p style="margin: 0; color: #6b7280; font-size: 13px; max-width: 700px;">
-                        Manage CRUD access for {{ $user->fname }} {{ $user->lname }} on system modules.
-                    </p>
-                </div>
-                <span style="padding: 6px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; background: {{ $user->isSuperAdmin() ? '#fee2e2' : ($isScopedAccess ? '#dcfce7' : '#f3f4f6') }}; color: {{ $user->isSuperAdmin() ? '#991b1b' : ($isScopedAccess ? '#166534' : '#475569') }};">
-                    @if($user->isSuperAdmin())
-                        Full access by role
-                    @elseif(!$isScopedAccess)
-                        Role defaults only
-                    @elseif($hasFullAccess)
-                        All additional permissions
-                    @elseif($grantedPermissions === [])
-                        No additional grants
-                    @else
-                        Custom additional grants
-                    @endif
-                </span>
-            </div>
-
-            @if($user->isSuperAdmin())
-                <div style="padding: 14px; border: 1px solid #fecaca; background: #fff1f2; color: #9f1239; border-radius: 10px; font-size: 13px; line-height: 1.6;">
-                    Superadmin accounts always keep full access and do not require CRUD permission grants.
-                </div>
-            @else
-                <form method="POST" action="{{ route('users.access.update', $user->idno) }}">
-                    @csrf
-                    @method('PUT')
-                    <input type="hidden" name="redirect_to" value="{{ route('users.show', ['user' => $user->idno, 'tab' => 'access-grant']) }}">
-
-                    <div class="crud-permission-table-wrap">
-                        <table class="crud-permission-table">
-                            <thead>
-                                <tr>
-                                    <th>Module</th>
-                                    <th>Submodule</th>
-                                    <th>Description</th>
-                                    @foreach($crudActionOptions as $actionKey => $actionLabel)
-                                        <th>{{ $actionLabel }}</th>
-                                    @endforeach
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach($accessGrantModules as $module)
-                                    @php
-                                        $items = $module['items'] ?? [];
-                                        $rowspan = count($items);
-                                    @endphp
-                                    @foreach($items as $itemIndex => $item)
-                                        <tr>
-                                            @if($itemIndex === 0)
-                                                <td rowspan="{{ $rowspan }}" class="crud-permission-module-cell">
-                                                    <div class="crud-permission-module-title">{{ $module['module'] }}</div>
-                                                    <div class="crud-permission-module-description">{{ $module['description'] }}</div>
-                                                </td>
-                                            @endif
-                                            <td class="crud-permission-submodule-cell">{{ $item['label'] }}</td>
-                                            <td class="crud-permission-description-cell">{{ $item['description'] }}</td>
-                                            @foreach($crudActionOptions as $actionKey => $actionLabel)
-                                                @php
-                                                    $permissionKey = $item['aspect'] . '.' . $actionKey;
-                                                    $checked = $hasFullAccess || $user->hasCrudPermission($item['aspect'], $actionKey);
-                                                    $isDefaultPermission = !$hasFullAccess && $user->hasDefaultCrudPermission($item['aspect'], $actionKey);
-                                                @endphp
-                                                <td class="crud-permission-check-cell">
-                                                    <label class="crud-check-item {{ $isDefaultPermission ? 'crud-check-item--default' : '' }}">
-                                                        <input
-                                                            type="checkbox"
-                                                            name="crud_permissions[]"
-                                                            value="{{ $permissionKey }}"
-                                                            @checked($checked)
-                                                            @disabled($isDefaultPermission)
-                                                        >
-                                                        <span>{{ $isDefaultPermission ? 'Role default' : 'Grant' }}</span>
-                                                    </label>
-                                                    @if($isDefaultPermission)
-                                                        <input type="hidden" name="crud_permissions[]" value="{{ $permissionKey }}">
-                                                    @endif
-                                                </td>
-                                            @endforeach
-                                        </tr>
-                                    @endforeach
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 18px; flex-wrap: wrap;">
-                        <div style="font-size: 12px; color: #64748b;">
-                            Checked boxes marked as `Role default` come from the selected hierarchy role. Use unchecked boxes to add more access on top of that baseline.
-                        </div>
-                        <button type="submit" class="user-preview-primary-btn">
-                            Save Permissions
-                        </button>
-                    </div>
-                </form>
-            @endif
-        </div>
-    </section>
-
     <style>
-        .project-tabs {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-bottom: 18px;
-        }
-
-        .project-tab {
-            padding: 10px 16px;
-            border: 1px solid #bfdbfe;
-            border-radius: 999px;
-            background: #eff6ff;
-            color: #1d4ed8;
-            font-size: 13px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .project-tab:hover {
-            background: #dbeafe;
-            border-color: #93c5fd;
-        }
-
-        .project-tab.is-active {
-            background: #002C76;
-            border-color: #002C76;
-            color: #ffffff;
-            box-shadow: 0 10px 24px rgba(0, 44, 118, 0.18);
-        }
-
-        .project-tab-panel {
-            display: none;
-        }
-
-        .project-tab-panel.is-active {
-            display: block;
-        }
-
         .user-preview-input {
             width: 100%;
             padding: 12px;
@@ -430,100 +272,7 @@
             color: #991b1b;
         }
 
-        .crud-permission-table-wrap {
-            overflow-x: auto;
-            border: 1px solid #dbeafe;
-            border-radius: 12px;
-        }
-
-        .crud-permission-table {
-            width: 100%;
-            border-collapse: collapse;
-            min-width: 1120px;
-            background: #ffffff;
-        }
-
-        .crud-permission-table th,
-        .crud-permission-table td {
-            padding: 12px 14px;
-            border-bottom: 1px solid #e5e7eb;
-            text-align: left;
-        }
-
-        .crud-permission-table th {
-            background: #eff6ff;
-            color: #1e3a8a;
-            font-size: 13px;
-            font-weight: 700;
-        }
-
-        .crud-permission-table tbody tr:last-child td {
-            border-bottom: none;
-        }
-
-        .crud-check-item {
-            display: inline-flex;
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 6px;
-            color: #334155;
-            font-size: 12px;
-            font-weight: 600;
-        }
-
-        .crud-check-item--default span {
-            color: #2563eb;
-        }
-
-        .crud-permission-module-cell {
-            background: #f8fbff;
-            min-width: 200px;
-            vertical-align: top;
-        }
-
-        .crud-permission-module-title,
-        .crud-permission-submodule-cell {
-            color: #0f172a;
-            font-weight: 700;
-            font-size: 13px;
-        }
-
-        .crud-permission-module-description,
-        .crud-permission-description-cell {
-            color: #64748b;
-            font-size: 12px;
-            line-height: 1.5;
-        }
-
-        .crud-permission-description-cell {
-            min-width: 280px;
-        }
-
-        .crud-permission-check-cell {
-            min-width: 110px;
-            text-align: center;
-        }
-
         @media (max-width: 768px) {
-            .project-tabs {
-                flex-wrap: nowrap;
-                overflow-x: auto;
-                overflow-y: hidden;
-                width: 100%;
-                padding-bottom: 4px;
-                -webkit-overflow-scrolling: touch;
-                scrollbar-width: none;
-            }
-
-            .project-tabs::-webkit-scrollbar {
-                display: none;
-            }
-
-            .project-tab {
-                flex: 0 0 auto;
-                white-space: nowrap;
-            }
-
             .user-preview-grid {
                 grid-template-columns: 1fr !important;
             }
@@ -549,9 +298,6 @@
             const officeSelect = document.getElementById('officeSelect');
             let isEditMode = false;
             let initialSnapshot = '';
-
-            const userViewTabs = Array.from(document.querySelectorAll('[data-user-view-tab-target]'));
-            const userViewPanels = Array.from(document.querySelectorAll('.project-tab-panel'));
 
             const positions = {
                 'DILG': [
@@ -731,18 +477,6 @@
                 updateOfficeDropdown(preserveCurrent);
             }
 
-            function activateUserViewTab(panelId) {
-                userViewTabs.forEach(function (tab) {
-                    const isActive = tab.dataset.userViewTabTarget === panelId;
-                    tab.classList.toggle('is-active', isActive);
-                    tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
-                });
-
-                userViewPanels.forEach(function (panel) {
-                    panel.classList.toggle('is-active', panel.id === panelId);
-                });
-            }
-
             editToggleBtn.addEventListener('click', function () {
                 setEditMode(true);
             });
@@ -814,12 +548,6 @@
             editableFields.forEach(function (field) {
                 field.addEventListener('input', refreshSaveState);
                 field.addEventListener('change', refreshSaveState);
-            });
-
-            userViewTabs.forEach(function (tab) {
-                tab.addEventListener('click', function () {
-                    activateUserViewTab(tab.dataset.userViewTabTarget);
-                });
             });
 
             syncAgencyWithRole();

@@ -181,7 +181,7 @@
                                 <option value="{{ $roleValue }}" @selected(old('role') === $roleValue)>{{ $roleLabel }}</option>
                             @endforeach
                         </select>
-                        <p style="color: #64748b; font-size: 12px; margin-top: 6px;">Regional oversees region, Provincial oversees province, LGU is the lowest scope. Access Grant can add module access later.</p>
+                        <p style="color: #64748b; font-size: 12px; margin-top: 6px;">Regional oversees region, Provincial oversees province, LGU is the lowest scope. Module access for each role is configured on the Role Configuration page.</p>
                         @error('role')
                             <p style="color: #dc2626; font-size: 12px; margin-top: 4px;">{{ $message }}</p>
                         @enderror
