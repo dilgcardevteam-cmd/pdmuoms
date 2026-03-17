@@ -1012,7 +1012,7 @@
             <button type="button" class="project-tab" id="tab-financial-accomplishment" data-project-tab-target="financialAccomplishmentSection" role="tab" aria-controls="financialAccomplishmentSection" aria-selected="false">Financial Accomplishment</button>
             <button type="button" class="project-tab" id="tab-monitoring-inspection" data-project-tab-target="monitoringInspectionSection" role="tab" aria-controls="monitoringInspectionSection" aria-selected="false">Monitoring/Inspection Activities</button>
             <button type="button" class="project-tab" id="tab-post-implementation" data-project-tab-target="postImplementationSection" role="tab" aria-controls="postImplementationSection" aria-selected="false">Post Implementation</button>
-            <button type="button" class="project-tab" id="tab-gallery">Gallery</button>
+            <a href="{{ route('locally-funded-project.gallery', $project) }}" class="project-tab" id="tab-gallery">Gallery</a>
         </div>
 
         <div id="projectProfileSection" class="project-tab-panel is-active" data-tab-key="profile" role="tabpanel" aria-labelledby="tab-project-profile" style="margin-bottom: 24px; padding: 20px; border: 1px solid #00267C; border-radius: 10px; background-color: #ffffff;">
@@ -3710,15 +3710,6 @@
     </style>
 
     <script>
-        document.getElementById("tab-gallery").addEventListener("click", function() {
-            if (typeof window.showSystemErrorModal === 'function') {
-                window.showSystemErrorModal('Gallery feature is coming soon!');
-                return;
-            }
-
-            alert('Gallery feature is coming soon!');
-        });
-
         function formatMoney(value) {
             return (Math.round((value + Number.EPSILON) * 100) / 100).toLocaleString('en-US', {
                 minimumFractionDigits: 2,

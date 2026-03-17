@@ -1639,6 +1639,7 @@ Route::middleware(['auth'])->group(function () {
         ->name('locally-funded-project.ensure');
     Route::post('/projects/locally-funded', [App\Http\Controllers\LocallyFundedProjectController::class, 'store'])->name('locally-funded-project.store');
     Route::get('/projects/locally-funded/{project}', [App\Http\Controllers\LocallyFundedProjectController::class, 'show'])->name('locally-funded-project.show');
+    Route::get('/projects/locally-funded/{project}/gallery', [App\Http\Controllers\LocallyFundedProjectController::class, 'showGallery'])->name('locally-funded-project.gallery');
     Route::get('/projects/locally-funded/{project}/pcr-mov', [App\Http\Controllers\LocallyFundedProjectController::class, 'viewPcrMov'])->name('locally-funded-project.view-pcr-mov');
     Route::get('/projects/locally-funded/{project}/edit', [App\Http\Controllers\LocallyFundedProjectController::class, 'edit'])->name('locally-funded-project.edit');
     Route::put('/projects/locally-funded/{project}', [App\Http\Controllers\LocallyFundedProjectController::class, 'update'])->name('locally-funded-project.update');
