@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>DILG-CAR Project Development and Management Unit</title>
+    <link rel="icon" type="image/png" href="{{ asset('DILG-Logo.png') }}">
+    <link rel="shortcut icon" href="{{ asset('DILG-Logo.png') }}">
 
     <!-- Fonts -->
     <link rel="dns-prefetch" href="//fonts.bunny.net">
@@ -189,11 +191,14 @@
                                 <div class="left-icon"><i data-feather="map"></i></div>
                                 <label class="sr-only" for="region">Region</label>
                                 <select id="region" name="region" required>
-                                    <option value="Cordillera Administrative Region" selected>Cordillera Administrative Region</option>
+                                    <option value="" disabled selected>Select Region</option>
+                                    @foreach(($locationOptions['regions'] ?? []) as $regionName)
+                                        <option value="{{ $regionName }}">{{ $regionName }}</option>
+                                    @endforeach
                                 </select>
                             </div>
                         </div>
-                        <div class="field">
+                        <div class="field" id="province-field">
                             <div class="input-wrapper">
                                 <div class="left-icon"><i data-feather="map-pin"></i></div>
                                 <label class="sr-only" for="province">Province</label>
@@ -202,7 +207,7 @@
                                 </select>
                             </div>
                         </div>
-                        <div class="field">
+                        <div class="field" id="office-field">
                             <div class="input-wrapper">
                                 <div class="left-icon"><i data-feather="home"></i></div>
                                 <label class="sr-only" for="office">Office</label>
@@ -339,77 +344,118 @@
                 }
             });
 
-            // Dynamic Province Dropdown based on Agency
-            const provinceSelect = document.getElementById('province');
-            const provinces = [
-                'Abra', 'Apayao', 'Benguet', 'City of Baguio', 'Ifugao', 'Kalinga', 'Mountain Province'
-            ];
+            const locationOptions = @json($locationOptions);
 
-            function updateProvinceDropdown(){
-                const selectedAgency = agencySelect.value;
-                provinceSelect.innerHTML = '<option value="" disabled selected>Select Province</option>';
-                if(selectedAgency === 'DILG'){
-                    const regionalOption = document.createElement('option');
-                    regionalOption.value = 'Regional Office';
-                    regionalOption.textContent = 'Regional Office';
-                    provinceSelect.appendChild(regionalOption);
-                }
-                provinces.forEach(function(province){
+            // Dynamic Province/Office Dropdowns based on Agency and Region
+            const regionSelect = document.getElementById('region');
+            const provinceSelect = document.getElementById('province');
+            const officeSelect = document.getElementById('office');
+            const provinceField = document.getElementById('province-field');
+            const officeField = document.getElementById('office-field');
+            const provinceLabel = document.querySelector('label[for="province"]');
+            const officeLabel = document.querySelector('label[for="office"]');
+
+            function resetSelect(select, placeholder){
+                select.innerHTML = '';
+                const option = document.createElement('option');
+                option.value = '';
+                option.disabled = true;
+                option.selected = true;
+                option.textContent = placeholder;
+                select.appendChild(option);
+            }
+
+            function setSelectOptions(select, placeholder, items){
+                resetSelect(select, placeholder);
+                items.forEach(function(item){
+                    const value = String(item || '').trim();
+                    if(value === ''){
+                        return;
+                    }
+
                     const option = document.createElement('option');
-                    option.value = province;
-                    option.textContent = province;
-                    provinceSelect.appendChild(option);
+                    option.value = value;
+                    option.textContent = value;
+                    select.appendChild(option);
                 });
             }
 
-            agencySelect.addEventListener('change', updateProvinceDropdown);
-
-            // Dynamic Office Dropdown for LGU
-            const officeSelect = document.getElementById('office');
-
-            const offices = {
-                'Abra': [
-                    'PLGU Abra', 'Bangued', 'Boliney', 'Bucay', 'Bucloc', 'Daguioman', 'Danglas', 'Dolores', 'La Paz', 'Lacub', 'Lagangilang', 'Lagayan', 'Langiden', 'Licuan-Baay', 'Luba', 'Malibcong', 'Manabo', 'Peñarrubia', 'Pidigan', 'Pilar', 'Sallapadan', 'San Isidro', 'San Juan', 'San Quintin', 'Tayum', 'Tineg', 'Tubo', 'Villaviciosa'
-                ],
-                'Apayao': [
-                    'PLGU Apayao', 'Calanasan', 'Conner', 'Flora', 'Kabugao', 'Luna', 'Pudtol', 'Santa Marcela'
-                ],
-                'Benguet': [
-                    'PLGU Benguet', 'Atok', 'Bakun', 'Bokod', 'Buguias', 'Itogon', 'Kabayan', 'Kapangan', 'Kibungan', 'La Trinidad', 'Mankayan', 'Sablan', 'Tuba', 'Tublay'
-                ],
-                'City of Baguio': [
-                    'PLGU City of Baguio', 'City of Baguio'
-                ],
-                'Ifugao': [
-                    'PLGU Ifugao', 'Aguinaldo', 'Alfonso Lista', 'Asipulo', 'Banaue', 'Hingyon', 'Hungduan', 'Kiangan', 'Lagawe', 'Lamut', 'Mayoyao', 'Tinoc'
-                ],
-                'Kalinga': [
-                    'PLGU Kalinga', 'Balbalan', 'Lubuagan', 'Pasil', 'Pinukpuk', 'Rizal', 'Tabuk', 'Tanudan'
-                ],
-                'Mountain Province': [
-                    'PLGU Mountain Province', 'Barlig', 'Bauko', 'Besao', 'Bontoc', 'Natonin', 'Paracelis', 'Sabangan', 'Sadanga', 'Sagada', 'Tadian'
-                ]
-            };
-
-            function updateOfficeDropdown(){
-                const selectedAgency = agencySelect.value;
-                const selectedProvince = provinceSelect.value;
-                officeSelect.innerHTML = '<option value="" disabled selected>Select Office</option>';
-                if(selectedAgency === 'LGU' && offices[selectedProvince]){
-                    offices[selectedProvince].forEach(function(office){
-                        const option = document.createElement('option');
-                        option.value = office;
-                        option.textContent = office;
-                        officeSelect.appendChild(option);
-                    });
-                }
+            function getProvinceOptionsByRegion(regionName){
+                return locationOptions.provincesByRegion?.[regionName] || [];
             }
 
-            agencySelect.addEventListener('change', updateOfficeDropdown);
+            function getOfficeOptionsByProvince(provinceName){
+                const items = [];
+                if(provinceName && provinceName.toLowerCase() !== 'city of baguio'){
+                    items.push(`PLGU ${provinceName}`);
+                }
+
+                (locationOptions.officesByProvince?.[provinceName] || []).forEach(function(office){
+                    if(office !== `PLGU ${provinceName}`){
+                        items.push(office);
+                    }
+                });
+
+                return items;
+            }
+
+            function updateOfficeDropdown(){
+                if(agencySelect.value !== 'LGU'){
+                    officeSelect.required = false;
+                    resetSelect(officeSelect, 'Select Office');
+                    officeField.style.display = 'none';
+                    return;
+                }
+
+                officeField.style.display = '';
+                officeLabel.textContent = 'Office';
+                officeSelect.required = true;
+
+                const selectedProvince = provinceSelect.value;
+                if(!selectedProvince){
+                    resetSelect(officeSelect, 'Select Office');
+                    return;
+                }
+
+                setSelectOptions(officeSelect, 'Select Office', getOfficeOptionsByProvince(selectedProvince));
+            }
+
+            function updateAgencyLocationFields(){
+                const selectedAgency = agencySelect.value;
+                const selectedRegion = regionSelect.value;
+                const provinceOptions = getProvinceOptionsByRegion(selectedRegion);
+
+                if(selectedAgency === 'DILG'){
+                    provinceLabel.textContent = 'Office';
+                    setSelectOptions(provinceSelect, 'Select Office', ['Regional Office', ...provinceOptions]);
+                    officeSelect.required = false;
+                    resetSelect(officeSelect, 'Select Office');
+                    officeField.style.display = 'none';
+                    return;
+                }
+
+                provinceLabel.textContent = 'Province';
+                setSelectOptions(provinceSelect, 'Select Province', provinceOptions);
+
+                if(selectedAgency === 'LGU'){
+                    officeField.style.display = '';
+                    updateOfficeDropdown();
+                    return;
+                }
+
+                officeSelect.required = false;
+                resetSelect(officeSelect, 'Select Office');
+                officeField.style.display = 'none';
+            }
+
+            agencySelect.addEventListener('change', updateAgencyLocationFields);
+            regionSelect.addEventListener('change', updateAgencyLocationFields);
             provinceSelect.addEventListener('change', updateOfficeDropdown);
 
-            // Initialize province dropdown on page load
-            updateProvinceDropdown();
+            resetSelect(provinceSelect, 'Select Province');
+            resetSelect(officeSelect, 'Select Office');
+            officeField.style.display = 'none';
+            updateAgencyLocationFields();
 
             // Validation for required fields
             const requiredFields = document.querySelectorAll('input[required], select[required]');

@@ -3307,6 +3307,274 @@
             cursor: not-allowed;
         }
 
+        /* ================================================================
+           DESIGN UPGRADE — Enhanced Dashboard Visual System
+           ================================================================ */
+
+        /* ---- Content Header ---- */
+        .content-header {
+            position: relative !important;
+            padding: 22px 26px !important;
+            background: linear-gradient(135deg, #ffffff 0%, #eef4ff 100%) !important;
+            border-radius: 16px !important;
+            border: 1px solid #c7d7f5 !important;
+            box-shadow: 0 4px 18px rgba(0, 44, 118, 0.08) !important;
+            overflow: hidden !important;
+            margin-bottom: 24px !important;
+        }
+
+        .content-header::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 5px;
+            background: linear-gradient(180deg, #002C76, #3b82f6);
+            border-radius: 0 3px 3px 0;
+        }
+
+        .content-header h1 {
+            font-size: 22px !important;
+            font-weight: 800 !important;
+            color: #0f172a !important;
+            margin-bottom: 6px !important;
+        }
+
+        .content-header p {
+            color: #475569 !important;
+            font-size: 13px !important;
+        }
+
+        /* ---- Card Base Upgrade ---- */
+        .dashboard-main-layout .dashboard-card,
+        .dashboard-status-row .dashboard-card {
+            border-radius: 14px !important;
+            box-shadow: 0 6px 20px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+            border: 1px solid rgba(226, 232, 240, 0.9) !important;
+        }
+
+        .dashboard-main-layout .dashboard-card:hover {
+            transform: translateY(-4px) !important;
+            box-shadow: 0 14px 32px rgba(15, 23, 42, 0.12), 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+        }
+
+        /* ---- Filter Form Upgrade ---- */
+        .project-filter-form.dashboard-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%) !important;
+            border: 1px solid #dbe4ff !important;
+            box-shadow: 0 4px 16px rgba(0, 44, 118, 0.07) !important;
+        }
+
+        .project-filter-toggle {
+            font-weight: 800 !important;
+            letter-spacing: 0.04em !important;
+            font-size: 12px !important;
+            color: #002C76 !important;
+        }
+
+        /* ---- Card Heading Accent Line ---- */
+        .dashboard-card h2 {
+            position: relative !important;
+            padding-bottom: 12px !important;
+            border-bottom: 1px solid #f1f5f9 !important;
+            margin-bottom: 16px !important;
+        }
+
+        .dashboard-card h2::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            width: 36px;
+            height: 2px;
+            background: linear-gradient(90deg, #002C76, #3b82f6);
+            border-radius: 2px;
+        }
+
+        .project-update-status-card h2::after,
+        .project-risk-card h2::after {
+            background: linear-gradient(90deg, #b91c1c, #f87171) !important;
+        }
+
+        /* ---- Total Projects Card ---- */
+        .total-projects-card {
+            background: linear-gradient(145deg, #ffffff 0%, #f0f5ff 100%) !important;
+        }
+
+        .total-projects-card .dashboard-tile {
+            background: linear-gradient(145deg, #eff6ff 0%, #dbeafe 100%) !important;
+            border-color: #93c5fd !important;
+            border-radius: 12px !important;
+            padding: 22px 12px !important;
+        }
+
+        .total-projects-card .dashboard-tile > div:last-child {
+            font-size: 52px !important;
+            font-weight: 800 !important;
+            background: linear-gradient(135deg, #002C76, #2563eb);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1.05 !important;
+        }
+
+        /* ---- Fund Source Tiles ---- */
+        .fund-source-link-tile {
+            border-radius: 12px !important;
+            transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+        }
+
+        .fund-source-link-tile:hover {
+            transform: translateY(-3px) !important;
+            box-shadow: 0 10px 22px rgba(0, 0, 0, 0.10) !important;
+        }
+
+        .fund-source-link-tile > div:last-child {
+            font-size: 26px !important;
+            font-weight: 800 !important;
+        }
+
+        /* ---- Financial Metric Tiles ---- */
+        .financial-metric-tile {
+            border-radius: 12px !important;
+        }
+
+        .financial-metric-tile:hover {
+            transform: translateY(-2px) !important;
+            box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08) !important;
+        }
+
+        .financial-percentage-value {
+            font-size: clamp(18px, 1.5vw, 24px) !important;
+            font-weight: 800 !important;
+        }
+
+        .financial-amount-value {
+            font-size: clamp(12px, 1vw, 16px) !important;
+            font-weight: 800 !important;
+        }
+
+        /* ---- Expected Completion Card ---- */
+        .expected-completion-card {
+            background: linear-gradient(145deg, #ffffff 0%, #f0fdf4 100%) !important;
+            border-color: #bbf7d0 !important;
+        }
+
+        .expected-completion-card h2 {
+            border-bottom-color: #dcfce7 !important;
+        }
+
+        .expected-completion-card h2::after {
+            background: linear-gradient(90deg, #16a34a, #4ade80) !important;
+        }
+
+        .expected-completion-item {
+            border-radius: 12px !important;
+        }
+
+        /* ---- Status Subaybayan Card ---- */
+        .status-subaybayan-card {
+            background: linear-gradient(145deg, #ffffff 0%, #f8fbff 100%) !important;
+        }
+
+        .status-subaybayan-grid .dashboard-tile {
+            border-radius: 12px !important;
+            padding: 14px !important;
+        }
+
+        .status-subaybayan-grid .dashboard-tile > div:last-child {
+            font-size: 26px !important;
+            font-weight: 800 !important;
+        }
+
+        /* ---- Project Update Status & Risk Cards ---- */
+        .project-update-status-card {
+            background: linear-gradient(145deg, #ffffff 0%, #fff5f5 100%) !important;
+            border: 1px solid rgba(254, 202, 202, 0.65) !important;
+        }
+
+        .project-risk-slippage-card,
+        .project-risk-aging-card {
+            background: linear-gradient(145deg, #ffffff 0%, #fff8f8 100%) !important;
+            border: 1px solid rgba(254, 202, 202, 0.65) !important;
+        }
+
+        .project-update-status-tile {
+            border-radius: 12px !important;
+            transition: transform 0.18s ease, box-shadow 0.18s ease !important;
+        }
+
+        .project-update-status-tile:hover {
+            transform: translateY(-2px) !important;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08) !important;
+        }
+
+        .project-update-status-value {
+            border-radius: 10px !important;
+            font-size: 28px !important;
+            height: 48px !important;
+        }
+
+        .project-risk-status-tile {
+            border-radius: 12px !important;
+        }
+
+        .project-risk-summary-value {
+            border-radius: 10px !important;
+            font-size: 26px !important;
+        }
+
+        /* ---- Chart Containers ---- */
+        .project-update-status-chart {
+            border-radius: 12px !important;
+            background: linear-gradient(180deg, #fcfcfd 0%, #f8fafc 100%) !important;
+            border-color: #f1f5f9 !important;
+        }
+
+        .project-risk-donut-layout {
+            border-radius: 12px !important;
+            background: linear-gradient(180deg, #fcfcfd 0%, #f8fafc 100%) !important;
+            border-color: #f1f5f9 !important;
+        }
+
+        .project-risk-chart {
+            border-radius: 12px !important;
+            background: linear-gradient(180deg, #fdfdfe 0%, #f9fafb 100%) !important;
+        }
+
+        /* ---- Dashboard Status Row — styled wrapper ---- */
+        .dashboard-status-row {
+            padding: 24px !important;
+            border: 1px solid #dbe4ff !important;
+            border-radius: 18px !important;
+            background:
+                radial-gradient(circle at bottom right, rgba(219, 234, 254, 0.25), transparent 42%),
+                linear-gradient(180deg, #fbfdff 0%, #f3f7fb 100%) !important;
+            box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06) !important;
+        }
+
+        /* ---- Responsive ---- */
+        @media (max-width: 700px) {
+            .content-header {
+                padding: 16px 18px !important;
+                border-radius: 12px !important;
+            }
+
+            .content-header h1 {
+                font-size: 18px !important;
+            }
+
+            .total-projects-card .dashboard-tile > div:last-child {
+                font-size: 44px !important;
+            }
+
+            .dashboard-status-row {
+                padding: 14px !important;
+                border-radius: 14px !important;
+            }
+        }
+
     </style>
 
     <script>

@@ -26,6 +26,7 @@ class DatabaseUtilityController extends Controller
             'key' => 'regions',
             'label' => 'Region',
             'table' => 'location_regions',
+            'load_tables' => ['location_regions', 'regions'],
             'icon' => 'fas fa-globe-asia',
             'description' => 'Upload the regional reference list as a CSV snapshot.',
             'columns' => ['region_code', 'region_name'],
@@ -45,16 +46,22 @@ class DatabaseUtilityController extends Controller
             'key' => 'provinces',
             'label' => 'Provinces',
             'table' => 'location_provinces',
+            'load_tables' => ['location_provinces'],
             'icon' => 'fas fa-map',
-            'description' => 'Upload the province master list as a CSV file using the region reference ID plus province code and name.',
+            'description' => 'Upload the province master list as a CSV file using the region reference ID, code, or name plus province code and name.',
             'columns' => ['region_id', 'province_code', 'province_name'],
             'required' => ['province_name'],
             'integer_columns' => ['region_id'],
+            'source_columns' => ['region_lookup_code', 'region_lookup_name'],
             'sql_aliases' => ['location_provinces', 'provinces', 'province'],
             'aliases' => [
                 'region_id' => 'region_id',
                 'reg_id' => 'region_id',
                 'regionid' => 'region_id',
+                'region_code' => 'region_lookup_code',
+                'reg_code' => 'region_lookup_code',
+                'region_name' => 'region_lookup_name',
+                'region' => 'region_lookup_name',
                 'province' => 'province_name',
                 'province_name' => 'province_name',
                 'prov_name' => 'province_name',
@@ -68,6 +75,7 @@ class DatabaseUtilityController extends Controller
             'key' => 'city-municipalities',
             'label' => 'City / Municipality',
             'table' => 'location_city_municipalities',
+            'load_tables' => ['location_city_municipalities'],
             'icon' => 'fas fa-city',
             'description' => 'Upload the city or municipality list as a CSV file using the province reference ID plus city or municipality code and name.',
             'columns' => ['province_id', 'citymun_code', 'citymun_name'],
@@ -569,6 +577,13 @@ class DatabaseUtilityController extends Controller
             throw new \RuntimeException('Unable to read the selected CSV file.');
         }
 
+        $destinationTables = $this->resolveLocationDestinationTables($config);
+        if ($destinationTables === []) {
+            throw new \RuntimeException($config['label'] . ' table is not available yet. Run the migration first.');
+        }
+
+        $lookupContext = $this->buildLocationLookupContext($config);
+
         $handle = fopen($path, 'r');
         if ($handle === false) {
             throw new \RuntimeException('Unable to open the selected CSV file.');
@@ -591,14 +606,19 @@ class DatabaseUtilityController extends Controller
                 }
             }
 
-            return DB::transaction(function () use ($config, $handle, $headerMap) {
-                DB::table($config['table'])->delete();
+            return DB::transaction(function () use ($config, $handle, $headerMap, $destinationTables, $lookupContext) {
+                foreach ($destinationTables as $table) {
+                    DB::table($table)->delete();
+                }
 
                 $now = now();
                 $rows = [];
                 $inserted = 0;
+                $rowNumber = 1;
 
                 while (($data = fgetcsv($handle)) !== false) {
+                    $rowNumber++;
+
                     if ($this->locationRowIsEmpty($data)) {
                         continue;
                     }
@@ -619,6 +639,12 @@ class DatabaseUtilityController extends Controller
                         $row[$column] = $value !== '' ? $value : null;
                     }
 
+                    try {
+                        $row = $this->prepareLocationImportRow($row, $config, $destinationTables, $lookupContext);
+                    } catch (\RuntimeException $exception) {
+                        throw new \RuntimeException('Row ' . $rowNumber . ': ' . $exception->getMessage());
+                    }
+
                     $hasRequiredValues = true;
                     foreach ($config['required'] as $requiredColumn) {
                         $requiredValue = $row[$requiredColumn] ?? null;
@@ -637,14 +663,18 @@ class DatabaseUtilityController extends Controller
                     $rows[] = $row;
 
                     if (count($rows) >= 500) {
-                        DB::table($config['table'])->insert($rows);
+                        foreach ($destinationTables as $table) {
+                            DB::table($table)->insert($rows);
+                        }
                         $inserted += count($rows);
                         $rows = [];
                     }
                 }
 
                 if ($rows !== []) {
-                    DB::table($config['table'])->insert($rows);
+                    foreach ($destinationTables as $table) {
+                        DB::table($table)->insert($rows);
+                    }
                     $inserted += count($rows);
                 }
 
@@ -680,7 +710,10 @@ class DatabaseUtilityController extends Controller
 
     private function buildLocationHeaderMap(array $headers, array $config): array
     {
-        $allowedColumns = array_fill_keys($config['columns'], true);
+        $allowedColumns = array_fill_keys(array_merge(
+            $config['columns'],
+            $config['source_columns'] ?? []
+        ), true);
         $aliases = $config['aliases'] ?? [];
         $mappedColumns = [];
         $headerMap = [];
@@ -717,6 +750,140 @@ class DatabaseUtilityController extends Controller
     private function normalizeLocationValue(mixed $value): string
     {
         return trim(is_scalar($value) ? (string) $value : '');
+    }
+
+    private function buildLocationLookupContext(array $config): array
+    {
+        if (($config['key'] ?? null) !== 'provinces' || !Schema::hasTable('regions')) {
+            return [];
+        }
+
+        $byId = [];
+        $byCode = [];
+        $byName = [];
+
+        foreach (DB::table('regions')->get(['id', 'region_code', 'region_name']) as $region) {
+            $regionId = (int) ($region->id ?? 0);
+            if ($regionId < 1) {
+                continue;
+            }
+
+            $byId[$regionId] = true;
+
+            $codeKey = $this->normalizeLocationLookupKey($region->region_code ?? null);
+            if ($codeKey !== '') {
+                $byCode[$codeKey] = $regionId;
+            }
+
+            $nameKey = $this->normalizeLocationLookupKey($region->region_name ?? null);
+            if ($nameKey !== '') {
+                $byName[$nameKey] = $regionId;
+            }
+        }
+
+        return [
+            'regions' => [
+                'by_id' => $byId,
+                'by_code' => $byCode,
+                'by_name' => $byName,
+            ],
+        ];
+    }
+
+    private function prepareLocationImportRow(
+        array $row,
+        array $config,
+        array $destinationTables,
+        array $lookupContext
+    ): array {
+        if (($config['key'] ?? null) === 'provinces') {
+            $row = $this->prepareProvinceImportRow($row, $destinationTables, $lookupContext);
+        }
+
+        return $this->filterLocationInsertableColumns($row, $config);
+    }
+
+    private function prepareProvinceImportRow(
+        array $row,
+        array $destinationTables,
+        array $lookupContext
+    ): array {
+        $regions = $lookupContext['regions'] ?? [
+            'by_id' => [],
+            'by_code' => [],
+            'by_name' => [],
+        ];
+
+        $resolvedRegionId = null;
+        $regionCodeKey = $this->normalizeLocationLookupKey($row['region_lookup_code'] ?? null);
+        if ($regionCodeKey !== '' && isset($regions['by_code'][$regionCodeKey])) {
+            $resolvedRegionId = $regions['by_code'][$regionCodeKey];
+        }
+
+        $regionNameKey = $this->normalizeLocationLookupKey($row['region_lookup_name'] ?? null);
+        if ($resolvedRegionId === null && $regionNameKey !== '' && isset($regions['by_name'][$regionNameKey])) {
+            $resolvedRegionId = $regions['by_name'][$regionNameKey];
+        }
+
+        $candidateRegionId = $row['region_id'] ?? null;
+        if ($resolvedRegionId === null && is_numeric($candidateRegionId)) {
+            $candidateRegionId = (int) $candidateRegionId;
+            if ($candidateRegionId > 0 && isset($regions['by_id'][$candidateRegionId])) {
+                $resolvedRegionId = $candidateRegionId;
+            }
+        }
+
+        if ($resolvedRegionId !== null) {
+            $row['region_id'] = $resolvedRegionId;
+        }
+
+        $requiresLegacyProvinceInsert = in_array('provinces', $destinationTables, true);
+        if ($requiresLegacyProvinceInsert && (!isset($row['region_id']) || !is_numeric($row['region_id']) || (int) $row['region_id'] < 1)) {
+            $provinceName = $this->normalizeLocationValue($row['province_name'] ?? null);
+            throw new \RuntimeException(
+                'Unable to resolve region_id for province "' . ($provinceName !== '' ? $provinceName : 'unknown') . '". ' .
+                'Include a valid region_id or add region_code/region_name that matches the regions table.'
+            );
+        }
+
+        $provinceCode = $this->normalizeLocationValue($row['province_code'] ?? null);
+        if ($requiresLegacyProvinceInsert && $provinceCode === '') {
+            throw new \RuntimeException('province_code is required to insert rows into the provinces table.');
+        }
+
+        unset($row['region_lookup_code'], $row['region_lookup_name']);
+
+        return $row;
+    }
+
+    private function filterLocationInsertableColumns(array $row, array $config): array
+    {
+        $filtered = [];
+
+        foreach ($config['columns'] as $column) {
+            if (array_key_exists($column, $row)) {
+                $filtered[$column] = $row[$column];
+            }
+        }
+
+        return $filtered;
+    }
+
+    private function normalizeLocationLookupKey(mixed $value): string
+    {
+        return Str::lower($this->normalizeLocationValue($value));
+    }
+
+    private function resolveLocationDestinationTables(array $config): array
+    {
+        $tables = $config['load_tables'] ?? [$config['table']];
+        $tables = array_values(array_unique(array_filter($tables, static function (mixed $table): bool {
+            return is_string($table) && trim($table) !== '';
+        })));
+
+        return array_values(array_filter($tables, static function (string $table): bool {
+            return Schema::hasTable($table);
+        }));
     }
 
     private function locationRowIsEmpty(array $row): bool

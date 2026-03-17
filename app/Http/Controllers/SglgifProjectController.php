@@ -120,9 +120,7 @@ class SglgifProjectController extends Controller
 
         $totalSubsidyAmount = (float) $rows->sum('subsidy_value');
         $totalProjectCostAmount = (float) $rows->sum('project_cost_value');
-        $subsidyUtilizationPercent = $totalSubsidyAmount > 0
-            ? round(($totalProjectCostAmount / $totalSubsidyAmount) * 100, 2)
-            : 0.0;
+        $subsidyBalanceAmount = $totalSubsidyAmount - $totalProjectCostAmount;
 
         $averageFinancialPercent = round((float) $rows->pluck('financial_pct')->filter(fn ($value) => $value !== null)->avg(), 2);
         $averagePhysicalPercent = round((float) $rows->pluck('physical_pct')->filter(fn ($value) => $value !== null)->avg(), 2);
@@ -140,11 +138,6 @@ class SglgifProjectController extends Controller
         $municipalityCount = $rows->filter(fn (array $row) => $row['level_lc'] === 'municipality')->count();
         $provinceLevelCount = $rows->filter(fn (array $row) => $row['level_lc'] === 'province')->count();
         $cityLevelCount = $rows->filter(fn (array $row) => $row['level_lc'] === 'city')->count();
-
-        $zeroFinancialCount = $rows->filter(fn (array $row) => ($row['financial_pct'] ?? null) !== null && (float) $row['financial_pct'] <= 0)->count();
-        $zeroPhysicalCount = $rows->filter(fn (array $row) => ($row['physical_pct'] ?? null) !== null && (float) $row['physical_pct'] <= 0)->count();
-        $incompleteAttachmentCount = $rows->filter(fn (array $row) => ($row['attachment_pct'] ?? null) !== null && (float) $row['attachment_pct'] < 100)->count();
-        $needsAttentionCount = $rows->filter(fn (array $row) => ($row['overall_pct'] ?? 0) < 50)->count();
 
         $statusBreakdown = $this->buildCountBreakdown($rows, 'status');
         $provinceBreakdown = $this->buildCountBreakdown($rows, 'province', 6);
@@ -217,8 +210,16 @@ class SglgifProjectController extends Controller
             ],
         ])->values();
 
-        $watchlistRows = $rows
+        $ongoingRows = $rows
             ->filter(fn (array $row) => $row['status_lc'] === 'ongoing')
+            ->values();
+
+        $ongoingAverageFinancialPercent = round((float) $ongoingRows->pluck('financial_pct')->filter(fn ($value) => $value !== null)->avg(), 2);
+        $ongoingAveragePhysicalPercent = round((float) $ongoingRows->pluck('physical_pct')->filter(fn ($value) => $value !== null)->avg(), 2);
+        $ongoingAverageAttachmentPercent = round((float) $ongoingRows->pluck('attachment_pct')->filter(fn ($value) => $value !== null)->avg(), 2);
+        $ongoingAverageOverallPercent = round((float) $ongoingRows->pluck('overall_pct')->filter(fn ($value) => $value !== null)->avg(), 2);
+
+        $watchlistRows = $ongoingRows
             ->sort(function (array $left, array $right) {
                 $leftOverall = $left['overall_pct'] ?? 999;
                 $rightOverall = $right['overall_pct'] ?? 999;
@@ -248,7 +249,7 @@ class SglgifProjectController extends Controller
             'uniqueCategoryCount' => $uniqueCategoryCount,
             'totalSubsidyAmount' => $totalSubsidyAmount,
             'totalProjectCostAmount' => $totalProjectCostAmount,
-            'subsidyUtilizationPercent' => $subsidyUtilizationPercent,
+            'subsidyBalanceAmount' => $subsidyBalanceAmount,
             'averageFinancialPercent' => $averageFinancialPercent,
             'averagePhysicalPercent' => $averagePhysicalPercent,
             'averageAttachmentPercent' => $averageAttachmentPercent,
@@ -261,10 +262,10 @@ class SglgifProjectController extends Controller
             'municipalityCount' => $municipalityCount,
             'provinceLevelCount' => $provinceLevelCount,
             'cityLevelCount' => $cityLevelCount,
-            'zeroFinancialCount' => $zeroFinancialCount,
-            'zeroPhysicalCount' => $zeroPhysicalCount,
-            'incompleteAttachmentCount' => $incompleteAttachmentCount,
-            'needsAttentionCount' => $needsAttentionCount,
+            'ongoingAverageFinancialPercent' => $ongoingAverageFinancialPercent,
+            'ongoingAveragePhysicalPercent' => $ongoingAveragePhysicalPercent,
+            'ongoingAverageAttachmentPercent' => $ongoingAverageAttachmentPercent,
+            'ongoingAverageOverallPercent' => $ongoingAverageOverallPercent,
             'statusBreakdown' => $statusBreakdown,
             'provinceBreakdown' => $provinceBreakdown,
             'provinceProjectsModalMap' => $provinceProjectsModalMap,
@@ -297,7 +298,7 @@ class SglgifProjectController extends Controller
             'uniqueCategoryCount' => 0,
             'totalSubsidyAmount' => 0,
             'totalProjectCostAmount' => 0,
-            'subsidyUtilizationPercent' => 0,
+            'subsidyBalanceAmount' => 0,
             'averageFinancialPercent' => 0,
             'averagePhysicalPercent' => 0,
             'averageAttachmentPercent' => 0,
@@ -310,10 +311,10 @@ class SglgifProjectController extends Controller
             'municipalityCount' => 0,
             'provinceLevelCount' => 0,
             'cityLevelCount' => 0,
-            'zeroFinancialCount' => 0,
-            'zeroPhysicalCount' => 0,
-            'incompleteAttachmentCount' => 0,
-            'needsAttentionCount' => 0,
+            'ongoingAverageFinancialPercent' => 0,
+            'ongoingAveragePhysicalPercent' => 0,
+            'ongoingAverageAttachmentPercent' => 0,
+            'ongoingAverageOverallPercent' => 0,
             'statusBreakdown' => collect(),
             'provinceBreakdown' => collect(),
             'provinceProjectsModalMap' => collect(),

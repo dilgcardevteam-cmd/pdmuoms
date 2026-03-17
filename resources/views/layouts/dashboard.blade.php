@@ -1204,6 +1204,44 @@
             box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
         }
 
+        .dashboard-file-input {
+            width: 100%;
+            padding: 6px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 12px;
+            color: #111827;
+            background: #f9fafb;
+            cursor: pointer;
+        }
+
+        .dashboard-file-input:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+        }
+
+        .dashboard-file-input::file-selector-button,
+        .dashboard-file-input::-webkit-file-upload-button {
+            margin-right: 12px;
+            padding: 9px 14px;
+            border: 1px solid #1d4ed8;
+            border-radius: 7px;
+            font-size: 12px;
+            font-weight: 700;
+            color: #ffffff;
+            background: linear-gradient(135deg, #0f3b8a 0%, #2563eb 100%);
+            cursor: pointer;
+            transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: 0 6px 14px rgba(37, 99, 235, 0.18);
+        }
+
+        .dashboard-file-input::file-selector-button:hover,
+        .dashboard-file-input::-webkit-file-upload-button:hover {
+            background: linear-gradient(135deg, #0b2f6c 0%, #1d4ed8 100%);
+            box-shadow: 0 8px 16px rgba(37, 99, 235, 0.24);
+        }
+
         .ops-detail-page button,
         .ops-detail-page a {
             transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;

@@ -149,7 +149,7 @@
                 @csrf
                 <div style="margin-bottom: 16px;">
                     <label for="import-file" style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 6px;">Upload CSV or Excel (.csv/.xls)</label>
-                    <input id="import-file" type="file" name="file" accept=".csv,.xls" required style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px; background-color: #f9fafb;">
+                    <input id="import-file" class="dashboard-file-input" type="file" name="file" accept=".csv,.xls" required>
                     <div style="margin-top: 6px; font-size: 11px; color: #6b7280;">Each import replaces the previous RLIP data source.</div>
                 </div>
                 <div style="display: flex; justify-content: flex-end; gap: 10px;">

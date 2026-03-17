@@ -408,58 +408,6 @@
                     </article>
                 </div>
 
-                <div class="sglgif-dual-panel">
-                    <div class="sglgif-panel">
-                        <div class="sglgif-panel-head">
-                            <h3>Project Status by Category</h3>
-                            <div class="sglgif-switch" data-sg-switch-group="category-focus">
-                                <button type="button" class="is-active" data-sg-switch-target="count">Count</button>
-                                <button type="button" data-sg-switch-target="funding">Funding</button>
-                            </div>
-                        </div>
-
-                        <div class="sglgif-switch-panel is-active" data-sg-switch-panel="category-focus:count">
-                            @forelse($categoryBreakdown as $item)
-                                @php $barWidth = $topCategoryCount > 0 ? round(($item['count'] / $topCategoryCount) * 100, 2) : 0; @endphp
-                                <div class="sglgif-bar-row">
-                                    <div class="sglgif-bar-head"><span>{{ $item['label'] }}</span><strong>{{ number_format($item['count']) }}</strong></div>
-                                    <div class="sglgif-bar-track"><div style="width: {{ $barWidth }}%; background: {{ $graphGradients['primary'] }};"></div></div>
-                                </div>
-                            @empty
-                                <p class="sglgif-empty">No category data for this filter set.</p>
-                            @endforelse
-                        </div>
-
-                        <div class="sglgif-switch-panel" data-sg-switch-panel="category-focus:funding">
-                            @forelse($categoryFundingBreakdown as $item)
-                                @php $barWidth = $topCategoryFundingAmount > 0 ? round((($item['amount'] ?? 0) / $topCategoryFundingAmount) * 100, 2) : 0; @endphp
-                                <div class="sglgif-bar-row">
-                                    <div class="sglgif-bar-head"><span>{{ $item['label'] }}</span><strong>&#8369; {{ number_format((float) ($item['amount'] ?? 0), 2) }}</strong></div>
-                                    <div class="sglgif-bar-track"><div style="width: {{ $barWidth }}%; background: {{ $graphGradients['secondary'] }};"></div></div>
-                                    <div class="sglgif-note">{{ number_format((int) ($item['count'] ?? 0)) }} projects</div>
-                                </div>
-                            @empty
-                                <p class="sglgif-empty">No funding data for this filter set.</p>
-                            @endforelse
-                        </div>
-                    </div>
-
-                    <div class="sglgif-panel">
-                        <div class="sglgif-panel-head">
-                            <h3>Funding by Year</h3>
-                        </div>
-                        @forelse($fundingYearBreakdown as $item)
-                            @php $barWidth = $topYearFundingAmount > 0 ? round((($item['amount'] ?? 0) / $topYearFundingAmount) * 100, 2) : 0; @endphp
-                            <div class="sglgif-bar-row">
-                                <div class="sglgif-bar-head"><span>{{ $item['label'] }}</span><strong>&#8369; {{ number_format((float) ($item['amount'] ?? 0), 2) }}</strong></div>
-                                <div class="sglgif-bar-track"><div style="width: {{ $barWidth }}%; background: {{ $graphGradients['tertiary'] }};"></div></div>
-                                <div class="sglgif-note">{{ number_format((int) ($item['count'] ?? 0)) }} projects</div>
-                            </div>
-                        @empty
-                            <p class="sglgif-empty">No funding-year data for this filter set.</p>
-                        @endforelse
-                    </div>
-                </div>
             </section>
 
             <section class="dashboard-card sglgif-card">
@@ -503,19 +451,69 @@
 
             </section>
 
+            <section class="dashboard-card sglgif-card">
+                <div class="sglgif-dual-panel">
+                    <div class="sglgif-panel">
+                        <div class="sglgif-panel-head">
+                            <h3>Project Status by Category</h3>
+                            <div class="sglgif-switch" data-sg-switch-group="category-focus">
+                                <button type="button" class="is-active" data-sg-switch-target="count">Count</button>
+                                <button type="button" data-sg-switch-target="funding">Funding</button>
+                            </div>
+                        </div>
+
+                        <div class="sglgif-switch-panel is-active" data-sg-switch-panel="category-focus:count">
+                            @forelse($categoryBreakdown as $item)
+                                @php $barWidth = $topCategoryCount > 0 ? round(($item['count'] / $topCategoryCount) * 100, 2) : 0; @endphp
+                                <div class="sglgif-bar-row" data-sg-bar-animate="count">
+                                    <div class="sglgif-bar-head"><span>{{ $item['label'] }}</span><strong data-sg-bar-number data-format="integer" data-value="{{ (int) ($item['count'] ?? 0) }}">{{ number_format($item['count']) }}</strong></div>
+                                    <div class="sglgif-bar-track"><div data-sg-bar-fill data-target-width="{{ $barWidth }}" style="width: {{ $barWidth }}%; background: {{ $graphGradients['primary'] }};"></div></div>
+                                </div>
+                            @empty
+                                <p class="sglgif-empty">No category data for this filter set.</p>
+                            @endforelse
+                        </div>
+
+                        <div class="sglgif-switch-panel" data-sg-switch-panel="category-focus:funding">
+                            @forelse($categoryFundingBreakdown as $item)
+                                @php $barWidth = $topCategoryFundingAmount > 0 ? round((($item['amount'] ?? 0) / $topCategoryFundingAmount) * 100, 2) : 0; @endphp
+                                <div class="sglgif-bar-row" data-sg-bar-animate="funding">
+                                    <div class="sglgif-bar-head"><span>{{ $item['label'] }}</span><strong data-sg-bar-number data-format="currency" data-value="{{ (float) ($item['amount'] ?? 0) }}">&#8369; {{ number_format((float) ($item['amount'] ?? 0), 2) }}</strong></div>
+                                    <div class="sglgif-bar-track"><div data-sg-bar-fill data-target-width="{{ $barWidth }}" style="width: {{ $barWidth }}%; background: {{ $graphGradients['secondary'] }};"></div></div>
+                                    <div class="sglgif-note"><span data-sg-bar-number data-format="integer" data-value="{{ (int) ($item['count'] ?? 0) }}">{{ number_format((int) ($item['count'] ?? 0)) }}</span> projects</div>
+                                </div>
+                            @empty
+                                <p class="sglgif-empty">No funding data for this filter set.</p>
+                            @endforelse
+                        </div>
+                    </div>
+
+                    <div class="sglgif-panel" data-sg-bar-container="funding-year">
+                        <div class="sglgif-panel-head">
+                            <h3>Funding by Year</h3>
+                        </div>
+                        @forelse($fundingYearBreakdown as $item)
+                            @php $barWidth = $topYearFundingAmount > 0 ? round((($item['amount'] ?? 0) / $topYearFundingAmount) * 100, 2) : 0; @endphp
+                            <div class="sglgif-bar-row" data-sg-bar-animate="funding">
+                                <div class="sglgif-bar-head"><span>{{ $item['label'] }}</span><strong data-sg-bar-number data-format="currency" data-value="{{ (float) ($item['amount'] ?? 0) }}">&#8369; {{ number_format((float) ($item['amount'] ?? 0), 2) }}</strong></div>
+                                <div class="sglgif-bar-track"><div data-sg-bar-fill data-target-width="{{ $barWidth }}" style="width: {{ $barWidth }}%; background: {{ $graphGradients['tertiary'] }};"></div></div>
+                                <div class="sglgif-note"><span data-sg-bar-number data-format="integer" data-value="{{ (int) ($item['count'] ?? 0) }}">{{ number_format((int) ($item['count'] ?? 0)) }}</span> projects</div>
+                            </div>
+                        @empty
+                            <p class="sglgif-empty">No funding-year data for this filter set.</p>
+                        @endforelse
+                    </div>
+                </div>
+            </section>
+
         </div>
 
         <div class="dashboard-status-row">
             <section class="dashboard-card sglgif-card sglgif-status-card">
                 <div class="sglgif-card-head sglgif-status-card-head">
-                    <div>
-                        <span class="sglgif-status-kicker">Portfolio Status</span>
+                    <div class="sglgif-status-card-copy">
                         <h2>STATUS OF PROJECT</h2>
                         <p>Click a tile to open the filtered SGLGIF table directly from the dashboard.</p>
-                    </div>
-                    <div class="sglgif-status-total-badge">
-                        <span>Tracked</span>
-                        <strong>{{ number_format($totalProjects) }}</strong>
                     </div>
                 </div>
 
@@ -571,7 +569,7 @@
                 <div class="sglgif-financial-status-head">
                     <div>
                         <h3>FINANCIAL STATUS</h3>
-                        <p>Allocation, project cost, and portfolio absorption for the current dashboard scope.</p>
+                        <p>Allocation, project cost, and balance for the current dashboard scope.</p>
                     </div>
                 </div>
 
@@ -585,8 +583,8 @@
                         <strong>&#8369; {{ number_format($totalProjectCostAmount, 2) }}</strong>
                     </div>
                     <div class="sglgif-financial-tile">
-                        <span>Cost Absorption</span>
-                        <strong>{{ number_format($subsidyUtilizationPercent, 2) }}%</strong>
+                        <span>Balance</span>
+                        <strong>&#8369; {{ number_format($subsidyBalanceAmount, 2) }}</strong>
                     </div>
                 </div>
             </section>
@@ -672,27 +670,27 @@
             <section class="dashboard-card sglgif-card">
                 <div class="sglgif-card-head">
                     <div>
-                        <h2>IMPLEMENTATION WATCH</h2>
-                        <p>Immediate attention points across ongoing SGLGIF projects and portfolio reporting completeness.</p>
+                        <h2>ONGOING PROJECTS</h2>
+                        <p>Financial, physical, attachment, and overall accomplishment across ongoing SGLGIF projects.</p>
                     </div>
                 </div>
 
                 <div class="sglgif-alert-grid">
                     <div class="sglgif-alert-card">
-                        <span>Zero Financial</span>
-                        <strong>{{ number_format($zeroFinancialCount) }}</strong>
+                        <span>Financial</span>
+                        <strong>{{ number_format($ongoingAverageFinancialPercent, 2) }}%</strong>
                     </div>
                     <div class="sglgif-alert-card">
-                        <span>Zero Physical</span>
-                        <strong>{{ number_format($zeroPhysicalCount) }}</strong>
+                        <span>Physical</span>
+                        <strong>{{ number_format($ongoingAveragePhysicalPercent, 2) }}%</strong>
                     </div>
                     <div class="sglgif-alert-card">
-                        <span>Attachment &lt; 100%</span>
-                        <strong>{{ number_format($incompleteAttachmentCount) }}</strong>
+                        <span>Attachment</span>
+                        <strong>{{ number_format($ongoingAverageAttachmentPercent, 2) }}%</strong>
                     </div>
                     <div class="sglgif-alert-card">
-                        <span>Overall &lt; 50%</span>
-                        <strong>{{ number_format($needsAttentionCount) }}</strong>
+                        <span>Overall</span>
+                        <strong>{{ number_format($ongoingAverageOverallPercent, 2) }}%</strong>
                     </div>
                 </div>
 
@@ -702,26 +700,40 @@
                             <tr>
                                 <th>Project</th>
                                 <th>LGU</th>
-                                <th>Overall</th>
                                 <th>Financial</th>
-                                <th>Subsidy</th>
+                                <th>Physical</th>
+                                <th>Attachment</th>
+                                <th>Overall</th>
                             </tr>
                         </thead>
                         <tbody>
                             @forelse($watchlistRows as $row)
-                                <tr>
+                                @php
+                                    $projectModalKey = trim((string) preg_replace('/[^a-z0-9]+/i', '-', (($row['project_code'] ?: $row['project_title']) ?: 'project')), '-');
+                                    $projectModalId = 'sglgif-project-' . ($projectModalKey !== '' ? $projectModalKey : 'item') . '-' . $loop->index . '-modal';
+                                    $projectDisplayTitle = $row['project_title'] ?: ($row['project_code'] ?: 'Untitled Project');
+                                @endphp
+                                <tr
+                                    class="sglgif-project-row"
+                                    tabindex="0"
+                                    role="button"
+                                    aria-controls="{{ $projectModalId }}"
+                                    aria-label="Open project information for {{ $projectDisplayTitle }}"
+                                    data-sglgif-modal-target="{{ $projectModalId }}"
+                                >
                                     <td>
-                                        <strong>{{ $row['project_title'] ?: $row['project_code'] }}</strong>
+                                        <strong>{{ $projectDisplayTitle }}</strong>
                                         <div class="sglgif-subline">{{ $row['project_code'] }}</div>
                                     </td>
                                     <td>{{ $row['city_municipality'] ?: '-' }}</td>
-                                    <td>{{ $row['overall_pct'] !== null ? number_format($row['overall_pct'], 2) . '%' : '-' }}</td>
                                     <td>{{ $row['financial_pct'] !== null ? number_format($row['financial_pct'], 2) . '%' : '-' }}</td>
-                                    <td>&#8369; {{ number_format((float) ($row['subsidy_value'] ?? 0), 2) }}</td>
+                                    <td>{{ $row['physical_pct'] !== null ? number_format($row['physical_pct'], 2) . '%' : '-' }}</td>
+                                    <td>{{ $row['attachment_pct'] !== null ? number_format($row['attachment_pct'], 2) . '%' : '-' }}</td>
+                                    <td>{{ $row['overall_pct'] !== null ? number_format($row['overall_pct'], 2) . '%' : '-' }}</td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="5" class="sglgif-empty-cell">No ongoing projects for the current filter set.</td>
+                                    <td colspan="6" class="sglgif-empty-cell">No ongoing projects for the current filter set.</td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -801,6 +813,139 @@
                         @else
                             <div class="sglgif-modal-empty-state">No projects found for this province.</div>
                         @endif
+                    </div>
+                </div>
+            </div>
+        @endforeach
+
+        @foreach($watchlistRows as $row)
+            @php
+                $projectModalKey = trim((string) preg_replace('/[^a-z0-9]+/i', '-', (($row['project_code'] ?: $row['project_title']) ?: 'project')), '-');
+                $projectModalId = 'sglgif-project-' . ($projectModalKey !== '' ? $projectModalKey : 'item') . '-' . $loop->index . '-modal';
+                $projectModalTitleId = $projectModalId . '-title';
+                $projectDisplayTitle = $row['project_title'] ?: ($row['project_code'] ?: 'Untitled Project');
+                $projectStatusLabel = $row['status'] !== '' ? $row['status'] : 'Status unavailable';
+                $projectStatusStyle = $statusStyles[$projectStatusLabel] ?? ['color' => '#334155', 'bg' => '#e2e8f0', 'border' => '#cbd5e1'];
+                $beneficiariesDisplay = $row['beneficiaries'] !== ''
+                    ? (is_numeric($row['beneficiaries']) ? number_format((float) $row['beneficiaries']) : $row['beneficiaries'])
+                    : '-';
+                $projectSummaryLocation = collect([
+                    $row['province'] !== '' ? $row['province'] : null,
+                    $row['city_municipality'] !== '' ? $row['city_municipality'] : null,
+                    $row['sglgif_level'] !== '' ? $row['sglgif_level'] . ' level' : null,
+                ])->filter()->implode(' • ');
+                $projectProgressMetrics = [
+                    ['label' => 'Financial', 'value' => $row['financial_pct'], 'color' => '#2563eb'],
+                    ['label' => 'Physical', 'value' => $row['physical_pct'], 'color' => '#0891b2'],
+                    ['label' => 'Attachment', 'value' => $row['attachment_pct'], 'color' => '#d97706'],
+                    ['label' => 'Overall', 'value' => $row['overall_pct'], 'color' => '#002C76'],
+                ];
+            @endphp
+            <div id="{{ $projectModalId }}" class="sglgif-modal" aria-hidden="true">
+                <div class="sglgif-modal-backdrop" data-sglgif-close-modal></div>
+                <div class="sglgif-modal-dialog sglgif-project-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="{{ $projectModalTitleId }}">
+                    <div class="sglgif-modal-header sglgif-project-modal-header">
+                        <div class="sglgif-project-modal-head-copy">
+                            <span
+                                class="sglgif-project-status-badge"
+                                @style([
+                                    'color: ' . $projectStatusStyle['color'],
+                                    'background: ' . $projectStatusStyle['bg'],
+                                    'border-color: ' . $projectStatusStyle['border'],
+                                ])
+                            >
+                                {{ $projectStatusLabel }}
+                            </span>
+                            <h3 id="{{ $projectModalTitleId }}">{{ $projectDisplayTitle }}</h3>
+                            <p class="sglgif-project-modal-meta">
+                                <span>Code: {{ $row['project_code'] !== '' ? $row['project_code'] : '-' }}</span>
+                                <span>FY {{ $row['funding_year'] !== '' ? $row['funding_year'] : '-' }}</span>
+                                <span>{{ $projectSummaryLocation !== '' ? $projectSummaryLocation : 'Location information unavailable' }}</span>
+                            </p>
+                        </div>
+                        <button type="button" class="sglgif-modal-close" data-sglgif-close-modal aria-label="Close">
+                            <i class="fas fa-times" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                    <div class="sglgif-modal-body">
+                        <div class="sglgif-project-modal-grid">
+                            <section class="sglgif-project-modal-section sglgif-project-modal-section--summary">
+                                <h4>Quick View</h4>
+                                <div class="sglgif-project-summary-grid">
+                                    <article class="sglgif-project-summary-card">
+                                        <span>Overall</span>
+                                        <strong>{{ $row['overall_pct'] !== null ? number_format((float) $row['overall_pct'], 2) . '%' : '-' }}</strong>
+                                    </article>
+                                    <article class="sglgif-project-summary-card">
+                                        <span>National Subsidy</span>
+                                        <strong>&#8369; {{ number_format((float) ($row['subsidy_value'] ?? 0), 2) }}</strong>
+                                    </article>
+                                    <article class="sglgif-project-summary-card">
+                                        <span>Total Project Cost</span>
+                                        <strong>&#8369; {{ number_format((float) ($row['project_cost_value'] ?? 0), 2) }}</strong>
+                                    </article>
+                                    <article class="sglgif-project-summary-card">
+                                        <span>Beneficiaries</span>
+                                        <strong>{{ $beneficiariesDisplay }}</strong>
+                                    </article>
+                                </div>
+                            </section>
+                            <section class="sglgif-project-modal-section sglgif-project-modal-section--details">
+                                <h4>Project Details</h4>
+                                <div class="sglgif-project-detail-grid">
+                                    <div class="sglgif-project-detail-card">
+                                        <span>Region</span>
+                                        <strong>{{ $row['region'] !== '' ? $row['region'] : '-' }}</strong>
+                                    </div>
+                                    <div class="sglgif-project-detail-card">
+                                        <span>Province</span>
+                                        <strong>{{ $row['province'] !== '' ? $row['province'] : '-' }}</strong>
+                                    </div>
+                                    <div class="sglgif-project-detail-card">
+                                        <span>LGU</span>
+                                        <strong>{{ $row['city_municipality'] !== '' ? $row['city_municipality'] : '-' }}</strong>
+                                    </div>
+                                    <div class="sglgif-project-detail-card">
+                                        <span>Implementation Level</span>
+                                        <strong>{{ $row['sglgif_level'] !== '' ? $row['sglgif_level'] : '-' }}</strong>
+                                    </div>
+                                    <div class="sglgif-project-detail-card">
+                                        <span>Project Type</span>
+                                        <strong>{{ $row['type_of_project'] !== '' ? $row['type_of_project'] : '-' }}</strong>
+                                    </div>
+                                    <div class="sglgif-project-detail-card">
+                                        <span>Category</span>
+                                        <strong>{{ $row['sub_type_of_project'] !== '' ? $row['sub_type_of_project'] : '-' }}</strong>
+                                    </div>
+                                </div>
+                            </section>
+                            <section class="sglgif-project-modal-section sglgif-project-modal-section--accomplishment">
+                                <h4>Accomplishment</h4>
+                                <div class="sglgif-project-progress-list">
+                                    @foreach($projectProgressMetrics as $metric)
+                                        @php
+                                            $metricValue = $metric['value'];
+                                            $metricPercent = $metricValue !== null ? max(0, min(100, (float) $metricValue)) : 0;
+                                        @endphp
+                                        <article class="sglgif-project-progress-card">
+                                            <div class="sglgif-project-progress-head">
+                                                <span>{{ $metric['label'] }}</span>
+                                                <strong>{{ $metricValue !== null ? number_format((float) $metricValue, 2) . '%' : '-' }}</strong>
+                                            </div>
+                                            <div class="sglgif-project-progress-track">
+                                                <div
+                                                    class="sglgif-project-progress-fill"
+                                                    @style([
+                                                        'width: ' . number_format($metricPercent, 2, '.', '') . '%',
+                                                        'background: linear-gradient(90deg, ' . $metric['color'] . ', color-mix(in srgb, ' . $metric['color'] . ' 58%, white))',
+                                                    ])
+                                                ></div>
+                                            </div>
+                                        </article>
+                                    @endforeach
+                                </div>
+                            </section>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -951,14 +1096,17 @@
         .sglgif-filter-actions {
             display: flex;
             align-items: end;
+            grid-column: 1 / -1;
             justify-content: flex-end;
             gap: 8px;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
         }
 
         .sglgif-action-btn {
             min-height: 38px;
             min-width: 148px;
+            width: auto;
+            flex: 0 0 auto;
             border-radius: 10px;
             color: #ffffff;
             text-decoration: none;
@@ -1034,78 +1182,13 @@
             margin-bottom: 18px;
         }
 
-        .sglgif-status-card-head > div:first-child {
+        .sglgif-status-card-copy {
             flex: 1 1 220px;
             min-width: 0;
         }
 
         .dashboard-status-row .sglgif-status-card-head {
             margin-bottom: 10px;
-        }
-
-        .sglgif-status-kicker {
-            display: inline-block;
-            margin-bottom: 8px;
-            padding: 5px 10px;
-            border-radius: 999px;
-            background: rgba(255, 255, 255, 0.58);
-            border: 1px solid rgba(255, 255, 255, 0.72);
-            color: #002C76;
-            font-size: 10px;
-            font-weight: 800;
-            letter-spacing: 0.12em;
-            text-transform: uppercase;
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
-        }
-
-        .dashboard-status-row .sglgif-status-kicker {
-            margin-bottom: 6px;
-            padding: 4px 9px;
-            font-size: 9px;
-        }
-
-        .sglgif-status-total-badge {
-            min-width: 92px;
-            padding: 12px 14px;
-            border-radius: 16px;
-            background: rgba(255, 255, 255, 0.50);
-            border: 1px solid rgba(255, 255, 255, 0.72);
-            box-shadow:
-                0 16px 28px rgba(15, 23, 42, 0.08),
-                inset 0 1px 0 rgba(255, 255, 255, 0.78);
-            text-align: right;
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-        }
-
-        .dashboard-status-row .sglgif-status-total-badge {
-            flex: 0 0 auto;
-            align-self: flex-start;
-            max-width: 100%;
-            min-width: 78px;
-            padding: 10px 12px;
-            border-radius: 14px;
-        }
-
-        .sglgif-status-total-badge span {
-            display: block;
-            color: #64748b;
-            font-size: 10px;
-            font-weight: 800;
-            letter-spacing: 0.12em;
-            text-transform: uppercase;
-        }
-
-        .sglgif-status-total-badge strong {
-            display: block;
-            margin-top: 6px;
-            color: #0f172a;
-            font-size: 24px;
-            line-height: 1;
-        }
-
-        .dashboard-status-row .sglgif-status-total-badge strong {
-            font-size: 21px;
         }
 
         .sglgif-financial-status-card {
@@ -1908,6 +1991,32 @@
             overflow-wrap: anywhere;
         }
 
+        /* Center and reduce font size for financial tiles to fit one line */
+        .sglgif-financial-summary {
+            text-align: center;
+        }
+
+        .sglgif-financial-summary .sglgif-financial-tile {
+            text-align: center;
+            display: inline-block;
+        }
+
+        .sglgif-financial-summary .sglgif-financial-tile strong {
+            font-size: 16px !important;
+            line-height: 1.2;
+            display: block;
+            margin-top: 8px;
+            word-break: break-word;
+            hyphens: auto;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 640px) {
+            .sglgif-financial-summary .sglgif-financial-tile strong {
+                font-size: 14px !important;
+            }
+        }
+
         .sglgif-status-footer i {
             font-size: 13px;
             color: var(--status-color);
@@ -1947,6 +2056,45 @@
         .dashboard-status-row .sglgif-table th,
         .dashboard-status-row .sglgif-table td {
             padding: 8px 7px;
+        }
+
+        .sglgif-project-row {
+            cursor: pointer;
+            transition: background-color 0.18s ease, transform 0.18s ease;
+        }
+
+        .sglgif-project-row:hover {
+            background: #f8fbff;
+        }
+
+        .sglgif-project-row:focus-visible {
+            outline: 2px solid #2563eb;
+            outline-offset: -2px;
+            background: #eff6ff;
+        }
+
+        .sglgif-project-row td:last-child {
+            position: relative;
+            padding-right: 34px;
+        }
+
+        .sglgif-project-row td:last-child::after {
+            content: '\f054';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            font-size: 11px;
+            transition: transform 0.18s ease, color 0.18s ease;
+        }
+
+        .sglgif-project-row:hover td:last-child::after,
+        .sglgif-project-row:focus-visible td:last-child::after {
+            color: #2563eb;
+            transform: translateY(-50%) translateX(2px);
         }
 
         .sglgif-table th {
@@ -2103,6 +2251,212 @@
             font-size: 13px;
         }
 
+        .sglgif-project-modal-dialog {
+            width: min(760px, calc(100vw - 40px));
+            background: #ffffff;
+        }
+
+        .sglgif-project-modal-header {
+            align-items: flex-start;
+            gap: 10px;
+            padding: 12px 14px;
+            background: #ffffff;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .sglgif-project-modal-head-copy {
+            flex: 1 1 auto;
+            min-width: 0;
+        }
+
+        .sglgif-project-status-badge {
+            display: inline-flex;
+            align-items: center;
+            min-height: 22px;
+            padding: 4px 9px;
+            border-radius: 999px;
+            border: 1px solid #cbd5e1;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 0.03em;
+        }
+
+        .sglgif-project-modal-header h3 {
+            margin: 8px 0 5px;
+            color: #0f172a;
+            font-size: 13px;
+            line-height: 1.35;
+            max-width: 100%;
+        }
+
+        .sglgif-project-modal-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px 8px;
+            margin: 0;
+            color: #64748b;
+            font-size: 10px;
+            line-height: 1.45;
+        }
+
+        .sglgif-project-modal-meta span {
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .sglgif-project-modal-header .sglgif-modal-close {
+            flex: 0 0 auto;
+            width: 26px;
+            height: 26px;
+            background: #ffffff;
+            color: #475569;
+            border-color: #cbd5e1;
+        }
+
+        .sglgif-project-modal-header .sglgif-modal-close:hover {
+            background: #f8fafc;
+            color: #0f172a;
+            border-color: #94a3b8;
+        }
+
+        .sglgif-project-modal-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.08fr) minmax(240px, 0.92fr);
+            gap: 8px;
+            padding: 10px 14px 14px;
+            align-items: start;
+        }
+
+        .sglgif-project-modal-section {
+            padding: 10px;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            background: #ffffff;
+        }
+
+        .sglgif-project-modal-section--summary,
+        .sglgif-project-modal-section--details {
+            grid-column: 1;
+        }
+
+        .sglgif-project-modal-section--accomplishment {
+            grid-column: 2;
+            grid-row: 1 / span 2;
+        }
+
+        .sglgif-project-modal-section h4 {
+            margin: 0 0 8px;
+            color: #0f172a;
+            font-size: 11px;
+            font-weight: 800;
+        }
+
+        .sglgif-project-summary-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        .sglgif-project-summary-card {
+            padding: 9px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            background: #f8fafc;
+        }
+
+        .sglgif-project-summary-card span {
+            display: block;
+            margin-bottom: 4px;
+            color: #64748b;
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .sglgif-project-summary-card strong {
+            color: #0f172a;
+            font-size: 11px;
+            font-weight: 800;
+            line-height: 1.35;
+            overflow-wrap: anywhere;
+        }
+
+        .sglgif-project-detail-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        .sglgif-project-detail-card {
+            padding: 9px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            background: #ffffff;
+        }
+
+        .sglgif-project-detail-card span {
+            display: block;
+            margin-bottom: 4px;
+            color: #64748b;
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .sglgif-project-detail-card strong {
+            color: #0f172a;
+            font-size: 11px;
+            font-weight: 700;
+            line-height: 1.5;
+            overflow-wrap: anywhere;
+        }
+
+        .sglgif-project-progress-list {
+            display: grid;
+            gap: 8px;
+        }
+
+        .sglgif-project-progress-card {
+            padding: 8px 9px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            background: #ffffff;
+        }
+
+        .sglgif-project-progress-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+
+        .sglgif-project-progress-head span {
+            color: #475569;
+            font-size: 10px;
+            font-weight: 700;
+        }
+
+        .sglgif-project-progress-head strong {
+            color: #0f172a;
+            font-size: 10px;
+            font-weight: 800;
+        }
+
+        .sglgif-project-progress-track {
+            height: 5px;
+            border-radius: 999px;
+            background: #e2e8f0;
+            overflow: hidden;
+        }
+
+        .sglgif-project-progress-fill {
+            height: 100%;
+            border-radius: inherit;
+            min-width: 0;
+        }
+
         @media (prefers-reduced-motion: reduce) {
             .sglgif-mix-donut-segment {
                 animation: none;
@@ -2182,6 +2536,18 @@
                 width: 116px;
                 height: 116px;
             }
+
+            .sglgif-project-modal-header {
+                flex-wrap: wrap;
+            }
+
+            .sglgif-project-summary-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .sglgif-project-detail-grid {
+                grid-template-columns: 1fr;
+            }
         }
 
         @media (max-width: 820px) {
@@ -2204,9 +2570,10 @@
                 align-items: flex-start;
             }
 
-            .sglgif-status-total-badge {
-                align-self: flex-start;
-                text-align: left;
+            .sglgif-status-card-copy {
+                flex: 0 0 auto;
+                width: 100%;
+                min-width: 0;
             }
 
             .dashboard-status-row .sglgif-status-grid,
@@ -2244,6 +2611,18 @@
             .sglgif-modal-dialog {
                 width: calc(100vw - 28px);
                 max-height: calc(100vh - 28px);
+            }
+
+            .sglgif-project-modal-header {
+                padding: 10px 12px;
+            }
+
+            .sglgif-project-modal-grid {
+                padding: 8px 12px 12px;
+            }
+
+            .sglgif-project-modal-header h3 {
+                font-size: 12px;
             }
         }
 
@@ -2306,8 +2685,12 @@
                 line-height: 1.4;
             }
 
-            .sglgif-status-total-badge {
-                width: 100%;
+            .dashboard-status-row .sglgif-status-card-head {
+                margin-bottom: 6px;
+            }
+
+            .dashboard-status-row .sglgif-status-card-copy p {
+                margin-top: 3px;
             }
 
             .dashboard-status-row .sglgif-status-tile {
@@ -2384,13 +2767,67 @@
 
             .sglgif-modal-subtitle,
             .sglgif-modal-table,
-            .sglgif-modal-empty-state {
+            .sglgif-modal-empty-state,
+            .sglgif-project-detail-card strong {
                 font-size: 11px;
             }
 
             .sglgif-modal-table thead th,
             .sglgif-modal-table tbody td {
                 padding: 8px 10px;
+            }
+
+            .sglgif-project-modal-header {
+                padding: 9px 10px;
+                gap: 8px;
+            }
+
+            .sglgif-project-modal-header h3 {
+                font-size: 11px;
+            }
+
+            .sglgif-project-modal-meta {
+                font-size: 9px;
+                gap: 3px 6px;
+            }
+
+            .sglgif-project-status-badge {
+                min-height: 20px;
+                padding: 4px 8px;
+                font-size: 9px;
+            }
+
+            .sglgif-project-summary-card strong {
+                font-size: 10px;
+            }
+
+            .sglgif-project-summary-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .sglgif-project-modal-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .sglgif-project-modal-section--summary,
+            .sglgif-project-modal-section--details,
+            .sglgif-project-modal-section--accomplishment {
+                grid-column: auto;
+                grid-row: auto;
+            }
+
+            .sglgif-project-modal-grid {
+                padding: 8px 10px 10px;
+            }
+
+            .sglgif-project-modal-section {
+                padding: 8px;
+            }
+
+            .sglgif-project-progress-head {
+                align-items: flex-start;
+                flex-direction: column;
+                gap: 4px;
             }
         }
     </style>
@@ -2605,7 +3042,11 @@
                 animateProvinceBars(defaultPanel);
             });
 
-            document.querySelectorAll('.sglgif-bar-trigger[data-sglgif-modal-target]').forEach((trigger) => {
+            document.querySelectorAll('[data-sg-bar-container]').forEach((barContainer) => {
+                animateProvinceBars(barContainer);
+            });
+
+            document.querySelectorAll('[data-sglgif-modal-target]').forEach((trigger) => {
                 const modalTargetId = trigger.getAttribute('data-sglgif-modal-target');
                 const modalElement = modalTargetId ? document.getElementById(modalTargetId) : null;
                 if (!modalElement) {
