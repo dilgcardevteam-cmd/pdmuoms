@@ -30,6 +30,24 @@ class RolePermissionRegistry
                         'label' => 'Locally Funded Projects',
                         'description' => 'View and manage locally funded project records, including profile details and monitoring updates within the role scope.',
                     ],
+                    [
+                        'aspect' => 'rlip_lime_projects',
+                        'label' => 'RLIP / LIME-20% Development Fund',
+                        'description' => 'Open the RLIP / LIME-20% project monitoring pages and review scoped project dashboards and tables.',
+                        'actions' => ['view'],
+                    ],
+                    [
+                        'aspect' => 'project_at_risk_projects',
+                        'label' => 'Project At Risk',
+                        'description' => 'Open the project-at-risk monitoring page and review scoped project risk records and exports.',
+                        'actions' => ['view'],
+                    ],
+                    [
+                        'aspect' => 'sglgif_portal',
+                        'label' => 'SGLGIF Portal',
+                        'description' => 'Open the SGLGIF dashboard and table views for scoped project performance and accomplishment tracking.',
+                        'actions' => ['view'],
+                    ],
                 ],
             ],
             [
@@ -74,17 +92,78 @@ class RolePermissionRegistry
                     ],
                 ],
             ],
+            [
+                'module' => 'Data Management',
+                'description' => 'Upload and manage source datasets used by the project monitoring and reportorial pages.',
+                'items' => [
+                    [
+                        'aspect' => 'subaybayan_data_uploads',
+                        'label' => 'Upload LFP Data',
+                        'description' => 'View the SubayBAYAN upload manager, import new files, load approved datasets, and remove stale imports.',
+                    ],
+                    [
+                        'aspect' => 'rlip_lime_data_uploads',
+                        'label' => 'Upload RLIP / LIME-20 Data',
+                        'description' => 'View the RLIP / LIME upload manager, import new files, load refreshed datasets, and delete old imports.',
+                    ],
+                    [
+                        'aspect' => 'project_at_risk_data_uploads',
+                        'label' => 'Upload Project-at-Risk Data',
+                        'description' => 'View the project-at-risk upload manager, import new files, load refreshed datasets, and delete old imports.',
+                    ],
+                    [
+                        'aspect' => 'sglgif_data_uploads',
+                        'label' => 'Upload SGLGIF Data',
+                        'description' => 'View the SGLGIF upload manager, import new files, load refreshed datasets, and delete old imports.',
+                    ],
+                ],
+            ],
         ];
+    }
+
+    public static function actionsForItem(array $item): array
+    {
+        $defaultActions = array_keys(self::actionOptions());
+
+        $actions = collect($item['actions'] ?? $defaultActions)
+            ->map(fn ($action) => strtolower(trim((string) $action)))
+            ->filter(fn (string $action) => array_key_exists($action, self::actionOptions()))
+            ->unique()
+            ->values()
+            ->all();
+
+        return $actions === [] ? $defaultActions : $actions;
+    }
+
+    public static function actionsForAspect(string $aspect): array
+    {
+        $normalizedAspect = strtolower(trim($aspect));
+
+        foreach (self::modules() as $module) {
+            foreach ($module['items'] ?? [] as $item) {
+                if (strtolower(trim((string) ($item['aspect'] ?? ''))) === $normalizedAspect) {
+                    return self::actionsForItem($item);
+                }
+            }
+        }
+
+        return array_keys(self::actionOptions());
     }
 
     public static function validPermissionKeys(): array
     {
         return collect(self::modules())
             ->flatMap(function (array $module) {
-                return collect($module['items'] ?? [])->pluck('aspect');
+                return collect($module['items'] ?? []);
             })
-            ->flatMap(function (string $aspect) {
-                return collect(array_keys(self::actionOptions()))
+            ->flatMap(function (array $item) {
+                $aspect = strtolower(trim((string) ($item['aspect'] ?? '')));
+
+                if ($aspect === '') {
+                    return [];
+                }
+
+                return collect(self::actionsForItem($item))
                     ->map(fn (string $action) => $aspect . '.' . $action);
             })
             ->unique()
@@ -113,6 +192,13 @@ class RolePermissionRegistry
 
     public static function defaultPermissionsByRole(): array
     {
+        $projectMonitoringPermissions = [
+            'locally_funded_projects.view',
+            'rlip_lime_projects.view',
+            'project_at_risk_projects.view',
+            'sglgif_portal.view',
+        ];
+
         $reportorialPermissions = [
             'fund_utilization_reports.view',
             'fund_utilization_reports.add',
@@ -136,20 +222,36 @@ class RolePermissionRegistry
             'pd_no_pbbm_monthly_reports.delete',
         ];
 
+        $dataManagementPermissions = [
+            'subaybayan_data_uploads.view',
+            'subaybayan_data_uploads.add',
+            'subaybayan_data_uploads.update',
+            'subaybayan_data_uploads.delete',
+            'rlip_lime_data_uploads.view',
+            'rlip_lime_data_uploads.add',
+            'rlip_lime_data_uploads.update',
+            'rlip_lime_data_uploads.delete',
+            'project_at_risk_data_uploads.view',
+            'project_at_risk_data_uploads.add',
+            'project_at_risk_data_uploads.update',
+            'project_at_risk_data_uploads.delete',
+            'sglgif_data_uploads.view',
+            'sglgif_data_uploads.add',
+            'sglgif_data_uploads.update',
+            'sglgif_data_uploads.delete',
+        ];
+
         return [
             User::ROLE_SUPERADMIN => ['*'],
-            User::ROLE_REGIONAL => array_merge($reportorialPermissions, [
-                'locally_funded_projects.view',
+            User::ROLE_REGIONAL => array_merge($reportorialPermissions, $projectMonitoringPermissions, $dataManagementPermissions, [
                 'locally_funded_projects.update',
             ]),
-            User::ROLE_PROVINCIAL => array_merge($reportorialPermissions, [
-                'locally_funded_projects.view',
+            User::ROLE_PROVINCIAL => array_merge($reportorialPermissions, $projectMonitoringPermissions, [
                 'locally_funded_projects.update',
                 'pre_implementation_documents.view',
                 'pre_implementation_documents.add',
             ]),
-            User::ROLE_LGU => array_merge($reportorialPermissions, [
-                'locally_funded_projects.view',
+            User::ROLE_LGU => array_merge($reportorialPermissions, $projectMonitoringPermissions, [
                 'pre_implementation_documents.view',
                 'pre_implementation_documents.add',
             ]),

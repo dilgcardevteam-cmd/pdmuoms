@@ -18,7 +18,18 @@ class LocallyFundedProjectController extends Controller
     public function __construct()
     {
         $this->middleware('auth');
-        $this->middleware('crud_permission:locally_funded_projects,view')->only(['index', 'showSubaybayan', 'show']);
+        $this->middleware(function ($request, $next) {
+            $aspect = $request->routeIs('projects.sglgif.table')
+                ? 'sglgif_portal'
+                : 'locally_funded_projects';
+
+            if ($request->user() && $request->user()->hasCrudPermission($aspect, 'view')) {
+                return $next($request);
+            }
+
+            return response()->view('errors.restricted', [], 403);
+        })->only(['index']);
+        $this->middleware('crud_permission:locally_funded_projects,view')->only(['showSubaybayan', 'show']);
         $this->middleware('crud_permission:locally_funded_projects,add')->only(['create', 'store']);
         $this->middleware('crud_permission:locally_funded_projects,update')->only(['edit', 'update']);
         $this->middleware('crud_permission:locally_funded_projects,delete')->only(['destroy']);

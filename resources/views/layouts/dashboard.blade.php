@@ -1367,59 +1367,78 @@
             </li>
             @php
                 $canViewLocallyFundedProjects = Auth::user()->hasCrudPermission('locally_funded_projects', 'view');
+                $canViewRlipLimeProjects = Auth::user()->hasCrudPermission('rlip_lime_projects', 'view');
+                $canViewProjectAtRiskProjects = Auth::user()->hasCrudPermission('project_at_risk_projects', 'view');
+                $canViewSglgifPortal = Auth::user()->hasCrudPermission('sglgif_portal', 'view');
                 $canViewPreImplementationDocuments = Auth::user()->hasCrudPermission('pre_implementation_documents', 'view');
                 $canViewRbisAnnualCertification = Auth::user()->hasCrudPermission('rbis_annual_certification', 'view');
                 $canViewPdNoPbbmMonthlyReports = Auth::user()->hasCrudPermission('pd_no_pbbm_monthly_reports', 'view');
                 $canViewFundUtilizationReports = Auth::user()->hasCrudPermission('fund_utilization_reports', 'view');
                 $canViewLpmcReports = Auth::user()->hasCrudPermission('local_project_monitoring_committee', 'view');
                 $canViewRoadMaintenanceReports = Auth::user()->hasCrudPermission('road_maintenance_status_reports', 'view');
+                $canViewSubaybayanUploads = Auth::user()->hasCrudPermission('subaybayan_data_uploads', 'view');
+                $canViewRlipLimeUploads = Auth::user()->hasCrudPermission('rlip_lime_data_uploads', 'view');
+                $canViewProjectAtRiskUploads = Auth::user()->hasCrudPermission('project_at_risk_data_uploads', 'view');
+                $canViewSglgifUploads = Auth::user()->hasCrudPermission('sglgif_data_uploads', 'view');
+                $hasAnyProjectMonitoringAccess = $canViewLocallyFundedProjects
+                    || $canViewRlipLimeProjects
+                    || $canViewProjectAtRiskProjects
+                    || $canViewSglgifPortal;
                 $hasAnyReportorialAccess = $canViewRbisAnnualCertification
                     || $canViewPdNoPbbmMonthlyReports
                     || $canViewFundUtilizationReports
                     || $canViewLpmcReports
                     || $canViewRoadMaintenanceReports;
             @endphp
-            <li>
-                @php
-                    $projectsMenuActive = (
-                        request()->routeIs('projects.*')
-                        && !$dashboardTabRouteActive
-                    ) || request()->routeIs('projects.at-risk');
-                @endphp
-                <a href="#" class="@if($projectsMenuActive) active @endif submenu-toggle" onclick="toggleSubmenu(event, 'projectsMenu')">
-                    <i class="fas fa-project-diagram"></i>
-                    <span>Project Monitoring</span>
-                    <i class="fas fa-chevron-down submenu-chevron" style="margin-left: auto; font-size: 12px;"></i>
-                </a>
-                <ul id="projectsMenu" class="submenu" style="display: {{ $projectsMenuActive ? 'block' : 'none' }};">
-                    @if($canViewLocallyFundedProjects)
-                        <li>
-                            <a href="{{ route('projects.locally-funded') }}" class="@if(Route::currentRouteName() == 'projects.locally-funded') active @endif">
-                                <i class="fas fa-hand-holding-usd"></i>
-                                <span>Locally Funded Projects</span>
-                            </a>
-                        </li>
-                    @endif
-                    <li>
-                        <a href="{{ route('projects.rlip-lime') }}" class="@if(request()->routeIs('projects.rlip-lime*') && !$dashboardTabRouteActive) active @endif">
-                            <i class="fas fa-leaf"></i>
-                            <span>RLIP/LIME-20% Development Fund</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ url('/project-at-risk') }}" class="@if(Route::currentRouteName() == 'projects.at-risk') active @endif">
-                            <i class="fas fa-exclamation-triangle"></i>
-                            <span>Project At Risk</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ route('projects.sglgif.table') }}" class="@if(request()->routeIs('projects.sglgif.table')) active @endif">
-                            <i class="fas fa-award"></i>
-                            <span>SGLGIF Portal</span>
-                        </a>
-                    </li>
-                </ul>
-            </li>
+            @if($hasAnyProjectMonitoringAccess)
+                <li>
+                    @php
+                        $projectsMenuActive = (
+                            request()->routeIs('projects.*')
+                            && !$dashboardTabRouteActive
+                        ) || request()->routeIs('projects.at-risk');
+                    @endphp
+                    <a href="#" class="@if($projectsMenuActive) active @endif submenu-toggle" onclick="toggleSubmenu(event, 'projectsMenu')">
+                        <i class="fas fa-project-diagram"></i>
+                        <span>Project Monitoring</span>
+                        <i class="fas fa-chevron-down submenu-chevron" style="margin-left: auto; font-size: 12px;"></i>
+                    </a>
+                    <ul id="projectsMenu" class="submenu" style="display: {{ $projectsMenuActive ? 'block' : 'none' }};">
+                        @if($canViewLocallyFundedProjects)
+                            <li>
+                                <a href="{{ route('projects.locally-funded') }}" class="@if(Route::currentRouteName() == 'projects.locally-funded') active @endif">
+                                    <i class="fas fa-hand-holding-usd"></i>
+                                    <span>Locally Funded Projects</span>
+                                </a>
+                            </li>
+                        @endif
+                        @if($canViewRlipLimeProjects)
+                            <li>
+                                <a href="{{ route('projects.rlip-lime') }}" class="@if(request()->routeIs('projects.rlip-lime*') && !$dashboardTabRouteActive) active @endif">
+                                    <i class="fas fa-leaf"></i>
+                                    <span>RLIP/LIME-20% Development Fund</span>
+                                </a>
+                            </li>
+                        @endif
+                        @if($canViewProjectAtRiskProjects)
+                            <li>
+                                <a href="{{ url('/project-at-risk') }}" class="@if(Route::currentRouteName() == 'projects.at-risk') active @endif">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <span>Project At Risk</span>
+                                </a>
+                            </li>
+                        @endif
+                        @if($canViewSglgifPortal)
+                            <li>
+                                <a href="{{ route('projects.sglgif.table') }}" class="@if(request()->routeIs('projects.sglgif.table')) active @endif">
+                                    <i class="fas fa-award"></i>
+                                    <span>SGLGIF Portal</span>
+                                </a>
+                            </li>
+                        @endif
+                    </ul>
+                </li>
+            @endif
             @if($hasAnyReportorialAccess)
             <li>
                 @php
@@ -1522,8 +1541,14 @@
             @php
                 $isRegionalDilg = strtoupper(trim((string) (Auth::user()->agency ?? ''))) === 'DILG'
                     && strtolower(trim((string) (Auth::user()->province ?? ''))) === 'regional office';
+                $hasAnySystemManagementAccess = $isRegionalDilg && (
+                    $canViewSubaybayanUploads
+                    || $canViewRlipLimeUploads
+                    || $canViewProjectAtRiskUploads
+                    || $canViewSglgifUploads
+                );
             @endphp
-            @if($isRegionalDilg)
+            @if($hasAnySystemManagementAccess)
                 <li>
                     @php
                         $systemManagementActive = request()->routeIs('system-management.*');
@@ -1534,30 +1559,38 @@
                         <i class="fas fa-chevron-down submenu-chevron" style="margin-left: auto; font-size: 12px;"></i>
                     </a>
                     <ul id="systemManagementMenu" class="submenu" style="display: {{ $systemManagementActive ? 'block' : 'none' }};">
-                        <li>
-                            <a href="{{ route('system-management.upload-subaybayan') }}" class="@if(Route::currentRouteName() == 'system-management.upload-subaybayan') active @endif">
-                                <i class="fas fa-upload"></i>
-                                <span>Upload LFP Data</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="{{ route('system-management.upload-rlip-lime') }}" class="@if(Route::currentRouteName() == 'system-management.upload-rlip-lime') active @endif">
-                                <i class="fas fa-file-import"></i>
-                                <span>Upload RLIP/LIME-20 Data</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="{{ route('system-management.upload-project-at-risk') }}" class="@if(request()->routeIs('system-management.upload-project-at-risk*')) active @endif">
-                                <i class="fas fa-exclamation-triangle"></i>
-                                <span>Upload Project-at-Risk</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="{{ route('system-management.upload-sglgif') }}" class="@if(Route::currentRouteName() == 'system-management.upload-sglgif') active @endif">
-                                <i class="fas fa-award"></i>
-                                <span>Upload SGLGIF Data</span>
-                            </a>
-                        </li>
+                        @if($canViewSubaybayanUploads)
+                            <li>
+                                <a href="{{ route('system-management.upload-subaybayan') }}" class="@if(Route::currentRouteName() == 'system-management.upload-subaybayan') active @endif">
+                                    <i class="fas fa-upload"></i>
+                                    <span>Upload LFP Data</span>
+                                </a>
+                            </li>
+                        @endif
+                        @if($canViewRlipLimeUploads)
+                            <li>
+                                <a href="{{ route('system-management.upload-rlip-lime') }}" class="@if(Route::currentRouteName() == 'system-management.upload-rlip-lime') active @endif">
+                                    <i class="fas fa-file-import"></i>
+                                    <span>Upload RLIP/LIME-20 Data</span>
+                                </a>
+                            </li>
+                        @endif
+                        @if($canViewProjectAtRiskUploads)
+                            <li>
+                                <a href="{{ route('system-management.upload-project-at-risk') }}" class="@if(request()->routeIs('system-management.upload-project-at-risk*')) active @endif">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <span>Upload Project-at-Risk</span>
+                                </a>
+                            </li>
+                        @endif
+                        @if($canViewSglgifUploads)
+                            <li>
+                                <a href="{{ route('system-management.upload-sglgif') }}" class="@if(Route::currentRouteName() == 'system-management.upload-sglgif') active @endif">
+                                    <i class="fas fa-award"></i>
+                                    <span>Upload SGLGIF Data</span>
+                                </a>
+                            </li>
+                        @endif
                     </ul>
                 </li>
             @endif
@@ -2474,5 +2507,160 @@
     </script>
     
     @yield('scripts')
+
+    <script>
+        (function initializePersistentTabState() {
+            const storagePrefix = 'pdmuoms.tab-state';
+            const tablistSelector = '[role="tablist"]';
+            const tabSelector = '[role="tab"]';
+
+            let storage = null;
+
+            try {
+                storage = window.sessionStorage;
+            } catch (error) {
+                storage = null;
+            }
+
+            if (!storage) {
+                return;
+            }
+
+            function normalizeValue(value) {
+                return String(value || '')
+                    .trim()
+                    .replace(/\s+/g, ' ');
+            }
+
+            function getPageKey() {
+                return window.location.pathname + window.location.search;
+            }
+
+            function getTablists() {
+                return Array.from(document.querySelectorAll(tablistSelector));
+            }
+
+            function getTabs(tablist) {
+                return Array.from(tablist.querySelectorAll(tabSelector)).filter(function (tab) {
+                    return tab.closest(tablistSelector) === tablist;
+                });
+            }
+
+            function getTablistKey(tablist, index) {
+                return normalizeValue(
+                    tablist.id
+                    || tablist.dataset.tablistKey
+                    || tablist.getAttribute('aria-label')
+                    || ('tablist-' + index)
+                );
+            }
+
+            function getTabKey(tab, index) {
+                return normalizeValue(
+                    tab.id
+                    || tab.getAttribute('aria-controls')
+                    || tab.dataset.target
+                    || tab.dataset.projectTabTarget
+                    || tab.dataset.userTabTarget
+                    || tab.dataset.utilityTabTarget
+                    || tab.dataset.userTab
+                    || tab.dataset.userAccessTab
+                    || tab.dataset.roleConfigTab
+                    || ('tab-' + index + ':' + normalizeValue(tab.textContent))
+                );
+            }
+
+            function getStorageKey(tablist, tablistIndex) {
+                return [
+                    storagePrefix,
+                    getPageKey(),
+                    getTablistKey(tablist, tablistIndex),
+                ].join(':');
+            }
+
+            function isTabActive(tab) {
+                return tab.getAttribute('aria-selected') === 'true' || tab.classList.contains('is-active');
+            }
+
+            function persistActiveTabs() {
+                getTablists().forEach(function (tablist, tablistIndex) {
+                    const tabs = getTabs(tablist);
+                    const activeTab = tabs.find(isTabActive);
+
+                    if (!activeTab) {
+                        return;
+                    }
+
+                    const activeTabIndex = tabs.indexOf(activeTab);
+                    storage.setItem(getStorageKey(tablist, tablistIndex), getTabKey(activeTab, activeTabIndex));
+                });
+            }
+
+            function restoreActiveTabs() {
+                getTablists().forEach(function (tablist, tablistIndex) {
+                    const storedTabKey = storage.getItem(getStorageKey(tablist, tablistIndex));
+
+                    if (!storedTabKey) {
+                        return;
+                    }
+
+                    const tabs = getTabs(tablist);
+                    const targetTab = tabs.find(function (tab, tabIndex) {
+                        return getTabKey(tab, tabIndex) === storedTabKey;
+                    });
+
+                    if (!targetTab || isTabActive(targetTab)) {
+                        return;
+                    }
+
+                    targetTab.dispatchEvent(new MouseEvent('click', {
+                        bubbles: true,
+                        cancelable: true,
+                    }));
+                });
+            }
+
+            document.addEventListener('click', function (event) {
+                const tab = event.target.closest(tabSelector);
+
+                if (!tab) {
+                    return;
+                }
+
+                const tablist = tab.closest(tablistSelector);
+
+                if (!tablist) {
+                    return;
+                }
+
+                const tablists = getTablists();
+                const tablistIndex = tablists.indexOf(tablist);
+                const tabs = getTabs(tablist);
+                const tabIndex = tabs.indexOf(tab);
+
+                if (tablistIndex === -1 || tabIndex === -1) {
+                    return;
+                }
+
+                storage.setItem(getStorageKey(tablist, tablistIndex), getTabKey(tab, tabIndex));
+            }, true);
+
+            window.addEventListener('beforeunload', persistActiveTabs);
+            window.addEventListener('pagehide', persistActiveTabs);
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', function () {
+                    window.requestAnimationFrame(function () {
+                        window.requestAnimationFrame(restoreActiveTabs);
+                    });
+                }, { once: true });
+                return;
+            }
+
+            window.requestAnimationFrame(function () {
+                window.requestAnimationFrame(restoreActiveTabs);
+            });
+        })();
+    </script>
 </body>
 </html>

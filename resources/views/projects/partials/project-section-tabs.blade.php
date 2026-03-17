@@ -1,5 +1,7 @@
 @php
     $activeTab = $activeTab ?? 'locally-funded';
+    $canViewRlipLimeProjects = Auth::user()->hasCrudPermission('rlip_lime_projects', 'view');
+    $canViewSglgifPortal = Auth::user()->hasCrudPermission('sglgif_portal', 'view');
     $projectTabs = [
         [
             'key' => 'locally-funded',
@@ -12,6 +14,7 @@
             'label' => 'RLIP / LIME 20% Development Fund',
             'icon' => 'fa-road',
             'url' => route('projects.rlip-lime.dashboard'),
+            'visible' => $canViewRlipLimeProjects,
         ],
         [
             'key' => 'rssa',
@@ -24,6 +27,7 @@
             'label' => 'SGLG Incentive Fund',
             'icon' => 'fa-award',
             'url' => route('projects.sglgif'),
+            'visible' => $canViewSglgifPortal,
         ],
     ];
 @endphp
@@ -95,6 +99,7 @@
 
 <nav class="project-section-tabs" aria-label="Project pages">
     @foreach ($projectTabs as $tab)
+        @continue(array_key_exists('visible', $tab) && !$tab['visible'])
         <a
             href="{{ $tab['url'] }}"
             class="project-section-tab{{ $activeTab === $tab['key'] ? ' is-active' : '' }}"

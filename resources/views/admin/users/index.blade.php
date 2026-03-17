@@ -258,8 +258,8 @@
                                         </span>
                                     </td>
                                     <td>
-                                        <span class="access-state-badge access-state-badge--role">
-                                            {{ $user->isSuperAdmin() ? 'Full access by role' : 'Managed from Role Configuration' }}
+                                        <span class="access-state-badge {{ $user->hasCustomCrudPermissions() ? 'access-state-badge--custom' : ($user->isSuperAdmin() ? 'access-state-badge--all' : 'access-state-badge--role') }}">
+                                            {{ $user->hasCustomCrudPermissions() ? 'Custom user override' : ($user->isSuperAdmin() ? 'Full access by role' : 'Managed from Role Configuration') }}
                                         </span>
                                     </td>
                                     <td style="text-align: center;">
@@ -281,7 +281,11 @@
                                         <div class="access-grant-detail">
                                             <div class="access-grant-note" style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
                                                 <span>
-                                                    Access is now managed by role configuration. Update the <strong>{{ $user->roleLabel() }}</strong> role on the Role Configuration page to affect this user.
+                                                    @if($user->hasCustomCrudPermissions())
+                                                        This user currently uses a custom permission override on top of the <strong>{{ $user->roleLabel() }}</strong> role. Edit the user profile to change or remove the override.
+                                                    @else
+                                                        Access is managed by role configuration. Update the <strong>{{ $user->roleLabel() }}</strong> role on the Role Configuration page to affect this user.
+                                                    @endif
                                                 </span>
                                                 @if(!$user->isSuperAdmin())
                                                     <a href="{{ route('utilities.role-configuration.index', ['role' => $user->role]) }}" style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; background-color: #002C76; color: white; border-radius: 8px; text-decoration: none; font-size: 12px; font-weight: 700;">
@@ -309,6 +313,9 @@
                                                                 $rowspan = count($items);
                                                             @endphp
                                                             @foreach($items as $itemIndex => $item)
+                                                                @php
+                                                                    $availableActions = \App\Support\RolePermissionRegistry::actionsForItem($item);
+                                                                @endphp
                                                                 <tr>
                                                                     @if($itemIndex === 0)
                                                                         <td rowspan="{{ $rowspan }}" class="crud-permission-module-cell">
@@ -319,16 +326,22 @@
                                                                     <td class="crud-permission-submodule-cell">{{ $item['label'] }}</td>
                                                                     <td class="crud-permission-description-cell">{{ $item['description'] }}</td>
                                                                     @foreach($crudActionOptions as $actionKey => $actionLabel)
-                                                                        <td class="crud-permission-check-cell">
-                                                                            <label class="crud-check-item crud-check-item--default">
-                                                                                <input
-                                                                                    type="checkbox"
-                                                                                    @checked($user->hasCrudPermission($item['aspect'], $actionKey))
-                                                                                    disabled
-                                                                                >
-                                                                                <span>{{ $user->isSuperAdmin() ? 'Full access' : 'Included in role' }}</span>
-                                                                            </label>
-                                                                        </td>
+                                                                        @if(in_array($actionKey, $availableActions, true))
+                                                                            <td class="crud-permission-check-cell">
+                                                                                <label class="crud-check-item crud-check-item--default">
+                                                                                    <input
+                                                                                        type="checkbox"
+                                                                                        @checked($user->hasCrudPermission($item['aspect'], $actionKey))
+                                                                                        disabled
+                                                                                    >
+                                                                                    <span>{{ $user->hasCustomCrudPermissions() ? 'User override' : ($user->isSuperAdmin() ? 'Full access' : 'Included in role') }}</span>
+                                                                                </label>
+                                                                            </td>
+                                                                        @else
+                                                                            <td class="crud-permission-check-cell crud-permission-check-cell--na">
+                                                                                <span class="crud-permission-na">N/A</span>
+                                                                            </td>
+                                                                        @endif
                                                                     @endforeach
                                                                 </tr>
                                                             @endforeach
@@ -789,6 +802,17 @@
         .crud-permission-check-cell {
             min-width: 110px;
             text-align: center;
+        }
+
+        .crud-permission-check-cell--na {
+            color: #94a3b8;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .crud-permission-na {
+            display: inline-block;
+            color: #94a3b8;
         }
 
         table tbody tr:hover {

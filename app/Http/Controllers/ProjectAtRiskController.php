@@ -37,6 +37,16 @@ class ProjectAtRiskController extends Controller
         'Risk Level as to Aging',
     ];
 
+    public function __construct()
+    {
+        $this->middleware('auth');
+        $this->middleware('crud_permission:project_at_risk_projects,view')->only(['index', 'export']);
+        $this->middleware('crud_permission:project_at_risk_data_uploads,view')->only(['uploadManager', 'downloadTemplate', 'downloadImport']);
+        $this->middleware('crud_permission:project_at_risk_data_uploads,add')->only(['import']);
+        $this->middleware('crud_permission:project_at_risk_data_uploads,update')->only(['loadImport']);
+        $this->middleware('crud_permission:project_at_risk_data_uploads,delete')->only(['deleteImport']);
+    }
+
     public function index(Request $request)
     {
         $filters = [

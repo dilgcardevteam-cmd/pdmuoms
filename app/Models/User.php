@@ -307,13 +307,42 @@ class User extends Authenticatable implements MustVerifyEmail
             return ['*'];
         }
 
+        if ($access === self::ACCESS_SCOPE_NONE || $access === '') {
+            return [];
+        }
+
         if (!str_starts_with($access, self::ACCESS_PERMISSION_PREFIX)) {
             return [];
         }
 
         $permissions = substr($access, strlen(self::ACCESS_PERMISSION_PREFIX));
 
-        return array_values(array_filter(array_map('trim', explode(',', $permissions))));
+        return RolePermissionRegistry::normalizePermissions(
+            array_values(array_filter(array_map('trim', explode(',', $permissions))))
+        );
+    }
+
+    public function effectiveCrudPermissions(): array
+    {
+        return $this->usesScopedCrudAccess()
+            ? $this->grantedCrudPermissions()
+            : $this->defaultCrudPermissions();
+    }
+
+    public function effectiveConcreteCrudPermissions(): array
+    {
+        $permissions = $this->effectiveCrudPermissions();
+
+        if (in_array('*', $permissions, true)) {
+            return RolePermissionRegistry::validPermissionKeys();
+        }
+
+        return RolePermissionRegistry::normalizePermissions($permissions);
+    }
+
+    public function hasCustomCrudPermissions(): bool
+    {
+        return $this->usesScopedCrudAccess();
     }
 
     public function permissionCandidateKeys(string $aspect, string $action): array
@@ -348,19 +377,29 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function hasExplicitCrudPermission(string $aspect, string $action): bool
     {
-        return false;
+        if (!$this->usesScopedCrudAccess()) {
+            return false;
+        }
+
+        $explicitPermissions = $this->grantedCrudPermissions();
+
+        if (in_array('*', $explicitPermissions, true)) {
+            return true;
+        }
+
+        return count(array_intersect($this->permissionCandidateKeys($aspect, $action), $explicitPermissions)) > 0;
     }
 
     public function hasCrudPermission(string $aspect, string $action): bool
     {
-        $defaultPermissions = $this->defaultCrudPermissions();
+        $permissions = $this->effectiveCrudPermissions();
 
-        if (in_array('*', $defaultPermissions, true)) {
+        if (in_array('*', $permissions, true)) {
             return true;
         }
 
         $permissionKeys = $this->permissionCandidateKeys($aspect, $action);
 
-        return count(array_intersect($permissionKeys, $defaultPermissions)) > 0;
+        return count(array_intersect($permissionKeys, $permissions)) > 0;
     }
 }

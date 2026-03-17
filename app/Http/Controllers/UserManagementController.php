@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\RolePermissionSetting;
 use App\Models\User;
 use App\Support\RolePermissionRegistry;
 use Illuminate\Http\Request;
@@ -62,6 +63,47 @@ class UserManagementController extends Controller
         return $validated;
     }
 
+    private function concretePermissionSet(array $permissions): array
+    {
+        $normalizedPermissions = RolePermissionRegistry::normalizePermissions($permissions);
+
+        if (in_array('*', $normalizedPermissions, true)) {
+            $normalizedPermissions = RolePermissionRegistry::validPermissionKeys();
+        }
+
+        sort($normalizedPermissions);
+
+        return array_values($normalizedPermissions);
+    }
+
+    private function resolveUserAccessValue(string $role, array $permissions): ?string
+    {
+        $selectedPermissions = $this->concretePermissionSet($permissions);
+        $defaultPermissions = $this->concretePermissionSet(
+            RolePermissionRegistry::permissionsForRole(
+                $role,
+                RolePermissionSetting::permissionsForRole($role),
+            ),
+        );
+        $allPermissions = RolePermissionRegistry::validPermissionKeys();
+
+        sort($allPermissions);
+
+        if ($selectedPermissions === $defaultPermissions) {
+            return null;
+        }
+
+        if ($selectedPermissions === []) {
+            return User::ACCESS_SCOPE_NONE;
+        }
+
+        if ($selectedPermissions === array_values($allPermissions)) {
+            return User::ACCESS_SCOPE_ALL;
+        }
+
+        return User::ACCESS_PERMISSION_PREFIX . implode(',', $selectedPermissions);
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -118,6 +160,8 @@ class UserManagementController extends Controller
             'office' => ['nullable', 'string'],
             'mobileno' => ['required', 'digits:11'],
             'role' => $this->roleValidationRule(),
+            'crud_permissions' => ['nullable', 'array'],
+            'crud_permissions.*' => ['string'],
             'status' => ['required', 'in:active,inactive'],
         ]);
 
@@ -127,6 +171,11 @@ class UserManagementController extends Controller
         }
 
         $validated = $this->normalizeUserPayload($validated);
+        $validated['access'] = $this->resolveUserAccessValue(
+            $validated['role'],
+            $validated['crud_permissions'] ?? [],
+        );
+        unset($validated['crud_permissions']);
         $user->update($validated);
 
         return redirect()->route('users.index')->with('success', 'User updated successfully!');

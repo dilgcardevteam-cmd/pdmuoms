@@ -162,6 +162,9 @@
                                         $rowspan = count($items);
                                     @endphp
                                     @foreach($items as $itemIndex => $item)
+                                        @php
+                                            $availableActions = \App\Support\RolePermissionRegistry::actionsForItem($item);
+                                        @endphp
                                         <tr class="crud-permission-row">
                                             @if($itemIndex === 0)
                                                 <td rowspan="{{ $rowspan }}" class="crud-permission-module-cell">
@@ -179,20 +182,26 @@
                                             </td>
                                             <td class="crud-permission-description-cell" data-label="Description">{{ $item['description'] }}</td>
                                             @foreach($crudActionOptions as $actionKey => $actionLabel)
-                                                @php
-                                                    $permissionKey = $item['aspect'] . '.' . $actionKey;
-                                                @endphp
-                                                <td class="crud-permission-check-cell" data-label="{{ $actionLabel }}">
-                                                    <label class="crud-check-item">
-                                                        <input
-                                                            type="checkbox"
-                                                            name="crud_permissions[]"
-                                                            value="{{ $permissionKey }}"
-                                                            @checked(in_array($permissionKey, $configuredPermissions, true))
-                                                        >
-                                                        <span>Allow</span>
-                                                    </label>
-                                                </td>
+                                                @if(in_array($actionKey, $availableActions, true))
+                                                    @php
+                                                        $permissionKey = $item['aspect'] . '.' . $actionKey;
+                                                    @endphp
+                                                    <td class="crud-permission-check-cell" data-label="{{ $actionLabel }}">
+                                                        <label class="crud-check-item">
+                                                            <input
+                                                                type="checkbox"
+                                                                name="crud_permissions[]"
+                                                                value="{{ $permissionKey }}"
+                                                                @checked(in_array($permissionKey, $configuredPermissions, true))
+                                                            >
+                                                            <span>Allow</span>
+                                                        </label>
+                                                    </td>
+                                                @else
+                                                    <td class="crud-permission-check-cell crud-permission-check-cell--na" data-label="{{ $actionLabel }}">
+                                                        <span class="crud-permission-na">N/A</span>
+                                                    </td>
+                                                @endif
                                             @endforeach
                                         </tr>
                                     @endforeach
@@ -328,6 +337,17 @@
         .crud-permission-check-cell {
             min-width: 108px;
             text-align: center;
+        }
+
+        .crud-permission-check-cell--na {
+            color: #94a3b8;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .crud-permission-na {
+            display: inline-block;
+            color: #94a3b8;
         }
 
         .crud-check-item {

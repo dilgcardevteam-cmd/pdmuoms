@@ -1672,17 +1672,35 @@ Route::middleware(['auth'])->group(function () {
 
     Route::middleware('regional_dilg')->group(function () {
         Route::get('/system-management', function () {
+            $user = request()->user();
+            $hasAccess = $user
+                && (
+                    $user->hasCrudPermission('subaybayan_data_uploads', 'view')
+                    || $user->hasCrudPermission('rlip_lime_data_uploads', 'view')
+                    || $user->hasCrudPermission('project_at_risk_data_uploads', 'view')
+                    || $user->hasCrudPermission('sglgif_data_uploads', 'view')
+                );
+
+            if (!$hasAccess) {
+                return response()->view('errors.restricted', [], 403);
+            }
+
             return view('system-management.index');
         })->name('system-management.index');
         Route::get('/system-management/upload-subaybayan', [SystemManagementController::class, 'uploadSubaybayan'])
+            ->middleware('crud_permission:subaybayan_data_uploads,view')
             ->name('system-management.upload-subaybayan');
         Route::get('/system-management/upload-subaybayan/template', [SystemManagementController::class, 'downloadSubaybayanTemplate'])
+            ->middleware('crud_permission:subaybayan_data_uploads,view')
             ->name('system-management.upload-subaybayan.template');
         Route::get('/system-management/upload-sglgif', [SystemManagementController::class, 'uploadSglgif'])
+            ->middleware('crud_permission:sglgif_data_uploads,view')
             ->name('system-management.upload-sglgif');
         Route::get('/system-management/upload-sglgif/template', [SystemManagementController::class, 'downloadSubaybayanTemplate'])
+            ->middleware('crud_permission:sglgif_data_uploads,view')
             ->name('system-management.upload-sglgif.template');
         Route::get('/system-management/upload-rlip-lime', [SystemManagementController::class, 'uploadRlipLime'])
+            ->middleware('crud_permission:rlip_lime_data_uploads,view')
             ->name('system-management.upload-rlip-lime');
         Route::get('/system-management/upload-project-at-risk', [App\Http\Controllers\ProjectAtRiskController::class, 'uploadManager'])
             ->name('system-management.upload-project-at-risk');
@@ -1697,28 +1715,40 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/system-management/upload-project-at-risk/import/{importId}', [App\Http\Controllers\ProjectAtRiskController::class, 'deleteImport'])
             ->name('system-management.upload-project-at-risk.delete');
         Route::post('/system-management/upload-subaybayan/import', [SystemManagementController::class, 'importSubaybayan'])
+            ->middleware('crud_permission:subaybayan_data_uploads,add')
             ->name('system-management.upload-subaybayan.import');
         Route::post('/system-management/upload-subaybayan/import/{importId}/load', [SystemManagementController::class, 'loadSubaybayanImport'])
+            ->middleware('crud_permission:subaybayan_data_uploads,update')
             ->name('system-management.upload-subaybayan.load');
         Route::get('/system-management/upload-subaybayan/import/{importId}/download', [SystemManagementController::class, 'downloadSubaybayanImport'])
+            ->middleware('crud_permission:subaybayan_data_uploads,view')
             ->name('system-management.upload-subaybayan.download');
         Route::delete('/system-management/upload-subaybayan/import/{importId}', [SystemManagementController::class, 'deleteSubaybayanImport'])
+            ->middleware('crud_permission:subaybayan_data_uploads,delete')
             ->name('system-management.upload-subaybayan.delete');
         Route::post('/system-management/upload-sglgif/import', [SystemManagementController::class, 'importSubaybayan'])
+            ->middleware('crud_permission:sglgif_data_uploads,add')
             ->name('system-management.upload-sglgif.import');
         Route::post('/system-management/upload-sglgif/import/{importId}/load', [SystemManagementController::class, 'loadSubaybayanImport'])
+            ->middleware('crud_permission:sglgif_data_uploads,update')
             ->name('system-management.upload-sglgif.load');
         Route::get('/system-management/upload-sglgif/import/{importId}/download', [SystemManagementController::class, 'downloadSubaybayanImport'])
+            ->middleware('crud_permission:sglgif_data_uploads,view')
             ->name('system-management.upload-sglgif.download');
         Route::delete('/system-management/upload-sglgif/import/{importId}', [SystemManagementController::class, 'deleteSubaybayanImport'])
+            ->middleware('crud_permission:sglgif_data_uploads,delete')
             ->name('system-management.upload-sglgif.delete');
         Route::post('/system-management/upload-rlip-lime/import', [SystemManagementController::class, 'importRlipLime'])
+            ->middleware('crud_permission:rlip_lime_data_uploads,add')
             ->name('system-management.upload-rlip-lime.import');
         Route::post('/system-management/upload-rlip-lime/import/{importId}/load', [SystemManagementController::class, 'loadRlipLimeImport'])
+            ->middleware('crud_permission:rlip_lime_data_uploads,update')
             ->name('system-management.upload-rlip-lime.load');
         Route::get('/system-management/upload-rlip-lime/import/{importId}/download', [SystemManagementController::class, 'downloadRlipLimeImport'])
+            ->middleware('crud_permission:rlip_lime_data_uploads,view')
             ->name('system-management.upload-rlip-lime.download');
         Route::delete('/system-management/upload-rlip-lime/import/{importId}', [SystemManagementController::class, 'deleteRlipLimeImport'])
+            ->middleware('crud_permission:rlip_lime_data_uploads,delete')
             ->name('system-management.upload-rlip-lime.delete');
     });
 

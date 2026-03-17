@@ -4,6 +4,11 @@
 @section('page-title', 'Upload Project-at-Risk Data')
 
 @section('content')
+    @php
+        $canAddUpload = Auth::user()->hasCrudPermission('project_at_risk_data_uploads', 'add');
+        $canUpdateUpload = Auth::user()->hasCrudPermission('project_at_risk_data_uploads', 'update');
+        $canDeleteUpload = Auth::user()->hasCrudPermission('project_at_risk_data_uploads', 'delete');
+    @endphp
     <div class="content-header">
         <h1>Upload Project-at-Risk Data</h1>
         <p>Upload CSV files, review the import history, then load the selected file to replace the current Project At Risk dataset.</p>
@@ -47,9 +52,11 @@
                         <i class="fas fa-file-excel" aria-hidden="true"></i>
                         <span>Download Template</span>
                     </a>
-                    <button type="button" onclick="openImportModal()" style="padding: 8px 14px; background: linear-gradient(180deg, #0a4cb3 0%, #002C76 100%); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12px; box-shadow: 0 6px 16px rgba(0, 44, 118, 0.2);">
-                        Import CSV
-                    </button>
+                    @if($canAddUpload)
+                        <button type="button" onclick="openImportModal()" style="padding: 8px 14px; background: linear-gradient(180deg, #0a4cb3 0%, #002C76 100%); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12px; box-shadow: 0 6px 16px rgba(0, 44, 118, 0.2);">
+                            Import CSV
+                        </button>
+                    @endif
                 </div>
             </div>
 
@@ -87,22 +94,26 @@
                                     </td>
                                     <td style="padding: 10px; color: #374151; vertical-align: top;">
                                         <div style="display: flex; justify-content: center; gap: 8px; flex-wrap: wrap;">
-                                            <form method="POST" action="{{ route('system-management.upload-project-at-risk.load', ['importId' => $historyRow->id]) }}" onsubmit="return confirm('Loading this file will replace the current Project At Risk data. Continue?');">
-                                                @csrf
-                                                <button type="submit" style="padding: 6px 10px; background-color: #002C76; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 600;">
-                                                    Load
-                                                </button>
-                                            </form>
+                                            @if($canUpdateUpload)
+                                                <form method="POST" action="{{ route('system-management.upload-project-at-risk.load', ['importId' => $historyRow->id]) }}" onsubmit="return confirm('Loading this file will replace the current Project At Risk data. Continue?');">
+                                                    @csrf
+                                                    <button type="submit" style="padding: 6px 10px; background-color: #002C76; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 600;">
+                                                        Load
+                                                    </button>
+                                                </form>
+                                            @endif
                                             <a href="{{ route('system-management.upload-project-at-risk.download', ['importId' => $historyRow->id]) }}" style="display: inline-flex; align-items: center; justify-content: center; padding: 6px 10px; background-color: #0f766e; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 600; text-decoration: none;">
                                                 Download CSV
                                             </a>
-                                            <form method="POST" action="{{ route('system-management.upload-project-at-risk.delete', ['importId' => $historyRow->id]) }}" onsubmit="return confirm('Delete this imported file record?');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" style="padding: 6px 10px; background-color: #dc2626; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 600;">
-                                                    Delete
-                                                </button>
-                                            </form>
+                                            @if($canDeleteUpload)
+                                                <form method="POST" action="{{ route('system-management.upload-project-at-risk.delete', ['importId' => $historyRow->id]) }}" onsubmit="return confirm('Delete this imported file record?');">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" style="padding: 6px 10px; background-color: #dc2626; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 600;">
+                                                        Delete
+                                                    </button>
+                                                </form>
+                                            @endif
                                         </div>
                                     </td>
                                 </tr>
@@ -150,23 +161,25 @@
         </div>
     @endif
 
-    <div id="importModal" style="display: none; position: fixed; inset: 0; background-color: rgba(0,0,0,0.45); z-index: 1000; align-items: center; justify-content: center;">
-        <div style="background: white; padding: 24px; border-radius: 10px; width: 100%; max-width: 480px; box-shadow: 0 10px 30px rgba(0,0,0,0.15);">
-            <h3 style="margin: 0 0 12px 0; color: #111827; font-size: 18px; font-weight: 600;">Import Project-at-Risk Data (CSV)</h3>
-            <form method="POST" action="{{ route('system-management.upload-project-at-risk.import') }}" enctype="multipart/form-data">
-                @csrf
-                <div style="margin-bottom: 16px;">
-                    <label for="import-file" style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 6px;">Upload CSV File</label>
-                    <input id="import-file" class="dashboard-file-input" type="file" name="file" accept=".csv" required>
-                    <div style="margin-top: 6px; font-size: 11px; color: #6b7280;">Excel users: Save As CSV first.</div>
-                </div>
-                <div style="display: flex; justify-content: flex-end; gap: 10px;">
-                    <button type="button" onclick="closeImportModal()" style="padding: 8px 14px; background-color: #6b7280; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12px;">Cancel</button>
-                    <button type="submit" style="padding: 8px 14px; background-color: #002C76; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12px;">Upload</button>
-                </div>
-            </form>
+    @if($canAddUpload)
+        <div id="importModal" style="display: none; position: fixed; inset: 0; background-color: rgba(0,0,0,0.45); z-index: 1000; align-items: center; justify-content: center;">
+            <div style="background: white; padding: 24px; border-radius: 10px; width: 100%; max-width: 480px; box-shadow: 0 10px 30px rgba(0,0,0,0.15);">
+                <h3 style="margin: 0 0 12px 0; color: #111827; font-size: 18px; font-weight: 600;">Import Project-at-Risk Data (CSV)</h3>
+                <form method="POST" action="{{ route('system-management.upload-project-at-risk.import') }}" enctype="multipart/form-data">
+                    @csrf
+                    <div style="margin-bottom: 16px;">
+                        <label for="import-file" style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 6px;">Upload CSV File</label>
+                        <input id="import-file" class="dashboard-file-input" type="file" name="file" accept=".csv" required>
+                        <div style="margin-top: 6px; font-size: 11px; color: #6b7280;">Excel users: Save As CSV first.</div>
+                    </div>
+                    <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                        <button type="button" onclick="closeImportModal()" style="padding: 8px 14px; background-color: #6b7280; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12px;">Cancel</button>
+                        <button type="submit" style="padding: 8px 14px; background-color: #002C76; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12px;">Upload</button>
+                    </div>
+                </form>
+            </div>
         </div>
-    </div>
+    @endif
 
     <script>
         function openImportModal() {

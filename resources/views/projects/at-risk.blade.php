@@ -108,7 +108,7 @@
                 <a id="risk-export" href="{{ route('projects.at-risk.export', request()->query()) }}" class="risk-btn risk-btn--success">
                     Export Excel
                 </a>
-                @if($isRegionalDilg)
+                @if($isRegionalDilg && Auth::user()->hasCrudPermission('project_at_risk_data_uploads', 'view'))
                     <a href="{{ route('system-management.upload-project-at-risk') }}" class="risk-btn risk-btn--primary">
                         Manage Uploads
                     </a>
