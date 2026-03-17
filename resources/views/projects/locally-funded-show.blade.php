@@ -1012,7 +1012,7 @@
             <button type="button" class="project-tab" id="tab-financial-accomplishment" data-project-tab-target="financialAccomplishmentSection" role="tab" aria-controls="financialAccomplishmentSection" aria-selected="false">Financial Accomplishment</button>
             <button type="button" class="project-tab" id="tab-monitoring-inspection" data-project-tab-target="monitoringInspectionSection" role="tab" aria-controls="monitoringInspectionSection" aria-selected="false">Monitoring/Inspection Activities</button>
             <button type="button" class="project-tab" id="tab-post-implementation" data-project-tab-target="postImplementationSection" role="tab" aria-controls="postImplementationSection" aria-selected="false">Post Implementation</button>
-            <a href="{{ route('locally-funded-project.gallery', $project) }}" class="project-tab" id="tab-gallery">Gallery</a>
+            <button type="button" class="project-tab" id="tab-gallery" data-project-tab-target="gallerySection" role="tab" aria-controls="gallerySection" aria-selected="false">Gallery</button>
         </div>
 
         <div id="projectProfileSection" class="project-tab-panel is-active" data-tab-key="profile" role="tabpanel" aria-labelledby="tab-project-profile" style="margin-bottom: 24px; padding: 20px; border: 1px solid #00267C; border-radius: 10px; background-color: #ffffff;">
@@ -2894,6 +2894,29 @@
             </div>
         </div>
 
+        @php
+            $galleryButtons = ['all', 'before', 'project billboard', 'community billboard', '20-40%', '50-70%', '90%', 'Completed', 'During'];
+        @endphp
+        <div id="gallerySection" class="project-tab-panel" data-tab-key="gallery" role="tabpanel" aria-labelledby="tab-gallery" style="margin-bottom: 24px; padding: 20px; border: 1px solid #00267C; border-radius: 10px; background-color: #ffffff;">
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 2px solid #00267C; padding-bottom: 10px;">
+                <h3 style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Gallery</h3>
+            </div>
+
+            <div class="lfp-gallery-layout">
+                <aside class="lfp-gallery-sidebar" aria-label="Gallery filters">
+                    <div class="lfp-gallery-sidebar-buttons">
+                        @foreach ($galleryButtons as $index => $buttonLabel)
+                            <button type="button" class="lfp-gallery-sidebar-button{{ $index === 0 ? ' is-active' : '' }}">
+                                {{ $buttonLabel }}
+                            </button>
+                        @endforeach
+                    </div>
+                </aside>
+
+                <div class="lfp-gallery-stage" aria-hidden="true"></div>
+            </div>
+        </div>
+
         </div>
     </div>
         <div id="activityLogSection" role="dialog" aria-modal="true" aria-labelledby="activityLogTitle" aria-hidden="true">
@@ -3100,12 +3123,74 @@
             display: block;
         }
 
+        .lfp-gallery-layout {
+            display: grid;
+            grid-template-columns: minmax(180px, 220px) minmax(0, 1fr);
+            gap: 20px;
+            align-items: start;
+            width: 100%;
+            min-width: 0;
+        }
+
+        .lfp-gallery-sidebar {
+            padding: 14px;
+            border: 1px solid #dbe3f0;
+            border-radius: 12px;
+            background: linear-gradient(180deg, #f8fbff 0%, #eef4ff 100%);
+        }
+
+        .lfp-gallery-sidebar-buttons {
+            display: grid;
+            gap: 10px;
+        }
+
+        .lfp-gallery-sidebar-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: flex-start;
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            background-color: #ffffff;
+            color: #1e293b;
+            font-size: 13px;
+            font-weight: 700;
+            line-height: 1.2;
+            text-align: left;
+            cursor: pointer;
+            transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .lfp-gallery-sidebar-button:hover {
+            border-color: #002c76;
+            color: #002c76;
+            box-shadow: 0 8px 18px rgba(0, 44, 118, 0.12);
+        }
+
+        .lfp-gallery-sidebar-button.is-active {
+            background-color: #002c76;
+            border-color: #002c76;
+            color: #ffffff;
+            box-shadow: 0 8px 18px rgba(0, 44, 118, 0.22);
+        }
+
+        .lfp-gallery-stage {
+            min-height: 320px;
+            width: 100%;
+            min-width: 0;
+            border: 1px dashed #cbd5e1;
+            border-radius: 12px;
+            background-color: #f8fafc;
+        }
+
         #projectProfileSection,
         #contractInfoSection,
         #physicalAccomplishmentSection,
         #financialAccomplishmentSection,
         #monitoringInspectionSection,
         #postImplementationSection,
+        #gallerySection,
         #activityLogSection {
             font-size: 0.9em;
             color: #374151;
@@ -3471,7 +3556,8 @@
             .lfp-mobile-canvas #physicalAccomplishmentSection,
             .lfp-mobile-canvas #financialAccomplishmentSection,
             .lfp-mobile-canvas #monitoringInspectionSection,
-            .lfp-mobile-canvas #postImplementationSection {
+            .lfp-mobile-canvas #postImplementationSection,
+            .lfp-mobile-canvas #gallerySection {
                 font-size: 0.78em;
             }
 
@@ -3568,6 +3654,14 @@
 
             .lfp-mobile-canvas #postImplementationSection > div:first-child > div {
                 margin-left: auto;
+            }
+
+            .lfp-mobile-canvas #gallerySection .lfp-gallery-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .lfp-mobile-canvas #gallerySection .lfp-gallery-stage {
+                min-height: 180px;
             }
 
             .lfp-mobile-canvas .lfp-financial-section-title {
@@ -4933,6 +5027,7 @@
             financial: 'financialAccomplishmentSection',
             monitoring: 'monitoringInspectionSection',
             'post-implementation': 'postImplementationSection',
+            gallery: 'gallerySection',
         };
 
         function setActiveProjectPanel(panelId) {

@@ -18,7 +18,7 @@ class LocallyFundedProjectController extends Controller
     public function __construct()
     {
         $this->middleware('auth');
-        $this->middleware('crud_permission:locally_funded_projects,view')->only(['index', 'showSubaybayan', 'show', 'showGallery']);
+        $this->middleware('crud_permission:locally_funded_projects,view')->only(['index', 'showSubaybayan', 'show']);
         $this->middleware('crud_permission:locally_funded_projects,add')->only(['create', 'store']);
         $this->middleware('crud_permission:locally_funded_projects,update')->only(['edit', 'update']);
         $this->middleware('crud_permission:locally_funded_projects,delete')->only(['destroy']);
@@ -2010,11 +2010,6 @@ class LocallyFundedProjectController extends Controller
             : null;
 
         return view('projects.locally-funded-show', compact('project', 'provinces', 'provinceMunicipalities', 'fundSources', 'fundingYears', 'physicalByMonth', 'currentPhysical', 'currentYear', 'currentMonth', 'actualCompletionUpdatedByName', 'financialByMonth', 'financialTotals', 'financialBalance', 'financialUtilizationRate', 'physicalRemarksUpdatedByName', 'physicalRemarksEncodedByName', 'financialRemarksUpdatedByName', 'financialRemarksEncodedByName', 'poMonitoringDateUpdatedByName', 'poFinalInspectionUpdatedByName', 'poRemarksUpdatedByName', 'roMonitoringDateUpdatedByName', 'roFinalInspectionUpdatedByName', 'roRemarksUpdatedByName', 'pcrSubmissionDeadlineUpdatedByName', 'pcrDateSubmittedToPoUpdatedByName', 'pcrMovUploadedByName', 'pcrDateReceivedByRoUpdatedByName', 'pcrRemarksUpdatedByName', 'rssaReportDeadlineUpdatedByName', 'rssaSubmissionStatusUpdatedByName', 'rssaDateSubmittedToPoUpdatedByName', 'rssaDateReceivedByRoUpdatedByName', 'rssaDateSubmittedToCoUpdatedByName', 'rssaRemarksUpdatedByName', 'activityLogs'));
-    }
-
-    public function showGallery(LocallyFundedProject $project)
-    {
-        return view('projects.locally-funded-gallery', compact('project'));
     }
 
     public function viewPcrMov(LocallyFundedProject $project)
