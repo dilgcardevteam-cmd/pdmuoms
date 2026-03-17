@@ -1568,6 +1568,9 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/utilities/role-configuration/roles/{role}', [App\Http\Controllers\DatabaseUtilityController::class, 'updateRoleConfiguration'])
             ->whereIn('role', ['user_regional', 'user_provincial', 'user_lgu'])
             ->name('utilities.role-configuration.roles.update');
+        Route::delete('/utilities/role-configuration/roles/{role}', [App\Http\Controllers\DatabaseUtilityController::class, 'resetRoleConfiguration'])
+            ->whereIn('role', ['user_regional', 'user_provincial', 'user_lgu'])
+            ->name('utilities.role-configuration.roles.reset');
         Route::get('/utilities/location-configuration', [App\Http\Controllers\DatabaseUtilityController::class, 'locationConfiguration'])
             ->name('utilities.location-configuration.index');
         Route::post('/utilities/location-configuration/import/{dataset}', [App\Http\Controllers\DatabaseUtilityController::class, 'importLocationDataset'])

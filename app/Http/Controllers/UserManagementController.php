@@ -96,11 +96,7 @@ class UserManagementController extends Controller
 
     public function show(User $user)
     {
-        return view('admin.users.show', [
-            'user' => $user,
-            'accessGrantModules' => $this->accessGrantModules(),
-            'crudActionOptions' => RolePermissionRegistry::actionOptions(),
-        ]);
+        return view('admin.users.show', compact('user'));
     }
 
     private function accessGrantModules(): array

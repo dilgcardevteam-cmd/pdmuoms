@@ -9,6 +9,7 @@ use App\Models\RolePermissionSetting;
 use App\Models\User;
 use App\Services\DatabaseBackupService;
 use App\Support\RolePermissionRegistry;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -173,11 +174,17 @@ class DatabaseUtilityController extends Controller
         ]);
     }
 
-    public function updateRoleConfiguration(Request $request, string $role): RedirectResponse
+    public function updateRoleConfiguration(Request $request, string $role): RedirectResponse|JsonResponse
     {
         $normalizedRole = strtolower(trim($role));
 
         if (!in_array($normalizedRole, RolePermissionRegistry::configurableRoles(), true)) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'That role cannot be configured from Role Configuration.',
+                ], 422);
+            }
+
             return redirect()
                 ->route('utilities.role-configuration.index')
                 ->with('error', 'That role cannot be configured from Role Configuration.');
@@ -197,9 +204,56 @@ class DatabaseUtilityController extends Controller
 
         RolePermissionSetting::flushPermissionsCache();
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Role configuration updated successfully.',
+                'role' => $normalizedRole,
+                'uses_recommended_defaults' => false,
+                'permissions' => RolePermissionRegistry::permissionsForRole($normalizedRole, $permissions),
+            ]);
+        }
+
         return redirect()
             ->route('utilities.role-configuration.index', ['role' => $normalizedRole])
             ->with('success', 'Role configuration updated successfully.');
+    }
+
+    public function resetRoleConfiguration(Request $request, string $role): RedirectResponse|JsonResponse
+    {
+        $normalizedRole = strtolower(trim($role));
+
+        if (!in_array($normalizedRole, RolePermissionRegistry::configurableRoles(), true)) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'That role cannot be configured from Role Configuration.',
+                ], 422);
+            }
+
+            return redirect()
+                ->route('utilities.role-configuration.index')
+                ->with('error', 'That role cannot be configured from Role Configuration.');
+        }
+
+        RolePermissionSetting::query()
+            ->where('role', $normalizedRole)
+            ->delete();
+
+        RolePermissionSetting::flushPermissionsCache();
+
+        $defaultPermissions = RolePermissionRegistry::permissionsForRole($normalizedRole);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Role configuration reset to the default baseline.',
+                'role' => $normalizedRole,
+                'uses_recommended_defaults' => true,
+                'permissions' => $defaultPermissions,
+            ]);
+        }
+
+        return redirect()
+            ->route('utilities.role-configuration.index', ['role' => $normalizedRole])
+            ->with('success', 'Role configuration reset to the default baseline.');
     }
 
     public function locationConfiguration(): View
