@@ -5,6 +5,86 @@
 
 @section('content')
     <div class="ops-detail-page">
+    <style>
+        .ops-detail-page .ops-upload-input {
+            flex: 1;
+            min-width: 200px;
+            padding: 10px 12px !important;
+            border: 1.5px dashed #9fb2d4 !important;
+            border-radius: 10px !important;
+            font-size: 12px !important;
+            line-height: 1.4;
+            color: #1f2937;
+            background: linear-gradient(180deg, #f8fbff 0%, #eef4ff 100%) !important;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+        }
+
+        .ops-detail-page .ops-upload-input:focus {
+            outline: none;
+            border-color: #2563eb !important;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+        }
+
+        .ops-detail-page .ops-upload-input.drag-active {
+            border-color: #1d4ed8 !important;
+            background: #e8f0ff !important;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+
+        .ops-detail-page .ops-upload-input.is-disabled {
+            cursor: not-allowed;
+            opacity: 0.65;
+            background: #f3f4f6 !important;
+            border-style: solid !important;
+        }
+
+        .ops-detail-page .ops-upload-input::-webkit-file-upload-button {
+            margin-right: 10px;
+            border: none;
+            border-radius: 999px;
+            padding: 6px 12px;
+            font-weight: 700;
+            font-size: 11px;
+            letter-spacing: 0.02em;
+            color: #1e3a8a;
+            background: #dbeafe;
+            cursor: pointer;
+        }
+
+        .ops-detail-page .ops-upload-submit {
+            background: linear-gradient(135deg, #059669, #047857) !important;
+            box-shadow: 0 8px 14px rgba(5, 150, 105, 0.2);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+        }
+
+        .ops-detail-page .ops-upload-submit:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 11px 18px rgba(5, 150, 105, 0.28);
+            filter: brightness(1.03);
+        }
+
+        .ops-detail-page .ops-upload-filename {
+            padding: 8px 10px;
+            border-radius: 8px;
+            border: 1px solid #d1d5db;
+            background: #f8fafc;
+            color: #334155;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .ops-detail-page .ops-upload-filename.has-file {
+            border-color: #86efac;
+            background: #ecfdf3;
+            color: #166534;
+        }
+
+        @media (max-width: 640px) {
+            .ops-detail-page .ops-upload-input {
+                min-width: 100%;
+            }
+        }
+    </style>
     <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 24px;">
         <div style="flex: 1; min-width: 0;">
             <div style="display: inline-flex; align-items: center; gap: 8px; background: linear-gradient(135deg, #002C76, #003d9e); padding: 5px 14px; border-radius: 999px; margin-bottom: 10px;">
@@ -151,7 +231,15 @@
     @foreach ($quarters as $quarter)
         @php
             $quarterLabels = ['Q1' => 'Quarter 1', 'Q2' => 'Quarter 2', 'Q3' => 'Quarter 3', 'Q4' => 'Quarter 4'];
+            $quarterWindows = [
+                'Q1' => 'January - March',
+                'Q2' => 'April - June',
+                'Q3' => 'July - September',
+                'Q4' => 'October - December',
+            ];
             $quarterLabel = $quarterLabels[$quarter] ?? $quarter;
+            $quarterWindow = $quarterWindows[$quarter] ?? '';
+            $quarterOrder = ['Q1' => 1, 'Q2' => 2, 'Q3' => 3, 'Q4' => 4];
 
             // Determine current quarter based on current date
             $now = \Carbon\Carbon::now();
@@ -167,6 +255,7 @@
             }
 
             $isCurrentQuarter = ($quarter === $currentQuarter);
+            $isQuarterClosed = ($quarterOrder[$quarter] ?? 0) < ($quarterOrder[$currentQuarter] ?? 0);
             $displayStyle = $isCurrentQuarter ? 'block' : 'none';
             $iconRotation = $isCurrentQuarter ? 'rotate(180deg)' : 'rotate(0deg)';
 
@@ -175,12 +264,16 @@
         @endphp
         <div style="background: white; border-radius: 12px; box-shadow: 0 4px 16px rgba(15,23,42,0.09); margin-bottom: 24px; border: 1px solid #e5e7eb; overflow: hidden;">
             <!-- Quarter Accordion Header -->
-            <button type="button" onclick="toggleAccordion('quarter-{{ $quarter }}')" style="width: 100%; padding: 18px 24px; background: linear-gradient(135deg, #002C76 0%, #003d9e 100%); color: white; border: none; text-align: left; cursor: pointer; font-weight: 700; font-size: 15px; display: flex; justify-content: space-between; align-items: center;" onmouseover="this.style.filter='brightness(1.08)'" onmouseout="this.style.filter='brightness(1)'">
+            <button type="button" onclick="toggleAccordion('quarter-{{ $quarter }}')" {{ $isQuarterClosed ? 'disabled' : '' }} style="width: 100%; padding: 18px 24px; background: linear-gradient(135deg, #002C76 0%, #003d9e 100%); color: white; border: none; text-align: left; cursor: {{ $isQuarterClosed ? 'not-allowed' : 'pointer' }}; font-weight: 700; font-size: 15px; display: flex; justify-content: space-between; align-items: center; opacity: {{ $isQuarterClosed ? '0.82' : '1' }};" onmouseover="if(!this.disabled){this.style.filter='brightness(1.08)'}" onmouseout="if(!this.disabled){this.style.filter='brightness(1)'}">
                 <span style="display: flex; align-items: center; gap: 12px;">
                     <span style="width: 34px; height: 34px; background: rgba(255,255,255,0.15); border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;">
                         <i class="fas fa-calendar-alt" style="font-size: 14px;"></i>
                     </span>
                     <span>{{ $quarterLabel }}</span>
+                    <span style="display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; background: {{ $isQuarterClosed ? 'rgba(239,68,68,0.22)' : 'rgba(16,185,129,0.25)' }}; color: #fff;">
+                        {{ $isQuarterClosed ? 'Closed' : 'Open for Upload' }}
+                    </span>
+                    <span style="font-size: 11px; opacity: 0.95;">{{ $quarterWindow }}</span>
                     <span style="display: inline-flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.15); padding: 4px 12px; border-radius: 999px; font-size: 12px;">
                         <span style="width: 60px; height: 5px; background: rgba(255,255,255,0.25); border-radius: 999px; overflow: hidden; display: inline-block;">
                             <span style="width: {{ $accomplishmentPercentages[$quarter] }}%; height: 100%; background: #34d399; display: block;"></span>
@@ -2341,10 +2434,84 @@
             });
         }
 
+        function initializeUploadStyling() {
+            const fileInputs = document.querySelectorAll('.ops-detail-page input[type="file"]');
+
+            fileInputs.forEach(input => {
+                if (input.dataset.uploadStyled === '1') {
+                    return;
+                }
+
+                input.dataset.uploadStyled = '1';
+                input.classList.add('ops-upload-input');
+
+                if (input.disabled) {
+                    input.classList.add('is-disabled');
+                }
+
+                ['dragenter', 'dragover'].forEach(evt => {
+                    input.addEventListener(evt, function(e) {
+                        e.preventDefault();
+                        if (!input.disabled) {
+                            input.classList.add('drag-active');
+                        }
+                    });
+                });
+
+                ['dragleave', 'drop', 'dragend'].forEach(evt => {
+                    input.addEventListener(evt, function() {
+                        input.classList.remove('drag-active');
+                    });
+                });
+
+                input.addEventListener('change', function() {
+                    input.classList.remove('drag-active');
+                    if (input.files && input.files.length > 0) {
+                        input.classList.add('has-selection');
+                    } else {
+                        input.classList.remove('has-selection');
+                    }
+                });
+
+                const submitBtn = input.parentElement ? input.parentElement.querySelector('button[type="submit"]') : null;
+                if (submitBtn) {
+                    submitBtn.classList.add('ops-upload-submit');
+                }
+
+                const onchangeValue = input.getAttribute('onchange') || '';
+                const filenameMatch = onchangeValue.match(/'([^']*filename-[^']*)'/);
+                if (filenameMatch && filenameMatch[1]) {
+                    const filenameDiv = document.getElementById(filenameMatch[1]);
+                    if (filenameDiv) {
+                        filenameDiv.classList.add('ops-upload-filename');
+                        if (filenameDiv.textContent && filenameDiv.textContent.trim().length > 0) {
+                            filenameDiv.classList.add('has-file');
+                        }
+                    }
+                }
+            });
+
+            document.querySelectorAll('.ops-detail-page button[id$="-save-btn"]').forEach(btn => {
+                btn.classList.add('ops-upload-submit');
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeUploadStyling);
+        if (document.readyState === 'complete' || document.readyState === 'interactive') {
+            initializeUploadStyling();
+        }
+
         // Show save button and filename when file is selected
         function showSaveButton(fileInput, buttonId, filenameId) {
             const saveBtn = document.getElementById(buttonId);
             const filenameDiv = document.getElementById(filenameId);
+
+            if (!saveBtn || !filenameDiv) {
+                return;
+            }
+
+            saveBtn.classList.add('ops-upload-submit');
+            filenameDiv.classList.add('ops-upload-filename');
             
             if (fileInput && fileInput.files && fileInput.files.length > 0) {
                 const fileName = fileInput.files[0].name;
@@ -2354,6 +2521,7 @@
                 // Display filename
                 filenameDiv.innerHTML = `<i class="fas fa-file" style="margin-right: 4px;"></i>Selected: ${fileName}`;
                 filenameDiv.style.display = 'block';
+                filenameDiv.classList.add('has-file');
                 
                 // Add click handler to submit the form
                 saveBtn.onclick = function(e) {
@@ -2384,6 +2552,7 @@
                 // Only hide if it's empty
                 if (!filenameDiv.innerHTML.trim()) {
                     filenameDiv.style.display = 'none';
+                    filenameDiv.classList.remove('has-file');
                 }
             }
         }
