@@ -132,6 +132,13 @@ class SystemManagementController extends Controller
         );
     }
 
+    public function uploadRssa()
+    {
+        return $this->renderSubaybayanUploadManager(
+            $this->resolveSubaybayanUploadPage('system-management.upload-rssa')
+        );
+    }
+
     public function uploadSglgif()
     {
         return $this->renderSubaybayanUploadManager(
@@ -447,6 +454,26 @@ class SystemManagementController extends Controller
 
     private function resolveSubaybayanUploadPage(?string $routeName = null): array
     {
+        if (Str::startsWith((string) $routeName, 'system-management.upload-rssa')) {
+            return [
+                'title' => 'Upload RSSA Data',
+                'pageTitle' => 'Upload RSSA Data',
+                'heading' => 'Upload RSSA Data',
+                'description' => 'Upload RSSA data files for system processing.',
+                'listTitle' => 'Imported RSSA Files',
+                'entityLabel' => 'RSSA',
+                'modalTitle' => 'Import RSSA Data (CSV)',
+                'routeBase' => 'system-management.upload-rssa',
+                'templateFileName' => 'rssa-template.csv',
+                'storageSlug' => 'rssa',
+                'storageFolder' => 'rssa-imports',
+                'templateHeaders' => self::SUBAYBAYAN_TEMPLATE_HEADERS,
+                'customHeaderMap' => [],
+                'rowDefaults' => [],
+                'snapshotScope' => 'subaybayan',
+            ];
+        }
+
         if (Str::startsWith((string) $routeName, 'system-management.upload-sglgif')) {
             return [
                 'title' => 'Upload SGLGIF Data',

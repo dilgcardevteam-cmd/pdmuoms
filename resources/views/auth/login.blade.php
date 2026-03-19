@@ -6,9 +6,10 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>DILG-CAR Project Development and Management Unit</title>
     <link rel="icon" type="image/png" href="/DILG-Logo.png">
+    @include('partials.google-sans-font')
     <style>
         body {
-            font-family: 'Facebook Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-family: var(--app-font-sans);
             background-color: #f4f4f4;
             background-image: url('/background.jpg');
             background-size: cover;

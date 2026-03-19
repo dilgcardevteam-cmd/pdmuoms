@@ -14,7 +14,7 @@ class RlipLimeProjectController extends Controller
         private readonly RlipLimeDataService $rlipLimeDataService
     ) {
         $this->middleware('auth');
-        $this->middleware('crud_permission:rlip_lime_projects,view')->only(['index', 'dashboard', 'show']);
+        $this->middleware('crud_permission:rlip_lime_projects,view')->only(['index', 'show']);
     }
 
     public function index(Request $request)

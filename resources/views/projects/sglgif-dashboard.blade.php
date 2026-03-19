@@ -1408,22 +1408,25 @@
             border: 1px solid #e2e8f0;
             border-radius: 14px;
             background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
-            overflow: hidden;
+            overflow: visible;
         }
 
         .sglgif-mix-donut-wrap {
             position: relative;
-            width: min(220px, 100%);
+            width: min(190px, 78%);
+            max-width: 190px;
             aspect-ratio: 1 / 1;
             display: flex;
             align-items: center;
             justify-content: center;
+            overflow: visible;
         }
 
         .sglgif-mix-donut {
             width: 100%;
             height: 100%;
             display: block;
+            overflow: visible;
         }
 
         .sglgif-mix-donut-track {
@@ -2729,7 +2732,8 @@
             }
 
             .sglgif-mix-donut-wrap {
-                width: min(190px, 100%);
+                width: min(168px, 76%);
+                max-width: 168px;
             }
 
             .sglgif-mix-donut-center {

@@ -227,15 +227,20 @@
                             $fundSourceStyles = $fundSourceStyleMap[$fundSource] ?? ['bg' => 'linear-gradient(180deg, #ffffff 0%, #f9fafb 100%)', 'border' => '#e5e7eb', 'iconBg' => 'linear-gradient(180deg, #f3f4f6 0%, #e5e7eb 100%)', 'iconColor' => '#4b5563', 'labelColor' => '#6b7280'];
                             $fundSourceModalKey = trim((string) preg_replace('/[^a-z0-9]+/i', '-', (string) $fundSource), '-');
                             $fundSourceModalId = 'fund-source-' . ($fundSourceModalKey !== '' ? $fundSourceModalKey : 'unspecified') . '-modal';
-                            $projectCodeKeyword = strtoupper(trim((string) $fundSource)) === 'FALGU'
-                                ? 'FA'
-                                : $fundSource;
+                            $knownFundSourceProjectCodeKeywords = [
+                                'SBDP' => 'SBDP',
+                                'FALGU' => 'FA',
+                                'CMGP' => 'CMGP',
+                                'GEF' => 'GEF',
+                                'SAFPB' => 'SAFPB',
+                            ];
+                            $normalizedFundSource = strtoupper(trim((string) $fundSource));
                             $fundSourceFilterQuery = [
                                 'search' => $fundSource,
                                 'fund_source' => $fundSource,
                             ];
-                            if (strtoupper(trim((string) $fundSource)) !== 'SGLGIF') {
-                                $fundSourceFilterQuery['project_code'] = $projectCodeKeyword;
+                            if (array_key_exists($normalizedFundSource, $knownFundSourceProjectCodeKeywords)) {
+                                $fundSourceFilterQuery['project_code'] = $knownFundSourceProjectCodeKeywords[$normalizedFundSource];
                             }
                             $fundSourceFilterUrl = route('projects.locally-funded', $fundSourceFilterQuery);
                         @endphp
@@ -3411,7 +3416,7 @@
 
         .total-projects-card .dashboard-tile > div:last-child {
             font-size: 52px !important;
-            font-weight: 800 !important;
+            font-weight: 600 !important;
             background: linear-gradient(135deg, #002C76, #2563eb);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -3432,7 +3437,7 @@
 
         .fund-source-link-tile > div:last-child {
             font-size: 26px !important;
-            font-weight: 800 !important;
+            font-weight: 600 !important;
         }
 
         /* ---- Financial Metric Tiles ---- */
@@ -3447,12 +3452,12 @@
 
         .financial-percentage-value {
             font-size: clamp(18px, 1.5vw, 24px) !important;
-            font-weight: 800 !important;
+            font-weight: 600 !important;
         }
 
         .financial-amount-value {
             font-size: clamp(12px, 1vw, 16px) !important;
-            font-weight: 800 !important;
+            font-weight: 600 !important;
         }
 
         /* ---- Expected Completion Card ---- */
@@ -3485,7 +3490,7 @@
 
         .status-subaybayan-grid .dashboard-tile > div:last-child {
             font-size: 26px !important;
-            font-weight: 800 !important;
+            font-weight: 600 !important;
         }
 
         /* ---- Project Update Status & Risk Cards ---- */

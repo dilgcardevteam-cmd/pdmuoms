@@ -8,9 +8,7 @@
     <link rel="icon" type="image/png" href="{{ asset('DILG-Logo.png') }}">
     <link rel="shortcut icon" href="{{ asset('DILG-Logo.png') }}">
 
-    <!-- Fonts -->
-    <link rel="dns-prefetch" href="//fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=Segoe+UI" rel="stylesheet">
+    @include('partials.google-sans-font')
 
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -49,7 +47,7 @@
     </style>
 
     <style>
-        body { font-family: 'Facebook Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-image: url('/background.jpg'); background-size: cover; background-position: center; background-attachment: fixed; display:flex; align-items:center; justify-content:center; min-height:100vh; margin:0; padding:20px 0; }
+        body { font-family: var(--app-font-sans); background-image: url('/background.jpg'); background-size: cover; background-position: center; background-attachment: fixed; display:flex; align-items:center; justify-content:center; min-height:100vh; margin:0; padding:20px 0; }
         .card { background:#fff; width:100%; max-width:640px; padding:28px; border-radius:10px; box-shadow:0 6px 24px rgba(10,10,10,0.08); }
         .card h2 { color:#002C76; margin:0 0 6px; font-size:20px; }
         .card p.subtitle { margin:0 0 18px; color:#6b7280; }

@@ -1,25 +1,22 @@
 @php
     $activeTab = $activeTab ?? 'locally-funded';
-    $canViewRlipLimeProjects = Auth::user()->hasCrudPermission('rlip_lime_projects', 'view');
-    $canViewSglgifPortal = Auth::user()->hasCrudPermission('sglgif_portal', 'view');
     $projectTabs = [
         [
             'key' => 'locally-funded',
             'label' => 'Locally Funded Projects',
-            'icon' => 'fa-project-diagram',
+            'icon' => 'fa-hand-holding-usd',
             'url' => route('dashboard'),
         ],
         [
             'key' => 'rlip-lime',
             'label' => 'RLIP / LIME 20% Development Fund',
-            'icon' => 'fa-road',
+            'icon' => 'fa-leaf',
             'url' => route('projects.rlip-lime.dashboard'),
-            'visible' => $canViewRlipLimeProjects,
         ],
         [
             'key' => 'rssa',
             'label' => 'Rapid Subproject Sustainability Assessment',
-            'icon' => 'fa-clipboard-check',
+            'icon' => 'fa-list-check',
             'url' => route('projects.rssa'),
         ],
         [
@@ -27,7 +24,6 @@
             'label' => 'SGLG Incentive Fund',
             'icon' => 'fa-award',
             'url' => route('projects.sglgif'),
-            'visible' => $canViewSglgifPortal,
         ],
     ];
 @endphp
@@ -50,6 +46,7 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
+            gap: 8px;
             padding: 8px 16px;
             border: 1px solid #a8c0e8;
             border-radius: 999px;
@@ -62,6 +59,16 @@
             white-space: nowrap;
             box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
             transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+        }
+
+        .project-section-tab-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 14px;
+            font-size: 12px;
+            line-height: 1;
+            flex: 0 0 auto;
         }
 
         .project-section-tab:hover {
@@ -99,12 +106,12 @@
 
 <nav class="project-section-tabs" aria-label="Project pages">
     @foreach ($projectTabs as $tab)
-        @continue(array_key_exists('visible', $tab) && !$tab['visible'])
         <a
             href="{{ $tab['url'] }}"
             class="project-section-tab{{ $activeTab === $tab['key'] ? ' is-active' : '' }}"
             @if ($activeTab === $tab['key']) aria-current="page" @endif
         >
+            <i class="fa-solid {{ $tab['icon'] }} project-section-tab-icon" aria-hidden="true"></i>
             <span>{{ $tab['label'] }}</span>
         </a>
     @endforeach

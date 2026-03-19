@@ -13,7 +13,6 @@ class SglgifProjectController extends Controller
     public function __construct()
     {
         $this->middleware('auth');
-        $this->middleware('crud_permission:sglgif_portal,view')->only(['dashboard']);
     }
 
     public function dashboard(Request $request)

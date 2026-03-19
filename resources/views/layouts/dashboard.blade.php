@@ -6,6 +6,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Dashboard') - DILG-CAR PDMU</title>
     <link rel="icon" type="image/png" href="/DILG-Logo.png">
+    @include('partials.google-sans-font')
     
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -28,7 +29,7 @@
         }
 
         body {
-            font-family: 'Facebook Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-family: var(--app-font-sans);
             background-image: url('/background.jpg');
             background-size: cover;
             background-position: center;
@@ -1355,8 +1356,7 @@
         <ul class="sidebar-menu">
             <li>
                 @php
-                    $dashboardTabRouteActive = request()->routeIs('projects.rssa')
-                        || request()->routeIs('projects.rlip-lime.dashboard')
+                    $dashboardTabRouteActive = request()->routeIs('projects.rlip-lime.dashboard')
                         || request()->routeIs('projects.sglgif');
                     $dashboardMenuActive = Route::currentRouteName() == 'dashboard' || $dashboardTabRouteActive;
                 @endphp
@@ -1367,6 +1367,7 @@
             </li>
             @php
                 $canViewLocallyFundedProjects = Auth::user()->hasCrudPermission('locally_funded_projects', 'view');
+                $canViewRssaProjects = $canViewLocallyFundedProjects;
                 $canViewRlipLimeProjects = Auth::user()->hasCrudPermission('rlip_lime_projects', 'view');
                 $canViewProjectAtRiskProjects = Auth::user()->hasCrudPermission('project_at_risk_projects', 'view');
                 $canViewSglgifPortal = Auth::user()->hasCrudPermission('sglgif_portal', 'view');
@@ -1377,7 +1378,9 @@
                 $canViewLpmcReports = Auth::user()->hasCrudPermission('local_project_monitoring_committee', 'view');
                 $canViewRoadMaintenanceReports = Auth::user()->hasCrudPermission('road_maintenance_status_reports', 'view');
                 $canViewSubaybayanUploads = Auth::user()->hasCrudPermission('subaybayan_data_uploads', 'view');
+                $canViewRssaLgsfUploads = $canViewSubaybayanUploads;
                 $canViewRlipLimeUploads = Auth::user()->hasCrudPermission('rlip_lime_data_uploads', 'view');
+                $canViewRssaUploads = $canViewRssaLgsfUploads || $canViewRlipLimeUploads;
                 $canViewProjectAtRiskUploads = Auth::user()->hasCrudPermission('project_at_risk_data_uploads', 'view');
                 $canViewSglgifUploads = Auth::user()->hasCrudPermission('sglgif_data_uploads', 'view');
                 $hasAnyProjectMonitoringAccess = $canViewLocallyFundedProjects
@@ -1409,6 +1412,14 @@
                                 <a href="{{ route('projects.locally-funded') }}" class="@if(Route::currentRouteName() == 'projects.locally-funded') active @endif">
                                     <i class="fas fa-hand-holding-usd"></i>
                                     <span>Locally Funded Projects</span>
+                                </a>
+                            </li>
+                        @endif
+                        @if($canViewRssaProjects)
+                            <li>
+                                <a href="{{ route('projects.rssa') }}" class="@if(request()->routeIs('projects.rssa')) active @endif">
+                                    <i class="fas fa-list-check"></i>
+                                    <span>Rapid Subproject Sustainability Assessment</span>
                                 </a>
                             </li>
                         @endif
@@ -1559,6 +1570,10 @@
                         <i class="fas fa-chevron-down submenu-chevron" style="margin-left: auto; font-size: 12px;"></i>
                     </a>
                     <ul id="systemManagementMenu" class="submenu" style="display: {{ $systemManagementActive ? 'block' : 'none' }};">
+                        @php
+                            $rssaUploadsMenuActive = request()->routeIs('system-management.upload-rssa*')
+                                || request()->routeIs('system-management.upload-rlip-lime*');
+                        @endphp
                         @if($canViewSubaybayanUploads)
                             <li>
                                 <a href="{{ route('system-management.upload-subaybayan') }}" class="@if(Route::currentRouteName() == 'system-management.upload-subaybayan') active @endif">
@@ -1567,12 +1582,31 @@
                                 </a>
                             </li>
                         @endif
-                        @if($canViewRlipLimeUploads)
+                        @if($canViewRssaUploads)
                             <li>
-                                <a href="{{ route('system-management.upload-rlip-lime') }}" class="@if(Route::currentRouteName() == 'system-management.upload-rlip-lime') active @endif">
-                                    <i class="fas fa-file-import"></i>
-                                    <span>Upload RLIP/LIME-20 Data</span>
+                                <a href="#" class="@if($rssaUploadsMenuActive) active @endif submenu-toggle" onclick="toggleSubmenu(event, 'rssaUploadsMenu')">
+                                    <i class="fas fa-list-check"></i>
+                                    <span>Upload RSSA Data</span>
+                                    <i class="fas fa-chevron-down submenu-chevron" style="margin-left: auto; font-size: 11px;"></i>
                                 </a>
+                                <ul id="rssaUploadsMenu" class="submenu" style="display: {{ $rssaUploadsMenuActive ? 'block' : 'none' }};">
+                                    @if($canViewRssaLgsfUploads)
+                                        <li>
+                                            <a href="{{ route('system-management.upload-rssa') }}" class="@if(request()->routeIs('system-management.upload-rssa*')) active @endif">
+                                                <i class="fas fa-upload"></i>
+                                                <span>LGSF Data</span>
+                                            </a>
+                                        </li>
+                                    @endif
+                                    @if($canViewRlipLimeUploads)
+                                        <li>
+                                            <a href="{{ route('system-management.upload-rlip-lime') }}" class="@if(request()->routeIs('system-management.upload-rlip-lime*')) active @endif">
+                                                <i class="fas fa-file-import"></i>
+                                                <span>RLIP/LIME20 Data</span>
+                                            </a>
+                                        </li>
+                                    @endif
+                                </ul>
                             </li>
                         @endif
                         @if($canViewProjectAtRiskUploads)

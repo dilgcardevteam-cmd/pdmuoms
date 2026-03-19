@@ -1047,7 +1047,6 @@ Route::middleware(['auth'])->group(function () {
 
                 $fundSourceFromProjectCodeExpr = "
                     CASE
-                        WHEN UPPER(TRIM(COALESCE(spp.program, ''))) = 'SGLGIF' THEN 'SGLGIF'
                         WHEN UPPER(TRIM(spp.project_code)) LIKE 'SBDP%' THEN 'SBDP'
                         WHEN UPPER(TRIM(spp.project_code)) LIKE 'FA-%' THEN 'FALGU'
                         WHEN UPPER(TRIM(spp.project_code)) LIKE 'FALGU%' THEN 'FALGU'
@@ -1055,6 +1054,7 @@ Route::middleware(['auth'])->group(function () {
                         WHEN UPPER(TRIM(spp.project_code)) LIKE 'GEF%' THEN 'GEF'
                         WHEN UPPER(TRIM(spp.project_code)) LIKE 'SAFPB%' THEN 'SAFPB'
                         WHEN UPPER(TRIM(spp.project_code)) LIKE 'SGLGIF%' THEN 'SGLGIF'
+                        WHEN TRIM(COALESCE(spp.program, '')) <> '' THEN UPPER(TRIM(COALESCE(spp.program, '')))
                         ELSE 'UNSPECIFIED'
                     END
                 ";
@@ -1693,6 +1693,12 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/system-management/upload-subaybayan/template', [SystemManagementController::class, 'downloadSubaybayanTemplate'])
             ->middleware('crud_permission:subaybayan_data_uploads,view')
             ->name('system-management.upload-subaybayan.template');
+        Route::get('/system-management/upload-rssa', [SystemManagementController::class, 'uploadRssa'])
+            ->middleware('crud_permission:subaybayan_data_uploads,view')
+            ->name('system-management.upload-rssa');
+        Route::get('/system-management/upload-rssa/template', [SystemManagementController::class, 'downloadSubaybayanTemplate'])
+            ->middleware('crud_permission:subaybayan_data_uploads,view')
+            ->name('system-management.upload-rssa.template');
         Route::get('/system-management/upload-sglgif', [SystemManagementController::class, 'uploadSglgif'])
             ->middleware('crud_permission:sglgif_data_uploads,view')
             ->name('system-management.upload-sglgif');
@@ -1726,6 +1732,18 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/system-management/upload-subaybayan/import/{importId}', [SystemManagementController::class, 'deleteSubaybayanImport'])
             ->middleware('crud_permission:subaybayan_data_uploads,delete')
             ->name('system-management.upload-subaybayan.delete');
+        Route::post('/system-management/upload-rssa/import', [SystemManagementController::class, 'importSubaybayan'])
+            ->middleware('crud_permission:subaybayan_data_uploads,add')
+            ->name('system-management.upload-rssa.import');
+        Route::post('/system-management/upload-rssa/import/{importId}/load', [SystemManagementController::class, 'loadSubaybayanImport'])
+            ->middleware('crud_permission:subaybayan_data_uploads,update')
+            ->name('system-management.upload-rssa.load');
+        Route::get('/system-management/upload-rssa/import/{importId}/download', [SystemManagementController::class, 'downloadSubaybayanImport'])
+            ->middleware('crud_permission:subaybayan_data_uploads,view')
+            ->name('system-management.upload-rssa.download');
+        Route::delete('/system-management/upload-rssa/import/{importId}', [SystemManagementController::class, 'deleteSubaybayanImport'])
+            ->middleware('crud_permission:subaybayan_data_uploads,delete')
+            ->name('system-management.upload-rssa.delete');
         Route::post('/system-management/upload-sglgif/import', [SystemManagementController::class, 'importSubaybayan'])
             ->middleware('crud_permission:sglgif_data_uploads,add')
             ->name('system-management.upload-sglgif.import');

@@ -6,9 +6,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ config('app.name', 'PDMU') }} - Verify Email</title>
 
-    <!-- Fonts -->
-    <link rel="dns-prefetch" href="//fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=Segoe+UI" rel="stylesheet">
+    @include('partials.google-sans-font')
 
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -17,7 +15,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
 
     <style>
-        body { font-family: 'Facebook Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #f4f4f4; display:flex; align-items:center; justify-content:center; min-height:100vh; margin:0; padding:20px 0; }
+        body { font-family: var(--app-font-sans); background-color: #f4f4f4; display:flex; align-items:center; justify-content:center; min-height:100vh; margin:0; padding:20px 0; }
         .card { background:#fff; width:100%; max-width:640px; padding:40px; border-radius:10px; box-shadow:0 6px 24px rgba(10,10,10,0.08); }
         .card h2 { color:#002C76; margin:0 0 12px; font-size:24px; text-align:center; }
         .card p { margin:0 0 18px; color:#6b7280; text-align:center; line-height:1.6; }

@@ -934,7 +934,7 @@
             flex-direction: row;
             width: 100%;
             ">
-            <div style="display: flex; flex-direction: column; gap: 6px; color: #374151; font-family: 'Facebook Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+            <div style="display: flex; flex-direction: column; gap: 6px; color: #374151; font-family: var(--app-font-sans);">
                 <span style="display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                     <span>
                     <span style="font-weight: 700; color: #374151;">

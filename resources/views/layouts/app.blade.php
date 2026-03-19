@@ -11,9 +11,7 @@
 
     @yield('head')
 
-    <!-- Fonts -->
-    <link rel="dns-prefetch" href="//fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=Nunito" rel="stylesheet">
+    @include('partials.google-sans-font')
 
     <!-- Scripts -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])

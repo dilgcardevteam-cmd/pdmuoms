@@ -6,9 +6,10 @@
     <title>DILG-CAR Project Development and Management Unit</title>
     <link rel="icon" type="image/png" href="/DILG-Logo.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    @include('partials.google-sans-font')
     <style>
         body {
-            font-family: "Facebook Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-family: var(--app-font-sans);
             background-color: #f4f4f4;
             background-image: url('/background.jpg');
             background-size: cover;
