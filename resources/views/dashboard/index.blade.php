@@ -658,70 +658,49 @@
             @endif
         </div>
 
-        <div class="dashboard-card status-subaybayan-card" style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-            <h2 style="color: #002C76; font-size: 16px; margin: 0 0 16px; display: flex; align-items: center; gap: 8px;">
-                <span style="width: 22px; height: 22px; border-radius: 999px; background-color: #e0f2fe; color: #0ea5e9; display: inline-flex; align-items: center; justify-content: center; font-size: 11px;">
-                    <i class="fas fa-list-check"></i>
-                </span>
-                STATUS OF PROJECT (SUBAYBAYAN STATUS)
-            </h2>
-            <div class="status-subaybayan-grid" style="display: grid; grid-template-columns: repeat(3, minmax(140px, 1fr)); gap: 12px;">
-                @foreach($statusSubaybayanCounts as $status => $count)
+        @php
+            $statusSubaybayanSorted = collect($statusSubaybayanCounts)->sortDesc();
+            $topStatusSubaybayanCount = (int) $statusSubaybayanSorted->max();
+        @endphp
+        <section class="dashboard-card sglgif-card status-subaybayan-card">
+            <div class="sglgif-card-head">
+                <div>
+                    <h2>STATUS OF PROJECT (SUBAYBAYAN STATUS)</h2>
+                    <p>Click a bar to open the filtered locally funded project list for that status.</p>
+                </div>
+            </div>
+
+            <div class="status-subaybayan-grid" data-dashboard-status-bars>
+                @forelse($statusSubaybayanSorted as $status => $count)
                     @php
-                        $iconConfig = $statusIconMap[$status] ?? ['icon' => 'fa-circle-info', 'color' => '#6b7280', 'bg' => '#f3f4f6', 'tileBg' => '#f9fafb', 'tileBorder' => '#e5e7eb', 'labelColor' => '#6b7280'];
+                        $iconConfig = $statusIconMap[$status] ?? ['color' => '#2563eb', 'bg' => '#dbeafe', 'tileBg' => '#f8fbff', 'tileBorder' => '#bfdbfe', 'labelColor' => '#1e3a8a'];
                         $statusModalKey = trim((string) preg_replace('/[^a-z0-9]+/i', '-', (string) $status), '-');
                         $statusModalId = 'status-subaybayan-' . ($statusModalKey !== '' ? $statusModalKey : 'unspecified') . '-modal';
                         $statusFilterUrl = route('projects.locally-funded', [
                             'status' => $status,
                         ]);
+                        $barWidth = $topStatusSubaybayanCount > 0 ? round((((int) $count) / $topStatusSubaybayanCount) * 100, 2) : 0;
                     @endphp
                     <div
-                        class="dashboard-tile clickable-dashboard-card"
+                        class="sglgif-bar-row sglgif-bar-trigger clickable-dashboard-card status-subaybayan-bar-row"
                         data-card-url="{{ $statusFilterUrl }}"
                         data-modal-target="{{ $statusModalId }}"
-                        @style([
-                            'padding: 12px',
-                            'border: 1px solid ' . $iconConfig['tileBorder'],
-                            'border-radius: 6px',
-                            'background-color: ' . $iconConfig['tileBg'],
-                            'text-align: center',
-                        ])
+                        data-sg-bar-animate="status-subaybayan"
+                        style="--status-row-bg: {{ $iconConfig['tileBg'] }}; --status-row-border: {{ $iconConfig['tileBorder'] }}; --status-title-color: {{ $iconConfig['labelColor'] }};"
                     >
-                        <div
-                            @style([
-                                'font-size: 13px',
-                                'font-weight: 600',
-                                'color: ' . $iconConfig['labelColor'],
-                                'margin-bottom: 6px',
-                                'display: flex',
-                                'align-items: center',
-                                'justify-content: center',
-                                'gap: 8px',
-                            ])
-                        >
-                            <span
-                                @style([
-                                    'width: 20px',
-                                    'height: 20px',
-                                    'border-radius: 999px',
-                                    'background-color: ' . $iconConfig['bg'],
-                                    'color: ' . $iconConfig['color'],
-                                    'display: inline-flex',
-                                    'align-items: center',
-                                    'justify-content: center',
-                                    'font-size: 11px',
-                                    'border: 1px solid rgba(0,0,0,0.05)',
-                                ])
-                            >
-                                <i class="fas {{ $iconConfig['icon'] }}"></i>
-                            </span>
+                        <div class="sglgif-bar-head">
                             <span>{{ $status }}</span>
+                            <strong data-sg-bar-number data-format="integer" data-value="{{ (int) $count }}">{{ number_format((int) $count) }}</strong>
                         </div>
-                        <div style="font-size: 20px; font-weight: 700; color: #002C76;">{{ $count }}</div>
+                        <div class="sglgif-bar-track">
+                            <div data-sg-bar-fill data-target-width="{{ $barWidth }}" style="width: {{ $barWidth }}%; background: linear-gradient(90deg, {{ $iconConfig['color'] }}, {{ $iconConfig['labelColor'] }});"></div>
+                        </div>
                     </div>
-                @endforeach
+                @empty
+                    <p class="sglgif-empty">No status data for the current filter set.</p>
+                @endforelse
             </div>
-        </div>
+        </section>
 
     </div>
 
@@ -3480,17 +3459,127 @@
 
         /* ---- Status Subaybayan Card ---- */
         .status-subaybayan-card {
-            background: linear-gradient(145deg, #ffffff 0%, #f8fbff 100%) !important;
+            background: #ffffff !important;
+            border-radius: 16px !important;
+            border: 1px solid rgba(191, 219, 254, 0.9) !important;
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08) !important;
+            padding: 20px !important;
         }
 
-        .status-subaybayan-grid .dashboard-tile {
-            border-radius: 12px !important;
-            padding: 14px !important;
+        .status-subaybayan-grid {
+            display: grid;
+            grid-template-columns: 1fr !important;
+            gap: 12px;
         }
 
-        .status-subaybayan-grid .dashboard-tile > div:last-child {
-            font-size: 26px !important;
-            font-weight: 600 !important;
+        .status-subaybayan-card .sglgif-card-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .status-subaybayan-card .sglgif-card-head h2 {
+            margin: 0;
+            color: #002C76;
+            font-size: 16px;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .status-subaybayan-card .sglgif-card-head p {
+            margin: 6px 0 0;
+            color: #64748b;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .status-subaybayan-card .sglgif-bar-row {
+            margin-bottom: 0;
+        }
+
+        .status-subaybayan-card .sglgif-bar-trigger {
+            padding: 10px 12px;
+            border: 1px solid var(--status-row-border, transparent);
+            border-radius: 12px;
+            background: var(--status-row-bg, #f8fbff);
+            cursor: pointer;
+            transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background-color 0.18s ease;
+        }
+
+        .status-subaybayan-card .sglgif-bar-trigger:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 18px rgba(15, 23, 42, 0.08);
+            border-color: #bfdbfe;
+            background: #f0f7ff;
+        }
+
+        .status-subaybayan-card .sglgif-bar-trigger:focus-visible {
+            outline: 2px solid #2563eb;
+            outline-offset: 2px;
+            border-color: #93c5fd;
+            background: #eff6ff;
+        }
+
+        .status-subaybayan-card .sglgif-bar-head {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 6px;
+            color: #334155;
+            font-size: 12px;
+            align-items: center;
+        }
+
+        .status-subaybayan-card .sglgif-bar-head span {
+            font-weight: 700;
+            color: var(--status-title-color, #334155);
+            overflow-wrap: anywhere;
+        }
+
+        .status-subaybayan-card .sglgif-bar-head strong {
+            color: #0f172a;
+            font-size: 13px;
+            font-weight: 800;
+        }
+
+        .status-subaybayan-card .sglgif-bar-track {
+            height: 8px;
+            border-radius: 999px;
+            background: #e2e8f0;
+            overflow: hidden;
+        }
+
+        .status-subaybayan-card .sglgif-bar-track > div {
+            height: 100%;
+            border-radius: 999px;
+        }
+
+        .status-subaybayan-card .sglgif-empty {
+            margin: 0;
+            padding: 18px 16px;
+            border-radius: 12px;
+            background: #f8fafc;
+            border: 1px dashed #cbd5e1;
+            color: #64748b;
+            font-size: 12px;
+            text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            .status-subaybayan-card .sglgif-card-head h2 {
+                font-size: 14px;
+            }
+
+            .status-subaybayan-card .sglgif-card-head p {
+                font-size: 11px;
+            }
+
+            .status-subaybayan-card .sglgif-bar-head {
+                font-size: 11px;
+            }
         }
 
         /* ---- Project Update Status & Risk Cards ---- */
@@ -4399,6 +4488,102 @@
             }
         }
 
+        function formatDashboardAnimatedBarValue(value, format) {
+            if (format === 'currency') {
+                return new Intl.NumberFormat('en-PH', {
+                    style: 'currency',
+                    currency: 'PHP',
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                }).format(value || 0);
+            }
+
+            if (format === 'decimal') {
+                return Number(value || 0).toLocaleString('en-PH', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                });
+            }
+
+            return Number(Math.round(value || 0)).toLocaleString('en-PH');
+        }
+
+        function initializeStatusSubaybayanBars() {
+            const barContainers = document.querySelectorAll('[data-dashboard-status-bars]');
+            if (!barContainers.length) {
+                return;
+            }
+
+            const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+            barContainers.forEach((barContainer) => {
+                if (barContainer.dataset.statusBarsInitialized === '1') {
+                    return;
+                }
+
+                barContainer.dataset.statusBarsInitialized = '1';
+                const animatedRows = Array.from(barContainer.querySelectorAll('[data-sg-bar-animate]'));
+
+                animatedRows.forEach((rowElement, index) => {
+                    const fillElement = rowElement.querySelector('[data-sg-bar-fill]');
+                    const numberElements = Array.from(rowElement.querySelectorAll('[data-sg-bar-number]'));
+                    const targetWidth = fillElement ? Number.parseFloat(fillElement.getAttribute('data-target-width') || '0') : 0;
+
+                    if (prefersReducedMotion) {
+                        if (fillElement) {
+                            fillElement.style.width = `${targetWidth}%`;
+                        }
+
+                        numberElements.forEach((numberElement) => {
+                            const targetValue = Number.parseFloat(numberElement.getAttribute('data-value') || '0');
+                            const format = numberElement.getAttribute('data-format') || 'integer';
+                            numberElement.textContent = formatDashboardAnimatedBarValue(targetValue, format);
+                        });
+
+                        return;
+                    }
+
+                    const durationMs = 1000;
+                    const delayMs = index * 90;
+
+                    window.setTimeout(() => {
+                        const startTime = performance.now();
+                        const easeOutCubic = (progress) => 1 - Math.pow(1 - progress, 3);
+
+                        if (fillElement) {
+                            fillElement.style.width = '0%';
+                        }
+
+                        numberElements.forEach((numberElement) => {
+                            const format = numberElement.getAttribute('data-format') || 'integer';
+                            numberElement.textContent = formatDashboardAnimatedBarValue(0, format);
+                        });
+
+                        const updateFrame = (now) => {
+                            const rawProgress = Math.min((now - startTime) / durationMs, 1);
+                            const easedProgress = easeOutCubic(rawProgress);
+
+                            if (fillElement) {
+                                fillElement.style.width = `${(targetWidth * easedProgress).toFixed(2)}%`;
+                            }
+
+                            numberElements.forEach((numberElement) => {
+                                const targetValue = Number.parseFloat(numberElement.getAttribute('data-value') || '0');
+                                const format = numberElement.getAttribute('data-format') || 'integer';
+                                numberElement.textContent = formatDashboardAnimatedBarValue(targetValue * easedProgress, format);
+                            });
+
+                            if (rawProgress < 1) {
+                                window.requestAnimationFrame(updateFrame);
+                            }
+                        };
+
+                        window.requestAnimationFrame(updateFrame);
+                    }, delayMs);
+                });
+            });
+        }
+
         function initializeDashboardModals() {
             const modalElements = document.querySelectorAll('.dashboard-modal');
             if (!modalElements.length) {
@@ -4521,6 +4706,7 @@
 
             initializeDashboardModals();
             initializeClickableDashboardCards();
+            initializeStatusSubaybayanBars();
             syncRiskCardHeightsWithStatusCard();
 
             window.addEventListener('resize', () => {

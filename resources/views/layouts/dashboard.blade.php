@@ -614,8 +614,12 @@
             min-height: calc(100vh - 70px);
             overflow-y: auto;
             overflow-x: hidden;
-            transition: margin-left 280ms cubic-bezier(0.2, 0.8, 0.2, 1);
+            transition: none;
             will-change: margin-left;
+        }
+
+        .main-content.sidebar-transition-enabled {
+            transition: margin-left 280ms cubic-bezier(0.2, 0.8, 0.2, 1);
         }
         
         .main-content.with-sidebar {
@@ -1415,12 +1419,35 @@
                                 </a>
                             </li>
                         @endif
-                        @if($canViewRssaProjects)
+                        @if($canViewRssaProjects || $canViewRlipLimeProjects)
                             <li>
-                                <a href="{{ route('projects.rssa') }}" class="@if(request()->routeIs('projects.rssa')) active @endif">
+                                @php
+                                    $rssaProjectsMenuActive = request()->routeIs('projects.rssa')
+                                        || request()->routeIs('projects.rlip-lime.dashboard');
+                                @endphp
+                                <a href="#" class="@if($rssaProjectsMenuActive) active @endif submenu-toggle" onclick="toggleSubmenu(event, 'rssaProjectsMenu')">
                                     <i class="fas fa-list-check"></i>
                                     <span>Rapid Subproject Sustainability Assessment</span>
+                                    <i class="fas fa-chevron-down submenu-chevron" style="margin-left: auto; font-size: 11px;"></i>
                                 </a>
+                                <ul id="rssaProjectsMenu" class="submenu" style="display: {{ $rssaProjectsMenuActive ? 'block' : 'none' }};">
+                                    @if($canViewRssaProjects)
+                                        <li>
+                                            <a href="{{ route('projects.rssa') }}" class="@if(request()->routeIs('projects.rssa')) active @endif">
+                                                <i class="fas fa-hand-holding-usd"></i>
+                                                <span>Locally Funded Projects</span>
+                                            </a>
+                                        </li>
+                                    @endif
+                                    @if($canViewRlipLimeProjects)
+                                        <li>
+                                            <a href="{{ route('projects.rlip-lime.dashboard') }}" class="@if(request()->routeIs('projects.rlip-lime.dashboard')) active @endif">
+                                                <i class="fas fa-leaf"></i>
+                                                <span>LIME-20% Development Fund</span>
+                                            </a>
+                                        </li>
+                                    @endif
+                                </ul>
                             </li>
                         @endif
                         @if($canViewRlipLimeProjects)
@@ -1652,6 +1679,12 @@
                         </a>
                     </li>
                     <li>
+                        <a href="{{ route('utilities.notifications.index') }}" class="@if(request()->routeIs('utilities.notifications.*')) active @endif">
+                            <i class="fas fa-bell"></i>
+                            <span>Notifications</span>
+                        </a>
+                    </li>
+                    <li>
                         <a href="{{ route('utilities.backup-and-restore.index') }}" class="@if(request()->routeIs('utilities.backup-and-restore.*')) active @endif">
                             <i class="fas fa-server"></i>
                             <span>Backup and Restore</span>
@@ -1792,6 +1825,7 @@
         let sidebarExpanded = localStorage.getItem('sidebarExpanded') !== 'false';
         let mainContentShiftTimer = null;
         let mainContentShiftAnimation = null;
+        let sidebarTransitionTimer = null;
         
         // Check if mobile
         function isMobile() {
@@ -1843,6 +1877,20 @@
         function updateSidebarState(options = {}) {
             const { animate = false } = options;
             const mobileView = isMobile();
+
+            if (mainContent) {
+                if (animate && !mobileView) {
+                    mainContent.classList.add('sidebar-transition-enabled');
+                    window.clearTimeout(sidebarTransitionTimer);
+                    sidebarTransitionTimer = window.setTimeout(() => {
+                        mainContent.classList.remove('sidebar-transition-enabled');
+                    }, 320);
+                } else {
+                    mainContent.classList.remove('sidebar-transition-enabled');
+                    window.clearTimeout(sidebarTransitionTimer);
+                }
+            }
+
             sidebar.classList.remove('collapsed', 'icon-collapsed');
 
             if (sidebarExpanded) {

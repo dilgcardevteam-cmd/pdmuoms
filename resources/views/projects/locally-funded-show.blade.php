@@ -261,6 +261,99 @@
             box-shadow: 0 10px 24px rgba(29, 78, 216, 0.1);
         }
 
+        .lfp-physical-timeline-year-groups {
+            display: grid;
+            gap: 14px;
+            margin-top: 16px;
+        }
+
+        .lfp-physical-year-accordion {
+            border: 1px solid #dbeafe;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.85);
+            overflow: hidden;
+        }
+
+        .lfp-physical-year-accordion.is-static {
+            border: none;
+            background: transparent;
+        }
+
+        .lfp-physical-year-summary {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 14px 16px;
+            list-style: none;
+            cursor: pointer;
+        }
+
+        .lfp-physical-year-summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .lfp-physical-year-summary::after {
+            content: '+';
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 22px;
+            height: 22px;
+            border-radius: 999px;
+            background: #dbeafe;
+            color: #1d4ed8;
+            font-size: 14px;
+            font-weight: 700;
+            line-height: 1;
+            transition: transform 0.2s ease;
+        }
+
+        .lfp-physical-year-accordion[open] > .lfp-physical-year-summary::after {
+            transform: rotate(45deg);
+        }
+
+        .lfp-physical-year-accordion.is-static > .lfp-physical-year-summary {
+            padding: 0 0 4px;
+            cursor: default;
+            pointer-events: none;
+        }
+
+        .lfp-physical-year-accordion.is-static > .lfp-physical-year-summary::after {
+            display: none;
+        }
+
+        .lfp-physical-year-heading {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .lfp-physical-year-label {
+            color: #0f172a;
+            font-size: 14px;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+        }
+
+        .lfp-physical-year-range {
+            color: #64748b;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .lfp-physical-year-count {
+            color: #1d4ed8;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .lfp-physical-year-body {
+            padding: 0 16px 16px;
+        }
+
         .lfp-physical-timeline-details > summary {
             list-style: none;
         }
@@ -340,6 +433,17 @@
             box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
         }
 
+        .lfp-physical-timeline-node.is-empty {
+            background: #94a3b8;
+            box-shadow: none;
+        }
+
+        .lfp-physical-timeline-card.is-empty {
+            border-style: dashed;
+            background: #f8fafc;
+            box-shadow: none;
+        }
+
         .lfp-physical-timeline-card-header {
             display: flex;
             justify-content: space-between;
@@ -362,6 +466,17 @@
             font-weight: 700;
             letter-spacing: 0.08em;
             text-transform: uppercase;
+        }
+
+        .lfp-physical-timeline-note {
+            margin: 0 0 12px;
+            padding: 10px 12px;
+            border: 1px dashed #cbd5e1;
+            border-radius: 12px;
+            background: #f8fafc;
+            color: #64748b;
+            font-size: 12px;
+            font-weight: 600;
         }
 
         .lfp-physical-timeline-month {
@@ -1500,41 +1615,90 @@
                 return '';
             };
 
-            $physicalTimelineEntries = [];
-            foreach ($months as $monthNumber => $monthName) {
-                $row = $physicalByMonth[$monthNumber] ?? [];
-                $hasData = collect([
-                    $row['status_project_fou'] ?? null,
-                    $row['status_project_ro'] ?? null,
-                    $row['accomplishment_pct'] ?? null,
-                    $row['accomplishment_pct_ro'] ?? null,
-                    $row['slippage'] ?? null,
-                    $row['slippage_ro'] ?? null,
-                    $row['risk_aging'] ?? null,
-                    $row['nc_letters'] ?? null,
-                ])->contains(function ($value) {
-                    return $value !== null && $value !== '';
-                });
-
-                if (!$hasData) {
-                    continue;
+            $physicalTimelineStart = $project->date_ntp ? $project->date_ntp->copy()->startOfMonth() : null;
+            if ($physicalTimelineStart === null && !empty($physicalTimelineByPeriod ?? [])) {
+                $firstPhysicalTimelineKey = array_key_first($physicalTimelineByPeriod);
+                if ($firstPhysicalTimelineKey) {
+                    [$startYear, $startMonth] = array_map('intval', explode('-', $firstPhysicalTimelineKey));
+                    $physicalTimelineStart = \Illuminate\Support\Carbon::create($startYear, $startMonth, 1)->startOfMonth();
                 }
-
-                $physicalTimelineEntries[] = [
-                    'month_number' => $monthNumber,
-                    'month_label' => $monthName,
-                    'month_short' => substr($monthName, 0, 3),
-                    'status_project_fou' => $row['status_project_fou'] ?? null,
-                    'status_project_ro' => $row['status_project_ro'] ?? null,
-                    'accomplishment_pct' => $row['accomplishment_pct'] ?? null,
-                    'accomplishment_pct_ro' => $row['accomplishment_pct_ro'] ?? null,
-                    'slippage' => $row['slippage'] ?? null,
-                    'slippage_ro' => $row['slippage_ro'] ?? null,
-                    'risk_aging' => $row['risk_aging'] ?? null,
-                    'nc_letters' => $row['nc_letters'] ?? null,
-                    'remarks' => $monthNumber === (int) $currentMonth ? ($project->physical_remarks ?? null) : null,
-                ];
             }
+
+            $physicalTimelineEnd = now()->startOfMonth();
+            if ($physicalTimelineStart && $physicalTimelineStart->greaterThan($physicalTimelineEnd)) {
+                $physicalTimelineStart = $physicalTimelineEnd->copy();
+            }
+
+            $currentPhysicalTimelineKey = sprintf('%04d-%02d', (int) $currentYear, (int) $currentMonth);
+            $physicalTimelineEntries = [];
+            $previousPhysicalMetricValues = [
+                'accomplishment_pct' => null,
+                'accomplishment_pct_ro' => null,
+                'slippage' => null,
+                'slippage_ro' => null,
+            ];
+
+            if ($physicalTimelineStart) {
+                $physicalTimelineCursor = $physicalTimelineStart->copy();
+
+                while ($physicalTimelineCursor->lessThanOrEqualTo($physicalTimelineEnd)) {
+                    $monthNumber = (int) $physicalTimelineCursor->month;
+                    $timelineYear = (int) $physicalTimelineCursor->year;
+                    $periodKey = $physicalTimelineCursor->format('Y-m');
+                    $row = $physicalTimelineByPeriod[$periodKey] ?? [];
+
+                    $hasData = collect([
+                        $row['status_project_fou'] ?? null,
+                        $row['status_project_ro'] ?? null,
+                        $row['accomplishment_pct'] ?? null,
+                        $row['accomplishment_pct_ro'] ?? null,
+                        $row['slippage'] ?? null,
+                        $row['slippage_ro'] ?? null,
+                        $row['risk_aging'] ?? null,
+                        $row['nc_letters'] ?? null,
+                    ])->contains(function ($value) {
+                        return $value !== null && $value !== '';
+                    });
+
+                    $physicalTimelineEntries[] = [
+                        'timeline_year' => $timelineYear,
+                        'period_key' => $periodKey,
+                        'month_number' => $monthNumber,
+                        'month_label' => $physicalTimelineCursor->format('F'),
+                        'month_short' => $physicalTimelineCursor->format('M'),
+                        'has_data' => $hasData,
+                        'status_project_fou' => $row['status_project_fou'] ?? null,
+                        'status_project_ro' => $row['status_project_ro'] ?? null,
+                        'accomplishment_pct' => $row['accomplishment_pct'] ?? null,
+                        'accomplishment_pct_ro' => $row['accomplishment_pct_ro'] ?? null,
+                        'slippage' => $row['slippage'] ?? null,
+                        'slippage_ro' => $row['slippage_ro'] ?? null,
+                        'risk_aging' => $row['risk_aging'] ?? null,
+                        'nc_letters' => $row['nc_letters'] ?? null,
+                        'previous_accomplishment_pct' => $previousPhysicalMetricValues['accomplishment_pct'],
+                        'previous_accomplishment_pct_ro' => $previousPhysicalMetricValues['accomplishment_pct_ro'],
+                        'previous_slippage' => $previousPhysicalMetricValues['slippage'],
+                        'previous_slippage_ro' => $previousPhysicalMetricValues['slippage_ro'],
+                        'remarks' => $periodKey === $currentPhysicalTimelineKey ? ($project->physical_remarks ?? null) : null,
+                    ];
+
+                    foreach (['accomplishment_pct', 'accomplishment_pct_ro', 'slippage', 'slippage_ro'] as $metricField) {
+                        if (is_numeric($row[$metricField] ?? null)) {
+                            $previousPhysicalMetricValues[$metricField] = $row[$metricField];
+                        }
+                    }
+
+                    $physicalTimelineCursor->addMonthNoOverflow();
+                }
+            }
+
+            $physicalTimelineGroups = collect($physicalTimelineEntries)
+                ->groupBy('timeline_year')
+                ->sortKeysDesc()
+                ->map(function ($entries) {
+                    return $entries->sortByDesc('month_number')->values();
+                });
+            $hasMultiplePhysicalTimelineYears = $physicalTimelineGroups->count() > 1;
 
             $formatFinancialCurrency = function ($value) {
                 if ($value === null || $value === '') {
@@ -1681,101 +1845,126 @@
 
             <details class="lfp-physical-timeline-details">
                 <summary class="lfp-physical-timeline-summary">View physical timeline</summary>
-                <div class="lfp-physical-timeline">
-                    @forelse($physicalTimelineEntries as $entry)
-                        @php
-                            $previousEntry = $loop->first ? null : ($physicalTimelineEntries[$loop->index - 1] ?? null);
-                        @endphp
-                        <article class="lfp-physical-timeline-item">
-                            <div class="lfp-physical-timeline-node">
-                                <span>{{ $entry['month_short'] }}</span>
-                            </div>
-                            <div class="lfp-physical-timeline-card">
-                                <div class="lfp-physical-timeline-card-header">
-                                    <div>
-                                        <p class="lfp-physical-timeline-kicker">Timeline Point</p>
-                                        <h4>{{ $entry['month_label'] }}</h4>
+                @if($physicalTimelineGroups->isEmpty())
+                    <div class="lfp-physical-empty-state">No physical accomplishment updates have been logged yet.</div>
+                @else
+                    <div class="lfp-physical-timeline-year-groups">
+                        @foreach($physicalTimelineGroups as $timelineYear => $yearEntries)
+                            @php
+                                $yearEntries = $yearEntries->values();
+                                $firstYearEntry = $yearEntries->sortBy('month_number')->first();
+                                $lastYearEntry = $yearEntries->sortByDesc('month_number')->first();
+                                $openYearAccordion = !$hasMultiplePhysicalTimelineYears || (int) $timelineYear === (int) $currentYear;
+                            @endphp
+                            <details class="lfp-physical-year-accordion{{ $hasMultiplePhysicalTimelineYears ? '' : ' is-static' }}" {{ $openYearAccordion ? 'open' : '' }}>
+                                <summary class="lfp-physical-year-summary">
+                                    <div class="lfp-physical-year-heading">
+                                        <span class="lfp-physical-year-label">{{ $timelineYear }}</span>
+                                        <span class="lfp-physical-year-range">{{ $firstYearEntry['month_label'] }} to {{ $lastYearEntry['month_label'] }}</span>
                                     </div>
-                                    <span class="lfp-physical-timeline-month">{{ str_pad((string) $entry['month_number'], 2, '0', STR_PAD_LEFT) }}</span>
+                                    @if($hasMultiplePhysicalTimelineYears)
+                                        <span class="lfp-physical-year-count">{{ $yearEntries->count() }} months</span>
+                                    @endif
+                                </summary>
+                                <div class="lfp-physical-year-body">
+                                    <div class="lfp-physical-timeline">
+                                        @foreach($yearEntries as $entry)
+                                            <article class="lfp-physical-timeline-item{{ $entry['has_data'] ? '' : ' is-empty' }}">
+                                                <div class="lfp-physical-timeline-node{{ $entry['has_data'] ? '' : ' is-empty' }}">
+                                                    <span>{{ $entry['month_short'] }}</span>
+                                                </div>
+                                                <div class="lfp-physical-timeline-card{{ $entry['has_data'] ? '' : ' is-empty' }}">
+                                                    <div class="lfp-physical-timeline-card-header">
+                                                        <div>
+                                                            <p class="lfp-physical-timeline-kicker">Timeline Point</p>
+                                                            <h4>{{ $entry['month_label'] }}</h4>
+                                                        </div>
+                                                        <span class="lfp-physical-timeline-month">{{ str_pad((string) $entry['month_number'], 2, '0', STR_PAD_LEFT) }}</span>
+                                                    </div>
+                                                    <button type="button"
+                                                            class="lfp-physical-compare-toggle"
+                                                            data-physical-compare-trigger="true"
+                                                            data-physical-compare-title="{{ $entry['month_label'] }} {{ $timelineYear }} comparison">
+                                                        Compare FOU vs RO
+                                                    </button>
+                                                    @if(!$entry['has_data'])
+                                                        <p class="lfp-physical-timeline-note">No monthly update logged yet.</p>
+                                                    @endif
+                                                    <div class="lfp-physical-timeline-metrics">
+                                                        <div class="">
+                                                            <div class="lfp-physical-timeline-metric !mb-4">
+                                                                <span>Risk</span>
+                                                                <strong>{!! $statusBadge($entry['risk_aging']) !!}</strong>
+                                                            </div>
+                                                            <div class="lfp-physical-timeline-metric !mt-4">
+                                                                <span>NC Letters</span>
+                                                                <strong>{!! $statusBadge($entry['nc_letters']) !!}</strong>
+                                                            </div>
+                                                        </div>
+
+                                                        <div class="lfp-physical-timeline-columns">
+                                                            <div class="flex flex-col gap-4">
+                                                                <div class="lfp-physical-timeline-metric">
+                                                                    <span>FOU Status</span>
+                                                                    <strong>{!! $statusBadge($entry['status_project_fou']) !!}</strong>
+                                                                </div>
+
+                                                                <div class="lfp-physical-timeline-metric">
+                                                                    <span>FOU Accomplishment</span>
+                                                                    <strong class="lfp-physical-trend">
+                                                                        {!! $physicalTrendIndicator($entry['accomplishment_pct'], $entry['previous_accomplishment_pct']) !!}
+                                                                        <span>{{ $formatPhysicalPercent($entry['accomplishment_pct']) }}</span>
+                                                                    </strong>
+                                                                </div>
+
+                                                                <div class="lfp-physical-timeline-metric">
+                                                                    <span>FOU Slippage</span>
+                                                                    <strong class="lfp-physical-trend">
+                                                                        {!! $physicalTrendIndicator($entry['slippage'], $entry['previous_slippage']) !!}
+                                                                        <span>{{ $formatPhysicalPercent($entry['slippage']) }}</span>
+                                                                    </strong>
+                                                                </div>
+                                                            </div>
+
+                                                            <div class="flex flex-col gap-4">
+                                                                <div class="lfp-physical-timeline-metric">
+                                                                    <span>RO Status</span>
+                                                                    <strong>{!! $statusBadge($entry['status_project_ro']) !!}</strong>
+                                                                </div>
+
+                                                                <div class="lfp-physical-timeline-metric">
+                                                                    <span>RO Accomplishment</span>
+                                                                    <strong class="lfp-physical-trend">
+                                                                        {!! $physicalTrendIndicator($entry['accomplishment_pct_ro'], $entry['previous_accomplishment_pct_ro']) !!}
+                                                                        <span>{{ $formatPhysicalPercent($entry['accomplishment_pct_ro']) }}</span>
+                                                                    </strong>
+                                                                </div>
+
+                                                                <div class="lfp-physical-timeline-metric">
+                                                                    <span>RO Slippage</span>
+                                                                    <strong class="lfp-physical-trend">
+                                                                        {!! $physicalTrendIndicator($entry['slippage_ro'], $entry['previous_slippage_ro']) !!}
+                                                                        <span>{{ $formatPhysicalPercent($entry['slippage_ro']) }}</span>
+                                                                    </strong>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    @if(!empty($entry['remarks']))
+                                                        <div class="lfp-physical-timeline-remarks">
+                                                            <span>Remarks</span>
+                                                            <p>{{ $entry['remarks'] }}</p>
+                                                        </div>
+                                                    @endif
+                                                </div>
+                                            </article>
+                                        @endforeach
+                                    </div>
                                 </div>
-                                <button type="button"
-                                        class="lfp-physical-compare-toggle"
-                                        data-physical-compare-trigger="true"
-                                        data-physical-compare-title="{{ $entry['month_label'] }} comparison">
-                                    Compare FOU vs RO
-                                </button>
-                                <div class="lfp-physical-timeline-metrics">
-                                    <div class="">
-                                        <div class="lfp-physical-timeline-metric !mb-4">
-                                            <span>Risk</span>
-                                            <strong>{!! $statusBadge($entry['risk_aging']) !!}</strong>
-                                        </div>
-                                        <div class="lfp-physical-timeline-metric !mt-4">
-                                            <span>NC Letters</span>
-                                            <strong>{!! $statusBadge($entry['nc_letters']) !!}</strong>
-                                        </div>
-                                    </div>
-
-                                    <div class="lfp-physical-timeline-columns">
-                                        <div class="flex flex-col gap-4">
-                                            <div class="lfp-physical-timeline-metric">
-                                                <span>FOU Status</span>
-                                                <strong>{!! $statusBadge($entry['status_project_fou']) !!}</strong>
-                                            </div>
-
-                                            <div class="lfp-physical-timeline-metric">
-                                                <span>FOU Accomplishment</span>
-                                                <strong class="lfp-physical-trend">
-                                                    {!! $physicalTrendIndicator($entry['accomplishment_pct'], $previousEntry['accomplishment_pct'] ?? null) !!}
-                                                    <span>{{ $formatPhysicalPercent($entry['accomplishment_pct']) }}</span>
-                                                </strong>
-                                            </div>
-
-                                            <div class="lfp-physical-timeline-metric">
-                                                <span>FOU Slippage</span>
-                                                <strong class="lfp-physical-trend">
-                                                    {!! $physicalTrendIndicator($entry['slippage'], $previousEntry['slippage'] ?? null) !!}
-                                                    <span>{{ $formatPhysicalPercent($entry['slippage']) }}</span>
-                                                </strong>
-                                            </div>
-                                        </div>
-
-                                        <div class="flex flex-col gap-4">
-                                            <div class="lfp-physical-timeline-metric">
-                                                <span>RO Status</span>
-                                                <strong>{!! $statusBadge($entry['status_project_ro']) !!}</strong>
-                                            </div>
-
-                                            <div class="lfp-physical-timeline-metric">
-                                                <span>RO Accomplishment</span>
-                                                <strong class="lfp-physical-trend">
-                                                    {!! $physicalTrendIndicator($entry['accomplishment_pct_ro'], $previousEntry['accomplishment_pct_ro'] ?? null) !!}
-                                                    <span>{{ $formatPhysicalPercent($entry['accomplishment_pct_ro']) }}</span>
-                                                </strong>
-                                            </div>
-
-                                            <div class="lfp-physical-timeline-metric">
-                                                <span>RO Slippage</span>
-                                                <strong class="lfp-physical-trend">
-                                                    {!! $physicalTrendIndicator($entry['slippage_ro'], $previousEntry['slippage_ro'] ?? null) !!}
-                                                    <span>{{ $formatPhysicalPercent($entry['slippage_ro']) }}</span>
-                                                </strong>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                @if(!empty($entry['remarks']))
-                                    <div class="lfp-physical-timeline-remarks">
-                                        <span>Remarks</span>
-                                        <p>{{ $entry['remarks'] }}</p>
-                                    </div>
-                                @endif
-                            </div>
-                        </article>
-                    @empty
-                        <div class="lfp-physical-empty-state">No physical accomplishment updates have been logged yet.</div>
-                    @endforelse
-                </div>
+                            </details>
+                        @endforeach
+                    </div>
+                @endif
             </details>
         </div>
 
@@ -1815,31 +2004,31 @@
                                 @method('PUT')
                                 <input type="hidden" name="section" value="physical">
                                 <div style="margin-top: 6px; color: #6b7280; display: grid; grid-template-columns: 120px 1fr 180px 140px; gap: 8px;">
-                                    @foreach($months as $monthNumber => $monthName)
-                                        @php
-                                            $row = $physicalByMonth[$monthNumber] ?? null;
-                                            $value = $row['status_project_fou'] ?? '';
-                                            $updatedAt = $row && $row['status_project_fou_updated_at']
-                                                ? \Illuminate\Support\Carbon::parse($row['status_project_fou_updated_at'])->format('M d, Y h:i A')
-                                                : '-';
-                                            $updatedBy = $row['status_project_fou_updated_by_name'] ?? '-';
-                                        @endphp
-                                        <div>{{ $monthName }}</div>
-                                        <div>
-                                            <select name="status_project_fou[{{ $monthNumber }}]" data-physical-edit="true" data-month="{{ $monthNumber }}" disabled
-                                                    style="width: 100%; min-width: 0; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px; background-color: #f3f4f6;">
-                                                <option value="">-- Select --</option>
-                                                @if($value && !in_array($value, $statusOptionValues, true))
-                                                    <option value="{{ $value }}" selected>{{ $statusLabel($value) }}</option>
-                                                @endif
-                                                @foreach($statusOptions as $option)
-                                                    <option value="{{ $option['value'] }}" {{ $value === $option['value'] ? 'selected' : '' }}>{{ $option['label'] }}</option>
-                                                @endforeach
-                                            </select>
-                                        </div>
-                                        <div><span style="display: inline-block; padding: 3px 8px; border-radius: 999px; border: 1px solid #e5e7eb; background-color: #f3f4f6; color: #374151; font-size: 11px; font-weight: 600;">{{ $updatedAt }}</span></div>
-                                        <div><span style="display: inline-block; padding: 3px 8px; border-radius: 999px; border: 1px solid #e5e7eb; background-color: #eef2ff; color: #4338ca; font-size: 11px; font-weight: 600;">{{ $updatedBy }}</span></div>
-                                    @endforeach
+                                    @php
+                                        $monthNumber = (int) $currentMonth;
+                                        $monthName = $months[$monthNumber] ?? now()->format('F');
+                                        $row = $physicalByMonth[$monthNumber] ?? null;
+                                        $value = $row['status_project_fou'] ?? '';
+                                        $updatedAt = $row && $row['status_project_fou_updated_at']
+                                            ? \Illuminate\Support\Carbon::parse($row['status_project_fou_updated_at'])->format('M d, Y h:i A')
+                                            : '-';
+                                        $updatedBy = $row['status_project_fou_updated_by_name'] ?? '-';
+                                    @endphp
+                                    <div>{{ $monthName }}</div>
+                                    <div>
+                                        <select name="status_project_fou[{{ $monthNumber }}]" data-physical-edit="true" data-month="{{ $monthNumber }}" disabled
+                                                style="width: 100%; min-width: 0; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px; background-color: #f3f4f6;">
+                                            <option value="">-- Select --</option>
+                                            @if($value && !in_array($value, $statusOptionValues, true))
+                                                <option value="{{ $value }}" selected>{{ $statusLabel($value) }}</option>
+                                            @endif
+                                            @foreach($statusOptions as $option)
+                                                <option value="{{ $option['value'] }}" {{ $value === $option['value'] ? 'selected' : '' }}>{{ $option['label'] }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div><span style="display: inline-block; padding: 3px 8px; border-radius: 999px; border: 1px solid #e5e7eb; background-color: #f3f4f6; color: #374151; font-size: 11px; font-weight: 600;">{{ $updatedAt }}</span></div>
+                                    <div><span style="display: inline-block; padding: 3px 8px; border-radius: 999px; border: 1px solid #e5e7eb; background-color: #eef2ff; color: #4338ca; font-size: 11px; font-weight: 600;">{{ $updatedBy }}</span></div>
                                 </div>
                             </form>
                         </div>
@@ -1862,31 +2051,31 @@
                                 @method('PUT')
                                 <input type="hidden" name="section" value="physical">
                                 <div style="margin-top: 6px; color: #6b7280; display: grid; grid-template-columns: 120px 1fr 180px 140px; gap: 8px;">
-                                    @foreach($months as $monthNumber => $monthName)
-                                        @php
-                                            $row = $physicalByMonth[$monthNumber] ?? null;
-                                            $value = $row['status_project_ro'] ?? '';
-                                            $updatedAt = $row && $row['status_project_ro_updated_at']
-                                                ? \Illuminate\Support\Carbon::parse($row['status_project_ro_updated_at'])->format('M d, Y h:i A')
-                                                : '-';
-                                            $updatedBy = $row['status_project_ro_updated_by_name'] ?? '-';
-                                        @endphp
-                                        <div>{{ $monthName }}</div>
-                                        <div>
-                                            <select name="status_project_ro[{{ $monthNumber }}]" data-physical-edit="true" data-month="{{ $monthNumber }}" data-ro-only="true" {{ !(Auth::user()->agency === 'DILG' && Auth::user()->province === 'Regional Office') ? 'disabled' : '' }}
-                                                    style="width: 100%; min-width: 0; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px; background-color: #f3f4f6;">
-                                                <option value="">-- Select --</option>
-                                                @if($value && !in_array($value, $statusOptionValues, true))
-                                                    <option value="{{ $value }}" selected>{{ $statusLabel($value) }}</option>
-                                                @endif
-                                                @foreach($statusOptions as $option)
-                                                    <option value="{{ $option['value'] }}" {{ $value === $option['value'] ? 'selected' : '' }}>{{ $option['label'] }}</option>
-                                                @endforeach
-                                            </select>
-                                        </div>
-                                        <div><span style="display: inline-block; padding: 3px 8px; border-radius: 999px; border: 1px solid #e5e7eb; background-color: #f3f4f6; color: #374151; font-size: 11px; font-weight: 600;">{{ $updatedAt }}</span></div>
-                                        <div><span style="display: inline-block; padding: 3px 8px; border-radius: 999px; border: 1px solid #e5e7eb; background-color: #eef2ff; color: #4338ca; font-size: 11px; font-weight: 600;">{{ $updatedBy }}</span></div>
-                                    @endforeach
+                                    @php
+                                        $monthNumber = (int) $currentMonth;
+                                        $monthName = $months[$monthNumber] ?? now()->format('F');
+                                        $row = $physicalByMonth[$monthNumber] ?? null;
+                                        $value = $row['status_project_ro'] ?? '';
+                                        $updatedAt = $row && $row['status_project_ro_updated_at']
+                                            ? \Illuminate\Support\Carbon::parse($row['status_project_ro_updated_at'])->format('M d, Y h:i A')
+                                            : '-';
+                                        $updatedBy = $row['status_project_ro_updated_by_name'] ?? '-';
+                                    @endphp
+                                    <div>{{ $monthName }}</div>
+                                    <div>
+                                        <select name="status_project_ro[{{ $monthNumber }}]" data-physical-edit="true" data-month="{{ $monthNumber }}" data-ro-only="true" {{ !(Auth::user()->agency === 'DILG' && Auth::user()->province === 'Regional Office') ? 'disabled' : '' }}
+                                                style="width: 100%; min-width: 0; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px; background-color: #f3f4f6;">
+                                            <option value="">-- Select --</option>
+                                            @if($value && !in_array($value, $statusOptionValues, true))
+                                                <option value="{{ $value }}" selected>{{ $statusLabel($value) }}</option>
+                                            @endif
+                                            @foreach($statusOptions as $option)
+                                                <option value="{{ $option['value'] }}" {{ $value === $option['value'] ? 'selected' : '' }}>{{ $option['label'] }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div><span style="display: inline-block; padding: 3px 8px; border-radius: 999px; border: 1px solid #e5e7eb; background-color: #f3f4f6; color: #374151; font-size: 11px; font-weight: 600;">{{ $updatedAt }}</span></div>
+                                    <div><span style="display: inline-block; padding: 3px 8px; border-radius: 999px; border: 1px solid #e5e7eb; background-color: #eef2ff; color: #4338ca; font-size: 11px; font-weight: 600;">{{ $updatedBy }}</span></div>
                                 </div>
                             </form>
                         </div>
@@ -1910,22 +2099,22 @@
                                 @method('PUT')
                                 <input type="hidden" name="section" value="physical">
                                 <div style="margin-top: 6px; color: #6b7280; display: grid; grid-template-columns: 120px 1fr 180px 140px; gap: 8px;">
-                                    @foreach($months as $monthNumber => $monthName)
-                                        @php
-                                            $row = $physicalByMonth[$monthNumber] ?? null;
-                                            $value = $row['accomplishment_pct'] ?? '';
-                                            $updatedAt = $row && $row['accomplishment_pct_updated_at']
-                                                ? \Illuminate\Support\Carbon::parse($row['accomplishment_pct_updated_at'])->format('M d, Y h:i A')
-                                                : '-';
-                                            $updatedBy = $row['accomplishment_pct_updated_by_name'] ?? '-';
-                                        @endphp
-                                        <div>{{ $monthName }}</div>
-                                        <div>
-                                            <input type="number" step="0.01" min="0" max="100" name="accomplishment_pct[{{ $monthNumber }}]" value="{{ $value }}" data-physical-edit="true" data-month="{{ $monthNumber }}" disabled style="width: 100%; min-width: 0; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px; background-color: #f3f4f6;">
-                                        </div>
-                                        <div><span style="display: inline-block; padding: 3px 8px; border-radius: 999px; border: 1px solid #e5e7eb; background-color: #f3f4f6; color: #374151; font-size: 11px; font-weight: 600;">{{ $updatedAt }}</span></div>
-                                        <div><span style="display: inline-block; padding: 3px 8px; border-radius: 999px; border: 1px solid #e5e7eb; background-color: #eef2ff; color: #4338ca; font-size: 11px; font-weight: 600;">{{ $updatedBy }}</span></div>
-                                    @endforeach
+                                    @php
+                                        $monthNumber = (int) $currentMonth;
+                                        $monthName = $months[$monthNumber] ?? now()->format('F');
+                                        $row = $physicalByMonth[$monthNumber] ?? null;
+                                        $value = $row['accomplishment_pct'] ?? '';
+                                        $updatedAt = $row && $row['accomplishment_pct_updated_at']
+                                            ? \Illuminate\Support\Carbon::parse($row['accomplishment_pct_updated_at'])->format('M d, Y h:i A')
+                                            : '-';
+                                        $updatedBy = $row['accomplishment_pct_updated_by_name'] ?? '-';
+                                    @endphp
+                                    <div>{{ $monthName }}</div>
+                                    <div>
+                                        <input type="number" step="0.01" min="0" max="100" name="accomplishment_pct[{{ $monthNumber }}]" value="{{ $value }}" data-physical-edit="true" data-month="{{ $monthNumber }}" disabled style="width: 100%; min-width: 0; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px; background-color: #f3f4f6;">
+                                    </div>
+                                    <div><span style="display: inline-block; padding: 3px 8px; border-radius: 999px; border: 1px solid #e5e7eb; background-color: #f3f4f6; color: #374151; font-size: 11px; font-weight: 600;">{{ $updatedAt }}</span></div>
+                                    <div><span style="display: inline-block; padding: 3px 8px; border-radius: 999px; border: 1px solid #e5e7eb; background-color: #eef2ff; color: #4338ca; font-size: 11px; font-weight: 600;">{{ $updatedBy }}</span></div>
                                 </div>
                             </form>
                         </div>
@@ -1948,22 +2137,22 @@
                                 @method('PUT')
                                 <input type="hidden" name="section" value="physical">
                                 <div style="margin-top: 6px; color: #6b7280; display: grid; grid-template-columns: 120px 1fr 180px 140px; gap: 8px;">
-                                    @foreach($months as $monthNumber => $monthName)
-                                        @php
-                                            $row = $physicalByMonth[$monthNumber] ?? null;
-                                            $value = $row['accomplishment_pct_ro'] ?? '';
-                                            $updatedAt = $row && $row['accomplishment_pct_ro_updated_at']
-                                                ? \Illuminate\Support\Carbon::parse($row['accomplishment_pct_ro_updated_at'])->format('M d, Y h:i A')
-                                                : '-';
-                                            $updatedBy = $row['accomplishment_pct_ro_updated_by_name'] ?? '-';
-                                        @endphp
-                                        <div>{{ $monthName }}</div>
-                                        <div>
-                                            <input type="number" step="0.01" min="0" max="100" name="accomplishment_pct_ro[{{ $monthNumber }}]" value="{{ $value }}" data-physical-edit="true" data-month="{{ $monthNumber }}" data-ro-only="true" {{ !(Auth::user()->agency === 'DILG' && Auth::user()->province === 'Regional Office') ? 'disabled' : '' }} style="width: 100%; min-width: 0; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px; background-color: #f3f4f6;">
-                                        </div>
-                                        <div><span style="display: inline-block; padding: 3px 8px; border-radius: 999px; border: 1px solid #e5e7eb; background-color: #f3f4f6; color: #374151; font-size: 11px; font-weight: 600;">{{ $updatedAt }}</span></div>
-                                        <div><span style="display: inline-block; padding: 3px 8px; border-radius: 999px; border: 1px solid #e5e7eb; background-color: #eef2ff; color: #4338ca; font-size: 11px; font-weight: 600;">{{ $updatedBy }}</span></div>
-                                    @endforeach
+                                    @php
+                                        $monthNumber = (int) $currentMonth;
+                                        $monthName = $months[$monthNumber] ?? now()->format('F');
+                                        $row = $physicalByMonth[$monthNumber] ?? null;
+                                        $value = $row['accomplishment_pct_ro'] ?? '';
+                                        $updatedAt = $row && $row['accomplishment_pct_ro_updated_at']
+                                            ? \Illuminate\Support\Carbon::parse($row['accomplishment_pct_ro_updated_at'])->format('M d, Y h:i A')
+                                            : '-';
+                                        $updatedBy = $row['accomplishment_pct_ro_updated_by_name'] ?? '-';
+                                    @endphp
+                                    <div>{{ $monthName }}</div>
+                                    <div>
+                                        <input type="number" step="0.01" min="0" max="100" name="accomplishment_pct_ro[{{ $monthNumber }}]" value="{{ $value }}" data-physical-edit="true" data-month="{{ $monthNumber }}" data-ro-only="true" {{ !(Auth::user()->agency === 'DILG' && Auth::user()->province === 'Regional Office') ? 'disabled' : '' }} style="width: 100%; min-width: 0; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px; background-color: #f3f4f6;">
+                                    </div>
+                                    <div><span style="display: inline-block; padding: 3px 8px; border-radius: 999px; border: 1px solid #e5e7eb; background-color: #f3f4f6; color: #374151; font-size: 11px; font-weight: 600;">{{ $updatedAt }}</span></div>
+                                    <div><span style="display: inline-block; padding: 3px 8px; border-radius: 999px; border: 1px solid #e5e7eb; background-color: #eef2ff; color: #4338ca; font-size: 11px; font-weight: 600;">{{ $updatedBy }}</span></div>
                                 </div>
                             </form>
                         </div>
@@ -1987,22 +2176,22 @@
                                 @method('PUT')
                                 <input type="hidden" name="section" value="physical">
                                 <div style="margin-top: 6px; color: #6b7280; display: grid; grid-template-columns: 120px 1fr 180px 140px; gap: 8px;">
-                                    @foreach($months as $monthNumber => $monthName)
-                                        @php
-                                            $row = $physicalByMonth[$monthNumber] ?? null;
-                                            $value = $row['slippage'] ?? '';
-                                            $updatedAt = $row && $row['slippage_updated_at']
-                                                ? \Illuminate\Support\Carbon::parse($row['slippage_updated_at'])->format('M d, Y h:i A')
-                                                : '-';
-                                            $updatedBy = $row['slippage_updated_by_name'] ?? '-';
-                                        @endphp
-                                        <div>{{ $monthName }}</div>
-                                        <div>
-                                            <input type="number" step="0.01" min="0" max="100" name="slippage[{{ $monthNumber }}]" value="{{ $value }}" data-physical-edit="true" data-month="{{ $monthNumber }}" disabled style="width: 100%; min-width: 0; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px; background-color: #f3f4f6;">
-                                        </div>
-                                        <div><span style="display: inline-block; padding: 3px 8px; border-radius: 999px; border: 1px solid #e5e7eb; background-color: #f3f4f6; color: #374151; font-size: 11px; font-weight: 600;">{{ $updatedAt }}</span></div>
-                                        <div><span style="display: inline-block; padding: 3px 8px; border-radius: 999px; border: 1px solid #e5e7eb; background-color: #eef2ff; color: #4338ca; font-size: 11px; font-weight: 600;">{{ $updatedBy }}</span></div>
-                                    @endforeach
+                                    @php
+                                        $monthNumber = (int) $currentMonth;
+                                        $monthName = $months[$monthNumber] ?? now()->format('F');
+                                        $row = $physicalByMonth[$monthNumber] ?? null;
+                                        $value = $row['slippage'] ?? '';
+                                        $updatedAt = $row && $row['slippage_updated_at']
+                                            ? \Illuminate\Support\Carbon::parse($row['slippage_updated_at'])->format('M d, Y h:i A')
+                                            : '-';
+                                        $updatedBy = $row['slippage_updated_by_name'] ?? '-';
+                                    @endphp
+                                    <div>{{ $monthName }}</div>
+                                    <div>
+                                        <input type="number" step="0.01" min="0" max="100" name="slippage[{{ $monthNumber }}]" value="{{ $value }}" data-physical-edit="true" data-month="{{ $monthNumber }}" disabled style="width: 100%; min-width: 0; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px; background-color: #f3f4f6;">
+                                    </div>
+                                    <div><span style="display: inline-block; padding: 3px 8px; border-radius: 999px; border: 1px solid #e5e7eb; background-color: #f3f4f6; color: #374151; font-size: 11px; font-weight: 600;">{{ $updatedAt }}</span></div>
+                                    <div><span style="display: inline-block; padding: 3px 8px; border-radius: 999px; border: 1px solid #e5e7eb; background-color: #eef2ff; color: #4338ca; font-size: 11px; font-weight: 600;">{{ $updatedBy }}</span></div>
                                 </div>
                             </form>
                         </div>
@@ -2025,22 +2214,22 @@
                                 @method('PUT')
                                 <input type="hidden" name="section" value="physical">
                                 <div style="margin-top: 6px; color: #6b7280; display: grid; grid-template-columns: 120px 1fr 180px 140px; gap: 8px;">
-                                    @foreach($months as $monthNumber => $monthName)
-                                        @php
-                                            $row = $physicalByMonth[$monthNumber] ?? null;
-                                            $value = $row['slippage_ro'] ?? '';
-                                            $updatedAt = $row && $row['slippage_ro_updated_at']
-                                                ? \Illuminate\Support\Carbon::parse($row['slippage_ro_updated_at'])->format('M d, Y h:i A')
-                                                : '-';
-                                            $updatedBy = $row['slippage_ro_updated_by_name'] ?? '-';
-                                        @endphp
-                                        <div>{{ $monthName }}</div>
-                                        <div>
-                                            <input type="number" step="0.01" min="0" max="100" name="slippage_ro[{{ $monthNumber }}]" value="{{ $value }}" data-physical-edit="true" data-month="{{ $monthNumber }}" data-ro-only="true" {{ !(Auth::user()->agency === 'DILG' && Auth::user()->province === 'Regional Office') ? 'disabled' : '' }} style="width: 100%; min-width: 0; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px; background-color: #f3f4f6;">
-                                        </div>
-                                        <div><span style="display: inline-block; padding: 3px 8px; border-radius: 999px; border: 1px solid #e5e7eb; background-color: #f3f4f6; color: #374151; font-size: 11px; font-weight: 600;">{{ $updatedAt }}</span></div>
-                                        <div><span style="display: inline-block; padding: 3px 8px; border-radius: 999px; border: 1px solid #e5e7eb; background-color: #eef2ff; color: #4338ca; font-size: 11px; font-weight: 600;">{{ $updatedBy }}</span></div>
-                                    @endforeach
+                                    @php
+                                        $monthNumber = (int) $currentMonth;
+                                        $monthName = $months[$monthNumber] ?? now()->format('F');
+                                        $row = $physicalByMonth[$monthNumber] ?? null;
+                                        $value = $row['slippage_ro'] ?? '';
+                                        $updatedAt = $row && $row['slippage_ro_updated_at']
+                                            ? \Illuminate\Support\Carbon::parse($row['slippage_ro_updated_at'])->format('M d, Y h:i A')
+                                            : '-';
+                                        $updatedBy = $row['slippage_ro_updated_by_name'] ?? '-';
+                                    @endphp
+                                    <div>{{ $monthName }}</div>
+                                    <div>
+                                        <input type="number" step="0.01" min="0" max="100" name="slippage_ro[{{ $monthNumber }}]" value="{{ $value }}" data-physical-edit="true" data-month="{{ $monthNumber }}" data-ro-only="true" {{ !(Auth::user()->agency === 'DILG' && Auth::user()->province === 'Regional Office') ? 'disabled' : '' }} style="width: 100%; min-width: 0; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px; background-color: #f3f4f6;">
+                                    </div>
+                                    <div><span style="display: inline-block; padding: 3px 8px; border-radius: 999px; border: 1px solid #e5e7eb; background-color: #f3f4f6; color: #374151; font-size: 11px; font-weight: 600;">{{ $updatedAt }}</span></div>
+                                    <div><span style="display: inline-block; padding: 3px 8px; border-radius: 999px; border: 1px solid #e5e7eb; background-color: #eef2ff; color: #4338ca; font-size: 11px; font-weight: 600;">{{ $updatedBy }}</span></div>
                                 </div>
                             </form>
                         </div>
@@ -2086,34 +2275,34 @@
                                 @method('PUT')
                                 <input type="hidden" name="section" value="physical">
                                 <div style="margin-top: 6px; color: #6b7280; display: grid; grid-template-columns: 120px 1fr 180px 140px; gap: 8px;">
-                                    @foreach($months as $monthNumber => $monthName)
-                                        @php
-                                            $row = $physicalByMonth[$monthNumber] ?? null;
-                                            $value = $row['risk_aging'] ?? '';
-                                            $updatedAt = $row && $row['risk_aging_updated_at']
-                                                ? \Illuminate\Support\Carbon::parse($row['risk_aging_updated_at'])->format('M d, Y h:i A')
-                                                : '-';
-                                            $updatedBy = $row['risk_aging_updated_by_name'] ?? '-';
-                                        @endphp
-                                        <div>{{ $monthName }}</div>
-                                        <div>
-                                            <select name="risk_aging[{{ $monthNumber }}]" data-physical-edit="true" data-month="{{ $monthNumber }}" data-ro-only="true" {{ !(Auth::user()->agency === 'DILG' && Auth::user()->province === 'Regional Office') ? 'disabled' : '' }}
-                                                    style="width: 100%; min-width: 0; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px; background-color: #f3f4f6;">
-                                                <option value="">-- Select --</option>
-                                                @if($value !== '' && !in_array($value, ['Ahead', 'On Schedule', 'No Risk', 'Low Risk', 'Moderate Risk', 'High Risk'], true))
-                                                    <option value="{{ $value }}" selected>{{ $value }}</option>
-                                                @endif
-                                                <option value="Ahead" {{ $value === 'Ahead' ? 'selected' : '' }}>Ahead</option>
-                                                <option value="On Schedule" {{ $value === 'On Schedule' ? 'selected' : '' }}>On Schedule</option>
-                                                <option value="No Risk" {{ $value === 'No Risk' ? 'selected' : '' }}>No Risk</option>
-                                                <option value="Low Risk" {{ $value === 'Low Risk' ? 'selected' : '' }}>Low Risk</option>
-                                                <option value="Moderate Risk" {{ $value === 'Moderate Risk' ? 'selected' : '' }}>Moderate Risk</option>
-                                                <option value="High Risk" {{ $value === 'High Risk' ? 'selected' : '' }}>High Risk</option>
-                                            </select>
-                                        </div>
-                                        <div><span style="display: inline-block; padding: 3px 8px; border-radius: 999px; border: 1px solid #e5e7eb; background-color: #f3f4f6; color: #374151; font-size: 11px; font-weight: 600;">{{ $updatedAt }}</span></div>
-                                        <div><span style="display: inline-block; padding: 3px 8px; border-radius: 999px; border: 1px solid #e5e7eb; background-color: #eef2ff; color: #4338ca; font-size: 11px; font-weight: 600;">{{ $updatedBy }}</span></div>
-                                    @endforeach
+                                    @php
+                                        $monthNumber = (int) $currentMonth;
+                                        $monthName = $months[$monthNumber] ?? now()->format('F');
+                                        $row = $physicalByMonth[$monthNumber] ?? null;
+                                        $value = $row['risk_aging'] ?? '';
+                                        $updatedAt = $row && $row['risk_aging_updated_at']
+                                            ? \Illuminate\Support\Carbon::parse($row['risk_aging_updated_at'])->format('M d, Y h:i A')
+                                            : '-';
+                                        $updatedBy = $row['risk_aging_updated_by_name'] ?? '-';
+                                    @endphp
+                                    <div>{{ $monthName }}</div>
+                                    <div>
+                                        <select name="risk_aging[{{ $monthNumber }}]" data-physical-edit="true" data-month="{{ $monthNumber }}" data-ro-only="true" {{ !(Auth::user()->agency === 'DILG' && Auth::user()->province === 'Regional Office') ? 'disabled' : '' }}
+                                                style="width: 100%; min-width: 0; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px; background-color: #f3f4f6;">
+                                            <option value="">-- Select --</option>
+                                            @if($value !== '' && !in_array($value, ['Ahead', 'On Schedule', 'No Risk', 'Low Risk', 'Moderate Risk', 'High Risk'], true))
+                                                <option value="{{ $value }}" selected>{{ $value }}</option>
+                                            @endif
+                                            <option value="Ahead" {{ $value === 'Ahead' ? 'selected' : '' }}>Ahead</option>
+                                            <option value="On Schedule" {{ $value === 'On Schedule' ? 'selected' : '' }}>On Schedule</option>
+                                            <option value="No Risk" {{ $value === 'No Risk' ? 'selected' : '' }}>No Risk</option>
+                                            <option value="Low Risk" {{ $value === 'Low Risk' ? 'selected' : '' }}>Low Risk</option>
+                                            <option value="Moderate Risk" {{ $value === 'Moderate Risk' ? 'selected' : '' }}>Moderate Risk</option>
+                                            <option value="High Risk" {{ $value === 'High Risk' ? 'selected' : '' }}>High Risk</option>
+                                        </select>
+                                    </div>
+                                    <div><span style="display: inline-block; padding: 3px 8px; border-radius: 999px; border: 1px solid #e5e7eb; background-color: #f3f4f6; color: #374151; font-size: 11px; font-weight: 600;">{{ $updatedAt }}</span></div>
+                                    <div><span style="display: inline-block; padding: 3px 8px; border-radius: 999px; border: 1px solid #e5e7eb; background-color: #eef2ff; color: #4338ca; font-size: 11px; font-weight: 600;">{{ $updatedBy }}</span></div>
                                 </div>
                             </form>
                         </div>
@@ -2137,43 +2326,43 @@
                                 @method('PUT')
                                 <input type="hidden" name="section" value="physical">
                                 <div style="margin-top: 6px; color: #6b7280; display: grid; grid-template-columns: 120px 1fr 180px 140px; gap: 8px;">
-                                    @foreach($months as $monthNumber => $monthName)
-                                        @php
-                                            $row = $physicalByMonth[$monthNumber] ?? null;
-                                            $value = $row['nc_letters'] ?? '';
-                                            $updatedAt = $row && $row['nc_letters_updated_at']
-                                                ? \Illuminate\Support\Carbon::parse($row['nc_letters_updated_at'])->format('M d, Y h:i A')
-                                                : '-';
-                                            $updatedBy = $row['nc_letters_updated_by_name'] ?? '-';
-                                            $ncColors = [
-                                                'NC No. 1' => '#fef3c7',
-                                                'NC No. 2' => '#fde68a',
-                                                'NC No. 3' => '#fecaca',
-                                                'No' => '#dcfce7',
-                                            ];
-                                            $ncTextColors = [
-                                                'NC No. 1' => '#92400e',
-                                                'NC No. 2' => '#78350f',
-                                                'NC No. 3' => '#991b1b',
-                                                'No' => '#166534',
-                                            ];
-                                            $bgColor = $ncColors[$value] ?? '#f3f4f6';
-                                            $textColor = $ncTextColors[$value] ?? '#374151';
-                                        @endphp
-                                        <div>{{ $monthName }}</div>
-                                        <div>
-                                            <select name="nc_letters[{{ $monthNumber }}]" data-physical-edit="true" data-month="{{ $monthNumber }}" disabled
-                                                    style="width: 100%; min-width: 0; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px; background-color: {{ $bgColor }}; color: {{ $textColor }};">
-                                                <option value="">-- Select --</option>
-                                                <option value="NC No. 1" {{ $value === 'NC No. 1' ? 'selected' : '' }}>NC No. 1</option>
-                                                <option value="NC No. 2" {{ $value === 'NC No. 2' ? 'selected' : '' }}>NC No. 2</option>
-                                                <option value="NC No. 3" {{ $value === 'NC No. 3' ? 'selected' : '' }}>NC No. 3</option>
-                                                <option value="No" {{ $value === 'No' ? 'selected' : '' }}>No</option>
-                                            </select>
-                                        </div>
-                                        <div><span style="display: inline-block; padding: 3px 8px; border-radius: 999px; border: 1px solid #e5e7eb; background-color: #f3f4f6; color: #374151; font-size: 11px; font-weight: 600;">{{ $updatedAt }}</span></div>
-                                        <div><span style="display: inline-block; padding: 3px 8px; border-radius: 999px; border: 1px solid #e5e7eb; background-color: #eef2ff; color: #4338ca; font-size: 11px; font-weight: 600;">{{ $updatedBy }}</span></div>
-                                    @endforeach
+                                    @php
+                                        $monthNumber = (int) $currentMonth;
+                                        $monthName = $months[$monthNumber] ?? now()->format('F');
+                                        $row = $physicalByMonth[$monthNumber] ?? null;
+                                        $value = $row['nc_letters'] ?? '';
+                                        $updatedAt = $row && $row['nc_letters_updated_at']
+                                            ? \Illuminate\Support\Carbon::parse($row['nc_letters_updated_at'])->format('M d, Y h:i A')
+                                            : '-';
+                                        $updatedBy = $row['nc_letters_updated_by_name'] ?? '-';
+                                        $ncColors = [
+                                            'NC No. 1' => '#fef3c7',
+                                            'NC No. 2' => '#fde68a',
+                                            'NC No. 3' => '#fecaca',
+                                            'No' => '#dcfce7',
+                                        ];
+                                        $ncTextColors = [
+                                            'NC No. 1' => '#92400e',
+                                            'NC No. 2' => '#78350f',
+                                            'NC No. 3' => '#991b1b',
+                                            'No' => '#166534',
+                                        ];
+                                        $bgColor = $ncColors[$value] ?? '#f3f4f6';
+                                        $textColor = $ncTextColors[$value] ?? '#374151';
+                                    @endphp
+                                    <div>{{ $monthName }}</div>
+                                    <div>
+                                        <select name="nc_letters[{{ $monthNumber }}]" data-physical-edit="true" data-month="{{ $monthNumber }}" disabled
+                                                style="width: 100%; min-width: 0; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px; background-color: {{ $bgColor }}; color: {{ $textColor }};">
+                                            <option value="">-- Select --</option>
+                                            <option value="NC No. 1" {{ $value === 'NC No. 1' ? 'selected' : '' }}>NC No. 1</option>
+                                            <option value="NC No. 2" {{ $value === 'NC No. 2' ? 'selected' : '' }}>NC No. 2</option>
+                                            <option value="NC No. 3" {{ $value === 'NC No. 3' ? 'selected' : '' }}>NC No. 3</option>
+                                            <option value="No" {{ $value === 'No' ? 'selected' : '' }}>No</option>
+                                        </select>
+                                    </div>
+                                    <div><span style="display: inline-block; padding: 3px 8px; border-radius: 999px; border: 1px solid #e5e7eb; background-color: #f3f4f6; color: #374151; font-size: 11px; font-weight: 600;">{{ $updatedAt }}</span></div>
+                                    <div><span style="display: inline-block; padding: 3px 8px; border-radius: 999px; border: 1px solid #e5e7eb; background-color: #eef2ff; color: #4338ca; font-size: 11px; font-weight: 600;">{{ $updatedBy }}</span></div>
                                 </div>
                             </form>
                         </div>

@@ -13,12 +13,6 @@
         <!-- Header with Create Button -->
         <div class="projects-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <h2 style="color: #002C76; font-size: 18px; margin: 0;">{{ $tableTitle ?? 'Projects' }}</h2>
-            @if(Auth::user()->hasCrudPermission('locally_funded_projects', 'add'))
-                <a href="{{ route('locally-funded-project.create') }}" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; background-color: #002C76; color: white; border-radius: 8px; font-size: 13px; font-weight: 700; text-decoration: none; white-space: nowrap;">
-                    <i class="fas fa-plus"></i>
-                    <span>Add Project</span>
-                </a>
-            @endif
         </div>
 
         @php

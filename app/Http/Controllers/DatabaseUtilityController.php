@@ -172,6 +172,25 @@ class DatabaseUtilityController extends Controller
         ]);
     }
 
+    public function notifications(): View
+    {
+        $notificationsQuery = DB::table('tbnotifications')
+            ->where('user_id', auth()->id());
+
+        return view('admin.utilities.notifications', [
+            'unreadNotifications' => (clone $notificationsQuery)
+                ->whereNull('read_at')
+                ->count(),
+            'readNotifications' => (clone $notificationsQuery)
+                ->whereNotNull('read_at')
+                ->count(),
+            'notifications' => (clone $notificationsQuery)
+                ->orderByDesc('created_at')
+                ->paginate(25)
+                ->withQueryString(),
+        ]);
+    }
+
     public function roleConfiguration(): View
     {
         return view('admin.utilities.role-configuration', [

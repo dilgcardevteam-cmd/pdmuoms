@@ -1475,11 +1475,13 @@ class LocallyFundedProjectController extends Controller
             }
         }
 
-        $physicalUpdates = \Illuminate\Support\Facades\DB::table('locally_funded_physical_updates')
+        $allPhysicalUpdates = \Illuminate\Support\Facades\DB::table('locally_funded_physical_updates')
             ->leftJoin('tbusers', 'tbusers.idno', '=', 'locally_funded_physical_updates.updated_by')
             ->where('locally_funded_physical_updates.project_id', $project->id)
-            ->where('locally_funded_physical_updates.year', $currentYear)
+            ->orderBy('locally_funded_physical_updates.year')
+            ->orderBy('locally_funded_physical_updates.month')
             ->select(
+                'locally_funded_physical_updates.year',
                 'locally_funded_physical_updates.month',
                 'locally_funded_physical_updates.status_project_fou',
                 'locally_funded_physical_updates.status_project_ro',
@@ -1508,7 +1510,13 @@ class LocallyFundedProjectController extends Controller
             )
             ->get();
 
-        $userIds = $physicalUpdates->flatMap(function ($row) {
+        $physicalUpdates = $allPhysicalUpdates
+            ->filter(function ($row) use ($currentYear) {
+                return (int) $row->year === (int) $currentYear;
+            })
+            ->values();
+
+        $userIds = $allPhysicalUpdates->flatMap(function ($row) {
             return [
                 $row->status_project_fou_updated_by,
                 $row->status_project_ro_updated_by,
@@ -1573,9 +1581,10 @@ class LocallyFundedProjectController extends Controller
             'nc_letters_updated_by_name' => null,
         ];
 
-        $physicalByMonth = [];
-        foreach ($physicalUpdates as $row) {
-            $physicalByMonth[(int) $row->month] = array_merge($physicalRowDefaults, [
+        $mapPhysicalUpdateRow = function ($row) use ($physicalRowDefaults, $usersById) {
+            return array_merge($physicalRowDefaults, [
+                'year' => isset($row->year) ? (int) $row->year : null,
+                'month_number' => isset($row->month) ? (int) $row->month : null,
                 'status_project_fou' => $row->status_project_fou,
                 'status_project_ro' => $row->status_project_ro ?? null,
                 'accomplishment_pct' => $row->accomplishment_pct,
@@ -1625,6 +1634,16 @@ class LocallyFundedProjectController extends Controller
                     ? trim($usersById[$row->nc_letters_updated_by]->fname . ' ' . $usersById[$row->nc_letters_updated_by]->lname)
                     : null,
             ]);
+        };
+
+        $physicalByMonth = [];
+        foreach ($physicalUpdates as $row) {
+            $physicalByMonth[(int) $row->month] = $mapPhysicalUpdateRow($row);
+        }
+
+        $physicalTimelineByPeriod = [];
+        foreach ($allPhysicalUpdates as $row) {
+            $physicalTimelineByPeriod[sprintf('%04d-%02d', (int) $row->year, (int) $row->month)] = $mapPhysicalUpdateRow($row);
         }
 
         if (!isset($physicalByMonth[$currentMonth])) {
@@ -1670,6 +1689,17 @@ class LocallyFundedProjectController extends Controller
                 $physicalByMonth[$currentMonth]['risk_aging_updated_at'] = $projectAtRiskValues['updated_at'];
             }
         }
+
+        $currentPhysicalTimelineKey = sprintf('%04d-%02d', (int) $currentYear, (int) $currentMonth);
+        $physicalTimelineByPeriod[$currentPhysicalTimelineKey] = array_merge(
+            $physicalRowDefaults,
+            $physicalTimelineByPeriod[$currentPhysicalTimelineKey] ?? [],
+            [
+                'year' => (int) $currentYear,
+                'month_number' => (int) $currentMonth,
+            ],
+            $physicalByMonth[$currentMonth] ?? []
+        );
 
         $currentPhysical = $physicalByMonth[$currentMonth] ?? null;
 
@@ -2112,7 +2142,7 @@ class LocallyFundedProjectController extends Controller
             ? trim($remarksUsers[$project->rssa_remarks_updated_by]->fname . ' ' . $remarksUsers[$project->rssa_remarks_updated_by]->lname)
             : null;
 
-        return view('projects.locally-funded-show', compact('project', 'provinces', 'provinceMunicipalities', 'fundSources', 'fundingYears', 'physicalByMonth', 'currentPhysical', 'currentYear', 'currentMonth', 'actualCompletionUpdatedByName', 'financialByMonth', 'financialTotals', 'financialBalance', 'financialUtilizationRate', 'physicalRemarksUpdatedByName', 'physicalRemarksEncodedByName', 'financialRemarksUpdatedByName', 'financialRemarksEncodedByName', 'poMonitoringDateUpdatedByName', 'poFinalInspectionUpdatedByName', 'poRemarksUpdatedByName', 'roMonitoringDateUpdatedByName', 'roFinalInspectionUpdatedByName', 'roRemarksUpdatedByName', 'pcrSubmissionDeadlineUpdatedByName', 'pcrDateSubmittedToPoUpdatedByName', 'pcrMovUploadedByName', 'pcrDateReceivedByRoUpdatedByName', 'pcrRemarksUpdatedByName', 'rssaReportDeadlineUpdatedByName', 'rssaSubmissionStatusUpdatedByName', 'rssaDateSubmittedToPoUpdatedByName', 'rssaDateReceivedByRoUpdatedByName', 'rssaDateSubmittedToCoUpdatedByName', 'rssaRemarksUpdatedByName', 'activityLogs'));
+        return view('projects.locally-funded-show', compact('project', 'provinces', 'provinceMunicipalities', 'fundSources', 'fundingYears', 'physicalByMonth', 'physicalTimelineByPeriod', 'currentPhysical', 'currentYear', 'currentMonth', 'actualCompletionUpdatedByName', 'financialByMonth', 'financialTotals', 'financialBalance', 'financialUtilizationRate', 'physicalRemarksUpdatedByName', 'physicalRemarksEncodedByName', 'financialRemarksUpdatedByName', 'financialRemarksEncodedByName', 'poMonitoringDateUpdatedByName', 'poFinalInspectionUpdatedByName', 'poRemarksUpdatedByName', 'roMonitoringDateUpdatedByName', 'roFinalInspectionUpdatedByName', 'roRemarksUpdatedByName', 'pcrSubmissionDeadlineUpdatedByName', 'pcrDateSubmittedToPoUpdatedByName', 'pcrMovUploadedByName', 'pcrDateReceivedByRoUpdatedByName', 'pcrRemarksUpdatedByName', 'rssaReportDeadlineUpdatedByName', 'rssaSubmissionStatusUpdatedByName', 'rssaDateSubmittedToPoUpdatedByName', 'rssaDateReceivedByRoUpdatedByName', 'rssaDateSubmittedToCoUpdatedByName', 'rssaRemarksUpdatedByName', 'activityLogs'));
     }
 
     public function viewPcrMov(LocallyFundedProject $project)

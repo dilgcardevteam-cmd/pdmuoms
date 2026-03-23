@@ -108,11 +108,6 @@
                 <a id="risk-export" href="{{ route('projects.at-risk.export', request()->query()) }}" class="risk-btn risk-btn--success">
                     Export Excel
                 </a>
-                @if($isRegionalDilg && Auth::user()->hasCrudPermission('project_at_risk_data_uploads', 'view'))
-                    <a href="{{ route('system-management.upload-project-at-risk') }}" class="risk-btn risk-btn--primary">
-                        Manage Uploads
-                    </a>
-                @endif
             </div>
         </div>
 
@@ -210,6 +205,7 @@
             </div>
         </details>
 
+        <div id="risk-data-stage" class="risk-data-stage" aria-live="polite">
         @if(($records ?? collect())->isEmpty())
             <p class="risk-empty-state">No records found.</p>
         @else
@@ -373,6 +369,7 @@
                 </div>
             @endif
         @endif
+        </div>
     </div>
 
     <style>
@@ -612,6 +609,18 @@
             border-radius: 8px;
             background: #ffffff;
             -webkit-overflow-scrolling: touch;
+        }
+
+        .risk-data-stage {
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 280ms ease, transform 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
+            will-change: opacity, transform;
+        }
+
+        .risk-data-stage.is-visible {
+            opacity: 1;
+            transform: translateY(0);
         }
 
         #project-at-risk-table {
@@ -956,6 +965,14 @@
                 padding: 0 12px 12px;
             }
         }
+
+        @media (prefers-reduced-motion: reduce) {
+            .risk-data-stage {
+                opacity: 1;
+                transform: none;
+                transition: none;
+            }
+        }
     </style>
 
     <script>
@@ -963,7 +980,14 @@
             const filtersPanel = document.getElementById('risk-filters-panel');
             const filtersForm = document.getElementById('risk-filters-form');
             const searchInput = document.getElementById('risk-filter-search');
+            const dataStage = document.getElementById('risk-data-stage');
             let searchTimer = null;
+
+            if (dataStage) {
+                requestAnimationFrame(function () {
+                    dataStage.classList.add('is-visible');
+                });
+            }
 
             if (filtersPanel && window.matchMedia('(max-width: 768px)').matches) {
                 filtersPanel.removeAttribute('open');
