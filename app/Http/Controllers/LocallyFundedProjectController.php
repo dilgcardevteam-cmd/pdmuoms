@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\FundUtilizationReport;
 use App\Models\LocallyFundedProject;
+use App\Support\InputSanitizer;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -79,6 +80,97 @@ class LocallyFundedProjectController extends Controller
         ];
 
         return compact('provinces', 'provinceMunicipalities', 'fundSources', 'fundingYears', 'procurementTypes', 'statusOptions');
+    }
+
+    private function mergeCleanCurrencyInputs(Request $request): void
+    {
+        $currencyFields = ['lgsf_allocation', 'lgu_counterpart', 'contract_amount', 'disbursed_amount', 'obligation', 'reverted_amount', 'balance'];
+        $cleaned = [];
+
+        foreach ($currencyFields as $field) {
+            if (!$request->has($field)) {
+                continue;
+            }
+
+            $raw = $request->input($field);
+            if (is_array($raw)) {
+                continue;
+            }
+
+            $value = preg_replace('/[^0-9.]/', '', (string) $raw);
+            if ($value === null) {
+                continue;
+            }
+
+            if (substr_count($value, '.') > 1) {
+                $firstDot = strpos($value, '.');
+                $value = substr($value, 0, $firstDot + 1) . str_replace('.', '', substr($value, $firstDot + 1));
+            }
+
+            $cleaned[$field] = $value;
+        }
+
+        if (!empty($cleaned)) {
+            $request->merge($cleaned);
+        }
+    }
+
+    private function sanitizeLocallyFundedPayload(array $validated): array
+    {
+        $validated = InputSanitizer::sanitizeTextFields($validated, [
+            'province',
+            'city_municipality',
+            'project_name',
+            'fund_source',
+            'subaybayan_project_code',
+            'project_type',
+            'mode_of_procurement',
+            'implementing_unit',
+            'contractor',
+            'project_duration',
+            'rssa_submission_status',
+        ]);
+
+        $validated = InputSanitizer::sanitizeTextFields($validated, [
+            'rainwater_collection_system',
+        ], false, true);
+
+        $validated = InputSanitizer::sanitizeTextFields($validated, [
+            'project_description',
+        ], true);
+
+        return InputSanitizer::sanitizeTextFields($validated, [
+            'physical_remarks',
+            'financial_remarks',
+            'po_remarks',
+            'ro_remarks',
+            'pcr_remarks',
+            'rssa_remarks',
+        ], true, true);
+    }
+
+    private function parseBarangaySelection(?string $json): array
+    {
+        return InputSanitizer::decodeJsonStringArray($json, 100);
+    }
+
+    private function sanitizeLocallyFundedRemark(?string $value): ?string
+    {
+        return InputSanitizer::sanitizeNullablePlainText($value, true);
+    }
+
+    private function sanitizeLocallyFundedFieldValue(string $field, mixed $value): mixed
+    {
+        if (!is_scalar($value)) {
+            return $value;
+        }
+
+        $textFields = ['status_project_fou', 'status_project_ro', 'risk_aging', 'nc_letters'];
+        if (!in_array($field, $textFields, true)) {
+            return $value;
+        }
+
+        return InputSanitizer::sanitizeNullablePlainText((string) $value);
     }
 
     private function ensureFundUtilizationReport(LocallyFundedProject $project): void
@@ -2153,28 +2245,7 @@ class LocallyFundedProjectController extends Controller
      */
     public function store(Request $request)
     {
-        $currencyFields = ['lgsf_allocation', 'lgu_counterpart', 'contract_amount', 'disbursed_amount', 'obligation', 'reverted_amount', 'balance'];
-        $cleaned = [];
-
-        foreach ($currencyFields as $field) {
-            if ($request->has($field)) {
-                $raw = $request->input($field);
-                if (is_array($raw)) {
-                    continue;
-                }
-                $value = (string) $raw;
-                $value = preg_replace('/[^0-9.]/', '', $value);
-                if (substr_count($value, '.') > 1) {
-                    $firstDot = strpos($value, '.');
-                    $value = substr($value, 0, $firstDot + 1) . str_replace('.', '', substr($value, $firstDot + 1));
-                }
-                $cleaned[$field] = $value;
-            }
-        }
-
-        if (!empty($cleaned)) {
-            $request->merge($cleaned);
-        }
+        $this->mergeCleanCurrencyInputs($request);
 
         // Validate the request
         $validated = $request->validate([
@@ -2216,12 +2287,14 @@ class LocallyFundedProjectController extends Controller
             'reverted_amount' => 'nullable|numeric|min:0',
             'balance' => 'nullable|numeric|min:0',
             'utilization_rate' => 'nullable|numeric|min:0|max:100',
-            'financial_remarks' => 'nullable|string',
+            'financial_remarks' => 'nullable|string|max:1000',
         ]);
 
+        $validated = $this->sanitizeLocallyFundedPayload($validated);
+
         // Parse the JSON array of barangays and convert to comma-separated string
-        $barangayList = json_decode($validated['barangay_json'], true);
-        if (is_array($barangayList) && count($barangayList) > 0) {
+        $barangayList = $this->parseBarangaySelection($validated['barangay_json'] ?? null);
+        if (count($barangayList) > 0) {
             $validated['barangay'] = implode(',', $barangayList);
         } else {
             return redirect()->back()->withInput()->withErrors(['barangay' => 'Please select at least one barangay']);
@@ -2235,8 +2308,8 @@ class LocallyFundedProjectController extends Controller
         
         // Add office and region from authenticated user
         $user = Auth::user();
-        $validated['office'] = $user->office;
-        $validated['region'] = $user->region;
+        $validated['office'] = InputSanitizer::sanitizeNullablePlainText($user->office) ?? '';
+        $validated['region'] = InputSanitizer::sanitizeNullablePlainText($user->region) ?? '';
 
         // Create the project
         $project = LocallyFundedProject::create($validated);
@@ -2262,37 +2335,16 @@ class LocallyFundedProjectController extends Controller
             abort(403, 'Unauthorized');
         }
 
-        $currencyFields = ['lgsf_allocation', 'lgu_counterpart', 'contract_amount', 'disbursed_amount', 'obligation', 'reverted_amount', 'balance'];
-        $cleaned = [];
-
-        foreach ($currencyFields as $field) {
-            if ($request->has($field)) {
-                $raw = $request->input($field);
-                if (is_array($raw)) {
-                    continue;
-                }
-                $value = (string) $raw;
-                $value = preg_replace('/[^0-9.]/', '', $value);
-                if (substr_count($value, '.') > 1) {
-                    $firstDot = strpos($value, '.');
-                    $value = substr($value, 0, $firstDot + 1) . str_replace('.', '', substr($value, $firstDot + 1));
-                }
-                $cleaned[$field] = $value;
-            }
-        }
-
-        if (!empty($cleaned)) {
-            $request->merge($cleaned);
-        }
+        $this->mergeCleanCurrencyInputs($request);
 
         if ($section === 'physical') {
             if ($request->has('physical_remarks')) {
                 $validated = $request->validate([
-                    'physical_remarks' => 'nullable|string',
+                    'physical_remarks' => 'nullable|string|max:1000',
                 ]);
 
                 $project->update([
-                    'physical_remarks' => $validated['physical_remarks'] ?? null,
+                    'physical_remarks' => $this->sanitizeLocallyFundedRemark($validated['physical_remarks'] ?? null),
                     'physical_remarks_updated_at' => now(),
                     'physical_remarks_updated_by' => Auth::id(),
                     'physical_remarks_encoded_by' => $project->physical_remarks_encoded_by ?: Auth::id(),
@@ -2348,6 +2400,7 @@ class LocallyFundedProjectController extends Controller
                     'month' => 'required|integer|min:1|max:12',
                     $field => $rulesByField[$field],
                 ]);
+                $value = $this->sanitizeLocallyFundedFieldValue($field, $validated[$field] ?? null);
 
                 $now = now();
 
@@ -2358,14 +2411,14 @@ class LocallyFundedProjectController extends Controller
                         'month' => $month,
                     ],
                     [
-                        $field => $validated[$field] ?? null,
+                        $field => $value,
                         'updated_by' => Auth::id(),
                         'updated_at' => $now,
                         'created_at' => $now,
                     ]
                 );
 
-                $formattedValue = $this->formatLocallyFundedActivityValue($field, $validated[$field] ?? null);
+                $formattedValue = $this->formatLocallyFundedActivityValue($field, $value);
                 $details = 'Month: ' . $month;
                 if ($formattedValue !== null && $formattedValue !== '') {
                     $details .= ' • ' . $formattedValue;
@@ -2408,7 +2461,7 @@ class LocallyFundedProjectController extends Controller
                 $updatedCurrentMonth = false;
 
                 if (isset($validated[$field]) && array_key_exists($m, $validated[$field])) {
-                    $value = $validated[$field][$m];
+                    $value = $this->sanitizeLocallyFundedFieldValue($field, $validated[$field][$m]);
                     $data = [$field => $value === '' ? null : $value];
                     $data[$field . '_updated_at'] = $now;
                     $data[$field . '_updated_by'] = Auth::id();
@@ -2467,11 +2520,11 @@ class LocallyFundedProjectController extends Controller
 
             if ($request->has('financial_remarks')) {
                 $validated = $request->validate([
-                    'financial_remarks' => 'nullable|string',
+                    'financial_remarks' => 'nullable|string|max:1000',
                 ]);
 
                 $project->update([
-                    'financial_remarks' => $validated['financial_remarks'] ?? null,
+                    'financial_remarks' => $this->sanitizeLocallyFundedRemark($validated['financial_remarks'] ?? null),
                     'financial_remarks_updated_at' => now(),
                     'financial_remarks_updated_by' => Auth::id(),
                     'financial_remarks_encoded_by' => $project->financial_remarks_encoded_by ?: Auth::id(),
@@ -2601,11 +2654,11 @@ class LocallyFundedProjectController extends Controller
 
             if ($request->has('po_remarks')) {
                 $validated = $request->validate([
-                    'po_remarks' => 'nullable|string',
+                    'po_remarks' => 'nullable|string|max:1000',
                 ]);
 
                 $project->update([
-                    'po_remarks' => $validated['po_remarks'] ?? null,
+                    'po_remarks' => $this->sanitizeLocallyFundedRemark($validated['po_remarks'] ?? null),
                     'po_remarks_updated_at' => now(),
                     'po_remarks_updated_by' => Auth::id(),
                 ]);
@@ -2650,11 +2703,11 @@ class LocallyFundedProjectController extends Controller
 
             if ($request->has('ro_remarks')) {
                 $validated = $request->validate([
-                    'ro_remarks' => 'nullable|string',
+                    'ro_remarks' => 'nullable|string|max:1000',
                 ]);
 
                 $project->update([
-                    'ro_remarks' => $validated['ro_remarks'] ?? null,
+                    'ro_remarks' => $this->sanitizeLocallyFundedRemark($validated['ro_remarks'] ?? null),
                     'ro_remarks_updated_at' => now(),
                     'ro_remarks_updated_by' => Auth::id(),
                 ]);
@@ -2743,11 +2796,11 @@ class LocallyFundedProjectController extends Controller
 
             if ($request->has('pcr_remarks')) {
                 $validated = $request->validate([
-                    'pcr_remarks' => 'nullable|string',
+                    'pcr_remarks' => 'nullable|string|max:1000',
                 ]);
 
                 $project->update([
-                    'pcr_remarks' => $validated['pcr_remarks'] ?? null,
+                    'pcr_remarks' => $this->sanitizeLocallyFundedRemark($validated['pcr_remarks'] ?? null),
                     'pcr_remarks_updated_at' => now(),
                     'pcr_remarks_updated_by' => Auth::id(),
                 ]);
@@ -2775,11 +2828,11 @@ class LocallyFundedProjectController extends Controller
 
             if ($request->has('rssa_submission_status')) {
                 $validated = $request->validate([
-                    'rssa_submission_status' => 'nullable|string',
+                    'rssa_submission_status' => 'nullable|string|max:255',
                 ]);
 
                 $project->update([
-                    'rssa_submission_status' => $validated['rssa_submission_status'] ?? null,
+                    'rssa_submission_status' => InputSanitizer::sanitizeNullablePlainText($validated['rssa_submission_status'] ?? null),
                     'rssa_submission_status_updated_at' => now(),
                     'rssa_submission_status_updated_by' => Auth::id(),
                 ]);
@@ -2839,11 +2892,11 @@ class LocallyFundedProjectController extends Controller
 
             if ($request->has('rssa_remarks')) {
                 $validated = $request->validate([
-                    'rssa_remarks' => 'nullable|string',
+                    'rssa_remarks' => 'nullable|string|max:1000',
                 ]);
 
                 $project->update([
-                    'rssa_remarks' => $validated['rssa_remarks'] ?? null,
+                    'rssa_remarks' => $this->sanitizeLocallyFundedRemark($validated['rssa_remarks'] ?? null),
                     'rssa_remarks_updated_at' => now(),
                     'rssa_remarks_updated_by' => Auth::id(),
                 ]);
@@ -2933,13 +2986,15 @@ class LocallyFundedProjectController extends Controller
                 'reverted_amount' => 'nullable|numeric|min:0',
                 'balance' => 'nullable|numeric|min:0',
                 'utilization_rate' => 'nullable|numeric|min:0|max:100',
-                'financial_remarks' => 'nullable|string',
+                'financial_remarks' => 'nullable|string|max:1000',
             ]);
         }
 
+        $validated = $this->sanitizeLocallyFundedPayload($validated);
+
         if (array_key_exists('barangay_json', $validated)) {
-            $barangayList = json_decode($validated['barangay_json'], true);
-            if (is_array($barangayList) && count($barangayList) > 0) {
+            $barangayList = $this->parseBarangaySelection($validated['barangay_json'] ?? null);
+            if (count($barangayList) > 0) {
                 $validated['barangay'] = implode(',', $barangayList);
             } else {
                 return redirect()->back()->withInput()->withErrors(['barangay' => 'Please select at least one barangay']);

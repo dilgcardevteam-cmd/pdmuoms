@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use App\Models\LpmcDocument;
+use App\Support\InputSanitizer;
 use App\Models\User;
 
 class LocalProjectMonitoringCommitteeController extends Controller
@@ -685,15 +686,19 @@ class LocalProjectMonitoringCommitteeController extends Controller
             abort(403);
         }
 
-        $request->validate([
+        $validated = $request->validate([
             'action' => ['required', 'in:approve,return'],
-            'remarks' => ['required_if:action,return', 'nullable', 'string'],
+            'remarks' => ['required_if:action,return', 'nullable', 'string', 'max:1000'],
         ]);
 
         $document = LpmcDocument::where('office', $officeName)->where('id', $docId)->firstOrFail();
         $now = now();
-        $action = $request->input('action');
-        $remarks = $request->input('remarks');
+        $action = $validated['action'];
+        $remarks = InputSanitizer::sanitizeNullablePlainText($validated['remarks'] ?? null, true);
+
+        if ($action === 'return' && $remarks === null) {
+            return back()->withErrors(['remarks' => 'Return remarks must contain plain text.']);
+        }
 
         $isRegionalOffice = $user->province === 'Regional Office';
         $isProvincialOffice = !$isRegionalOffice;

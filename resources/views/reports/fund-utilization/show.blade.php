@@ -1778,7 +1778,10 @@
 
             <!-- LGU Posting Link Section -->
             @php
-                $hasPostingLink = $fdpDocuments[$quarter] && !empty($fdpDocuments[$quarter]->posting_link);
+                $postingLinkValue = $fdpDocuments[$quarter]->posting_link ?? '';
+                $safePostingLink = \App\Support\InputSanitizer::sanitizeHttpUrl($postingLinkValue);
+                $hasPostingLink = $fdpDocuments[$quarter] && $postingLinkValue !== '';
+                $hasSafePostingLink = !empty($safePostingLink);
                 $isPostingReturned = $fdpDocuments[$quarter] && $fdpDocuments[$quarter]->posting_status === 'returned';
                 $postingBackgroundColor = $hasPostingLink ? '#fffbeb' : 'transparent';
 
@@ -1860,7 +1863,7 @@
                     <form action="{{ route('fund-utilization.save-posting-link', $report->project_code) }}" method="POST" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; align-items: center;">
                         @csrf
                         <input type="hidden" name="quarter" value="{{ $quarter }}">
-                        <input type="text" name="posting_link" value="{{ $fdpDocuments[$quarter]->posting_link ?? '' }}" placeholder="https://example.com/post" style="flex: 1; min-width: 240px; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 12px;" oninput="showSaveButtonForText(this, 'posting-save-btn-{{ $quarter }}')">
+                        <input type="text" name="posting_link" value="{{ $postingLinkValue }}" placeholder="https://example.com/post" style="flex: 1; min-width: 240px; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 12px;" oninput="showSaveButtonForText(this, 'posting-save-btn-{{ $quarter }}')">
                         <button type="submit" id="posting-save-btn-{{ $quarter }}" style="padding: 10px 20px; background-color: #059669; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; width: auto;">
                             <i class="fas fa-save"></i> Submit
                         </button>
@@ -1868,17 +1871,21 @@
                     <div style="font-size: 11px; color: #059669; font-weight: 600; margin-bottom: 8px;">
                         @if($hasPostingLink)
                             <i class="fas fa-link" style="margin-right: 4px;"></i>Current link:
-                            <a href="{{ $fdpDocuments[$quarter]->posting_link }}" target="_blank" rel="noopener noreferrer" style="color: #2563eb; text-decoration: underline; word-break: break-all;">
-                                {{ $fdpDocuments[$quarter]->posting_link }}
-                            </a>
+                            @if($hasSafePostingLink)
+                                <a href="{{ $safePostingLink }}" target="_blank" rel="noopener noreferrer" style="color: #2563eb; text-decoration: underline; word-break: break-all;">
+                                    {{ $postingLinkValue }}
+                                </a>
+                            @else
+                                <span style="color: #374151; word-break: break-all;">{{ $postingLinkValue }}</span>
+                            @endif
                         @endif
                     </div>
 
                     @if(Auth::user()->agency === 'LGU')
                         @if($hasPostingLink || $isPostingReturned)
                             <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px;">
-                                @if($hasPostingLink)
-                                    <a href="{{ $fdpDocuments[$quarter]->posting_link }}" target="_blank" rel="noopener noreferrer" style="padding: 6px 12px; background-color: #3b82f6; color: white; border: none; border-radius: 4px; text-align: center; text-decoration: none; font-weight: 600; font-size: 11px; white-space: nowrap;">
+                                @if($hasSafePostingLink)
+                                    <a href="{{ $safePostingLink }}" target="_blank" rel="noopener noreferrer" style="padding: 6px 12px; background-color: #3b82f6; color: white; border: none; border-radius: 4px; text-align: center; text-decoration: none; font-weight: 600; font-size: 11px; white-space: nowrap;">
                                         <i class="fas fa-eye"></i> Open Link
                                     </a>
                                 @endif
@@ -1892,9 +1899,11 @@
                     @elseif(Auth::user()->agency === 'DILG')
                         @if($hasPostingLink)
                             <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px;">
-                                <a href="{{ $fdpDocuments[$quarter]->posting_link }}" target="_blank" rel="noopener noreferrer" style="padding: 6px 12px; background-color: #3b82f6; color: white; border: none; border-radius: 4px; text-align: center; text-decoration: none; font-weight: 600; font-size: 11px; white-space: nowrap;">
-                                    <i class="fas fa-eye"></i> Open Link
-                                </a>
+                                @if($hasSafePostingLink)
+                                    <a href="{{ $safePostingLink }}" target="_blank" rel="noopener noreferrer" style="padding: 6px 12px; background-color: #3b82f6; color: white; border: none; border-radius: 4px; text-align: center; text-decoration: none; font-weight: 600; font-size: 11px; white-space: nowrap;">
+                                        <i class="fas fa-eye"></i> Open Link
+                                    </a>
+                                @endif
                                 @if(!$fdpDocuments[$quarter] || $fdpDocuments[$quarter]->posting_status !== 'approved')
                                     <button type="button" onclick="openRemarksModal('posting-link', '{{ $quarter }}', 'approve')" style="padding: 6px 12px; background-color: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 11px; white-space: nowrap;">
                                         <i class="fas fa-check"></i> Approve
@@ -2502,6 +2511,13 @@
         }
 
         // Show save button and filename when file is selected
+        function renderSelectedFileName(filenameDiv, fileName) {
+            const icon = document.createElement('i');
+            icon.className = 'fas fa-file';
+            icon.style.marginRight = '4px';
+            filenameDiv.replaceChildren(icon, document.createTextNode(`Selected: ${fileName}`));
+        }
+
         function showSaveButton(fileInput, buttonId, filenameId) {
             const saveBtn = document.getElementById(buttonId);
             const filenameDiv = document.getElementById(filenameId);
@@ -2519,7 +2535,7 @@
                 saveBtn.style.opacity = '1';
                 saveBtn.style.pointerEvents = 'auto';
                 // Display filename
-                filenameDiv.innerHTML = `<i class="fas fa-file" style="margin-right: 4px;"></i>Selected: ${fileName}`;
+                renderSelectedFileName(filenameDiv, fileName);
                 filenameDiv.style.display = 'block';
                 filenameDiv.classList.add('has-file');
                 
@@ -2550,7 +2566,7 @@
                 saveBtn.style.pointerEvents = 'none';
                 // Keep filename div visible if there's already uploaded content (from Blade)
                 // Only hide if it's empty
-                if (!filenameDiv.innerHTML.trim()) {
+                if (!filenameDiv.textContent.trim()) {
                     filenameDiv.style.display = 'none';
                     filenameDiv.classList.remove('has-file');
                 }
@@ -2585,6 +2601,4 @@
 
     </div>
 @endsection
-
-
 

@@ -179,9 +179,8 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function verifyEmailWithToken($token)
     {
-        if ($this->verification_token === $token && $this->status === 'inactive') {
+        if ($this->verification_token === $token && !$this->hasVerifiedEmail()) {
             $this->email_verified_at = now();
-            $this->status = 'active';
             $this->verification_token = null;
 
             return $this->save();

@@ -1693,6 +1693,52 @@
         // Initialize selectedBarangays object BEFORE event listeners
         let selectedBarangays = {};
 
+        function createBarangayPlaceholder() {
+            const placeholder = document.createElement('span');
+            placeholder.style.color = '#9ca3af';
+            placeholder.style.fontSize = '14px';
+            placeholder.style.alignSelf = 'center';
+            placeholder.textContent = 'Click dropdown to add barangays';
+            return placeholder;
+        }
+
+        function setBarangayPlaceholder(container) {
+            container.replaceChildren(createBarangayPlaceholder());
+        }
+
+        function createBarangayBadge(barangay) {
+            const badge = document.createElement('span');
+            badge.style.display = 'inline-flex';
+            badge.style.alignItems = 'center';
+            badge.style.gap = '6px';
+            badge.style.backgroundColor = '#002C76';
+            badge.style.color = 'white';
+            badge.style.padding = '6px 12px';
+            badge.style.borderRadius = '20px';
+            badge.style.fontSize = '13px';
+            badge.style.fontWeight = '500';
+            badge.appendChild(document.createTextNode(barangay));
+
+            const removeButton = document.createElement('button');
+            removeButton.type = 'button';
+            removeButton.style.background = 'none';
+            removeButton.style.border = 'none';
+            removeButton.style.color = 'white';
+            removeButton.style.cursor = 'pointer';
+            removeButton.style.fontSize = '16px';
+            removeButton.style.padding = '0';
+            removeButton.style.lineHeight = '1';
+            removeButton.textContent = '×';
+            removeButton.addEventListener('click', function() {
+                delete selectedBarangays[barangay];
+                updateBadges();
+            });
+
+            badge.appendChild(removeButton);
+
+            return badge;
+        }
+
         // Handle Province Change
         document.getElementById('province').addEventListener('change', function() {
             const selectedProvince = this.value;
@@ -1707,7 +1753,7 @@
             
             // Reset barangay selections
             selectedBarangays = {};
-            barangayBadges.innerHTML = '<span style="color: #9ca3af; font-size: 14px; align-self: center;">Click dropdown to add barangays</span>';
+            setBarangayPlaceholder(barangayBadges);
             barangayHidden.value = '';
 
             // Populate cities/municipalities
@@ -1732,7 +1778,7 @@
             // Clear barangays and reset selections
             barangaySelect.innerHTML = '';
             selectedBarangays = {};
-            barangayBadges.innerHTML = '<span style="color: #9ca3af; font-size: 14px; align-self: center;">Click dropdown to add barangays</span>';
+            setBarangayPlaceholder(barangayBadges);
             barangayHidden.value = '';
 
             // Populate barangays from the inline location data
@@ -1768,33 +1814,22 @@
             const barangayHidden = document.getElementById('barangay_hidden');
             
             if (Object.keys(selectedBarangays).length === 0) {
-                barangayBadges.innerHTML = '<span style="color: #9ca3af; font-size: 14px; align-self: center;">Click dropdown to add barangays</span>';
+                setBarangayPlaceholder(barangayBadges);
                 barangayHidden.value = '';
                 return;
             }
             
-            let badgesHTML = '';
             const selectedList = Object.keys(selectedBarangays);
-            
+            const fragment = document.createDocumentFragment();
+
             selectedList.forEach(barangay => {
-                badgesHTML += `
-                    <span style="display: inline-flex; align-items: center; gap: 6px; background-color: #002C76; color: white; padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 500;">
-                        ${barangay}
-                        <button type="button" onclick="removeBarangay('${barangay}')" style="background: none; border: none; color: white; cursor: pointer; font-size: 16px; padding: 0; line-height: 1;">×</button>
-                    </span>
-                `;
+                fragment.appendChild(createBarangayBadge(barangay));
             });
-            
-            barangayBadges.innerHTML = badgesHTML;
+
+            barangayBadges.replaceChildren(fragment);
             // Store as JSON array that Laravel can parse
             barangayHidden.value = JSON.stringify(selectedList);
         }
-
-        // Remove barangay from selection
-        window.removeBarangay = function(barangay) {
-            delete selectedBarangays[barangay];
-            updateBadges();
-        };
 
         // Format currency input fields
         function formatCurrencyValue(value) {

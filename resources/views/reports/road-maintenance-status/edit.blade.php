@@ -526,7 +526,10 @@
                 const fileName = fileInput.files[0].name;
                 saveBtn.style.opacity = '1';
                 saveBtn.style.pointerEvents = 'auto';
-                filenameDiv.innerHTML = `<i class="fas fa-file" style="margin-right: 4px;"></i>Selected: ${fileName}`;
+                const icon = document.createElement('i');
+                icon.className = 'fas fa-file';
+                icon.style.marginRight = '4px';
+                filenameDiv.replaceChildren(icon, document.createTextNode(`Selected: ${fileName}`));
                 filenameDiv.style.display = 'block';
                 filenameDiv.classList.add('has-file');
             } else {

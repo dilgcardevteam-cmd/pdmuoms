@@ -265,10 +265,6 @@
                     </div>
                 </div>
 
-                <input type="hidden" name="role" value="user">
-                <input type="hidden" name="status" value="inactive">
-                <input type="hidden" name="access" value="none">
-
                 <div class="actions">
                     <button type="submit" id="registerBtn">
                         Register
@@ -476,22 +472,36 @@
             function showToast(message, type = 'success') {
                 const toastContainer = document.getElementById('toastContainer');
                 const toastId = 'toast-' + Date.now();
+                const toastElement = document.createElement('div');
+                toastElement.id = toastId;
+                toastElement.className = `toast ${type}`;
+                toastElement.setAttribute('role', 'alert');
+                toastElement.setAttribute('aria-live', 'assertive');
+                toastElement.setAttribute('aria-atomic', 'true');
 
-                const toastHTML = `
-                    <div id="${toastId}" class="toast ${type}" role="alert" aria-live="assertive" aria-atomic="true">
-                        <div class="toast-header">
-                            <strong class="me-auto">${type === 'success' ? 'Success' : 'Error'}</strong>
-                            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
-                        </div>
-                        <div class="toast-body">
-                            ${message}
-                        </div>
-                    </div>
-                `;
+                const toastHeader = document.createElement('div');
+                toastHeader.className = 'toast-header';
 
-                toastContainer.insertAdjacentHTML('beforeend', toastHTML);
+                const title = document.createElement('strong');
+                title.className = 'me-auto';
+                title.textContent = type === 'success' ? 'Success' : 'Error';
 
-                const toastElement = document.getElementById(toastId);
+                const closeButton = document.createElement('button');
+                closeButton.type = 'button';
+                closeButton.className = 'btn-close';
+                closeButton.setAttribute('data-bs-dismiss', 'toast');
+                closeButton.setAttribute('aria-label', 'Close');
+
+                toastHeader.append(title, closeButton);
+
+                const toastBody = document.createElement('div');
+                toastBody.className = 'toast-body';
+                toastBody.style.whiteSpace = 'pre-line';
+                toastBody.textContent = message ?? '';
+
+                toastElement.append(toastHeader, toastBody);
+                toastContainer.appendChild(toastElement);
+
                 const bsToast = new bootstrap.Toast(toastElement, {
                     autohide: true,
                     delay: 5000

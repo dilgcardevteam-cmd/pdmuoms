@@ -21,7 +21,9 @@
             
             <p>Thank you for registering with the <strong>PDMU Operations Management System (PDMUOMS)</strong>.</p>
             
-            <p>Your account has been successfully created. To activate your account, please verify your email address by clicking the button below.</p>
+            <p>Your account has been successfully created. Please verify your email address by clicking the button below.</p>
+
+            <p>After verification, your account will remain pending until an administrator approves it.</p>
             
             <div style="text-align: center;">
                 <a href="{{ $verificationUrl }}" class="button" style="color: #ffffff !important;">Verify Email Address</a>

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\PdNoPbbmMonthlyDocument;
+use App\Support\InputSanitizer;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -842,9 +843,9 @@ class PdNoPbbmMonthlyReportController extends Controller
             abort(403);
         }
 
-        $request->validate([
+        $validated = $request->validate([
             'action' => ['required', 'in:approve,return'],
-            'remarks' => ['required_if:action,return', 'nullable', 'string'],
+            'remarks' => ['required_if:action,return', 'nullable', 'string', 'max:1000'],
         ]);
 
         $document = PdNoPbbmMonthlyDocument::query()
@@ -858,8 +859,12 @@ class PdNoPbbmMonthlyReportController extends Controller
         }
 
         $now = now();
-        $action = $request->input('action');
-        $remarks = $request->input('remarks');
+        $action = $validated['action'];
+        $remarks = InputSanitizer::sanitizeNullablePlainText($validated['remarks'] ?? null, true);
+
+        if ($action === 'return' && $remarks === null) {
+            return back()->withErrors(['remarks' => 'Return remarks must contain plain text.']);
+        }
 
         $isRegionalOffice = trim((string) $user->province) === 'Regional Office';
         $isProvincialOffice = !$isRegionalOffice;

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\RolePermissionSetting;
 use App\Models\User;
+use App\Support\InputSanitizer;
 use App\Support\RolePermissionRegistry;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -58,6 +59,31 @@ class UserManagementController extends Controller
             $validated['agency'] = 'LGU';
         } elseif (in_array($role, [User::ROLE_REGIONAL, User::ROLE_PROVINCIAL], true)) {
             $validated['agency'] = 'DILG';
+        }
+
+        return $validated;
+    }
+
+    private function sanitizeUserPayload(array $validated): array
+    {
+        $validated = InputSanitizer::sanitizeTextFields($validated, [
+            'fname',
+            'lname',
+            'agency',
+            'position',
+            'region',
+            'province',
+            'username',
+        ]);
+
+        $validated = InputSanitizer::sanitizeTextFields($validated, ['office'], false, true);
+
+        if (array_key_exists('emailaddress', $validated)) {
+            $validated['emailaddress'] = strtolower(trim((string) $validated['emailaddress']));
+        }
+
+        if (array_key_exists('mobileno', $validated)) {
+            $validated['mobileno'] = preg_replace('/\D+/', '', (string) $validated['mobileno']);
         }
 
         return $validated;
@@ -122,7 +148,7 @@ class UserManagementController extends Controller
             'status' => ['required', 'in:active,inactive'],
         ]);
 
-        $validated = $this->normalizeUserPayload($validated);
+        $validated = $this->sanitizeUserPayload($this->normalizeUserPayload($validated));
         $validated['password'] = Hash::make($validated['password']);
         $validated['email_verified_at'] = now();
 
@@ -170,7 +196,7 @@ class UserManagementController extends Controller
             $validated['password'] = Hash::make($request->password);
         }
 
-        $validated = $this->normalizeUserPayload($validated);
+        $validated = $this->sanitizeUserPayload($this->normalizeUserPayload($validated));
         $validated['access'] = $this->resolveUserAccessValue(
             $validated['role'],
             $validated['crud_permissions'] ?? [],
@@ -213,9 +239,14 @@ class UserManagementController extends Controller
 
     public function updateAccess(Request $request, User $user)
     {
-        $redirectTo = $request->filled('redirect_to')
-            ? $request->input('redirect_to')
-            : route('users.index', ['tab' => 'access-grants']);
+        $redirectTo = route('users.index', ['tab' => 'access-grants']);
+
+        if ($request->filled('redirect_to')) {
+            $safeRedirect = InputSanitizer::sanitizeInternalRedirect($request->input('redirect_to'));
+            if ($safeRedirect) {
+                $redirectTo = $safeRedirect;
+            }
+        }
 
         return redirect()
             ->to($redirectTo)

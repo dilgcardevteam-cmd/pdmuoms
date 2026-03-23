@@ -1358,6 +1358,62 @@ function normalizeBarangayList(items) {
         .filter(Boolean)));
 }
 
+function createBarangayPlaceholder() {
+    const placeholder = document.createElement('span');
+    placeholder.style.color = '#9ca3af';
+    placeholder.style.fontSize = '14px';
+    placeholder.style.alignSelf = 'center';
+    placeholder.textContent = 'Click here or dropdown to add barangays';
+    return placeholder;
+}
+
+function setBarangayPlaceholder() {
+    if (!barangayBadges) {
+        return;
+    }
+
+    barangayBadges.replaceChildren(createBarangayPlaceholder());
+}
+
+function createBarangayBadge(barangay) {
+    const badge = document.createElement('span');
+    badge.style.display = 'inline-flex';
+    badge.style.alignItems = 'center';
+    badge.style.gap = '6px';
+    badge.style.backgroundColor = '#002C76';
+    badge.style.color = 'white';
+    badge.style.padding = '6px 12px';
+    badge.style.borderRadius = '20px';
+    badge.style.fontSize = '13px';
+    badge.style.fontWeight = '500';
+    badge.appendChild(document.createTextNode(barangay));
+
+    const removeButton = document.createElement('button');
+    removeButton.type = 'button';
+    removeButton.style.background = 'none';
+    removeButton.style.border = 'none';
+    removeButton.style.color = 'white';
+    removeButton.style.cursor = 'pointer';
+    removeButton.style.fontSize = '16px';
+    removeButton.style.padding = '0';
+    removeButton.style.lineHeight = '1';
+    removeButton.textContent = '×';
+    removeButton.addEventListener('click', () => {
+        delete selectedBarangays[barangay];
+        updateBadges();
+
+        if (barangaySelect) {
+            setTimeout(() => {
+                openBarangayPicker();
+            }, 0);
+        }
+    });
+
+    badge.appendChild(removeButton);
+
+    return badge;
+}
+
 function renderBarangayOptions() {
     if (!barangaySelect) {
         return;
@@ -1432,7 +1488,7 @@ function updateBadges() {
 
     const selectedList = Object.keys(selectedBarangays);
     if (selectedList.length === 0) {
-        barangayBadges.innerHTML = '<span style="color: #9ca3af; font-size: 14px; align-self: center;">Click here or dropdown to add barangays</span>';
+        setBarangayPlaceholder();
         barangayHidden.value = '';
         barangayHidden.dispatchEvent(new Event('input', { bubbles: true }));
         barangayHidden.dispatchEvent(new Event('change', { bubbles: true }));
@@ -1440,38 +1496,21 @@ function updateBadges() {
         return;
     }
 
-    let badgesHTML = '';
+    const fragment = document.createDocumentFragment();
     selectedList.forEach((barangay) => {
-        badgesHTML += `
-            <span style="display: inline-flex; align-items: center; gap: 6px; background-color: #002C76; color: white; padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 500;">
-                ${barangay}
-                <button type="button" onclick="removeBarangay('${barangay}')" style="background: none; border: none; color: white; cursor: pointer; font-size: 16px; padding: 0; line-height: 1;">×</button>
-            </span>
-        `;
+        fragment.appendChild(createBarangayBadge(barangay));
     });
 
-    barangayBadges.innerHTML = badgesHTML;
+    barangayBadges.replaceChildren(fragment);
     barangayHidden.value = JSON.stringify(selectedList);
     barangayHidden.dispatchEvent(new Event('input', { bubbles: true }));
     barangayHidden.dispatchEvent(new Event('change', { bubbles: true }));
     renderBarangayOptions();
 }
 
-window.removeBarangay = function(barangay) {
-    delete selectedBarangays[barangay];
-    updateBadges();
-    if (barangaySelect) {
-        setTimeout(() => {
-            openBarangayPicker();
-        }, 0);
-    }
-};
-
 function resetBarangaySelection() {
     selectedBarangays = {};
-    if (barangayBadges) {
-        barangayBadges.innerHTML = '<span style="color: #9ca3af; font-size: 14px; align-self: center;">Click here or dropdown to add barangays</span>';
-    }
+    setBarangayPlaceholder();
     if (barangayHidden) {
         barangayHidden.value = '';
     }

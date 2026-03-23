@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\InputSanitizer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 
 class ProfileController extends Controller
 {
@@ -69,6 +69,9 @@ class ProfileController extends Controller
             'position' => ['required', 'string', 'max:255'],
             'mobileno' => ['required', 'string', 'digits:11'],
         ]);
+
+        $validated = InputSanitizer::sanitizeTextFields($validated, ['fname', 'lname', 'position']);
+        $validated['mobileno'] = preg_replace('/\D+/', '', (string) $validated['mobileno']);
 
         // Update user profile
         $user->update($validated);

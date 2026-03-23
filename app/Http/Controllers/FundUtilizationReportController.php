@@ -8,6 +8,7 @@ use App\Models\FURMovUpload;
 use App\Models\FURWrittenNotice;
 use App\Models\FURFDP;
 use App\Models\FURAdminRemark;
+use App\Support\InputSanitizer;
 use App\Models\User;
 use App\Services\SecureTimestampService;
 use Illuminate\Http\Request;
@@ -480,7 +481,9 @@ class FundUtilizationReportController extends Controller
                 $fdpDocument && $fdpDocument->approved_at_dilg_po ? $fdpDocument->approved_at_dilg_po->format('Y-m-d H:i:s') : '-',
                 $fdpDocument && $fdpDocument->approved_at_dilg_ro ? $fdpDocument->approved_at_dilg_ro->format('Y-m-d H:i:s') : '-',
                 $fdpDocument && $fdpDocument->posting_link
-                    ? ($useHtmlLinks ? $this->toHtmlLink($fdpDocument->posting_link) : $fdpDocument->posting_link)
+                    ? ($useHtmlLinks
+                        ? $this->toHtmlLink($fdpDocument->posting_link)
+                        : (InputSanitizer::sanitizeHttpUrl($fdpDocument->posting_link) ?? InputSanitizer::sanitizePlainText($fdpDocument->posting_link)))
                     : '-',
                 $fdpDocument && $fdpDocument->posting_uploaded_at ? $fdpDocument->posting_uploaded_at->format('Y-m-d H:i:s') : '-',
                 $fdpDocument && $fdpDocument->posting_approved_at_dilg_po ? $fdpDocument->posting_approved_at_dilg_po->format('Y-m-d H:i:s') : '-',
@@ -736,10 +739,36 @@ class FundUtilizationReportController extends Controller
         return $asHtmlLink ? $this->toHtmlLink($url) : $url;
     }
 
+    private function sanitizeReportPayload(array $validated): array
+    {
+        return InputSanitizer::sanitizeTextFields($validated, [
+            'project_code',
+            'province',
+            'implementing_unit',
+            'barangay',
+            'fund_source',
+            'project_status',
+            'project_title',
+        ]);
+    }
+
+    private function sanitizeReportRemarks(?string $remarks): ?string
+    {
+        return InputSanitizer::sanitizeNullablePlainText($remarks, true);
+    }
+
     private function toHtmlLink(string $value): string
     {
-        $safeUrl = htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
-        return '<a href="' . $safeUrl . '">' . $safeUrl . '</a>';
+        $safeText = htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+        $safeUrl = InputSanitizer::sanitizeHttpUrl($value);
+
+        if ($safeUrl === null) {
+            return $safeText;
+        }
+
+        $escapedUrl = htmlspecialchars($safeUrl, ENT_QUOTES, 'UTF-8');
+
+        return '<a href="' . $escapedUrl . '">' . $safeText . '</a>';
     }
 
     /**
@@ -817,7 +846,7 @@ class FundUtilizationReportController extends Controller
             'project_title' => 'required|string',
         ]);
 
-        FundUtilizationReport::create($validated);
+        FundUtilizationReport::create($this->sanitizeReportPayload($validated));
 
         return redirect()->route('fund-utilization.index')
                         ->with('success', 'Fund Utilization Report created successfully.');
@@ -892,7 +921,7 @@ class FundUtilizationReportController extends Controller
             'project_title' => 'required|string',
         ]);
 
-        $report->update($validated);
+        $report->update($this->sanitizeReportPayload($validated));
 
         return redirect()->route('fund-utilization.show', $report->project_code)
                         ->with('success', 'Fund Utilization Report updated successfully.');
@@ -1351,7 +1380,7 @@ class FundUtilizationReportController extends Controller
      */
     public function savePostingLink(Request $request, $projectCode)
     {
-        $request->validate([
+        $validated = $request->validate([
             'quarter' => 'required|in:Q1,Q2,Q3,Q4',
             'posting_link' => 'required|string|max:2048',
         ]);
@@ -1362,10 +1391,11 @@ class FundUtilizationReportController extends Controller
 
         $secureTimestamp = SecureTimestampService::getUploadTimestamp();
 
-        $postingLink = trim($request->posting_link);
-        // Automatically add https:// if the link doesn't start with http:// or https://
-        if (!preg_match('/^https?:\/\//', $postingLink)) {
-            $postingLink = 'https://' . $postingLink;
+        $postingLink = InputSanitizer::sanitizeHttpUrl($validated['posting_link']);
+        if ($postingLink === null) {
+            return back()
+                ->withInput()
+                ->withErrors(['posting_link' => 'Please enter a valid http or https URL.']);
         }
 
         $updates = [
@@ -1393,14 +1423,14 @@ class FundUtilizationReportController extends Controller
         }
 
         FURFDP::updateOrCreate(
-            ['project_code' => $projectCode, 'quarter' => $request->quarter],
+            ['project_code' => $projectCode, 'quarter' => $validated['quarter']],
             $updates
         );
 
         Log::channel('upload_timestamps')->info('Document uploaded', [
             'document_type' => 'posting-link',
             'project_code' => $projectCode,
-            'quarter' => $request->quarter,
+            'quarter' => $validated['quarter'],
             'upload_timestamp' => $secureTimestamp->format('Y-m-d H:i:s'),
             'timezone' => $secureTimestamp->timezone->getName(),
             'ip_address' => request()->ip(),
@@ -1409,9 +1439,9 @@ class FundUtilizationReportController extends Controller
         ]);
 
         if ($autoElevateToRegional) {
-            $this->notifyDilgRegionalUsers($report, 'posting-link', $request->quarter);
+            $this->notifyDilgRegionalUsers($report, 'posting-link', $validated['quarter']);
         } else {
-            $this->notifyDilgProvinceUsers($report, 'posting-link', $request->quarter);
+            $this->notifyDilgProvinceUsers($report, 'posting-link', $validated['quarter']);
         }
 
         return back()->with('success', 'LGU posting link saved successfully.');
@@ -1422,9 +1452,9 @@ class FundUtilizationReportController extends Controller
      */
     public function approveUpload(Request $request, $projectCode, $uploadType, $quarter)
     {
-        $request->validate([
+        $validated = $request->validate([
             'action' => 'required|in:approve,return',
-            'remarks' => 'nullable|string',
+            'remarks' => 'required_if:action,return|nullable|string|max:1000',
         ]);
 
         $user = Auth::user();
@@ -1433,8 +1463,13 @@ class FundUtilizationReportController extends Controller
             && strtolower(trim((string) ($user->province ?? ''))) === 'regional office';
         $isProvincialOffice = $isDilgUser && !$isRegionalOffice;
 
-        $action = $request->action;
-        $remarks = $request->remarks ?? null;
+        $action = $validated['action'];
+        $remarks = $this->sanitizeReportRemarks($validated['remarks'] ?? null);
+
+        if ($action === 'return' && $remarks === null) {
+            return back()
+                ->withErrors(['remarks' => 'Return remarks must contain plain text.']);
+        }
 
         // Map uploadType to individual status field names
         $statusFieldMap = [
@@ -1559,7 +1594,7 @@ class FundUtilizationReportController extends Controller
 
             if ($action === 'approve') {
                 $data[$remarksField] = null;
-            } elseif ($action === 'return' && $remarks) {
+            } elseif ($action === 'return' && $remarks !== null) {
                 $data[$remarksField] = $remarks;
                 $data['user_remarks'] = $remarks; // Save return remarks in user_remarks so they persist in notes
             }
@@ -1734,11 +1769,11 @@ class FundUtilizationReportController extends Controller
      */
     public function saveUserRemarks(Request $request, $projectCode, $uploadType, $quarter)
     {
-        $request->validate([
-            'remarks' => 'nullable|string',
+        $validated = $request->validate([
+            'remarks' => 'nullable|string|max:1000',
         ]);
 
-        $remarks = $request->remarks ?? null;
+        $remarks = $this->sanitizeReportRemarks($validated['remarks'] ?? null);
 
         switch ($uploadType) {
             case 'mov':

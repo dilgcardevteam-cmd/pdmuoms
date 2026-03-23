@@ -4,14 +4,15 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\InputSanitizer;
 use Illuminate\Foundation\Auth\RegistersUsers;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
 use Illuminate\Auth\Events\Registered;
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class RegisterController extends Controller
@@ -82,21 +83,23 @@ class RegisterController extends Controller
      */
     protected function create(array $data)
     {
+        $agency = strtoupper(trim((string) ($data['agency'] ?? '')));
+
         return User::create([
-            'fname' => $data['fname'],
-            'lname' => $data['lname'],
-            'agency' => $data['agency'],
-            'position' => $data['position'],
-            'region' => $data['region'],
-            'province' => $data['province'],
-            'office' => $data['office'] ?? null,
-            'emailaddress' => $data['emailaddress'],
-            'mobileno' => $data['mobileno'],
-            'username' => $data['username'],
+            'fname' => InputSanitizer::sanitizePlainText($data['fname'] ?? null),
+            'lname' => InputSanitizer::sanitizePlainText($data['lname'] ?? null),
+            'agency' => $agency === 'DILG' ? 'DILG' : 'LGU',
+            'position' => InputSanitizer::sanitizePlainText($data['position'] ?? null),
+            'region' => InputSanitizer::sanitizePlainText($data['region'] ?? null),
+            'province' => InputSanitizer::sanitizePlainText($data['province'] ?? null),
+            'office' => InputSanitizer::sanitizeNullablePlainText($data['office'] ?? null),
+            'emailaddress' => strtolower(trim((string) ($data['emailaddress'] ?? ''))),
+            'mobileno' => preg_replace('/\D+/', '', (string) ($data['mobileno'] ?? '')),
+            'username' => InputSanitizer::sanitizePlainText($data['username'] ?? null),
             'password' => Hash::make($data['password']),
-            'role' => $data['role'] ?? User::ROLE_LGU,
-            'status' => $data['status'] ?? 'active',
-            'access' => $data['access'] ?? 'limited',
+            'role' => User::ROLE_LGU,
+            'status' => 'inactive',
+            'access' => User::ACCESS_SCOPE_NONE,
         ]);
     }
 
@@ -122,7 +125,7 @@ class RegisterController extends Controller
     {
         try {
             $validator = $this->validator($request->all());
-            
+
             if ($validator->fails()) {
                 if ($request->expectsJson()) {
                     return response()->json([
@@ -133,13 +136,13 @@ class RegisterController extends Controller
                 return redirect()->back()->withErrors($validator)->withInput();
             }
 
-            $user = $this->create($request->all());
+            $user = $this->create($validator->validated());
             event(new Registered($user));
 
             if ($request->expectsJson()) {
                 return response()->json([
                     'success' => true,
-                    'message' => 'Registration successful! Please check your email for verification.',
+                    'message' => 'Registration successful. Verify your email, then wait for administrator approval before logging in.',
                     'redirect' => route('login')
                 ]);
             }
@@ -147,13 +150,22 @@ class RegisterController extends Controller
             return $this->registered($request, $user)
                 ?: redirect(route('login'));
         } catch (\Exception $e) {
+            Log::error('User registration failed.', [
+                'username' => $request->input('username'),
+                'emailaddress' => $request->input('emailaddress'),
+                'error' => $e->getMessage(),
+            ]);
+
+            $message = 'Registration could not be completed. Please try again or contact an administrator.';
+
             if ($request->expectsJson()) {
                 return response()->json([
                     'success' => false,
-                    'message' => $e->getMessage()
+                    'message' => $message
                 ], 500);
             }
-            return redirect()->back()->withErrors(['error' => $e->getMessage()])->withInput();
+
+            return redirect()->back()->withErrors(['error' => $message])->withInput();
         }
     }
 
