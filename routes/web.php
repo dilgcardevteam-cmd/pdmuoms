@@ -211,10 +211,23 @@ Route::middleware(['auth'])->group(function () {
         \Illuminate\Support\Facades\DB::table('tbnotifications')
             ->where('user_id', \Illuminate\Support\Facades\Auth::id())
             ->whereNotNull('read_at')
+            ->where(function ($query) {
+                $query->whereNull('document_type')
+                    ->orWhere('document_type', '!=', 'bulk-notification');
+            })
             ->delete();
 
         return redirect()->back();
     })->name('notifications.clear');
+
+    Route::get('/messages', [App\Http\Controllers\MessageController::class, 'index'])->name('messages.index');
+    Route::post('/messages', [App\Http\Controllers\MessageController::class, 'store'])->name('messages.store');
+    Route::post('/messages/{thread}/mark-unread', [App\Http\Controllers\MessageController::class, 'markThreadUnread'])->name('messages.mark-unread');
+    Route::post('/messages/{thread}/mark-read', [App\Http\Controllers\MessageController::class, 'markThreadRead'])->name('messages.mark-read');
+    Route::post('/messages/{thread}/delete', [App\Http\Controllers\MessageController::class, 'deleteConversation'])->name('messages.delete');
+    Route::post('/messages/{thread}/rename-group', [App\Http\Controllers\MessageController::class, 'renameGroup'])->name('messages.rename-group');
+    Route::get('/messages/poll', [App\Http\Controllers\MessageController::class, 'poll'])->name('messages.poll');
+    Route::get('/messages/conversation', [App\Http\Controllers\MessageController::class, 'conversation'])->name('messages.conversation');
 
     Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
 
@@ -1565,6 +1578,8 @@ Route::middleware(['auth'])->group(function () {
             ->name('utilities.system-setup.index');
         Route::get('/utilities/notifications', [App\Http\Controllers\DatabaseUtilityController::class, 'notifications'])
             ->name('utilities.notifications.index');
+        Route::post('/utilities/notifications', [App\Http\Controllers\DatabaseUtilityController::class, 'sendBulkNotification'])
+            ->name('utilities.notifications.broadcast');
         Route::get('/utilities/role-configuration', [App\Http\Controllers\DatabaseUtilityController::class, 'roleConfiguration'])
             ->name('utilities.role-configuration.index');
         Route::put('/utilities/role-configuration/roles/{role}', [App\Http\Controllers\DatabaseUtilityController::class, 'updateRoleConfiguration'])
@@ -1624,14 +1639,25 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/{projectCode}/delete-document/{docType}/{quarter}', [App\Http\Controllers\FundUtilizationReportController::class, 'deleteDocument'])->name('fund-utilization.delete-document');
     });
 
-    Route::get('/pre-implementation-documents/sbdp-projects', [App\Http\Controllers\PreImplementationDocumentController::class, 'index'])
-        ->name('pre-implementation-documents.sbdp');
-    Route::get('/pre-implementation-documents/sbdp-projects/{projectCode}', [App\Http\Controllers\PreImplementationDocumentController::class, 'show'])
-        ->name('pre-implementation-documents.sbdp.show');
-    Route::post('/pre-implementation-documents/sbdp-projects/{projectCode}', [App\Http\Controllers\PreImplementationDocumentController::class, 'save'])
-        ->name('pre-implementation-documents.sbdp.save');
-    Route::post('/pre-implementation-documents/sbdp-projects/{projectCode}/validate/{documentType}', [App\Http\Controllers\PreImplementationDocumentController::class, 'validateDocument'])
-        ->name('pre-implementation-documents.sbdp.validate');
+    Route::get('/pre-implementation-documents/projects', [App\Http\Controllers\PreImplementationDocumentController::class, 'index'])
+        ->name('pre-implementation-documents.index');
+    Route::get('/pre-implementation-documents/projects/{projectCode}', [App\Http\Controllers\PreImplementationDocumentController::class, 'show'])
+        ->name('pre-implementation-documents.show');
+    Route::post('/pre-implementation-documents/projects/{projectCode}', [App\Http\Controllers\PreImplementationDocumentController::class, 'save'])
+        ->name('pre-implementation-documents.save');
+    Route::post('/pre-implementation-documents/projects/{projectCode}/validate/{documentType}', [App\Http\Controllers\PreImplementationDocumentController::class, 'validateDocument'])
+        ->name('pre-implementation-documents.validate');
+    Route::get('/pre-implementation-documents/sbdp-projects', function () {
+        return redirect()->route('pre-implementation-documents.index', request()->query());
+    });
+    Route::get('/pre-implementation-documents/sbdp-projects/{projectCode}', function (string $projectCode) {
+        return redirect()->route('pre-implementation-documents.show', array_merge(
+            ['projectCode' => $projectCode],
+            request()->query()
+        ));
+    });
+    Route::post('/pre-implementation-documents/sbdp-projects/{projectCode}', [App\Http\Controllers\PreImplementationDocumentController::class, 'save']);
+    Route::post('/pre-implementation-documents/sbdp-projects/{projectCode}/validate/{documentType}', [App\Http\Controllers\PreImplementationDocumentController::class, 'validateDocument']);
 
     // Projects routes
     Route::get('/projects/locally-funded', [App\Http\Controllers\LocallyFundedProjectController::class, 'index'])->name('projects.locally-funded');
@@ -1656,8 +1682,10 @@ Route::middleware(['auth'])->group(function () {
         ->middleware('regional_dilg')
         ->name('projects.at-risk.import');
 
-    Route::get('/projects/rssa', function () use ($renderProjectDashboard) {
-        return $renderProjectDashboard('rssa');
+    Route::get('/projects/rssa', function () {
+        return view('projects.rssa-coming-soon', [
+            'activeTab' => 'rssa',
+        ]);
     })->name('projects.rssa');
 
     Route::get('/projects/sglgif', [SglgifProjectController::class, 'dashboard'])

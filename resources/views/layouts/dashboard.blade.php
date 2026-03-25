@@ -65,6 +65,12 @@
             z-index: 1000;
             box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
             transform: translateX(0);
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .sidebar::-webkit-scrollbar {
+            display: none;
         }
         
         .sidebar.collapsed {
@@ -148,6 +154,7 @@
             color: rgba(255, 255, 255, 0.8);
             text-decoration: none;
             border-radius: 6px;
+            position: relative;
             transform: translateY(0);
             box-shadow: 0 0 0 rgba(0, 0, 0, 0);
             transition: background-color 0.22s ease, color 0.22s ease, padding-left 0.22s ease, transform 0.22s ease, box-shadow 0.22s ease;
@@ -168,6 +175,18 @@
             font-weight: 700;
             box-shadow: none;
         }
+
+        .sidebar-menu a.sidebar-float-hover:hover,
+        .sidebar-menu a.sidebar-float-hover:focus-visible {
+            transform: translateY(-4px);
+            box-shadow: 0 14px 24px rgba(15, 23, 42, 0.24);
+        }
+
+        .sidebar-menu a.sidebar-float-hover.active:hover,
+        .sidebar-menu a.sidebar-float-hover.active:focus-visible {
+            background-color: #ffffff;
+            color: #002C76;
+        }
         
         .sidebar-menu i {
             width: 20px;
@@ -183,6 +202,26 @@
             opacity: 1;
             transform: translateX(0);
             transition: opacity 180ms ease, max-width 220ms ease, transform 220ms ease;
+        }
+
+        .sidebar-menu a .sidebar-menu-badge {
+            margin-left: auto;
+            min-width: 20px;
+            height: 20px;
+            padding: 0 6px;
+            border-radius: 999px;
+            background: #dc2626;
+            color: #ffffff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 700;
+            line-height: 1;
+            flex-shrink: 0;
+            max-width: none;
+            opacity: 1;
+            transform: none;
         }
 
         /* Submenu Styles */
@@ -467,6 +506,26 @@
             color: #6b7280;
         }
 
+        .notification-menu-footer {
+            padding: 10px 14px;
+            border-top: 1px solid #e5e7eb;
+            background: #f8fafc;
+        }
+
+        .notification-menu-view-all {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #1d4ed8;
+            font-size: 12px;
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        .notification-menu-view-all:hover {
+            color: #1e3a8a;
+        }
+
         .notification-menu-item {
             display: block;
             text-decoration: none;
@@ -710,6 +769,16 @@
             max-width: 0;
             transform: translateX(-6px);
             white-space: nowrap;
+        }
+
+        .sidebar.icon-collapsed .sidebar-menu a .sidebar-menu-badge {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            margin-left: 0;
+            max-width: none;
+            opacity: 1;
+            transform: none;
         }
 
         .sidebar.icon-collapsed .sidebar-menu i {
@@ -1357,6 +1426,209 @@
             </a>
         </div>
         
+        @php
+            $authUserId = (int) Auth::id();
+            $messageSchemaAvailable = \Illuminate\Support\Facades\Schema::hasTable('tbusers')
+                && \Illuminate\Support\Facades\Schema::hasTable('user_messages')
+                && \Illuminate\Support\Facades\Schema::hasTable('message_threads')
+                && \Illuminate\Support\Facades\Schema::hasTable('message_thread_members')
+                && \Illuminate\Support\Facades\Schema::hasColumn('user_messages', 'thread_id');
+            $supportsManualMessageUnread = $messageSchemaAvailable
+                && \Illuminate\Support\Facades\Schema::hasColumn('message_thread_members', 'manual_unread_at');
+            $unreadMessageThreads = 0;
+            $recentMessageThreads = collect();
+            $messageUnreadBadgeText = '';
+
+            if ($messageSchemaAvailable && $authUserId > 0) {
+                $messagePreviewText = function ($message, $imagePath, int $limit = 72) {
+                    $text = trim((string) $message);
+                    if ($text !== '') {
+                        return \Illuminate\Support\Str::limit($text, $limit);
+                    }
+
+                    return !empty($imagePath) ? 'Sent a photo' : 'No message preview available.';
+                };
+
+                $formatMessageTime = function ($timestamp) {
+                    if (empty($timestamp)) {
+                        return '';
+                    }
+
+                    try {
+                        return \Illuminate\Support\Carbon::parse($timestamp)->format('M d, Y h:i A');
+                    } catch (\Throwable $error) {
+                        return (string) $timestamp;
+                    }
+                };
+
+                $visibleThreadIds = \Illuminate\Support\Facades\DB::table('user_messages')
+                    ->where('recipient_id', $authUserId)
+                    ->whereNotNull('thread_id')
+                    ->distinct()
+                    ->pluck('thread_id')
+                    ->map(fn ($id) => (int) $id)
+                    ->filter(fn ($id) => $id > 0)
+                    ->values();
+
+                if ($visibleThreadIds->isNotEmpty()) {
+                    $actualUnreadThreadIds = \Illuminate\Support\Facades\DB::table('user_messages')
+                        ->where('recipient_id', $authUserId)
+                        ->where('sender_id', '!=', $authUserId)
+                        ->whereNull('read_at')
+                        ->whereIn('thread_id', $visibleThreadIds)
+                        ->distinct()
+                        ->pluck('thread_id')
+                        ->map(fn ($id) => (int) $id)
+                        ->values();
+
+                    $manualUnreadThreadIds = collect();
+                    if ($supportsManualMessageUnread) {
+                        $manualUnreadThreadIds = \Illuminate\Support\Facades\DB::table('message_thread_members')
+                            ->where('user_id', $authUserId)
+                            ->whereNotNull('manual_unread_at')
+                            ->whereIn('thread_id', $visibleThreadIds)
+                            ->pluck('thread_id')
+                            ->map(fn ($id) => (int) $id)
+                            ->values();
+                    }
+
+                    $unreadMessageThreads = $actualUnreadThreadIds
+                        ->merge($manualUnreadThreadIds)
+                        ->unique()
+                        ->count();
+
+                    $latestByThread = \Illuminate\Support\Facades\DB::table('user_messages')
+                        ->selectRaw('thread_id, MAX(created_at) as latest_created_at, MAX(id) as latest_message_id')
+                        ->where('recipient_id', $authUserId)
+                        ->whereIn('thread_id', $visibleThreadIds)
+                        ->whereNotNull('thread_id')
+                        ->groupBy('thread_id');
+
+                    $threadRowsQuery = \Illuminate\Support\Facades\DB::table('message_thread_members as member')
+                        ->join('message_threads as thread', 'thread.id', '=', 'member.thread_id')
+                        ->joinSub($latestByThread, 'latest', function ($join) {
+                            $join->on('latest.thread_id', '=', 'thread.id');
+                        })
+                        ->where('member.user_id', $authUserId)
+                        ->select([
+                            'thread.id as thread_id',
+                            'thread.name as thread_name',
+                            'thread.is_group',
+                            'latest.latest_created_at',
+                            'latest.latest_message_id',
+                        ]);
+
+                    if ($supportsManualMessageUnread) {
+                        $threadRowsQuery->addSelect('member.manual_unread_at');
+                    }
+
+                    $threadRows = $threadRowsQuery
+                        ->orderByDesc('latest.latest_created_at')
+                        ->orderByDesc('latest.latest_message_id')
+                        ->limit(8)
+                        ->get();
+
+                    $threadIds = $threadRows->pluck('thread_id')
+                        ->filter()
+                        ->map(fn ($id) => (int) $id)
+                        ->values();
+                    $latestIds = $threadRows->pluck('latest_message_id')
+                        ->filter()
+                        ->map(fn ($id) => (int) $id)
+                        ->values();
+
+                    if ($threadIds->isNotEmpty() && $latestIds->isNotEmpty()) {
+                        $latestMessages = \Illuminate\Support\Facades\DB::table('user_messages')
+                            ->whereIn('id', $latestIds)
+                            ->get()
+                            ->keyBy('id');
+
+                        $threadMembersRaw = \Illuminate\Support\Facades\DB::table('message_thread_members as member')
+                            ->join('tbusers as user', 'user.idno', '=', 'member.user_id')
+                            ->whereIn('member.thread_id', $threadIds)
+                            ->select([
+                                'member.thread_id',
+                                'user.idno',
+                                'user.fname',
+                                'user.lname',
+                            ])
+                            ->get();
+
+                        $membersByThread = $threadMembersRaw->groupBy('thread_id');
+
+                        $unreadByThread = \Illuminate\Support\Facades\DB::table('user_messages')
+                            ->select('thread_id', \Illuminate\Support\Facades\DB::raw('COUNT(*) as unread_count'))
+                            ->where('recipient_id', $authUserId)
+                            ->where('sender_id', '!=', $authUserId)
+                            ->whereNull('read_at')
+                            ->whereIn('thread_id', $threadIds)
+                            ->whereNotNull('thread_id')
+                            ->groupBy('thread_id')
+                            ->pluck('unread_count', 'thread_id');
+
+                        $recentMessageThreads = $threadRows->map(function ($row) use ($authUserId, $latestMessages, $membersByThread, $unreadByThread, $supportsManualMessageUnread, $messagePreviewText, $formatMessageTime) {
+                            $threadId = (int) ($row->thread_id ?? 0);
+                            $latest = $latestMessages->get((int) ($row->latest_message_id ?? 0));
+                            if ($threadId <= 0 || !$latest) {
+                                return null;
+                            }
+
+                            $members = collect($membersByThread->get($threadId, collect()));
+                            $counterparts = $members
+                                ->filter(fn ($member) => (int) ($member->idno ?? 0) !== $authUserId)
+                                ->values();
+                            if ($counterparts->isEmpty()) {
+                                return null;
+                            }
+
+                            $isGroup = (bool) ($row->is_group ?? false) || $counterparts->count() > 1;
+                            $name = trim((string) ($row->thread_name ?? ''));
+
+                            if ($isGroup) {
+                                $names = $counterparts
+                                    ->map(function ($member) {
+                                        $memberName = trim((string) (($member->fname ?? '') . ' ' . ($member->lname ?? '')));
+                                        return $memberName !== '' ? $memberName : 'Unknown User';
+                                    })
+                                    ->sortBy(fn ($memberName) => strtolower((string) $memberName))
+                                    ->values();
+
+                                if ($name === '') {
+                                    $name = $names->take(2)->implode(', ');
+                                    $remaining = max(0, $names->count() - 2);
+                                    if ($remaining > 0) {
+                                        $name .= ' +' . $remaining;
+                                    }
+                                }
+
+                                if ($name === '') {
+                                    $name = 'Group chat';
+                                }
+                            } else {
+                                $counterpart = $counterparts->first();
+                                $name = trim((string) (($counterpart->fname ?? '') . ' ' . ($counterpart->lname ?? '')));
+                                $name = $name !== '' ? $name : 'Unknown User';
+                            }
+
+                            $actualUnreadCount = (int) ($unreadByThread[$threadId] ?? 0);
+                            $manualUnread = $supportsManualMessageUnread && !empty($row->manual_unread_at);
+                            $threadUnreadCount = $actualUnreadCount > 0 ? $actualUnreadCount : ($manualUnread ? 1 : 0);
+
+                            return (object) [
+                                'thread_id' => $threadId,
+                                'name' => $name,
+                                'preview' => $messagePreviewText($latest->message ?? '', $latest->image_path ?? null),
+                                'time' => $formatMessageTime($latest->created_at ?? null),
+                                'unread' => $threadUnreadCount,
+                            ];
+                        })->filter()->values();
+                    }
+                }
+            }
+
+            $messageUnreadBadgeText = $unreadMessageThreads > 99 ? '99+' : (string) $unreadMessageThreads;
+        @endphp
+
         <ul class="sidebar-menu">
             <li>
                 @php
@@ -1402,6 +1674,7 @@
                     @php
                         $projectsMenuActive = (
                             request()->routeIs('projects.*')
+                            && !request()->routeIs('projects.rssa')
                             && !$dashboardTabRouteActive
                         ) || request()->routeIs('projects.at-risk');
                     @endphp
@@ -1417,37 +1690,6 @@
                                     <i class="fas fa-hand-holding-usd"></i>
                                     <span>Locally Funded Projects</span>
                                 </a>
-                            </li>
-                        @endif
-                        @if($canViewRssaProjects || $canViewRlipLimeProjects)
-                            <li>
-                                @php
-                                    $rssaProjectsMenuActive = request()->routeIs('projects.rssa')
-                                        || request()->routeIs('projects.rlip-lime.dashboard');
-                                @endphp
-                                <a href="#" class="@if($rssaProjectsMenuActive) active @endif submenu-toggle" onclick="toggleSubmenu(event, 'rssaProjectsMenu')">
-                                    <i class="fas fa-list-check"></i>
-                                    <span>Rapid Subproject Sustainability Assessment</span>
-                                    <i class="fas fa-chevron-down submenu-chevron" style="margin-left: auto; font-size: 11px;"></i>
-                                </a>
-                                <ul id="rssaProjectsMenu" class="submenu" style="display: {{ $rssaProjectsMenuActive ? 'block' : 'none' }};">
-                                    @if($canViewRssaProjects)
-                                        <li>
-                                            <a href="{{ route('projects.rssa') }}" class="@if(request()->routeIs('projects.rssa')) active @endif">
-                                                <i class="fas fa-hand-holding-usd"></i>
-                                                <span>Locally Funded Projects</span>
-                                            </a>
-                                        </li>
-                                    @endif
-                                    @if($canViewRlipLimeProjects)
-                                        <li>
-                                            <a href="{{ route('projects.rlip-lime.dashboard') }}" class="@if(request()->routeIs('projects.rlip-lime.dashboard')) active @endif">
-                                                <i class="fas fa-leaf"></i>
-                                                <span>LIME-20% Development Fund</span>
-                                            </a>
-                                        </li>
-                                    @endif
-                                </ul>
                             </li>
                         @endif
                         @if($canViewRlipLimeProjects)
@@ -1471,6 +1713,37 @@
                                 <a href="{{ route('projects.sglgif.table') }}" class="@if(request()->routeIs('projects.sglgif.table')) active @endif">
                                     <i class="fas fa-award"></i>
                                     <span>SGLGIF Portal</span>
+                                </a>
+                            </li>
+                        @endif
+                    </ul>
+                </li>
+            @endif
+            @if($canViewRssaProjects || $canViewRlipLimeProjects)
+                <li>
+                    @php
+                        $rssaProjectsMenuActive = request()->routeIs('projects.rssa')
+                            || request()->routeIs('projects.rlip-lime.dashboard');
+                    @endphp
+                    <a href="#" class="@if($rssaProjectsMenuActive) active @endif submenu-toggle" onclick="toggleSubmenu(event, 'rssaProjectsMenu')">
+                        <i class="fas fa-list-check"></i>
+                        <span>Rapid Subproject Sustainability Assessment</span>
+                        <i class="fas fa-chevron-down submenu-chevron" style="margin-left: auto; font-size: 11px;"></i>
+                    </a>
+                    <ul id="rssaProjectsMenu" class="submenu" style="display: {{ $rssaProjectsMenuActive ? 'block' : 'none' }};">
+                        @if($canViewRssaProjects)
+                            <li>
+                                <a href="{{ route('projects.rssa') }}" class="@if(request()->routeIs('projects.rssa')) active @endif">
+                                    <i class="fas fa-hand-holding-usd"></i>
+                                    <span>Locally Funded Projects</span>
+                                </a>
+                            </li>
+                        @endif
+                        @if($canViewRlipLimeProjects)
+                            <li>
+                                <a href="{{ route('projects.rlip-lime.dashboard') }}" class="@if(request()->routeIs('projects.rlip-lime.dashboard')) active @endif">
+                                    <i class="fas fa-leaf"></i>
+                                    <span>LIME-20% Development Fund</span>
                                 </a>
                             </li>
                         @endif
@@ -1570,12 +1843,19 @@
             @endif
             @if($canViewPreImplementationDocuments)
                 <li>
-                    <a href="{{ route('pre-implementation-documents.sbdp') }}" class="@if(Route::currentRouteName() == 'pre-implementation-documents.sbdp') active @endif">
+                    <a href="{{ route('pre-implementation-documents.index') }}" class="@if(request()->routeIs('pre-implementation-documents.*')) active @endif">
                         <i class="fas fa-folder-open"></i>
-                        <span>Pre-Implementation Documents(SBDP Projects)</span>
+                        <span>Pre-Implementation Documents</span>
                     </a>
                 </li>
             @endif
+            <li>
+                <a href="{{ route('messages.index') }}" class="sidebar-float-hover @if(request()->routeIs('messages.*')) active @endif">
+                    <i class="fas fa-envelope-open-text"></i>
+                    <span>Messages</span>
+                    <span class="sidebar-menu-badge" data-message-unread-badge @if($unreadMessageThreads < 1) hidden @endif>{{ $messageUnreadBadgeText }}</span>
+                </a>
+            </li>
             @php
                 $isRegionalDilg = strtoupper(trim((string) (Auth::user()->agency ?? ''))) === 'DILG'
                     && strtolower(trim((string) (Auth::user()->province ?? ''))) === 'regional office';
@@ -1681,7 +1961,7 @@
                     <li>
                         <a href="{{ route('utilities.notifications.index') }}" class="@if(request()->routeIs('utilities.notifications.*')) active @endif">
                             <i class="fas fa-bell"></i>
-                            <span>Notifications</span>
+                            <span>Bulk Notification</span>
                         </a>
                     </li>
                     <li>
@@ -1764,6 +2044,59 @@
                                 </a>
                             @endforeach
                         @endif
+                        <div class="notification-menu-footer">
+                            <a href="{{ route('messages.index') }}" class="notification-menu-view-all">
+                                <i class="fas fa-envelope-open-text"></i>
+                                <span>Open Messages</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="notification-wrap">
+                    <button
+                        class="notification-bell"
+                        id="messageBell"
+                        title="Messages"
+                        aria-haspopup="true"
+                        aria-expanded="false"
+                        aria-controls="messageMenu"
+                    >
+                        <i class="fas fa-comments"></i>
+                        <span class="notification-badge" data-message-unread-badge @if($unreadMessageThreads < 1) hidden @endif>{{ $messageUnreadBadgeText }}</span>
+                    </button>
+                    <div class="notification-menu" id="messageMenu">
+                        <div class="notification-menu-header">
+                            <span class="notification-menu-title">Messages</span>
+                        </div>
+                        @if($recentMessageThreads->isEmpty())
+                            <div class="notification-menu-empty">No messages yet.</div>
+                        @else
+                            @foreach($recentMessageThreads as $messageThread)
+                                <a
+                                    href="{{ route('messages.index', ['thread' => $messageThread->thread_id]) }}"
+                                    class="notification-menu-item @if(($messageThread->unread ?? 0) > 0) unread @endif"
+                                >
+                                    <div class="notification-menu-message-row">
+                                        @if(($messageThread->unread ?? 0) > 0)
+                                            <span class="notification-unread-dot" aria-label="Unread message"></span>
+                                        @endif
+                                        <div style="min-width: 0;">
+                                            <div class="notification-menu-message">{{ $messageThread->name }}</div>
+                                            <div class="notification-menu-time">{{ $messageThread->preview }}</div>
+                                        </div>
+                                    </div>
+                                    <div class="notification-menu-time">
+                                        {{ $messageThread->time }}
+                                    </div>
+                                </a>
+                            @endforeach
+                        @endif
+                        <div class="notification-menu-footer">
+                            <a href="{{ route('messages.index') }}" class="notification-menu-view-all">
+                                <i class="fas fa-envelope-open-text"></i>
+                                <span>Open Messages</span>
+                            </a>
+                        </div>
                     </div>
                 </div>
 
@@ -1950,6 +2283,8 @@
         const profileMenu = document.getElementById('profileMenu');
         const notificationBell = document.getElementById('notificationBell');
         const notificationMenu = document.getElementById('notificationMenu');
+        const messageBell = document.getElementById('messageBell');
+        const messageMenu = document.getElementById('messageMenu');
         
         const SIDEBAR_SUBMENU_STORAGE_KEY = 'pdmuoms.sidebar.openSubmenus';
         const SIDEBAR_SUBMENU_COLLAPSE_ONCE_KEY = 'pdmuoms.sidebar.collapseSubmenusOnce';
@@ -2192,6 +2527,12 @@
                 if (notificationBell) {
                     notificationBell.setAttribute('aria-expanded', 'false');
                 }
+                if (messageMenu) {
+                    messageMenu.classList.remove('show');
+                }
+                if (messageBell) {
+                    messageBell.setAttribute('aria-expanded', 'false');
+                }
             });
         }
 
@@ -2203,6 +2544,30 @@
                 this.setAttribute('aria-expanded', notificationMenu.classList.contains('show') ? 'true' : 'false');
                 if (profileMenu) {
                     profileMenu.classList.remove('show');
+                }
+                if (messageMenu) {
+                    messageMenu.classList.remove('show');
+                }
+                if (messageBell) {
+                    messageBell.setAttribute('aria-expanded', 'false');
+                }
+            });
+        }
+
+        if (messageBell && messageMenu) {
+            messageBell.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                messageMenu.classList.toggle('show');
+                this.setAttribute('aria-expanded', messageMenu.classList.contains('show') ? 'true' : 'false');
+                if (profileMenu) {
+                    profileMenu.classList.remove('show');
+                }
+                if (notificationMenu) {
+                    notificationMenu.classList.remove('show');
+                }
+                if (notificationBell) {
+                    notificationBell.setAttribute('aria-expanded', 'false');
                 }
             });
         }
@@ -2216,7 +2581,69 @@
                 notificationMenu.classList.remove('show');
                 notificationBell.setAttribute('aria-expanded', 'false');
             }
+            if (messageMenu && messageBell && !messageMenu.contains(e.target) && !messageBell.contains(e.target)) {
+                messageMenu.classList.remove('show');
+                messageBell.setAttribute('aria-expanded', 'false');
+            }
         });
+
+        (function initializeGlobalMessageUnreadBadges() {
+            const messagePollUrl = @json(route('messages.poll'));
+            const messageUnreadBadges = Array.from(document.querySelectorAll('[data-message-unread-badge]'));
+
+            if (!messagePollUrl || !messageUnreadBadges.length) {
+                return;
+            }
+
+            let syncInProgress = false;
+            const MESSAGE_POLL_MS = 15000;
+
+            const renderUnreadCount = (value) => {
+                const total = Math.max(0, Number(value || 0));
+                const label = total > 99 ? '99+' : total.toLocaleString();
+
+                messageUnreadBadges.forEach((badge) => {
+                    badge.hidden = total <= 0;
+                    badge.textContent = total > 0 ? label : '';
+                });
+            };
+
+            const syncUnreadCount = async () => {
+                if (syncInProgress || document.visibilityState === 'hidden') {
+                    return;
+                }
+
+                syncInProgress = true;
+
+                try {
+                    const response = await fetch(messagePollUrl, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json',
+                        },
+                        credentials: 'same-origin',
+                    });
+
+                    if (!response.ok) {
+                        return;
+                    }
+
+                    const payload = await response.json();
+                    renderUnreadCount(payload.unread_count || 0);
+                } catch (error) {
+                    // Ignore transient polling failures.
+                } finally {
+                    syncInProgress = false;
+                }
+            };
+
+            window.setInterval(syncUnreadCount, MESSAGE_POLL_MS);
+            document.addEventListener('visibilitychange', function () {
+                if (document.visibilityState === 'visible') {
+                    syncUnreadCount();
+                }
+            });
+        })();
 
         (function initializeSystemDialogs() {
             const confirmModal = document.getElementById('globalConfirmModal');

@@ -103,16 +103,16 @@
                                         <i class="fas fa-eye"></i> View
                                     </a>
                                     @if($user->idno !== Auth::id())
-                                        <form action="{{ route('users.block', $user->idno) }}" method="POST" style="display: inline;" onsubmit="return confirm('{{ $user->status === 'inactive' ? 'Unblock this user? They will be able to log in again.' : 'Block this user? They will no longer be able to log in.' }}');">
+                                        <form action="{{ route('users.block', $user->idno) }}" method="POST" style="display: inline;" onsubmit="return confirm('{{ $user->status === 'inactive' ? 'Activate this user? They will be able to log in again.' : 'Deactivate this user? They will no longer be able to log in.' }}');">
                                             @csrf
                                             @method('PUT')
                                             @if($user->status === 'inactive')
                                                 <button type="submit" style="padding: 6px 12px; background-color: #10b981; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; transition: all 0.3s ease;">
-                                                    <i class="fas fa-user-check"></i> Unblock
+                                                    <i class="fas fa-user-check"></i> Activate
                                                 </button>
                                             @else
                                                 <button type="submit" style="padding: 6px 12px; background-color: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; transition: all 0.3s ease;">
-                                                    <i class="fas fa-user-slash"></i> Block
+                                                    <i class="fas fa-user-slash"></i> Deactivate
                                                 </button>
                                             @endif
                                         </form>
@@ -179,16 +179,16 @@
                                     <i class="fas fa-eye"></i> View
                                 </a>
                                 @if($user->idno !== Auth::id())
-                                    <form action="{{ route('users.block', $user->idno) }}" method="POST" class="user-mobile-card__form" onsubmit="return confirm('{{ $user->status === 'inactive' ? 'Unblock this user? They will be able to log in again.' : 'Block this user? They will no longer be able to log in.' }}');">
+                                    <form action="{{ route('users.block', $user->idno) }}" method="POST" class="user-mobile-card__form" onsubmit="return confirm('{{ $user->status === 'inactive' ? 'Activate this user? They will be able to log in again.' : 'Deactivate this user? They will no longer be able to log in.' }}');">
                                         @csrf
                                         @method('PUT')
                                         @if($user->status === 'inactive')
                                             <button type="submit" class="user-mobile-card__action user-mobile-card__action--unblock">
-                                                <i class="fas fa-user-check"></i> Unblock
+                                                <i class="fas fa-user-check"></i> Activate
                                             </button>
                                         @else
                                             <button type="submit" class="user-mobile-card__action user-mobile-card__action--block">
-                                                <i class="fas fa-user-slash"></i> Block
+                                                <i class="fas fa-user-slash"></i> Deactivate
                                             </button>
                                         @endif
                                     </form>

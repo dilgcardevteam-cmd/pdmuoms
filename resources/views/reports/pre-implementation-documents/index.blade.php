@@ -1,16 +1,16 @@
 @extends('layouts.dashboard')
 
-@section('title', 'Pre-Implementation Documents (SBDP Projects)')
-@section('page-title', 'Pre-Implementation Documents (SBDP Projects)')
+@section('title', 'Pre-Implementation Documents')
+@section('page-title', 'Pre-Implementation Documents')
 
 @section('content')
     <div class="content-header">
-        <h1>Pre-Implementation Documents (SBDP Projects)</h1>
-        <p>View SBDP projects and open each project profile to manage pre-implementation records.</p>
+        <h1>Pre-Implementation Documents</h1>
+        <p>View accessible SubayBayan LFP projects from 2024 onward and open each project profile to manage pre-implementation records.</p>
     </div>
 
     <div style="background: white; padding: 16px 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); margin-bottom: 20px; border: 1px solid #e5e7eb;">
-        <form method="GET" action="{{ route('pre-implementation-documents.sbdp') }}" style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
+        <form method="GET" action="{{ route('pre-implementation-documents.index') }}" style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
             <input type="hidden" name="per_page" value="{{ $perPage ?? 10 }}">
             <div style="position: relative; flex: 2 1 220px; min-width: 200px;">
                 <i class="fas fa-search" style="position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: #9ca3af; font-size: 13px; pointer-events: none;"></i>
@@ -37,7 +37,7 @@
             <button type="submit" style="flex: 0 0 auto; height: 42px; padding: 0 18px; background-color: #2563eb; color: white; border: 1px solid #2563eb; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; transition: background-color 0.2s;">
                 <i class="fas fa-filter"></i> Apply
             </button>
-            <a href="{{ route('pre-implementation-documents.sbdp') }}" style="flex: 0 0 auto; height: 42px; padding: 0 18px; background-color: #6b7280; color: white; border: 1px solid #6b7280; border-radius: 8px; font-size: 13px; font-weight: 600; white-space: nowrap; display: inline-flex; align-items: center; text-decoration: none; transition: background-color 0.2s;">
+            <a href="{{ route('pre-implementation-documents.index') }}" style="flex: 0 0 auto; height: 42px; padding: 0 18px; background-color: #6b7280; color: white; border: 1px solid #6b7280; border-radius: 8px; font-size: 13px; font-weight: 600; white-space: nowrap; display: inline-flex; align-items: center; text-decoration: none; transition: background-color 0.2s;">
                 Reset
             </a>
         </form>
@@ -83,7 +83,7 @@
                         </td>
                         <td style="padding: 14px 16px; font-size: 13px; color: #374151; text-align: center; white-space: nowrap;">
                             <span style="display: inline-block; padding: 3px 10px; background-color: #e0e7ff; color: #3730a3; border-radius: 6px; font-size: 12px; font-weight: 600;">
-                                {{ $project->fund_source ?: 'SBDP' }}
+                                {{ $project->fund_source ?: 'Unspecified' }}
                             </span>
                         </td>
                         <td style="padding: 14px 16px; font-size: 13px; color: #374151; text-align: center; font-weight: 600; white-space: nowrap;">{{ $project->funding_year ?: '-' }}</td>
@@ -96,7 +96,7 @@
                             </span>
                         </td>
                         <td style="padding: 14px 16px; text-align: center; white-space: nowrap;">
-                            <a href="{{ route('pre-implementation-documents.sbdp.show', $project->project_code) }}" style="display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; background-color: #002C76; color: white; text-decoration: none; border-radius: 6px; font-size: 12px; font-weight: 600; transition: background-color 0.2s;"
+                            <a href="{{ route('pre-implementation-documents.show', $project->project_code) }}" style="display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; background-color: #002C76; color: white; text-decoration: none; border-radius: 6px; font-size: 12px; font-weight: 600; transition: background-color 0.2s;"
                                onmouseover="this.style.backgroundColor='#003d9e'" onmouseout="this.style.backgroundColor='#002C76'">
                                 <i class="fas fa-folder-open"></i> Open
                             </a>
@@ -106,7 +106,7 @@
                     <tr>
                         <td colspan="8" style="padding: 60px 20px; text-align: center; color: #9ca3af;">
                             <i class="fas fa-inbox" style="font-size: 36px; margin-bottom: 12px; display: block; color: #d1d5db;"></i>
-                            <div style="font-size: 14px; font-weight: 600; color: #6b7280;">No SBDP projects found.</div>
+                            <div style="font-size: 14px; font-weight: 600; color: #6b7280;">No SubayBayan LFP projects found from 2024 onward.</div>
                             <div style="font-size: 12px; margin-top: 4px;">Try adjusting your filters.</div>
                         </td>
                     </tr>
@@ -122,7 +122,7 @@
                         Page {{ $projects->currentPage() }} of {{ $projects->lastPage() }} ·
                         Showing {{ $projects->firstItem() ?? 0 }}–{{ $projects->lastItem() ?? 0 }} of {{ $projects->total() }}
                     </div>
-                    <form method="GET" action="{{ route('pre-implementation-documents.sbdp') }}" style="display: inline-flex; align-items: center;">
+                    <form method="GET" action="{{ route('pre-implementation-documents.index') }}" style="display: inline-flex; align-items: center;">
                         <input type="hidden" name="search" value="{{ $filters['search'] ?? '' }}">
                         <input type="hidden" name="province" value="{{ $filters['province'] ?? '' }}">
                         <input type="hidden" name="funding_year" value="{{ $filters['funding_year'] ?? '' }}">

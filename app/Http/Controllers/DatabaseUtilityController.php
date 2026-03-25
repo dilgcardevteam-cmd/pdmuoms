@@ -3,17 +3,20 @@
 namespace App\Http\Controllers;
 
 use App\Mail\AutomatedDatabaseBackupMail;
+use App\Mail\BulkNotificationMail;
 use App\Models\BackupAutomationSetting;
 use App\Models\DatabaseBackupRun;
 use App\Models\RolePermissionSetting;
 use App\Models\User;
 use App\Services\DatabaseBackupService;
+use App\Support\InputSanitizer;
 use App\Support\RolePermissionRegistry;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -174,21 +177,195 @@ class DatabaseUtilityController extends Controller
 
     public function notifications(): View
     {
-        $notificationsQuery = DB::table('tbnotifications')
-            ->where('user_id', auth()->id());
+        $activeUsers = User::query()
+            ->select(['idno', 'fname', 'lname', 'username', 'emailaddress', 'role', 'province', 'office'])
+            ->whereRaw('LOWER(TRIM(COALESCE(status, ""))) = ?', ['active'])
+            ->orderByRaw("
+                CASE LOWER(TRIM(COALESCE(role, '')))
+                    WHEN '" . User::ROLE_SUPERADMIN . "' THEN 1
+                    WHEN '" . User::ROLE_REGIONAL . "' THEN 2
+                    WHEN '" . User::ROLE_PROVINCIAL . "' THEN 3
+                    WHEN '" . User::ROLE_LGU . "' THEN 4
+                    ELSE 5
+                END
+            ")
+            ->orderBy('lname')
+            ->orderBy('fname')
+            ->get();
+
+        $roleGroups = collect(User::roleOptions())
+            ->map(function (string $label, string $role) use ($activeUsers): array {
+                return [
+                    'role' => $role,
+                    'label' => $label,
+                    'count' => $activeUsers->filter(function (User $user) use ($role): bool {
+                        return $user->normalizedRole() === $role;
+                    })->count(),
+                ];
+            })
+            ->values();
 
         return view('admin.utilities.notifications', [
-            'unreadNotifications' => (clone $notificationsQuery)
-                ->whereNull('read_at')
-                ->count(),
-            'readNotifications' => (clone $notificationsQuery)
-                ->whereNotNull('read_at')
-                ->count(),
-            'notifications' => (clone $notificationsQuery)
-                ->orderByDesc('created_at')
-                ->paginate(25)
-                ->withQueryString(),
+            'activeUsers' => $activeUsers,
+            'roleGroups' => $roleGroups,
+            'roleOptions' => User::roleOptions(),
+            'totalActiveUsers' => $activeUsers->count(),
         ]);
+    }
+
+    public function sendBulkNotification(Request $request): RedirectResponse
+    {
+        if (!Schema::hasTable('tbnotifications')) {
+            return redirect()
+                ->route('utilities.notifications.index')
+                ->with('error', 'System notifications table is not available yet. Run the migration first.');
+        }
+
+        $validated = $request->validate([
+            'target_scope' => ['required', 'in:selected_users,selected_role,all_users'],
+            'user_ids' => ['nullable', 'array'],
+            'user_ids.*' => ['integer', 'exists:tbusers,idno'],
+            'role' => ['nullable', 'in:' . implode(',', array_keys(User::roleOptions()))],
+            'title' => ['required', 'string', 'max:120'],
+            'message' => ['required', 'string', 'max:5000'],
+            'redirect_path' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $targetScope = (string) $validated['target_scope'];
+        $selectedUserIds = array_values(array_unique(array_map('intval', $validated['user_ids'] ?? [])));
+        $selectedRole = isset($validated['role']) ? strtolower(trim((string) $validated['role'])) : null;
+        $title = InputSanitizer::sanitizePlainText((string) $validated['title']);
+        $message = InputSanitizer::sanitizePlainText((string) $validated['message'], true);
+        $redirectPath = InputSanitizer::sanitizeInternalRedirect($validated['redirect_path'] ?? null);
+
+        if ($title === '') {
+            return back()
+                ->withErrors(['title' => 'Enter a notification title.'])
+                ->withInput();
+        }
+
+        if ($message === '') {
+            return back()
+                ->withErrors(['message' => 'Enter the message to broadcast.'])
+                ->withInput();
+        }
+
+        if ($targetScope === 'selected_users' && $selectedUserIds === []) {
+            return back()
+                ->withErrors(['user_ids' => 'Select at least one active recipient.'])
+                ->withInput();
+        }
+
+        if ($targetScope === 'selected_role' && (!$selectedRole || !array_key_exists($selectedRole, User::roleOptions()))) {
+            return back()
+                ->withErrors(['role' => 'Choose the user level that should receive the broadcast.'])
+                ->withInput();
+        }
+
+        if ($request->filled('redirect_path') && $redirectPath === null) {
+            return back()
+                ->withErrors(['redirect_path' => 'Use an internal path that starts with /. Example: /dashboard'])
+                ->withInput();
+        }
+
+        $recipients = $this->resolveBulkNotificationRecipients(
+            targetScope: $targetScope,
+            selectedUserIds: $selectedUserIds,
+            selectedRole: $selectedRole,
+        );
+
+        if ($recipients->isEmpty()) {
+            return back()
+                ->with('error', 'No active users matched the selected audience.')
+                ->withInput();
+        }
+
+        $sender = auth()->user();
+        $senderId = $sender?->idno ? (int) $sender->idno : null;
+        $senderName = trim(implode(' ', array_filter([
+            $sender?->fname,
+            $sender?->lname,
+        ])));
+        if ($senderName === '') {
+            $senderName = trim((string) ($sender?->username ?? 'PDMU PDMUOMS'));
+        }
+
+        $actionUrl = $redirectPath ? url($redirectPath) : route('dashboard');
+        $systemMessage = $this->formatBulkNotificationSystemMessage($title, $message);
+        $now = now();
+
+        foreach (array_chunk($recipients->map(function (User $recipient) use ($systemMessage, $actionUrl, $now, $senderId, $senderName): array {
+            return [
+                'user_id' => (int) $recipient->idno,
+                'sender_user_id' => $senderId,
+                'sender_name' => $senderName,
+                'message' => $systemMessage,
+                'url' => $actionUrl,
+                'document_type' => 'bulk-notification',
+                'quarter' => null,
+                'read_at' => null,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+        })->all(), 500) as $notificationChunk) {
+            DB::table('tbnotifications')->insert($notificationChunk);
+        }
+
+        $emailedCount = 0;
+        $emailFailedCount = 0;
+        $emailSkippedCount = 0;
+
+        foreach ($recipients as $recipient) {
+            $emailAddress = strtolower(trim((string) $recipient->emailaddress));
+
+            if (!filter_var($emailAddress, FILTER_VALIDATE_EMAIL)) {
+                $emailSkippedCount++;
+                continue;
+            }
+
+            try {
+                Mail::to($emailAddress)->send(new BulkNotificationMail(
+                    recipient: $recipient,
+                    titleText: $title,
+                    messageText: $message,
+                    actionUrl: $actionUrl,
+                    senderName: $senderName,
+                ));
+                $emailedCount++;
+            } catch (\Throwable $exception) {
+                $emailFailedCount++;
+
+                Log::warning('Bulk notification email delivery failed.', [
+                    'recipient_id' => $recipient->idno,
+                    'email' => $emailAddress,
+                    'target_scope' => $targetScope,
+                    'selected_role' => $selectedRole,
+                    'error' => $exception->getMessage(),
+                ]);
+            }
+        }
+
+        $summaryParts = [
+            'System notifications were sent to ' . number_format($recipients->count()) . ' active recipient(s).',
+        ];
+
+        if ($emailedCount > 0) {
+            $summaryParts[] = 'Email was delivered to ' . number_format($emailedCount) . ' recipient(s).';
+        }
+
+        if ($emailSkippedCount > 0) {
+            $summaryParts[] = number_format($emailSkippedCount) . ' recipient(s) were skipped because no valid email address was available.';
+        }
+
+        if ($emailFailedCount > 0) {
+            $summaryParts[] = 'Email delivery failed for ' . number_format($emailFailedCount) . ' recipient(s). Check the mail configuration or logs.';
+        }
+
+        $summaryParts[] = 'Audience: ' . $this->bulkNotificationAudienceLabel($targetScope, $selectedRole) . '.';
+
+        return redirect()
+            ->route('utilities.notifications.index')
+            ->with('success', implode(' ', $summaryParts));
     }
 
     public function roleConfiguration(): View
@@ -1050,6 +1227,47 @@ class DatabaseUtilityController extends Controller
         $items = array_unique(array_filter(array_map('trim', $items)));
 
         return array_values(array_filter($items, fn (string $email): bool => filter_var($email, FILTER_VALIDATE_EMAIL) !== false));
+    }
+
+    private function resolveBulkNotificationRecipients(
+        string $targetScope,
+        array $selectedUserIds = [],
+        ?string $selectedRole = null
+    ) {
+        $query = User::query()
+            ->select(['idno', 'fname', 'lname', 'username', 'emailaddress', 'role'])
+            ->whereRaw('LOWER(TRIM(COALESCE(status, ""))) = ?', ['active']);
+
+        if ($targetScope === 'selected_users') {
+            $query->whereIn('idno', $selectedUserIds);
+        } elseif ($targetScope === 'selected_role' && $selectedRole !== null) {
+            $query->whereRaw('LOWER(TRIM(COALESCE(role, ""))) = ?', [$selectedRole]);
+        }
+
+        return $query
+            ->orderBy('lname')
+            ->orderBy('fname')
+            ->get();
+    }
+
+    private function formatBulkNotificationSystemMessage(string $title, string $message): string
+    {
+        $singleLineMessage = preg_replace('/\s+/u', ' ', $message) ?? $message;
+
+        return Str::limit(trim($title . ': ' . $singleLineMessage), 500, '...');
+    }
+
+    private function bulkNotificationAudienceLabel(string $targetScope, ?string $selectedRole = null): string
+    {
+        if ($targetScope === 'selected_users') {
+            return 'selected user(s)';
+        }
+
+        if ($targetScope === 'selected_role') {
+            return User::roleOptions()[$selectedRole] ?? 'selected level';
+        }
+
+        return 'all active users';
     }
 
     private function nextScheduledRun(?BackupAutomationSetting $setting): ?string

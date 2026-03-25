@@ -1,16 +1,16 @@
 @extends('layouts.dashboard')
 
-@section('title', 'Pre-Implementation Upload')
-@section('page-title', 'Pre-Implementation Documents (SBDP Projects)')
+@section('title', 'Pre-Implementation Documents')
+@section('page-title', 'Pre-Implementation Documents')
 
 @section('content')
     <div class="content-header" style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;">
         <div>
             <h1>Update - {{ $project->project_code }}</h1>
-            <p>Upload and validate pre-implementation documents for this SBDP project.</p>
+            <p>Upload and validate pre-implementation documents for this project.</p>
         </div>
         <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-            <a href="{{ route('pre-implementation-documents.sbdp') }}" style="display: inline-flex; padding: 10px 18px; background-color: #6b7280; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; text-decoration: none; align-items: center; gap: 6px; white-space: nowrap;">
+            <a href="{{ route('pre-implementation-documents.index') }}" style="display: inline-flex; padding: 10px 18px; background-color: #6b7280; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; text-decoration: none; align-items: center; gap: 6px; white-space: nowrap;">
                 <i class="fas fa-arrow-left"></i> Back to List
             </a>
         </div>
@@ -49,6 +49,10 @@
             <div>
                 <label style="display: block; color: #6b7280; font-size: 12px; font-weight: 600; text-transform: uppercase; margin-bottom: 4px;">Funding Year</label>
                 <p style="color: #111827; font-size: 15px; font-weight: 500; margin: 0;">{{ $project->funding_year ?: '-' }}</p>
+            </div>
+            <div>
+                <label style="display: block; color: #6b7280; font-size: 12px; font-weight: 600; text-transform: uppercase; margin-bottom: 4px;">Fund Source</label>
+                <p style="color: #111827; font-size: 15px; font-weight: 500; margin: 0;">{{ $project->fund_source ?: 'Unspecified' }}</p>
             </div>
             <div>
                 <label style="display: block; color: #6b7280; font-size: 12px; font-weight: 600; text-transform: uppercase; margin-bottom: 4px;">Province</label>
@@ -101,7 +105,7 @@
         <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 18px; flex-wrap: wrap;">
             <h2 style="color: #002C76; font-size: 18px; margin: 0; font-weight: 600;">Uploading of Documents</h2>
 
-            <form method="POST" action="{{ route('pre-implementation-documents.sbdp.save', $project->project_code) }}" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+            <form method="POST" action="{{ route('pre-implementation-documents.save', $project->project_code) }}" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
                 @csrf
                 <label for="mode_of_contract" style="color: #374151; font-size: 12px; font-weight: 600;">Mode of Contract</label>
                 <select id="mode_of_contract" name="mode_of_contract" style="padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; min-width: 220px;">
@@ -266,7 +270,7 @@
                         && !($isProvincialDilg && $isApproved);
                 @endphp
 
-                <form method="POST" action="{{ route('pre-implementation-documents.sbdp.save', $project->project_code) }}" enctype="multipart/form-data" style="border: 1px dashed #cbd5f5; padding: 18px; border-radius: 8px; background-color: #f9fafb;">
+                <form method="POST" action="{{ route('pre-implementation-documents.save', $project->project_code) }}" enctype="multipart/form-data" style="border: 1px dashed #cbd5f5; padding: 18px; border-radius: 8px; background-color: #f9fafb;">
                     @csrf
 
                     <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px;">
@@ -623,7 +627,7 @@
         </div>
     </div>
     <script>
-        const preImplValidateBaseUrl = @json(url('/pre-implementation-documents/sbdp-projects/' . $project->project_code . '/validate'));
+        const preImplValidateBaseUrl = @json(url('/pre-implementation-documents/projects/' . $project->project_code . '/validate'));
 
         function openPreImplementationApprovalModal(documentType, action) {
             const modal = document.getElementById('preImplApprovalModal');

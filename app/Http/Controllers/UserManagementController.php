@@ -231,10 +231,10 @@ class UserManagementController extends Controller
         ]);
 
         if ($isInactive) {
-            return redirect()->route('users.index')->with('success', 'User unblocked successfully.');
+            return redirect()->route('users.index')->with('success', 'User activated successfully.');
         }
 
-        return redirect()->route('users.index')->with('success', 'User blocked successfully.');
+        return redirect()->route('users.index')->with('success', 'User deactivated successfully.');
     }
 
     public function updateAccess(Request $request, User $user)

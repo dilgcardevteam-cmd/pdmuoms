@@ -95,6 +95,8 @@ class PreImplementationDocumentController extends Controller
             $query->whereRaw('CAST(NULLIF(TRIM(COALESCE(spp.funding_year, \'\')), \'\') AS UNSIGNED) = ?', [(int) $filters['funding_year']]);
         }
 
+        $fundSourceExpression = $this->fundSourceExpression('spp');
+
         $projects = $query
             ->select([
                 'spp.project_code',
@@ -105,7 +107,7 @@ class PreImplementationDocumentController extends Controller
                 'spp.funding_year',
                 'spp.status',
                 'spp.updated_at',
-                DB::raw("'SBDP' as fund_source"),
+                DB::raw("{$fundSourceExpression} as fund_source"),
             ])
             ->orderByRaw("CASE WHEN spp.funding_year IS NULL OR TRIM(spp.funding_year) = '' THEN 1 ELSE 0 END")
             ->orderByRaw('CAST(spp.funding_year AS UNSIGNED) ASC')
@@ -184,7 +186,7 @@ class PreImplementationDocumentController extends Controller
         $document->mode_of_contract = $validated['mode_of_contract'] ?? $document->mode_of_contract;
         $document->updated_by = Auth::user()->idno ?? null;
 
-        $folder = 'pre-implementation/sbdp/' . Str::slug((string) $project->project_code, '_');
+        $folder = 'pre-implementation/projects/' . Str::slug((string) $project->project_code, '_');
         $now = now();
         $userId = Auth::user()->idno ?? null;
 
@@ -232,7 +234,7 @@ class PreImplementationDocumentController extends Controller
         $document->save();
 
         return redirect()
-            ->route('pre-implementation-documents.sbdp.show', $project->project_code)
+            ->route('pre-implementation-documents.show', $project->project_code)
             ->with('success', 'Pre-implementation documents saved successfully.');
     }
 
@@ -478,7 +480,7 @@ class PreImplementationDocumentController extends Controller
                 $actorName,
                 $actionLabel,
                 $this->formatDocumentLabel($documentType),
-                $projectLabel !== '' ? $projectLabel : 'an SBDP project',
+                $projectLabel !== '' ? $projectLabel : 'a project',
                 $targetOffice !== '' ? ' - ' . $targetOffice : '',
                 $targetProvince !== '' ? ' - ' . $targetProvince : ''
             );
@@ -489,8 +491,8 @@ class PreImplementationDocumentController extends Controller
 
             $now = now();
             $url = $projectCode !== ''
-                ? route('pre-implementation-documents.sbdp.show', ['projectCode' => $projectCode])
-                : route('pre-implementation-documents.sbdp');
+                ? route('pre-implementation-documents.show', ['projectCode' => $projectCode])
+                : route('pre-implementation-documents.index');
             $actorId = (int) Auth::id();
 
             $rows = collect($recipientIds)
@@ -726,10 +728,13 @@ class PreImplementationDocumentController extends Controller
         $provinceLower = strtolower($province);
         $officeLower = strtolower($office);
         $regionLower = strtolower($region);
+        $fundSourceExpression = $this->fundSourceExpression('spp');
+        $lfpSources = $this->subaybayanLfpFundSources();
+        $lfpSourcePlaceholders = implode(', ', array_fill(0, count($lfpSources), '?'));
 
         $query = DB::table('subay_project_profiles as spp')
-            ->whereRaw('LOWER(TRIM(COALESCE(spp.project_code, \'\'))) LIKE ?', ['%sbdp%'])
-            ->whereRaw('CAST(NULLIF(TRIM(COALESCE(spp.funding_year, \'\')), \'\') AS UNSIGNED) >= 2024');
+            ->whereRaw('CAST(NULLIF(TRIM(COALESCE(spp.funding_year, \'\')), \'\') AS UNSIGNED) >= 2024')
+            ->whereRaw("{$fundSourceExpression} IN ({$lfpSourcePlaceholders})", $lfpSources);
 
         if ($agency === 'LGU') {
             if ($office !== '') {
@@ -773,8 +778,31 @@ class PreImplementationDocumentController extends Controller
                 'spp.barangay',
                 'spp.funding_year',
                 'spp.status',
+                DB::raw($this->fundSourceExpression('spp') . ' as fund_source'),
             ])
             ->first();
+    }
+
+    private function fundSourceExpression(string $alias = 'spp'): string
+    {
+        return "
+            CASE
+                WHEN UPPER(TRIM({$alias}.project_code)) LIKE 'SBDP%' THEN 'SBDP'
+                WHEN UPPER(TRIM({$alias}.project_code)) LIKE 'FA-%' THEN 'FALGU'
+                WHEN UPPER(TRIM({$alias}.project_code)) LIKE 'FALGU%' THEN 'FALGU'
+                WHEN UPPER(TRIM({$alias}.project_code)) LIKE 'CMGP%' THEN 'CMGP'
+                WHEN UPPER(TRIM({$alias}.project_code)) LIKE 'GEF%' THEN 'GEF'
+                WHEN UPPER(TRIM({$alias}.project_code)) LIKE 'SAFPB%' THEN 'SAFPB'
+                WHEN UPPER(TRIM({$alias}.project_code)) LIKE 'SGLGIF%' THEN 'SGLGIF'
+                WHEN TRIM(COALESCE({$alias}.program, '')) <> '' THEN UPPER(TRIM(COALESCE({$alias}.program, '')))
+                ELSE 'UNSPECIFIED'
+            END
+        ";
+    }
+
+    private function subaybayanLfpFundSources(): array
+    {
+        return ['SBDP', 'FALGU', 'CMGP', 'GEF', 'SAFPB'];
     }
 
     private function documentFieldMap(): array

@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
 use Illuminate\Auth\Events\Registered;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class RegisterController extends Controller
