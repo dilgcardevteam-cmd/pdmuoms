@@ -173,7 +173,7 @@ class PreImplementationDocumentController extends Controller
         ];
 
         foreach (array_keys($this->documentFieldMap()) as $field) {
-            $validationRules[$field] = ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,doc,docx', 'max:15360'];
+            $validationRules[$field] = ['nullable', 'file', 'mimes:pdf', 'max:15360'];
         }
 
         $validated = $request->validate($validationRules);
@@ -200,8 +200,13 @@ class PreImplementationDocumentController extends Controller
                 'document_type' => $field,
             ]);
 
-            if (!empty($fileRecord->file_path) && Storage::disk('public')->exists($fileRecord->file_path)) {
-                Storage::disk('public')->delete($fileRecord->file_path);
+            $existingPath = $fileRecord->file_path ?: ($document->{$field} ?? null);
+            if (!empty($existingPath)) {
+                return back()
+                    ->withInput()
+                    ->withErrors([
+                        $field => $this->documentFieldMap()[$field] . ' already has an uploaded file. Upload is locked for this document.',
+                    ]);
             }
 
             $path = $request->file($field)->store($folder, 'public');
@@ -236,6 +241,44 @@ class PreImplementationDocumentController extends Controller
         return redirect()
             ->route('pre-implementation-documents.show', $project->project_code)
             ->with('success', 'Pre-implementation documents saved successfully.');
+    }
+
+    public function viewDocument(string $projectCode, string $documentType)
+    {
+        $project = $this->resolveProjectForUser($projectCode, Auth::user());
+        if (!$project) {
+            abort(404);
+        }
+
+        if (!array_key_exists($documentType, $this->documentFieldMap())) {
+            abort(404);
+        }
+
+        $document = PreImplementationDocument::where('project_code', $project->project_code)->first();
+        $fileRecord = PreImplementationDocumentFile::where('project_code', $project->project_code)
+            ->where('document_type', $documentType)
+            ->first();
+
+        $path = $fileRecord->file_path ?? ($document?->{$documentType} ?? null);
+        if (!$path || !Storage::disk('public')->exists($path)) {
+            abort(404);
+        }
+
+        $filePath = Storage::disk('public')->path($path);
+        $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+        $inlineExtensions = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'];
+        $mimeType = @mime_content_type($filePath) ?: 'application/octet-stream';
+        $headers = [
+            'Content-Type' => $mimeType,
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+            'Pragma' => 'no-cache',
+        ];
+
+        if (!in_array($extension, $inlineExtensions, true)) {
+            return response()->download($filePath, basename($filePath), $headers);
+        }
+
+        return response()->file($filePath, $headers);
     }
 
     public function validateDocument(Request $request, string $projectCode, string $documentType)

@@ -19,17 +19,7 @@ class LocallyFundedProjectController extends Controller
     public function __construct()
     {
         $this->middleware('auth');
-        $this->middleware(function ($request, $next) {
-            $aspect = $request->routeIs('projects.sglgif.table')
-                ? 'sglgif_portal'
-                : 'locally_funded_projects';
-
-            if ($request->user() && $request->user()->hasCrudPermission($aspect, 'view')) {
-                return $next($request);
-            }
-
-            return response()->view('errors.restricted', [], 403);
-        })->only(['index']);
+        $this->middleware('crud_permission:locally_funded_projects,view')->only(['index']);
         $this->middleware('crud_permission:locally_funded_projects,view')->only(['showSubaybayan', 'show']);
         $this->middleware('crud_permission:locally_funded_projects,add')->only(['create', 'store']);
         $this->middleware('crud_permission:locally_funded_projects,update')->only(['edit', 'update']);
@@ -543,15 +533,12 @@ class LocallyFundedProjectController extends Controller
     public function index()
     {
         $this->syncMissingFundUtilizationReports();
-        $isSglgifPortal = request()->routeIs('projects.sglgif*');
-        $listRouteName = $isSglgifPortal ? 'projects.sglgif.table' : 'projects.locally-funded';
-        $activeProjectTab = $isSglgifPortal ? 'sglgif' : 'locally-funded';
-        $pageTitle = $isSglgifPortal ? 'SGLGIF Project Table' : 'Locally Funded Projects';
-        $pageDescription = $isSglgifPortal
-            ? 'Detailed table of imported SGLGIF records.'
-            : 'Manage and review locally funded project records.';
-        $tableTitle = $isSglgifPortal ? 'SGLGIF Records' : 'Projects';
-        $forceFundSource = $isSglgifPortal ? 'SGLGIF' : '';
+        $listRouteName = 'projects.locally-funded';
+        $activeProjectTab = 'locally-funded';
+        $pageTitle = 'Locally Funded Projects';
+        $pageDescription = 'Manage and review locally funded project records.';
+        $tableTitle = 'Projects';
+        $forceFundSource = '';
         $currentYear = now()->year;
         $currentMonth = now()->month;
         $user = Auth::user();
@@ -768,13 +755,22 @@ class LocallyFundedProjectController extends Controller
             'search' => trim((string) request('search', '')),
             'project_code' => trim((string) request('project_code', '')),
             'funding_year' => trim((string) request('funding_year', '')),
-            'fund_source' => $forceFundSource !== '' ? $forceFundSource : trim((string) request('fund_source', '')),
+            'fund_source' => trim((string) request('fund_source', '')),
             'province' => trim((string) request('province', '')),
             'city' => trim((string) request('city', '')),
             'procurement' => trim((string) request('procurement', '')),
             'status' => trim((string) request('status', '')),
             'project_update_status' => trim((string) request('project_update_status', '')),
         ];
+
+        if (strcasecmp($filters['fund_source'], 'SGLGIF') === 0) {
+            $filters['fund_source'] = '';
+        }
+
+        $query->whereRaw(
+            "UPPER(TRIM(COALESCE(lfp.fund_source, spp.program, ''))) <> ?",
+            ['SGLGIF']
+        );
 
         if ($filters['project_code'] !== '') {
             $projectCodeKeyword = '%' . strtolower($filters['project_code']) . '%';
@@ -1102,6 +1098,12 @@ class LocallyFundedProjectController extends Controller
         }
 
         $options = $this->getProjectFormOptions();
+        $options['fundSources'] = collect($options['fundSources'] ?? [])
+            ->reject(function ($source) {
+                return strcasecmp((string) $source, 'SGLGIF') === 0;
+            })
+            ->values()
+            ->all();
 
         return view('projects.locally-funded', array_merge(
             $options,

@@ -45,19 +45,6 @@
                 ->sort()
                 ->values();
 
-            $columnToggleOptions = [
-                'funding_year' => 'Funding Year',
-                'fund_source' => 'Fund Source',
-                'procurement_type' => 'Procurement Type',
-                'lgsf_allocation' => 'LGSF Allocation',
-                'obligation' => 'Obligation',
-                'utilization_rate' => 'Utilization Rate',
-                'physical_status_subaybayan' => 'Physical Status (Subaybayan %)',
-                'status_actual' => 'Status (Actual)',
-                'status_subaybayan' => 'Status (Subaybayan)',
-                'last_updated_at' => 'Last Updated At',
-            ];
-
             $normalizePercent = function ($value) {
                 if (!is_numeric($value)) {
                     return null;
@@ -263,23 +250,6 @@
                     </a>
                 </form>
 
-                <div class="lfp-column-toggle-panel" aria-label="Table columns filter">
-                    <div class="lfp-column-toggle-header">
-                        <div class="lfp-column-toggle-label">Visible Columns</div>
-                        <label class="lfp-column-toggle-option lfp-column-toggle-option--master">
-                            <input type="checkbox" id="lfp-column-toggle-all" checked>
-                            <span>Select All</span>
-                        </label>
-                    </div>
-                    <div class="lfp-column-toggle-grid">
-                        @foreach($columnToggleOptions as $columnKey => $columnLabel)
-                            <label class="lfp-column-toggle-option">
-                                <input type="checkbox" class="lfp-column-toggle-checkbox" data-column-toggle="{{ $columnKey }}" checked>
-                                <span>{{ $columnLabel }}</span>
-                            </label>
-                        @endforeach
-                    </div>
-                </div>
             </div>
         </details>
 
@@ -986,10 +956,6 @@
             color: #6b7280;
         }
 
-        .lfp-mobile-card-detail.is-column-hidden {
-            display: none;
-        }
-
         #lfp-table {
             width: max-content !important;
             min-width: 100%;
@@ -1041,54 +1007,6 @@
             text-align: center;
         }
 
-        .lfp-column-toggle-panel {
-            margin-bottom: 16px;
-            padding: 14px 16px;
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            background: #f9fafb;
-        }
-
-        .lfp-column-toggle-label {
-            font-size: 12px;
-            font-weight: 700;
-            color: #374151;
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
-        }
-
-        .lfp-column-toggle-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-            margin-bottom: 10px;
-            flex-wrap: wrap;
-        }
-
-        .lfp-column-toggle-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 10px 16px;
-        }
-
-        .lfp-column-toggle-option {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 12px;
-            color: #374151;
-            cursor: pointer;
-        }
-
-        .lfp-column-toggle-option input {
-            margin: 0;
-        }
-
-        .lfp-column-toggle-option--master {
-            font-weight: 600;
-        }
-
         .lfp-search-field {
             position: relative;
         }
@@ -1124,10 +1042,6 @@
             padding: 0 2px;
         }
 
-        #lfp-table [data-column-key].is-column-hidden {
-            display: none;
-        }
-
         .projects-header {
             flex-wrap: wrap;
             gap: 12px;
@@ -1150,10 +1064,6 @@
         @media (max-width: 1024px) {
             .projects-header {
                 flex-direction: column;
-                align-items: flex-start;
-            }
-
-            .lfp-column-toggle-header {
                 align-items: flex-start;
             }
         }
@@ -1179,10 +1089,6 @@
                 padding-right: 12px;
             }
 
-            .lfp-column-toggle-panel {
-                padding: 12px;
-            }
-
             .lfp-table-wrap {
                 display: none;
             }
@@ -1203,17 +1109,6 @@
                 grid-template-columns: 1fr;
             }
 
-            .lfp-column-toggle-grid {
-                grid-template-columns: 1fr;
-                gap: 8px;
-            }
-
-            .lfp-column-toggle-option {
-                padding: 8px 10px;
-                border: 1px solid #d1d5db;
-                border-radius: 8px;
-                background: #ffffff;
-            }
         }
 
         @media (max-width: 480px) {
@@ -1251,10 +1146,7 @@
             const fundSourceSelect = document.getElementById('filter-fund-source');
             const procurementSelect = document.getElementById('filter-procurement');
             const statusSelect = document.getElementById('filter-status');
-            const selectAllColumnsToggle = document.getElementById('lfp-column-toggle-all');
-            const columnToggles = Array.from(document.querySelectorAll('.lfp-column-toggle-checkbox'));
             const locationData = @json($provinceMunicipalities);
-            const columnToggleStorageKey = 'lfp-visible-columns';
             const selectedCity = citySelect ? (citySelect.dataset.selectedCity || '') : '';
             let isFetchingResults = false;
 
@@ -1363,14 +1255,6 @@
                     resultsContainer.replaceWith(nextResultsContainer);
                     resultsContainer = nextResultsContainer;
                     window.history.replaceState({}, '', url);
-                    applyVisibleColumns(columnToggles
-                        .filter(function (toggle) {
-                            return toggle.checked;
-                        })
-                        .map(function (toggle) {
-                            return toggle.dataset.columnToggle || '';
-                        })
-                        .filter(Boolean));
                 } catch (error) {
                     window.location.assign(url);
                 } finally {
@@ -1381,82 +1265,6 @@
                         resultsContainer.style.opacity = '1';
                     }
                 }
-            }
-
-            function applyVisibleColumns(visibleColumns) {
-                document.querySelectorAll('#lfp-table [data-column-key], .lfp-mobile-card-detail[data-column-key]').forEach(function (cell) {
-                    const columnKey = cell.dataset.columnKey || '';
-                    cell.classList.toggle('is-column-hidden', !visibleColumns.includes(columnKey));
-                });
-            }
-
-            function syncVisibleColumns() {
-                const visibleColumns = columnToggles
-                    .filter(function (toggle) {
-                        return toggle.checked;
-                    })
-                    .map(function (toggle) {
-                        return toggle.dataset.columnToggle || '';
-                    })
-                    .filter(Boolean);
-
-                applyVisibleColumns(visibleColumns);
-
-                if (columnToggles.length > 0) {
-                    localStorage.setItem(columnToggleStorageKey, JSON.stringify(visibleColumns));
-                }
-
-                if (selectAllColumnsToggle) {
-                    const checkedCount = visibleColumns.length;
-                    const totalCount = columnToggles.length;
-                    selectAllColumnsToggle.checked = totalCount > 0 && checkedCount === totalCount;
-                    selectAllColumnsToggle.indeterminate = checkedCount > 0 && checkedCount < totalCount;
-                }
-            }
-
-            function initializeColumnToggles() {
-                if (columnToggles.length === 0) {
-                    return;
-                }
-
-                const storedColumnsRaw = localStorage.getItem(columnToggleStorageKey);
-                let savedColumns = null;
-
-                try {
-                    savedColumns = JSON.parse(storedColumnsRaw || 'null');
-                } catch (error) {
-                    savedColumns = null;
-                }
-
-                const validColumns = Array.isArray(savedColumns)
-                    ? savedColumns.filter(function (columnKey) {
-                        return columnToggles.some(function (toggle) {
-                            return toggle.dataset.columnToggle === columnKey;
-                        });
-                    })
-                    : null;
-
-                if (storedColumnsRaw !== null && validColumns) {
-                    columnToggles.forEach(function (toggle) {
-                        toggle.checked = validColumns.includes(toggle.dataset.columnToggle || '');
-                    });
-                }
-
-                columnToggles.forEach(function (toggle) {
-                    toggle.addEventListener('change', syncVisibleColumns);
-                });
-
-                if (selectAllColumnsToggle) {
-                    selectAllColumnsToggle.addEventListener('change', function () {
-                        columnToggles.forEach(function (toggle) {
-                            toggle.checked = selectAllColumnsToggle.checked;
-                        });
-
-                        syncVisibleColumns();
-                    });
-                }
-
-                syncVisibleColumns();
             }
 
             filtersForm.addEventListener('submit', function (event) {
@@ -1508,7 +1316,6 @@
                 });
 
             populateCityOptions(provinceSelect.value, selectedCity);
-            initializeColumnToggles();
 
             document.addEventListener('click', function (event) {
                 const link = event.target.closest('.lfp-sort-link, .lfp-mobile-card-action, [data-results-container] a');

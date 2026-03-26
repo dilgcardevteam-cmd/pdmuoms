@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -13,6 +14,7 @@ class SglgifProjectController extends Controller
     public function __construct()
     {
         $this->middleware('auth');
+        $this->middleware('crud_permission:sglgif_portal,view')->only(['dashboard', 'table']);
     }
 
     public function dashboard(Request $request)
@@ -283,6 +285,245 @@ class SglgifProjectController extends Controller
             'progressBandBreakdown' => $progressBandBreakdown,
             'watchlistRows' => $watchlistRows,
             'latestUpdateAt' => $latestUpdateAt,
+        ]);
+    }
+
+    public function table(Request $request)
+    {
+        $filters = [
+            'search' => trim((string) $request->query('search', '')),
+            'province' => trim((string) $request->query('province', '')),
+            'city' => trim((string) $request->query('city', '')),
+            'funding_year' => trim((string) $request->query('funding_year', '')),
+            'level' => trim((string) $request->query('level', '')),
+            'type' => trim((string) $request->query('type', '')),
+            'status' => trim((string) $request->query('status', '')),
+        ];
+
+        $perPage = (int) $request->query('per_page', 15);
+        $allowedPerPage = [10, 15, 25, 50];
+        if (!in_array($perPage, $allowedPerPage, true)) {
+            $perPage = 15;
+        }
+
+        $sortBy = trim((string) $request->query('sort_by', 'funding_year'));
+        $sortDir = strtolower(trim((string) $request->query('sort_dir', 'desc')));
+        if (!in_array($sortDir, ['asc', 'desc'], true)) {
+            $sortDir = 'desc';
+        }
+
+        if (!Schema::hasTable('subay_project_profiles')) {
+            return view('projects.sglgif-table', [
+                'activeTab' => 'sglgif',
+                'filters' => $filters,
+                'fundingYears' => collect(),
+                'provinces' => collect(),
+                'cityOptions' => collect(),
+                'levelOptions' => collect(),
+                'typeOptions' => collect(),
+                'statusOptions' => collect(),
+                'projects' => new LengthAwarePaginator([], 0, $perPage, 1, [
+                    'path' => $request->url(),
+                    'query' => $request->query(),
+                ]),
+                'perPage' => $perPage,
+                'sortBy' => $sortBy,
+                'sortDir' => $sortDir,
+                'latestUpdateAt' => null,
+                'totalProjects' => 0,
+            ]);
+        }
+
+        $baseQuery = $this->buildScopedBaseQuery();
+
+        $fundingYears = (clone $baseQuery)
+            ->select('spp.funding_year')
+            ->whereNotNull('spp.funding_year')
+            ->whereRaw('TRIM(spp.funding_year) <> ""')
+            ->distinct()
+            ->orderByRaw("CAST(COALESCE(NULLIF(TRIM(spp.funding_year), ''), '0') AS UNSIGNED) DESC")
+            ->pluck('spp.funding_year');
+
+        $provinces = (clone $baseQuery)
+            ->select('spp.province')
+            ->whereNotNull('spp.province')
+            ->whereRaw('TRIM(spp.province) <> ""')
+            ->distinct()
+            ->orderBy('spp.province')
+            ->pluck('spp.province');
+
+        $levelOptions = (clone $baseQuery)
+            ->select('spp.sglgif_level')
+            ->whereNotNull('spp.sglgif_level')
+            ->whereRaw('TRIM(spp.sglgif_level) <> ""')
+            ->distinct()
+            ->orderBy('spp.sglgif_level')
+            ->pluck('spp.sglgif_level');
+
+        $typeOptions = (clone $baseQuery)
+            ->select('spp.type_of_project')
+            ->whereNotNull('spp.type_of_project')
+            ->whereRaw('TRIM(spp.type_of_project) <> ""')
+            ->distinct()
+            ->orderBy('spp.type_of_project')
+            ->pluck('spp.type_of_project');
+
+        $statusOptions = (clone $baseQuery)
+            ->select('spp.status')
+            ->whereNotNull('spp.status')
+            ->whereRaw('TRIM(spp.status) <> ""')
+            ->distinct()
+            ->orderBy('spp.status')
+            ->pluck('spp.status');
+
+        $cityOptionsQuery = clone $baseQuery;
+        if ($filters['province'] !== '') {
+            $cityOptionsQuery->whereRaw('LOWER(TRIM(COALESCE(spp.province, ""))) = ?', [mb_strtolower($filters['province'])]);
+        }
+
+        $cityOptions = $cityOptionsQuery
+            ->select('spp.city_municipality')
+            ->whereNotNull('spp.city_municipality')
+            ->whereRaw('TRIM(spp.city_municipality) <> ""')
+            ->distinct()
+            ->orderBy('spp.city_municipality')
+            ->pluck('spp.city_municipality');
+
+        $filteredQuery = clone $baseQuery;
+        $this->applyFiltersToQuery($filteredQuery, $filters);
+
+        $latestUpdateAt = (clone $filteredQuery)->max('spp.updated_at');
+
+        $subsidyExpr = "NULLIF(REPLACE(TRIM(COALESCE(spp.national_subsidy_original_allocation, '')), ',', ''), '')";
+        $projectCostExpr = "NULLIF(REPLACE(TRIM(COALESCE(spp.total_project_cost, '')), ',', ''), '')";
+        $financialExpr = "NULLIF(REPLACE(TRIM(COALESCE(spp.sglgif_financial, '')), ',', ''), '')";
+        $physicalExpr = "NULLIF(REPLACE(TRIM(COALESCE(spp.total_accomplishment, '')), ',', ''), '')";
+        $attachmentExpr = "NULLIF(REPLACE(TRIM(COALESCE(spp.sglgif_attachment, '')), ',', ''), '')";
+        $overallExpr = "NULLIF(REPLACE(TRIM(COALESCE(spp.sglgif_overall, '')), ',', ''), '')";
+
+        $query = clone $filteredQuery;
+        $query->select([
+            'spp.project_code',
+            'spp.project_title',
+            'spp.funding_year',
+            'spp.region',
+            'spp.province',
+            'spp.city_municipality',
+            'spp.beneficiaries',
+            'spp.status',
+            'spp.type_of_project',
+            'spp.sub_type_of_project',
+            'spp.sglgif_level',
+            'spp.national_subsidy_original_allocation',
+            'spp.total_project_cost',
+            'spp.sglgif_financial',
+            'spp.total_accomplishment',
+            'spp.sglgif_attachment',
+            'spp.sglgif_overall',
+            'spp.updated_at',
+        ]);
+
+        switch ($sortBy) {
+            case 'project_code':
+                $query->orderByRaw("CASE WHEN spp.project_code IS NULL OR TRIM(spp.project_code) = '' THEN 1 ELSE 0 END")
+                    ->orderBy('spp.project_code', $sortDir);
+                break;
+            case 'project_title':
+                $query->orderByRaw("CASE WHEN spp.project_title IS NULL OR TRIM(spp.project_title) = '' THEN 1 ELSE 0 END")
+                    ->orderBy('spp.project_title', $sortDir);
+                break;
+            case 'province':
+                $query->orderByRaw("CASE WHEN spp.province IS NULL OR TRIM(spp.province) = '' THEN 1 ELSE 0 END")
+                    ->orderBy('spp.province', $sortDir);
+                break;
+            case 'city':
+                $query->orderByRaw("CASE WHEN spp.city_municipality IS NULL OR TRIM(spp.city_municipality) = '' THEN 1 ELSE 0 END")
+                    ->orderBy('spp.city_municipality', $sortDir);
+                break;
+            case 'funding_year':
+                $query->orderByRaw("CASE WHEN spp.funding_year IS NULL OR TRIM(spp.funding_year) = '' THEN 1 ELSE 0 END")
+                    ->orderByRaw("CAST(COALESCE(NULLIF(TRIM(spp.funding_year), ''), '0') AS UNSIGNED) {$sortDir}");
+                break;
+            case 'level':
+                $query->orderByRaw("CASE WHEN spp.sglgif_level IS NULL OR TRIM(spp.sglgif_level) = '' THEN 1 ELSE 0 END")
+                    ->orderBy('spp.sglgif_level', $sortDir);
+                break;
+            case 'type':
+                $query->orderByRaw("CASE WHEN spp.type_of_project IS NULL OR TRIM(spp.type_of_project) = '' THEN 1 ELSE 0 END")
+                    ->orderBy('spp.type_of_project', $sortDir);
+                break;
+            case 'category':
+                $query->orderByRaw("CASE WHEN spp.sub_type_of_project IS NULL OR TRIM(spp.sub_type_of_project) = '' THEN 1 ELSE 0 END")
+                    ->orderBy('spp.sub_type_of_project', $sortDir);
+                break;
+            case 'subsidy':
+                $query->orderByRaw("CASE WHEN {$subsidyExpr} IS NULL THEN 1 ELSE 0 END")
+                    ->orderByRaw("{$subsidyExpr} + 0 {$sortDir}");
+                break;
+            case 'project_cost':
+                $query->orderByRaw("CASE WHEN {$projectCostExpr} IS NULL THEN 1 ELSE 0 END")
+                    ->orderByRaw("{$projectCostExpr} + 0 {$sortDir}");
+                break;
+            case 'financial':
+                $query->orderByRaw("CASE WHEN {$financialExpr} IS NULL THEN 1 ELSE 0 END")
+                    ->orderByRaw("{$financialExpr} + 0 {$sortDir}");
+                break;
+            case 'physical':
+                $query->orderByRaw("CASE WHEN {$physicalExpr} IS NULL THEN 1 ELSE 0 END")
+                    ->orderByRaw("{$physicalExpr} + 0 {$sortDir}");
+                break;
+            case 'attachment':
+                $query->orderByRaw("CASE WHEN {$attachmentExpr} IS NULL THEN 1 ELSE 0 END")
+                    ->orderByRaw("{$attachmentExpr} + 0 {$sortDir}");
+                break;
+            case 'overall':
+                $query->orderByRaw("CASE WHEN {$overallExpr} IS NULL THEN 1 ELSE 0 END")
+                    ->orderByRaw("{$overallExpr} + 0 {$sortDir}");
+                break;
+            case 'status':
+                $query->orderByRaw("CASE WHEN spp.status IS NULL OR TRIM(spp.status) = '' THEN 1 ELSE 0 END")
+                    ->orderBy('spp.status', $sortDir);
+                break;
+            case 'updated_at':
+                $query->orderByRaw("CASE WHEN spp.updated_at IS NULL THEN 1 ELSE 0 END")
+                    ->orderBy('spp.updated_at', $sortDir);
+                break;
+            default:
+                $sortBy = 'funding_year';
+                $sortDir = 'desc';
+                $query->orderByRaw("CASE WHEN spp.funding_year IS NULL OR TRIM(spp.funding_year) = '' THEN 1 ELSE 0 END")
+                    ->orderByRaw("CAST(COALESCE(NULLIF(TRIM(spp.funding_year), ''), '0') AS UNSIGNED) DESC");
+                break;
+        }
+
+        $projects = $query
+            ->orderBy('spp.province')
+            ->orderBy('spp.city_municipality')
+            ->orderBy('spp.project_title')
+            ->paginate($perPage)
+            ->withQueryString();
+
+        $projects->setCollection(
+            $projects->getCollection()->map(function ($row) {
+                return $this->mapRow($row);
+            })
+        );
+
+        return view('projects.sglgif-table', [
+            'activeTab' => 'sglgif',
+            'filters' => $filters,
+            'fundingYears' => $fundingYears,
+            'provinces' => $provinces,
+            'cityOptions' => $cityOptions,
+            'levelOptions' => $levelOptions,
+            'typeOptions' => $typeOptions,
+            'statusOptions' => $statusOptions,
+            'projects' => $projects,
+            'perPage' => $perPage,
+            'sortBy' => $sortBy,
+            'sortDir' => $sortDir,
+            'latestUpdateAt' => $latestUpdateAt,
+            'totalProjects' => $projects->total(),
         ]);
     }
 

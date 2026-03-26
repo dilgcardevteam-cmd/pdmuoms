@@ -1643,6 +1643,8 @@ Route::middleware(['auth'])->group(function () {
         ->name('pre-implementation-documents.index');
     Route::get('/pre-implementation-documents/projects/{projectCode}', [App\Http\Controllers\PreImplementationDocumentController::class, 'show'])
         ->name('pre-implementation-documents.show');
+    Route::get('/pre-implementation-documents/projects/{projectCode}/document/{documentType}', [App\Http\Controllers\PreImplementationDocumentController::class, 'viewDocument'])
+        ->name('pre-implementation-documents.document');
     Route::post('/pre-implementation-documents/projects/{projectCode}', [App\Http\Controllers\PreImplementationDocumentController::class, 'save'])
         ->name('pre-implementation-documents.save');
     Route::post('/pre-implementation-documents/projects/{projectCode}/validate/{documentType}', [App\Http\Controllers\PreImplementationDocumentController::class, 'validateDocument'])
@@ -1690,7 +1692,7 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('/projects/sglgif', [SglgifProjectController::class, 'dashboard'])
         ->name('projects.sglgif');
-    Route::get('/projects/sglgif/table', [App\Http\Controllers\LocallyFundedProjectController::class, 'index'])
+    Route::get('/projects/sglgif/table', [SglgifProjectController::class, 'table'])
         ->name('projects.sglgif.table');
 
     Route::get('/projects/rlip-lime/dashboard', [RlipLimeProjectController::class, 'dashboard'])

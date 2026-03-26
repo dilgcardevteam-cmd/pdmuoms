@@ -154,7 +154,7 @@ class DatabaseUtilityController extends Controller
                     'route' => route('utilities.role-configuration.index'),
                 ],
                 [
-                    'icon' => 'fas fa-clock',
+                    'icon' => 'fas fa-map-marker-alt',
                     'title' => 'Location Configuration',
                     'description' => 'Review and manage the location-related configuration used across the application.',
                     'route' => route('utilities.location-configuration.index'),

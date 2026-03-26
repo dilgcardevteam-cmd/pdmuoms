@@ -102,24 +102,8 @@
     @endphp
 
     <div style="background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 18px; flex-wrap: wrap;">
+        <div style="margin-bottom: 18px;">
             <h2 style="color: #002C76; font-size: 18px; margin: 0; font-weight: 600;">Uploading of Documents</h2>
-
-            <form method="POST" action="{{ route('pre-implementation-documents.save', $project->project_code) }}" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-                @csrf
-                <label for="mode_of_contract" style="color: #374151; font-size: 12px; font-weight: 600;">Mode of Contract</label>
-                <select id="mode_of_contract" name="mode_of_contract" style="padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; min-width: 220px;">
-                    <option value="">Select</option>
-                    @foreach ($allowedModeOfContract as $option)
-                        <option value="{{ $option }}" {{ old('mode_of_contract', $document->mode_of_contract ?? '') === $option ? 'selected' : '' }}>
-                            {{ $option }}
-                        </option>
-                    @endforeach
-                </select>
-                <button type="submit" style="padding: 9px 14px; background-color: #002C76; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12px;">
-                    Save Mode
-                </button>
-            </form>
         </div>
 
         <div style="display: grid; grid-template-columns: repeat(3, minmax(260px, 1fr)); gap: 16px; margin-bottom: 24px;">
@@ -128,12 +112,16 @@
                     $fileRecord = $documentFilesByType[$field] ?? null;
                     $path = $fileRecord->file_path ?? ($document->{$field} ?? null);
                     $fileName = $path ? basename($path) : null;
-                    $fileUrl = $path ? \Illuminate\Support\Facades\Storage::disk('public')->url($path) : null;
 
                     $hasFile = !empty($path);
+                    $fileViewUrl = $hasFile ? route('pre-implementation-documents.document', [$project->project_code, $field]) : null;
                     $isReturned = $fileRecord && $fileRecord->status === 'returned';
                     $isApprovedRo = $fileRecord && $fileRecord->approved_at_dilg_ro;
                     $isPendingRo = $fileRecord && $fileRecord->approved_at_dilg_po && !$fileRecord->approved_at_dilg_ro;
+                    $disableUpload = $hasFile || $isRegionalDilg;
+                    $uploadDisabledMessage = $isRegionalDilg && !$hasFile
+                        ? 'Regional Office cannot upload files. Choose file is disabled.'
+                        : null;
 
                     $statusLabel = 'Pending Upload';
                     $statusColor = '#f59e0b';
@@ -291,34 +279,76 @@
                         @endforeach
                     </div>
 
-                    @if ($fileUrl)
-                        <a href="{{ $fileUrl }}" target="_blank" rel="noopener noreferrer" style="display: inline-block; margin-bottom: 8px; color: #002C76; font-size: 12px; text-decoration: none;">
-                            <i class="fas fa-file"></i> View current file{{ $fileName ? ': ' . $fileName : '' }}
-                        </a>
-                    @endif
+                    <div class="pre-impl-upload-shell{{ $disableUpload ? ' is-disabled' : '' }}">
+                        <input
+                            id="{{ $inputId }}"
+                            type="file"
+                            name="{{ $field }}"
+                            accept=".pdf,application/pdf"
+                            required
+                            @disabled($disableUpload)
+                            class="pre-impl-upload-input"
+                            data-pre-impl-upload-input
+                            data-button-id="{{ $buttonId }}"
+                            data-filename-id="{{ $filenameId }}"
+                            onchange="showPreImplementationSaveButton(this, '{{ $buttonId }}', '{{ $filenameId }}')"
+                        >
+                        @unless ($hasFile)
+                            <label for="{{ $inputId }}" class="pre-impl-upload-dropzone{{ $disableUpload ? ' is-disabled' : '' }}" tabindex="{{ $disableUpload ? '-1' : '0' }}" role="button" aria-controls="{{ $inputId }}">
+                                <span class="pre-impl-upload-dropzone-icon">
+                                    <i class="fas fa-cloud-upload-alt"></i>
+                                </span>
+                                <span class="pre-impl-upload-dropzone-title">Browse Files to upload</span>
+                                <span class="pre-impl-upload-dropzone-copy">PDF only</span>
+                            </label>
+                        @endunless
 
-                    <input
-                        id="{{ $inputId }}"
-                        type="file"
-                        name="{{ $field }}"
-                        accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                        required
-                        @disabled($isRegionalDilg)
-                        style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 12px; margin-bottom: 8px;"
-                        onchange="showPreImplementationSaveButton(this, '{{ $buttonId }}', '{{ $filenameId }}')"
-                    >
+                        @if ($hasFile && $fileViewUrl)
+                            <a
+                                id="{{ $filenameId }}"
+                                href="{{ $fileViewUrl }}"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="pre-impl-upload-filebar pre-impl-upload-filelink is-selected"
+                                data-empty-text="{{ $fileName ?: 'View current file' }}"
+                                data-locked="1"
+                                title="View {{ $fileName ?: 'current file' }}"
+                            >
+                                <span class="pre-impl-upload-fileicon">
+                                    <i class="far fa-file-alt"></i>
+                                </span>
+                                <span class="pre-impl-upload-filename" data-file-name>{{ $fileName ?: 'View current file' }}</span>
+                            </a>
+                        @else
+                            <div id="{{ $filenameId }}" class="pre-impl-upload-filebar" data-empty-text="No selected file">
+                                <span class="pre-impl-upload-fileicon">
+                                    <i class="far fa-file-alt"></i>
+                                </span>
+                                <span class="pre-impl-upload-filename" data-file-name>No selected file</span>
+                                <button
+                                    type="button"
+                                    class="pre-impl-upload-clear"
+                                    data-file-clear
+                                    hidden
+                                    @disabled($disableUpload)
+                                    onclick="clearPreImplementationFileSelection('{{ $inputId }}', '{{ $buttonId }}', '{{ $filenameId }}')"
+                                    aria-label="Clear selected file"
+                                >
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        @endif
+                    </div>
 
-                    @if ($isRegionalDilg)
+                    @if ($uploadDisabledMessage)
                         <div style="margin-bottom: 8px; font-size: 11px; color: #6b7280;">
-                            Regional Office cannot upload files. Choose file is disabled.
+                            {{ $uploadDisabledMessage }}
                         </div>
                     @endif
 
                     @error($field)
                         <div style="margin-bottom: 8px; color: #dc2626; font-size: 11px;">{{ $message }}</div>
                     @enderror
-
-                    <div id="{{ $filenameId }}" style="display: none; margin-bottom: 8px; font-size: 12px; color: #6b7280;"></div>
 
                     <button
                         type="submit"
@@ -351,7 +381,7 @@
         </div>
 
         <div style="margin-top: 12px; font-size: 11px; color: #6b7280;">
-            Accepted formats: PDF, JPG, JPEG, PNG, DOC, DOCX. Maximum file size per document: 15 MB.
+            Accepted format: PDF only. Maximum file size per document: 15 MB.
         </div>
     </div>
 
@@ -515,7 +545,174 @@
             background-color: #0f172a;
         }
 
+        .pre-impl-upload-shell {
+            margin-bottom: 8px;
+        }
+
+        .pre-impl-upload-input {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            clip-path: inset(50%);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        .pre-impl-upload-dropzone {
+            display: grid;
+            justify-items: center;
+            gap: 8px;
+            padding: 26px 16px;
+            margin-bottom: 10px;
+            border: 2px dashed #60a5fa;
+            border-radius: 16px;
+            background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+        }
+
+        .pre-impl-upload-dropzone:hover {
+            border-color: #2563eb;
+            box-shadow: 0 12px 24px rgba(37, 99, 235, 0.12);
+            transform: translateY(-1px);
+        }
+
+        .pre-impl-upload-dropzone.is-disabled {
+            cursor: not-allowed;
+            opacity: 0.65;
+            box-shadow: none;
+            transform: none;
+        }
+
+        .pre-impl-upload-dropzone-icon {
+            width: 58px;
+            height: 58px;
+            border-radius: 999px;
+            background: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%);
+            color: #ffffff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            box-shadow: 0 10px 22px rgba(37, 99, 235, 0.25);
+        }
+
+        .pre-impl-upload-dropzone-title {
+            display: block;
+            color: #111827;
+            font-size: 20px;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        .pre-impl-upload-dropzone-copy {
+            display: block;
+            color: #64748b;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .pre-impl-upload-filebar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-height: 48px;
+            padding: 10px 12px;
+            border: 1px solid #dbe7ff;
+            border-radius: 12px;
+            background: #edf4ff;
+            transition: border-color 0.2s ease, background-color 0.2s ease;
+        }
+
+        .pre-impl-upload-filebar.is-selected {
+            border-color: #93c5fd;
+            background: #dbeafe;
+        }
+
+        .pre-impl-upload-filelink {
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .pre-impl-upload-filelink:hover {
+            border-color: #60a5fa;
+            background: #dbeafe;
+            box-shadow: 0 10px 20px rgba(37, 99, 235, 0.10);
+        }
+
+        .pre-impl-upload-filelink:focus-visible {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.16);
+        }
+
+        .pre-impl-upload-fileicon {
+            width: 24px;
+            height: 24px;
+            color: #2563eb;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+
+        .pre-impl-upload-filename {
+            flex: 1 1 auto;
+            min-width: 0;
+            color: #334155;
+            font-size: 13px;
+            line-height: 1.4;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .pre-impl-upload-clear {
+            width: 28px;
+            height: 28px;
+            border: none;
+            border-radius: 999px;
+            background: transparent;
+            color: #111827;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+
+        .pre-impl-upload-clear:hover:not(:disabled) {
+            background: rgba(15, 23, 42, 0.08);
+            color: #b91c1c;
+        }
+
+        .pre-impl-upload-clear:disabled {
+            cursor: not-allowed;
+            opacity: 0.45;
+        }
+
         @media (max-width: 640px) {
+            .pre-impl-upload-dropzone {
+                padding: 22px 14px;
+            }
+
+            .pre-impl-upload-dropzone-icon {
+                width: 50px;
+                height: 50px;
+                font-size: 20px;
+            }
+
+            .pre-impl-upload-dropzone-title {
+                font-size: 16px;
+            }
+
             #preImplActivityLogFab span { display: none; }
             #preImplActivityLogFab { padding: 14px; border-radius: 50%; }
         }
@@ -538,25 +735,84 @@
     </style>
 
     <script>
-        function showPreImplementationSaveButton(fileInput, buttonId, filenameId) {
+        function syncPreImplementationUploadUi(fileInput, buttonId, filenameId) {
             const saveBtn = document.getElementById(buttonId);
-            const filenameDiv = document.getElementById(filenameId);
-            if (!saveBtn || !filenameDiv) return;
+            const filenameBar = document.getElementById(filenameId);
+            const filenameText = filenameBar ? filenameBar.querySelector('[data-file-name]') : null;
+            const clearBtn = filenameBar ? filenameBar.querySelector('[data-file-clear]') : null;
+            if (!saveBtn || !filenameBar || !filenameText) return;
 
-            if (fileInput && fileInput.files && fileInput.files.length > 0) {
+            const isLocked = filenameBar.dataset.locked === '1';
+            if (isLocked) {
+                saveBtn.style.opacity = '0';
+                saveBtn.style.pointerEvents = 'none';
+                filenameBar.classList.add('is-selected');
+                if (clearBtn) {
+                    clearBtn.hidden = true;
+                }
+                return;
+            }
+
+            const hasFile = !!(fileInput && fileInput.files && fileInput.files.length > 0);
+            const emptyText = filenameBar.dataset.emptyText || 'No selected file';
+
+            if (hasFile) {
                 const fileName = fileInput.files[0].name;
                 saveBtn.style.opacity = '1';
                 saveBtn.style.pointerEvents = 'auto';
-                filenameDiv.textContent = `Selected: ${fileName}`;
-                filenameDiv.style.display = 'block';
-            } else {
-                saveBtn.style.opacity = '0';
-                saveBtn.style.pointerEvents = 'none';
-                if (!filenameDiv.textContent.trim()) {
-                    filenameDiv.style.display = 'none';
+                filenameText.textContent = fileName;
+                filenameBar.classList.add('is-selected');
+                if (clearBtn) {
+                    clearBtn.hidden = false;
                 }
+                return;
+            }
+
+            saveBtn.style.opacity = '0';
+            saveBtn.style.pointerEvents = 'none';
+            filenameText.textContent = emptyText;
+            filenameBar.classList.remove('is-selected');
+            if (clearBtn) {
+                clearBtn.hidden = true;
             }
         }
+
+        function showPreImplementationSaveButton(fileInput, buttonId, filenameId) {
+            syncPreImplementationUploadUi(fileInput, buttonId, filenameId);
+        }
+
+        function clearPreImplementationFileSelection(inputId, buttonId, filenameId) {
+            const fileInput = document.getElementById(inputId);
+            if (!(fileInput instanceof HTMLInputElement) || fileInput.disabled) {
+                return;
+            }
+
+            fileInput.value = '';
+            syncPreImplementationUploadUi(fileInput, buttonId, filenameId);
+        }
+
+        document.querySelectorAll('[data-pre-impl-upload-input]').forEach((fileInput) => {
+            const buttonId = fileInput.getAttribute('data-button-id') || '';
+            const filenameId = fileInput.getAttribute('data-filename-id') || '';
+            syncPreImplementationUploadUi(fileInput, buttonId, filenameId);
+        });
+    </script>
+
+    <script>
+        document.querySelectorAll('.pre-impl-upload-dropzone').forEach((dropzone) => {
+            dropzone.addEventListener('keydown', (event) => {
+                if ((event.key !== 'Enter' && event.key !== ' ') || dropzone.classList.contains('is-disabled')) {
+                    return;
+                }
+
+                event.preventDefault();
+                const inputId = dropzone.getAttribute('for');
+                const input = inputId ? document.getElementById(inputId) : null;
+                if (input instanceof HTMLInputElement && !input.disabled) {
+                    input.click();
+                }
+            });
+        });
     </script>
 
     <script>

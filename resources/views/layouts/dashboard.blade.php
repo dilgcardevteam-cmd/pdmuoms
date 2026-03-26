@@ -512,6 +512,18 @@
             background: #f8fafc;
         }
 
+        .notification-menu-footer-actions {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .notification-menu-action-form {
+            margin: 0;
+        }
+
         .notification-menu-view-all {
             display: inline-flex;
             align-items: center;
@@ -524,6 +536,24 @@
 
         .notification-menu-view-all:hover {
             color: #1e3a8a;
+        }
+
+        .notification-menu-clear-action {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border: none;
+            background: transparent;
+            color: #b91c1c;
+            font-size: 12px;
+            font-weight: 700;
+            line-height: 1;
+            padding: 0;
+            cursor: pointer;
+        }
+
+        .notification-menu-clear-action:hover {
+            color: #991b1b;
         }
 
         .notification-menu-item {
@@ -2017,12 +2047,6 @@
                     <div class="notification-menu" id="notificationMenu">
                         <div class="notification-menu-header">
                             <span class="notification-menu-title">Notifications</span>
-                            @if($recentNotifications->isNotEmpty())
-                                <form method="POST" action="{{ route('notifications.clear') }}">
-                                    @csrf
-                                    <button type="submit" class="notification-clear-btn">Clear Read</button>
-                                </form>
-                            @endif
                         </div>
                         @if($recentNotifications->isEmpty())
                             <div class="notification-menu-empty">No notifications yet.</div>
@@ -2045,10 +2069,21 @@
                             @endforeach
                         @endif
                         <div class="notification-menu-footer">
-                            <a href="{{ route('messages.index') }}" class="notification-menu-view-all">
-                                <i class="fas fa-envelope-open-text"></i>
-                                <span>Open Messages</span>
-                            </a>
+                            <div class="notification-menu-footer-actions">
+                                @if($recentNotifications->isNotEmpty())
+                                    <form method="POST" action="{{ route('notifications.clear') }}" class="notification-menu-action-form">
+                                        @csrf
+                                        <button type="submit" class="notification-menu-clear-action">
+                                            <i class="fas fa-trash-alt"></i>
+                                            <span>Clear Read</span>
+                                        </button>
+                                    </form>
+                                @endif
+                                <a href="{{ route('messages.index') }}" class="notification-menu-view-all">
+                                    <i class="fas fa-envelope-open-text"></i>
+                                    <span>Open Messages</span>
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>

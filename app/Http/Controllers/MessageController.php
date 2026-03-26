@@ -263,6 +263,7 @@ class MessageController extends Controller
                     ->where('thread_id', $threadId)
                     ->where('recipient_id', $authId)
                     ->orderBy('created_at')
+                    ->orderBy('id')
                     ->limit(150)
                     ->get();
 
@@ -307,6 +308,7 @@ class MessageController extends Controller
         return view('messages.index', [
             'threads' => $threads,
             'conversation' => $conversation,
+            'conversationGroups' => $this->groupConversationEntries($conversation, $authId),
             'selectedUser' => $selectedUser,
             'selectedGroupMembers' => $selectedGroupMembers,
             'selectedThreadId' => $threadId,
@@ -339,18 +341,37 @@ class MessageController extends Controller
             ],
             'message' => ['nullable', 'string', 'max:2000'],
             'image' => ['nullable', 'file', 'image', 'max:5120'],
+            'images' => ['nullable', 'array', 'max:10'],
+            'images.*' => ['file', 'image', 'max:5120'],
         ], [
             'image.image' => 'Only image files can be uploaded.',
             'image.max' => 'Images must be 5 MB or smaller.',
+            'images.max' => 'You can upload up to 10 images at a time.',
+            'images.*.image' => 'Only image files can be uploaded.',
+            'images.*.max' => 'Images must be 5 MB or smaller.',
         ]);
 
-        if ($request->hasFile('image') && !$supportsMessageImages) {
+        $uploadedImages = collect();
+        if ($request->hasFile('image')) {
+            $uploadedImages->push($request->file('image'));
+        }
+        if ($request->hasFile('images')) {
+            $uploadedImages = $uploadedImages
+                ->merge(collect($request->file('images')))
+                ->filter(fn ($file) => $file instanceof UploadedFile)
+                ->values();
+        }
+
+        if ($uploadedImages->isNotEmpty() && !$supportsMessageImages) {
             $errorMessage = 'Image uploads are not ready yet. Run the latest migrations first.';
 
             if ($wantsJson) {
                 return response()->json([
                     'message' => $errorMessage,
-                    'errors' => ['image' => [$errorMessage]],
+                    'errors' => [
+                        'image' => [$errorMessage],
+                        'images' => [$errorMessage],
+                    ],
                 ], 422);
             }
 
@@ -402,18 +423,15 @@ class MessageController extends Controller
                 ->values();
         }
 
-        $body = trim((string) $validated['message']);
-        $imagePath = null;
-        $imageOriginalName = null;
+        $body = $this->sanitizeMultilineInput($validated['message'] ?? '', 2000);
+        $storedImages = $supportsMessageImages
+            ? $uploadedImages
+                ->map(fn (UploadedFile $image) => $this->storeMessageImage($image))
+                ->values()
+            : collect();
 
-        if ($supportsMessageImages && $request->hasFile('image')) {
-            $storedImage = $this->storeMessageImage($request->file('image'));
-            $imagePath = $storedImage['path'];
-            $imageOriginalName = $storedImage['original_name'];
-        }
-
-        if ($body === '' && $imagePath === null) {
-            $errorMessage = 'Please type a message or select an image to send.';
+        if ($body === '' && $storedImages->isEmpty()) {
+            $errorMessage = 'Please type a message or select at least one image to send.';
 
             if ($wantsJson) {
                 return response()->json([
@@ -427,34 +445,61 @@ class MessageController extends Controller
                 ->with('error', $errorMessage);
         }
 
-        $now = now();
-        $rows = $memberIds->map(function ($recipientId) use ($threadId, $authId, $body, $now, $supportsMessageImages, $imagePath, $imageOriginalName) {
-            $row = [
-                'thread_id' => $threadId,
-                'sender_id' => $authId,
-                'recipient_id' => (int) $recipientId,
+        $messagePayloads = $storedImages->isEmpty()
+            ? collect([[
                 'message' => $body,
-                'read_at' => (int) $recipientId === $authId ? $now : null,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ];
+                'image_path' => null,
+                'image_original_name' => null,
+            ]])
+            : $storedImages->values()->map(function (array $storedImage, int $index) use ($body) {
+                return [
+                    'message' => $index === 0 ? $body : '',
+                    'image_path' => $storedImage['path'] ?? null,
+                    'image_original_name' => $storedImage['original_name'] ?? null,
+                ];
+            });
 
-            if ($supportsMessageImages) {
-                $row['image_path'] = $imagePath;
-                $row['image_original_name'] = $imageOriginalName;
+        $now = now();
+        $batchUuid = $this->hasMessageBatchColumn() ? (string) Str::uuid() : null;
+        $rows = [];
+
+        foreach ($messagePayloads as $payload) {
+            foreach ($memberIds as $recipientId) {
+                $row = [
+                    'thread_id' => $threadId,
+                    'sender_id' => $authId,
+                    'recipient_id' => (int) $recipientId,
+                    'message' => (string) ($payload['message'] ?? ''),
+                    'read_at' => (int) $recipientId === $authId ? $now : null,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+
+                if ($supportsMessageImages) {
+                    $row['image_path'] = $payload['image_path'] ?? null;
+                    $row['image_original_name'] = $payload['image_original_name'] ?? null;
+                }
+
+                if ($batchUuid !== null) {
+                    $row['batch_uuid'] = $batchUuid;
+                }
+
+                $rows[] = $row;
             }
-
-            return $row;
-        })->all();
+        }
 
         DB::table('user_messages')->insert($rows);
+
+        $storedImageCount = $storedImages->count();
 
         if ($wantsJson) {
             return response()->json([
                 'ok' => true,
                 'thread_id' => $threadId,
-                'has_image' => $imagePath !== null,
-                'notice' => $imagePath !== null ? 'Image sent.' : 'Message sent.',
+                'has_image' => $storedImageCount > 0,
+                'notice' => $storedImageCount > 1
+                    ? 'Images sent.'
+                    : ($storedImageCount === 1 ? 'Image sent.' : 'Message sent.'),
             ]);
         }
 
@@ -502,7 +547,7 @@ class MessageController extends Controller
             'group_rename_open' => ['nullable', 'in:1'],
         ]);
 
-        $groupName = trim((string) ($validated['group_name'] ?? ''));
+        $groupName = $this->sanitizeSingleLineInput($validated['group_name'] ?? '', 120);
         if ($groupName === '') {
             return redirect()->route('messages.index', ['thread' => $threadId])
                 ->withInput()
@@ -750,6 +795,7 @@ class MessageController extends Controller
             ->where('thread_id', $threadId)
             ->where('recipient_id', $authId)
             ->orderBy('created_at')
+            ->orderBy('id')
             ->limit(150)
             ->get();
 
@@ -763,17 +809,7 @@ class MessageController extends Controller
                 'updated_at' => now(),
             ]);
 
-        $messages = $conversation->map(function ($entry) use ($authId) {
-            return [
-                'id' => (int) ($entry->id ?? 0),
-                'is_mine' => (int) ($entry->sender_id ?? 0) === $authId,
-                'message' => (string) ($entry->message ?? ''),
-                'has_image' => !empty($entry->image_path),
-                'image_url' => $this->messageImageUrl($entry->image_path ?? null),
-                'image_name' => (string) ($entry->image_original_name ?? ''),
-                'time' => $this->formatConversationTimestamp($entry->created_at ?? null),
-            ];
-        })->values();
+        $messages = $this->groupConversationEntries($conversation, $authId)->values();
 
         return response()->json([
             'ok' => true,
@@ -862,6 +898,12 @@ class MessageController extends Controller
             && Schema::hasColumn('user_messages', 'image_original_name');
     }
 
+    private function hasMessageBatchColumn(): bool
+    {
+        return Schema::hasTable('user_messages')
+            && Schema::hasColumn('user_messages', 'batch_uuid');
+    }
+
     private function storeMessageImage(UploadedFile $image): array
     {
         $folder = 'uploads/message-images/' . now()->format('Y/m');
@@ -875,7 +917,7 @@ class MessageController extends Controller
 
         return [
             'path' => $folder . '/' . $filename,
-            'original_name' => $image->getClientOriginalName(),
+            'original_name' => $this->sanitizeUploadOriginalName($image->getClientOriginalName()),
         ];
     }
 
@@ -929,6 +971,74 @@ class MessageController extends Controller
             ->merge($manualUnreadThreadIds)
             ->unique()
             ->count();
+    }
+
+    private function groupConversationEntries(Collection $conversation, int $authId): Collection
+    {
+        $groups = [];
+
+        foreach ($conversation as $entry) {
+            $senderId = (int) ($entry->sender_id ?? 0);
+            $createdAtRaw = (string) ($entry->created_at ?? '');
+            $batchUuid = trim((string) data_get($entry, 'batch_uuid', ''));
+            $imageUrl = $this->messageImageUrl($entry->image_path ?? null);
+            $hasImage = $imageUrl !== '';
+            $messageText = (string) ($entry->message ?? '');
+            $imageName = trim((string) ($entry->image_original_name ?? '')) ?: 'Shared image';
+
+            $shouldAppendToPrevious = false;
+            if (!empty($groups)) {
+                $lastIndex = array_key_last($groups);
+                $lastGroup = $groups[$lastIndex];
+                $sameSender = (int) ($lastGroup['sender_id'] ?? 0) === $senderId;
+                $sameCreatedAt = (string) ($lastGroup['created_at_raw'] ?? '') === $createdAtRaw;
+                $sameBatch = $batchUuid !== '' && (string) ($lastGroup['batch_uuid'] ?? '') === $batchUuid;
+                $heuristicMultiImageBatch = $batchUuid === ''
+                    && (string) ($lastGroup['batch_uuid'] ?? '') === ''
+                    && $sameSender
+                    && $sameCreatedAt
+                    && !empty($lastGroup['images'])
+                    && $hasImage;
+
+                $shouldAppendToPrevious = $sameSender && $sameCreatedAt && ($sameBatch || $heuristicMultiImageBatch);
+            }
+
+            if (!$shouldAppendToPrevious) {
+                $groups[] = [
+                    'id' => (int) ($entry->id ?? 0),
+                    'sender_id' => $senderId,
+                    'batch_uuid' => $batchUuid,
+                    'created_at_raw' => $createdAtRaw,
+                    'is_mine' => $senderId === $authId,
+                    'message' => trim($messageText),
+                    'images' => [],
+                    'time' => $this->formatConversationTimestamp($entry->created_at ?? null),
+                ];
+            }
+
+            $groupIndex = array_key_last($groups);
+            if ($groupIndex === null) {
+                continue;
+            }
+
+            if (trim((string) ($groups[$groupIndex]['message'] ?? '')) === '' && trim($messageText) !== '') {
+                $groups[$groupIndex]['message'] = trim($messageText);
+            }
+
+            if ($hasImage) {
+                $groups[$groupIndex]['images'][] = [
+                    'url' => $imageUrl,
+                    'name' => $imageName,
+                ];
+            }
+
+            $groups[$groupIndex]['id'] = max(
+                (int) ($groups[$groupIndex]['id'] ?? 0),
+                (int) ($entry->id ?? 0)
+            );
+        }
+
+        return collect($groups)->values();
     }
 
     private function threadActionRedirectParams(int $authId, int $actedThreadId, int $currentThreadId = 0): array
@@ -1023,6 +1133,56 @@ class MessageController extends Controller
         ]);
 
         return $threadId;
+    }
+
+    private function sanitizeMultilineInput($value, int $maxLength = 0): string
+    {
+        return $this->sanitizeTextInput($value, true, $maxLength);
+    }
+
+    private function sanitizeSingleLineInput($value, int $maxLength = 0): string
+    {
+        return $this->sanitizeTextInput($value, false, $maxLength);
+    }
+
+    private function sanitizeTextInput($value, bool $allowNewLines = false, int $maxLength = 0): string
+    {
+        $text = (string) $value;
+        $text = str_replace(["\r\n", "\r"], "\n", $text);
+        $text = strip_tags($text);
+        $text = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]+/u', '', $text) ?? $text;
+        $text = preg_replace('/[\x{200B}-\x{200F}\x{202A}-\x{202E}\x{2066}-\x{2069}]+/u', '', $text) ?? $text;
+
+        if ($allowNewLines) {
+            $text = preg_replace('/[ \t]+\n/u', "\n", $text) ?? $text;
+            $text = preg_replace('/\n[ \t]+/u', "\n", $text) ?? $text;
+            $text = preg_replace('/\n{3,}/u', "\n\n", $text) ?? $text;
+            $text = preg_replace('/[ \t]{2,}/u', ' ', $text) ?? $text;
+        } else {
+            $text = str_replace(["\n", "\t"], ' ', $text);
+            $text = preg_replace('/\s+/u', ' ', $text) ?? $text;
+        }
+
+        $text = trim($text);
+
+        if ($maxLength > 0) {
+            $text = mb_substr($text, 0, $maxLength);
+        }
+
+        return $text;
+    }
+
+    private function sanitizeUploadOriginalName(?string $value): string
+    {
+        $name = basename((string) $value);
+        $name = preg_replace('/[^A-Za-z0-9._ -]+/u', '_', $name) ?? $name;
+        $name = trim($name, " \t\n\r\0\x0B.");
+
+        if ($name === '') {
+            $name = 'shared-image';
+        }
+
+        return mb_substr($name, 0, 180);
     }
 
     private function createGroupThread(int $authId, Collection $recipients): int

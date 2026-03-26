@@ -6,6 +6,7 @@
 @section('content')
 @php
     $threadItems = collect($threads->items());
+    $conversationGroups = collect($conversationGroups ?? []);
     $selectedGroupMembers = collect($selectedGroupMembers ?? []);
     $selectedThreadId = (int) ($selectedThreadId ?? 0);
     $latestConversationId = (int) ($conversation->max('id') ?? 0);
@@ -499,19 +500,17 @@
                     @endif
 
                     <div class="msg-chat-body" id="msgChatBody">
-                        @if($conversation->isEmpty())
+                        @if($conversationGroups->isEmpty())
                             <div class="msg-empty-thread msg-empty-thread-chat">No messages yet. Start this conversation below.</div>
                         @endif
 
-                        @foreach($conversation as $entry)
+                        @foreach($conversationGroups as $group)
                             @php
-                                $isMine = (int) ($entry->sender_id ?? 0) === (int) auth()->id();
-                                $messageTime = \Illuminate\Support\Carbon::parse($entry->created_at)->format('M j, Y g:i A');
-                                $messageText = trim((string) ($entry->message ?? ''));
-                                $imageUrl = !empty($entry->image_path)
-                                    ? asset(ltrim(str_replace('\\', '/', (string) $entry->image_path), '/'))
-                                    : '';
-                                $imageName = trim((string) ($entry->image_original_name ?? '')) ?: 'Shared image';
+                                $isMine = (bool) ($group['is_mine'] ?? false);
+                                $messageTime = trim((string) ($group['time'] ?? ''));
+                                $messageText = trim((string) ($group['message'] ?? ''));
+                                $groupImages = collect($group['images'] ?? []);
+                                $hasMultipleImages = $groupImages->count() > 1;
                             @endphp
                             <div class="msg-row {{ $isMine ? 'right' : 'left' }}">
                                 @unless($isMine)
@@ -525,16 +524,20 @@
                                 @endunless
 
                                 <div class="msg-bubble-stack {{ $isMine ? 'outgoing' : 'incoming' }}">
-                                    <div class="msg-bubble {{ $isMine ? 'outgoing' : 'incoming' }}{{ $imageUrl !== '' ? ' has-image' : '' }}">
-                                        @if($imageUrl !== '')
-                                            <a href="{{ $imageUrl }}" class="msg-message-image-link" target="_blank" rel="noopener noreferrer">
-                                                <img src="{{ $imageUrl }}" alt="{{ $imageName }}" class="msg-message-image">
-                                            </a>
-                                        @endif
-                                        @if($messageText !== '')
+                                    @if($groupImages->isNotEmpty())
+                                        <div class="msg-message-gallery {{ $isMine ? 'outgoing' : 'incoming' }} {{ $hasMultipleImages ? 'is-multi' : 'is-single' }}">
+                                            @foreach($groupImages as $groupImage)
+                                                <a href="{{ $groupImage['url'] ?? '' }}" class="msg-message-image-link {{ $isMine ? 'outgoing' : 'incoming' }}" target="_blank" rel="noopener noreferrer">
+                                                    <img src="{{ $groupImage['url'] ?? '' }}" alt="{{ $groupImage['name'] ?? 'Shared image' }}" class="msg-message-image">
+                                                </a>
+                                            @endforeach
+                                        </div>
+                                    @endif
+                                    @if($messageText !== '')
+                                        <div class="msg-bubble {{ $isMine ? 'outgoing' : 'incoming' }}">
                                             <div class="msg-text">{{ $messageText }}</div>
-                                        @endif
-                                    </div>
+                                        </div>
+                                    @endif
                                     <div class="msg-meta {{ $isMine ? 'out' : '' }}"><span>{{ $messageTime }}</span></div>
                                 </div>
                             </div>
@@ -542,10 +545,11 @@
                     </div>
 
                     <div class="msg-chat-input">
+                        <div class="msg-image-preview-list" id="msgImagePreviewList" hidden></div>
                         <form method="POST" action="{{ route('messages.store') }}" class="msg-send-form" id="msgSendForm" enctype="multipart/form-data">
                             @csrf
                             <input type="hidden" name="thread_id" value="{{ (int) $selectedThreadId }}">
-                            <input type="file" name="image" id="msgImageInput" class="msg-file-input" accept="image/*" hidden>
+                            <input type="file" name="images[]" id="msgImageInput" class="msg-file-input" accept="image/*" multiple hidden>
 
                             <button type="button" class="msg-tool-button msg-tool-button-attach" title="Select image" aria-label="Select image" aria-controls="msgImageInput">
                                 <i class="far fa-image"></i>
@@ -563,6 +567,16 @@
                             </button>
                         </form>
                         <div class="msg-upload-notice" id="msgUploadNotice" hidden aria-live="polite"></div>
+                    </div>
+                    <div class="msg-image-modal" id="msgImageModal" hidden>
+                        <div class="msg-image-modal-backdrop" data-image-modal-close></div>
+                        <div class="msg-image-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="msgImageModalTitle">
+                            <button type="button" class="msg-image-modal-close" id="msgImageModalClose" aria-label="Close image preview">
+                                <i class="fas fa-times"></i>
+                            </button>
+                            <img src="" alt="" class="msg-image-modal-image" id="msgImageModalImage">
+                            <div class="msg-image-modal-title" id="msgImageModalTitle"></div>
+                        </div>
                     </div>
                 @endif
                 </div>
@@ -758,17 +772,30 @@ body.msg-group-info-open{overflow:hidden}
 .msg-bubble{display:inline-block;width:fit-content;max-width:100%;padding:12px 16px;border-radius:20px;box-shadow:0 12px 26px rgba(15,23,42,.06)}
 .msg-bubble.incoming{background:#f3f4f6;border:none;border-radius:20px;color:#111827;box-shadow:none;padding:14px 18px}
 .msg-bubble.outgoing{background:linear-gradient(135deg,#1580ff,#0a66ff);border-top-right-radius:8px;color:#fff}
-.msg-bubble.has-image{padding:10px 10px 12px}
-.msg-bubble.incoming.has-image{padding:10px}
-.msg-message-image-link{display:inline-block;max-width:100%;overflow:hidden;border-radius:16px;line-height:0;text-decoration:none}
-.msg-message-image{display:block;max-width:min(280px,100%);max-height:320px;width:auto;height:auto;object-fit:cover;border-radius:16px}
-.msg-bubble.has-image .msg-text{margin-top:10px}
+.msg-message-gallery{display:grid;gap:6px;max-width:min(280px,100%)}
+.msg-message-gallery.is-single{grid-template-columns:1fr}
+.msg-message-gallery.is-multi{grid-template-columns:repeat(2,minmax(0,1fr))}
+.msg-message-gallery.incoming{justify-items:start}
+.msg-message-gallery.outgoing{justify-items:end}
+.msg-message-gallery.is-multi .msg-message-image-link{width:100%;max-width:none}
+.msg-message-image-link{display:block;width:fit-content;max-width:min(220px,100%);overflow:hidden;line-height:0;text-decoration:none;background:transparent}
+.msg-message-image-link.incoming{justify-self:start;border-radius:20px;box-shadow:none}
+.msg-message-image-link.outgoing{justify-self:end;border-radius:20px 8px 20px 20px;box-shadow:0 12px 26px rgba(15,23,42,.06)}
+.msg-message-image{display:block;width:100%;max-width:100%;height:auto;max-height:280px;object-fit:contain}
+.msg-message-gallery.is-multi .msg-message-image{height:120px;max-height:none;object-fit:cover}
 .msg-text{font-size:15px;line-height:1.6;white-space:pre-wrap;word-break:break-word}
 .msg-meta{font-size:11px;color:#64748b;padding:0 4px}
 .msg-meta.out{color:#64748b}
 .msg-empty-thread{padding:18px 20px;border-radius:18px;border:1px dashed #c7d7ea;background:rgba(255,255,255,.85);color:#64748b;font-size:14px;line-height:1.7}
 .msg-empty-thread-chat{max-width:420px}
 .msg-chat-input{display:grid;gap:10px;padding:14px 22px 18px;border-top:1px solid #dee7f2;background:#fff}
+.msg-image-preview-list{display:flex;flex-wrap:wrap;gap:12px}
+.msg-image-preview-item{position:relative;display:grid;gap:6px;width:96px}
+.msg-image-preview-open{display:block;width:96px;height:96px;border:none;border-radius:18px;padding:0;overflow:hidden;background:linear-gradient(180deg,#f8fbff 0%,#eef5ff 100%);box-shadow:inset 0 0 0 1px #d6e4f5;cursor:pointer}
+.msg-image-preview-thumb{display:block;width:100%;height:100%;object-fit:cover}
+.msg-image-preview-name{font-size:11px;font-weight:700;line-height:1.35;color:#334155;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msg-image-preview-remove{position:absolute;top:6px;right:6px;width:26px;height:26px;border:none;border-radius:999px;background:rgba(15,23,42,.76);color:#fff;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;backdrop-filter:blur(4px);transition:background-color .18s ease,transform .18s ease}
+.msg-image-preview-remove:hover{background:rgba(185,28,28,.92);transform:scale(1.04)}
 .msg-send-form{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center}
 .msg-file-input{display:none}
 .msg-tool-button{width:38px;height:38px;border:none;border-radius:999px;background:transparent;color:#0a66ff;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-size:20px;transition:background-color .18s ease,color .18s ease}
@@ -784,12 +811,19 @@ body.msg-group-info-open{overflow:hidden}
 .msg-upload-notice{padding:10px 12px;border-radius:14px;border:1px solid #dbe7f5;background:#f8fbff;color:#33507a;font-size:12px;font-weight:700;line-height:1.45}
 .msg-upload-notice.is-success{background:#eff6ff;border-color:#bfdbfe;color:#0a66ff}
 .msg-upload-notice.is-error{background:#fff1f2;border-color:#fecdd3;color:#be123c}
+.msg-image-modal{position:fixed;inset:0;z-index:90;display:grid;place-items:center;padding:20px}
+.msg-image-modal-backdrop{position:absolute;inset:0;background:rgba(15,23,42,.72);backdrop-filter:blur(4px)}
+.msg-image-modal-dialog{position:relative;z-index:1;display:grid;gap:12px;max-width:min(92vw,960px);max-height:min(90vh,840px);padding:18px;border-radius:28px;background:#ffffff;box-shadow:0 28px 60px rgba(15,23,42,.24)}
+.msg-image-modal-close{position:absolute;top:10px;right:10px;width:38px;height:38px;border:none;border-radius:999px;background:rgba(15,23,42,.76);color:#fff;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+.msg-image-modal-image{display:block;max-width:min(88vw,900px);max-height:min(78vh,760px);width:auto;height:auto;border-radius:18px}
+.msg-image-modal-title{font-size:13px;font-weight:700;line-height:1.45;color:#334155;word-break:break-word}
 .msg-chat-placeholder{display:grid;place-items:center;flex:1 1 auto;padding:32px;background:radial-gradient(circle at top left,rgba(191,219,254,.35),transparent 28%),linear-gradient(180deg,#ffffff 0%,#f8fbff 100%)}
 .msg-compose-form-chat{width:min(100%,750px);margin:0 auto;min-height:100%;display:flex;flex-direction:column;padding:0;border:none;border-radius:0;background:transparent;box-shadow:none;gap:14px;align-content:start}
 .msg-chat-placeholder-card{display:grid;justify-items:center;gap:12px;max-width:380px;padding:34px 30px;border-radius:28px;background:rgba(255,255,255,.94);border:1px solid #dbe4ef;box-shadow:0 20px 50px rgba(15,23,42,.08);text-align:center}
 .msg-chat-placeholder-card img{width:84px;height:84px;object-fit:contain}
 .msg-chat-placeholder-card strong{color:#0f172a;font-size:24px}
 .msg-chat-placeholder-card p{margin:0;color:#64748b;font-size:15px;line-height:1.7}
+body.msg-image-modal-open{overflow:hidden}
 #msgList > .msg-thread-card.is-hidden{display:none}
 @media (max-width:1280px){
     .msg-shell{grid-template-columns:320px minmax(0,1fr)}
@@ -1377,13 +1411,22 @@ body.msg-group-info-open{overflow:hidden}
     const chatBody = document.getElementById('msgChatBody');
     const sendForm = document.getElementById('msgSendForm');
     const sendMessageInput = sendForm?.querySelector('textarea[name="message"]');
-    const sendImageInput = sendForm?.querySelector('input[name="image"]');
+    const sendImageInput = document.getElementById('msgImageInput');
     const sendImageButton = sendForm?.querySelector('.msg-tool-button-attach');
     const sendUploadNotice = document.getElementById('msgUploadNotice');
+    const sendImagePreviewList = document.getElementById('msgImagePreviewList');
+    const imageModal = document.getElementById('msgImageModal');
+    const imageModalImage = document.getElementById('msgImageModalImage');
+    const imageModalTitle = document.getElementById('msgImageModalTitle');
+    const imageModalClose = document.getElementById('msgImageModalClose');
+    const imageModalCloseTargets = Array.from(document.querySelectorAll('[data-image-modal-close]'));
     const POLL_MS = 7000;
     const CHAT_INPUT_MAX_HEIGHT = 80;
     const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+    const MAX_PENDING_IMAGES = 10;
     let uploadNoticeTimer = 0;
+    let pendingImageId = 0;
+    let pendingImages = [];
 
     const getSendMessageBaseHeight = () => {
         if (!(sendMessageInput instanceof HTMLTextAreaElement)) {
@@ -1458,18 +1501,88 @@ body.msg-group-info-open{overflow:hidden}
         }
     };
 
-    const formatFileSize = (bytes) => {
-        const size = Math.max(0, Number(bytes || 0));
-        if (size >= 1024 * 1024) {
-            return (size / (1024 * 1024)).toFixed(1) + ' MB';
-        }
-
-        return Math.max(1, Math.round(size / 1024)) + ' KB';
-    };
-
-    const resetSelectedImage = () => {
+    const resetSelectedImageInput = () => {
         if (sendImageInput instanceof HTMLInputElement) {
             sendImageInput.value = '';
+        }
+    };
+
+    const pendingImageFileName = (file) => {
+        if (!(file instanceof File)) {
+            return 'pasted-image.png';
+        }
+
+        const rawName = String(file.name || '').trim();
+        if (rawName !== '') {
+            return rawName;
+        }
+
+        const type = String(file.type || '').toLowerCase();
+        const extension = ({
+            'image/jpeg': 'jpg',
+            'image/png': 'png',
+            'image/gif': 'gif',
+            'image/webp': 'webp',
+            'image/bmp': 'bmp',
+            'image/heic': 'heic',
+            'image/heif': 'heif',
+            'image/avif': 'avif',
+        })[type] || 'png';
+
+        return 'pasted-image.' + extension;
+    };
+
+    const revokePendingImageEntry = (entry) => {
+        if (entry && typeof entry.previewUrl === 'string' && entry.previewUrl !== '') {
+            URL.revokeObjectURL(entry.previewUrl);
+        }
+    };
+
+    const revokeAllPendingImages = () => {
+        pendingImages.forEach((entry) => {
+            revokePendingImageEntry(entry);
+        });
+    };
+
+    const renderPendingImages = () => {
+        if (!(sendImagePreviewList instanceof HTMLElement)) {
+            return;
+        }
+
+        if (pendingImages.length < 1) {
+            sendImagePreviewList.hidden = true;
+            sendImagePreviewList.innerHTML = '';
+            return;
+        }
+
+        sendImagePreviewList.hidden = false;
+        sendImagePreviewList.innerHTML = pendingImages.map((entry) => (
+            '<div class="msg-image-preview-item" data-pending-image-id="' + entry.id + '">'
+            + '<button type="button" class="msg-image-preview-open" data-open-pending-image="' + entry.id + '" aria-label="Open ' + escapeHtml(entry.name) + '">'
+            + '<img src="' + escapeHtml(entry.previewUrl) + '" alt="' + escapeHtml(entry.name) + '" class="msg-image-preview-thumb">'
+            + '</button>'
+            + '<button type="button" class="msg-image-preview-remove" data-remove-pending-image="' + entry.id + '" aria-label="Discard ' + escapeHtml(entry.name) + '">'
+            + '<i class="fas fa-times"></i>'
+            + '</button>'
+            + '<div class="msg-image-preview-name" title="' + escapeHtml(entry.name) + '">' + escapeHtml(entry.name) + '</div>'
+            + '</div>'
+        )).join('');
+    };
+
+    const clearPendingImages = (options = {}) => {
+        const shouldClearInput = options.clearInput !== false;
+        const shouldClearNotice = options.clearNotice === true;
+
+        revokeAllPendingImages();
+        pendingImages = [];
+        renderPendingImages();
+
+        if (shouldClearInput) {
+            resetSelectedImageInput();
+        }
+
+        if (shouldClearNotice) {
+            setUploadNotice('');
         }
     };
 
@@ -1491,6 +1604,70 @@ body.msg-group-info-open{overflow:hidden}
         }
 
         return '';
+    };
+
+    const removePendingImage = (imageId) => {
+        const numericId = Number(imageId || 0);
+        if (numericId <= 0) {
+            return;
+        }
+
+        const pendingIndex = pendingImages.findIndex((entry) => entry.id === numericId);
+        if (pendingIndex < 0) {
+            return;
+        }
+
+        const [removedEntry] = pendingImages.splice(pendingIndex, 1);
+        revokePendingImageEntry(removedEntry);
+        renderPendingImages();
+        if (pendingImages.length < 1) {
+            setUploadNotice('');
+        }
+    };
+
+    const stagePendingImages = (files) => {
+        const incomingFiles = Array.isArray(files) ? files : Array.from(files || []);
+        if (incomingFiles.length < 1) {
+            return false;
+        }
+
+        let lastError = '';
+        let stagedCount = 0;
+
+        for (const file of incomingFiles) {
+            if (!(file instanceof File)) {
+                continue;
+            }
+
+            const validationError = validateSelectedImage(file);
+            if (validationError !== '') {
+                lastError = validationError;
+                continue;
+            }
+
+            if (pendingImages.length >= MAX_PENDING_IMAGES) {
+                lastError = 'You can attach up to ' + MAX_PENDING_IMAGES + ' images at a time.';
+                break;
+            }
+
+            pendingImages.push({
+                id: ++pendingImageId,
+                file,
+                name: pendingImageFileName(file),
+                previewUrl: URL.createObjectURL(file),
+            });
+            stagedCount += 1;
+        }
+
+        renderPendingImages();
+
+        if (lastError !== '') {
+            setUploadNotice(lastError, 'error');
+        } else {
+            setUploadNotice('');
+        }
+
+        return stagedCount > 0;
     };
 
     const hasUserInputFocus = () => {
@@ -1528,6 +1705,58 @@ body.msg-group-info-open{overflow:hidden}
         return '<span class="msg-inline-avatar ' + contactAvatarClass + '"><span>' + escapeHtml(contactInitials || 'U') + '</span></span>';
     };
 
+    const openImageModal = (imageUrl, imageTitle = 'Image preview') => {
+        if (
+            !(imageModal instanceof HTMLElement)
+            || !(imageModalImage instanceof HTMLImageElement)
+            || !(imageModalTitle instanceof HTMLElement)
+        ) {
+            return;
+        }
+
+        imageModalImage.src = String(imageUrl || '');
+        imageModalImage.alt = String(imageTitle || 'Image preview');
+        imageModalTitle.textContent = String(imageTitle || 'Image preview');
+        imageModal.hidden = false;
+        document.body.classList.add('msg-image-modal-open');
+    };
+
+    const closeImageModal = () => {
+        if (
+            !(imageModal instanceof HTMLElement)
+            || !(imageModalImage instanceof HTMLImageElement)
+            || !(imageModalTitle instanceof HTMLElement)
+        ) {
+            return;
+        }
+
+        imageModal.hidden = true;
+        imageModalImage.removeAttribute('src');
+        imageModalImage.alt = '';
+        imageModalTitle.textContent = '';
+        document.body.classList.remove('msg-image-modal-open');
+    };
+
+    const renderImageGallery = (images, mine) => {
+        const normalizedImages = Array.isArray(images) ? images : [];
+        if (!normalizedImages.length) {
+            return '';
+        }
+
+        const galleryClass = normalizedImages.length > 1 ? 'is-multi' : 'is-single';
+
+        return [
+            '<div class="msg-message-gallery ' + (mine ? 'outgoing' : 'incoming') + ' ' + galleryClass + '">',
+            normalizedImages.map((image) => {
+                const imageUrl = String(image?.url || '');
+                const imageName = String(image?.name || 'Shared image');
+
+                return '<a href="' + escapeHtml(imageUrl) + '" class="msg-message-image-link ' + (mine ? 'outgoing' : 'incoming') + '" target="_blank" rel="noopener noreferrer"><img src="' + escapeHtml(imageUrl) + '" alt="' + escapeHtml(imageName) + '" class="msg-message-image"></a>';
+            }).join(''),
+            '</div>',
+        ].join('');
+    };
+
     const renderMessages = (messages) => {
         if (!chatBody) {
             return;
@@ -1542,22 +1771,16 @@ body.msg-group-info-open{overflow:hidden}
 
         chatBody.innerHTML = normalized.map((entry) => {
             const mine = Boolean(entry.is_mine);
-            const imageUrl = String(entry.image_url || '');
-            const imageName = String(entry.image_name || 'Shared image');
-            const hasImage = Boolean(entry.has_image) && imageUrl !== '';
+            const images = Array.isArray(entry.images) ? entry.images : [];
             const messageText = String(entry.message || '');
             return [
                 '<div class="msg-row ' + (mine ? 'right' : 'left') + '">',
                 mine ? '' : incomingAvatarMarkup(),
                 '<div class="msg-bubble-stack ' + (mine ? 'outgoing' : 'incoming') + '">',
-                '<div class="msg-bubble ' + (mine ? 'outgoing' : 'incoming') + (hasImage ? ' has-image' : '') + '">',
-                hasImage
-                    ? '<a href="' + escapeHtml(imageUrl) + '" class="msg-message-image-link" target="_blank" rel="noopener noreferrer"><img src="' + escapeHtml(imageUrl) + '" alt="' + escapeHtml(imageName) + '" class="msg-message-image"></a>'
-                    : '',
+                renderImageGallery(images, mine),
                 messageText !== ''
-                    ? '<div class="msg-text">' + escapeHtml(messageText).replaceAll('\n', '<br>') + '</div>'
+                    ? '<div class="msg-bubble ' + (mine ? 'outgoing' : 'incoming') + '"><div class="msg-text">' + escapeHtml(messageText).replaceAll('\n', '<br>') + '</div></div>'
                     : '',
-                '</div>',
                 '<div class="msg-meta ' + (mine ? 'out' : '') + '"><span>' + escapeHtml(entry.time || '') + '</span></div>',
                 '</div>',
                 '</div>'
@@ -1647,6 +1870,46 @@ body.msg-group-info-open{overflow:hidden}
     if (sendMessageInput instanceof HTMLTextAreaElement) {
         syncSendMessageHeight();
         sendMessageInput.addEventListener('input', syncSendMessageHeight);
+        sendMessageInput.addEventListener('keydown', (event) => {
+            if (
+                event.key !== 'Enter'
+                || event.shiftKey
+                || event.altKey
+                || event.ctrlKey
+                || event.metaKey
+                || event.isComposing
+            ) {
+                return;
+            }
+
+            const hasText = String(sendMessageInput.value || '').trim() !== '';
+            const hasQueuedImages = pendingImages.length > 0;
+            if (!hasText && !hasQueuedImages) {
+                event.preventDefault();
+                return;
+            }
+
+            event.preventDefault();
+            sendForm?.requestSubmit();
+        });
+        sendMessageInput.addEventListener('paste', (event) => {
+            const clipboard = event.clipboardData;
+            if (!clipboard) {
+                return;
+            }
+
+            const pastedImages = Array.from(clipboard.items || []).filter((item) => (
+                item?.kind === 'file'
+                && String(item.type || '').toLowerCase().startsWith('image/')
+            )).map((item) => item.getAsFile()).filter((file) => file instanceof File);
+
+            if (pastedImages.length < 1) {
+                return;
+            }
+
+            event.preventDefault();
+            stagePendingImages(pastedImages);
+        });
     }
 
     if (sendImageButton instanceof HTMLElement && sendImageInput instanceof HTMLInputElement) {
@@ -1655,20 +1918,42 @@ body.msg-group-info-open{overflow:hidden}
         });
 
         sendImageInput.addEventListener('change', () => {
-            const selectedFile = sendImageInput.files?.[0];
-            if (!selectedFile) {
-                setUploadNotice('');
+            const selectedFiles = Array.from(sendImageInput.files || []);
+            if (selectedFiles.length < 1) {
                 return;
             }
 
-            const validationError = validateSelectedImage(selectedFile);
-            if (validationError !== '') {
-                resetSelectedImage();
-                setUploadNotice(validationError, 'error');
+            stagePendingImages(selectedFiles);
+            resetSelectedImageInput();
+        });
+    }
+
+    if (sendImagePreviewList instanceof HTMLElement) {
+        sendImagePreviewList.addEventListener('click', (event) => {
+            const target = event.target;
+            if (!(target instanceof Element)) {
                 return;
             }
 
-            setUploadNotice('Image selected: ' + selectedFile.name + ' (' + formatFileSize(selectedFile.size) + '). Click send to upload.', 'success');
+            const removeButton = target.closest('[data-remove-pending-image]');
+            if (removeButton instanceof HTMLElement) {
+                event.preventDefault();
+                removePendingImage(removeButton.getAttribute('data-remove-pending-image'));
+                sendMessageInput?.focus();
+                return;
+            }
+
+            const openButton = target.closest('[data-open-pending-image]');
+            if (!(openButton instanceof HTMLElement)) {
+                return;
+            }
+
+            event.preventDefault();
+            const pendingId = Number(openButton.getAttribute('data-open-pending-image') || 0);
+            const pendingEntry = pendingImages.find((entry) => entry.id === pendingId);
+            if (pendingEntry) {
+                openImageModal(pendingEntry.previewUrl, pendingEntry.name);
+            }
         });
     }
 
@@ -1681,8 +1966,10 @@ body.msg-group-info-open{overflow:hidden}
                 return;
             }
             const content = String(messageInput.value || '').trim();
-            const selectedImage = sendImageInput instanceof HTMLInputElement ? sendImageInput.files?.[0] : null;
-            const hasImage = selectedImage instanceof File;
+            const selectedImages = pendingImages
+                .map((entry) => entry.file)
+                .filter((file) => file instanceof File);
+            const hasImage = selectedImages.length > 0;
 
             if (!content && !hasImage) {
                 setUploadNotice('Please type a message or select an image to send.', 'error');
@@ -1690,15 +1977,21 @@ body.msg-group-info-open{overflow:hidden}
             }
 
             if (hasImage) {
-                const validationError = validateSelectedImage(selectedImage);
-                if (validationError !== '') {
-                    resetSelectedImage();
-                    setUploadNotice(validationError, 'error');
-                    return;
+                for (const selectedImage of selectedImages) {
+                    const validationError = validateSelectedImage(selectedImage);
+                    if (validationError !== '') {
+                        setUploadNotice(validationError, 'error');
+                        return;
+                    }
                 }
             }
 
             const formData = new FormData(sendForm);
+            formData.delete('images[]');
+            formData.delete('image');
+            selectedImages.forEach((selectedImage) => {
+                formData.append('images[]', selectedImage, pendingImageFileName(selectedImage));
+            });
             try {
                 if (submitButton) {
                     submitButton.disabled = true;
@@ -1717,6 +2010,8 @@ body.msg-group-info-open{overflow:hidden}
                 if (response.status === 422) {
                     const payload = await response.json().catch(() => null);
                     const messageError = payload?.errors?.message?.[0]
+                        || payload?.errors?.images?.[0]
+                        || payload?.errors?.['images.0']?.[0]
                         || payload?.errors?.image?.[0]
                         || payload?.message
                         || 'Unable to send this message.';
@@ -1731,9 +2026,10 @@ body.msg-group-info-open{overflow:hidden}
 
                 const payload = await response.json().catch(() => null);
                 messageInput.value = '';
-                resetSelectedImage();
+                clearPendingImages({ clearNotice: false });
+                closeImageModal();
                 syncSendMessageHeight();
-                setUploadNotice(String(payload?.notice || (hasImage ? 'Image sent.' : 'Message sent.')), 'success', 2600);
+                setUploadNotice(String(payload?.notice || (hasImage ? 'Images sent.' : 'Message sent.')), 'success', 2600);
                 await fetchConversation();
                 scrollToBottom();
             } catch (error) {
@@ -1749,6 +2045,46 @@ body.msg-group-info-open{overflow:hidden}
     if (chatBody && currentThread > 0) {
         window.requestAnimationFrame(scrollToBottom);
     }
+
+    if (chatBody) {
+        chatBody.addEventListener('click', (event) => {
+            const target = event.target;
+            if (!(target instanceof Element)) {
+                return;
+            }
+
+            const imageLink = target.closest('.msg-message-image-link');
+            if (!(imageLink instanceof HTMLAnchorElement)) {
+                return;
+            }
+
+            event.preventDefault();
+            const image = imageLink.querySelector('.msg-message-image');
+            const imageTitle = image instanceof HTMLImageElement && image.alt
+                ? image.alt
+                : 'Image preview';
+
+            openImageModal(imageLink.href, imageTitle);
+        });
+    }
+
+    if (imageModal instanceof HTMLElement) {
+        imageModalCloseTargets.forEach((closeTarget) => {
+            closeTarget.addEventListener('click', closeImageModal);
+        });
+
+        if (imageModalClose instanceof HTMLButtonElement) {
+            imageModalClose.addEventListener('click', closeImageModal);
+        }
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && !imageModal.hidden) {
+                closeImageModal();
+            }
+        });
+    }
+
+    window.addEventListener('beforeunload', revokeAllPendingImages);
 
     window.setInterval(poll, POLL_MS);
 })();
