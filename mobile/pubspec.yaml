@@ -57,6 +57,42 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
+  assets:
+    - assets/images/background.jpg
+    - assets/images/DILG-Logo.png
+
+  fonts:
+    - family: FacebookSans
+      fonts:
+        - asset: assets/fonts/FacebookSansHairline.ttf
+          weight: 100
+        - asset: assets/fonts/FacebookSansHairlineItalic.ttf
+          weight: 100
+          style: italic
+        - asset: assets/fonts/FacebookSansLight.ttf
+          weight: 300
+        - asset: assets/fonts/FacebookSansLightItalic.ttf
+          weight: 300
+          style: italic
+        - asset: assets/fonts/FacebookSansRegular.ttf
+          weight: 400
+        - asset: assets/fonts/FacebookSansItalic.ttf
+          weight: 400
+          style: italic
+        - asset: assets/fonts/FacebookSansBold.ttf
+          weight: 700
+        - asset: assets/fonts/FacebookSansBoldItalic.ttf
+          weight: 700
+          style: italic
+        - asset: assets/fonts/FacebookSansHeavy.ttf
+          weight: 800
+        - asset: assets/fonts/FacebookSansHeavyItalic.ttf
+          weight: 800
+          style: italic
+    - family: FacebookNarrowApp
+      fonts:
+        - asset: assets/fonts/FacebookNarrowAppRegular.ttf
+
   # To add assets to your application, add an assets section, like this:
   # assets:
   #   - images/a_dot_burr.jpeg

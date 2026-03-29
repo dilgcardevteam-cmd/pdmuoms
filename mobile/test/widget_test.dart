@@ -7,14 +7,14 @@
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:mobile/main.dart';
+import 'package:mobile/app/app.dart';
 
 void main() {
-  testWidgets('starter page renders', (WidgetTester tester) async {
+  testWidgets('login page renders', (WidgetTester tester) async {
     await tester.pumpWidget(const PdmuomsApp());
 
     expect(find.text('PDMUOMS'), findsOneWidget);
-    expect(find.text('Start building from here.'), findsOneWidget);
-    expect(find.text('Next step'), findsOneWidget);
+    expect(find.text('PDMU Operations Management System'), findsOneWidget);
+    expect(find.text('Login'), findsOneWidget);
   });
 }
