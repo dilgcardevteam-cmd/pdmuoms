@@ -69,30 +69,50 @@ class LoginFormSection extends StatelessWidget {
             obscureText: true,
           ),
           const SizedBox(height: 16),
-          Row(
-            children: [
-              Icon(
-                Icons.check_box_outline_blank_rounded,
-                size: 18,
-                color: const Color(0xFF2E6FDB),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'Remember Me',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: const Color(0xFF7F7C80),
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const Spacer(),
-              Text(
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final rememberMe = Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.check_box_outline_blank_rounded,
+                    size: 18,
+                    color: Color(0xFF2E6FDB),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Remember Me',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: const Color(0xFF7F7C80),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              );
+
+              final forgotPassword = Text(
                 'Forgot Password?',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: const Color(0xFF2E6FDB),
                   fontWeight: FontWeight.w700,
                 ),
-              ),
-            ],
+              );
+
+              if (constraints.maxWidth < 280) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    rememberMe,
+                    const SizedBox(height: 10),
+                    forgotPassword,
+                  ],
+                );
+              }
+
+              return Row(
+                children: [rememberMe, const Spacer(), forgotPassword],
+              );
+            },
           ),
           const SizedBox(height: 28),
           ElevatedButton(
