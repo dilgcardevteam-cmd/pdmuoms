@@ -51,19 +51,6 @@ class UserManagementController extends Controller
         return ['required', 'in:' . implode(',', array_keys(User::roleOptions()))];
     }
 
-    private function normalizeUserPayload(array $validated): array
-    {
-        $role = strtolower(trim((string) ($validated['role'] ?? '')));
-
-        if ($role === User::ROLE_LGU) {
-            $validated['agency'] = 'LGU';
-        } elseif (in_array($role, [User::ROLE_REGIONAL, User::ROLE_PROVINCIAL], true)) {
-            $validated['agency'] = 'DILG';
-        }
-
-        return $validated;
-    }
-
     private function sanitizeUserPayload(array $validated): array
     {
         $validated = InputSanitizer::sanitizeTextFields($validated, [
@@ -148,7 +135,7 @@ class UserManagementController extends Controller
             'status' => ['required', 'in:active,inactive'],
         ]);
 
-        $validated = $this->sanitizeUserPayload($this->normalizeUserPayload($validated));
+        $validated = $this->sanitizeUserPayload($validated);
         $validated['password'] = Hash::make($validated['password']);
         $validated['email_verified_at'] = now();
 
@@ -196,7 +183,7 @@ class UserManagementController extends Controller
             $validated['password'] = Hash::make($request->password);
         }
 
-        $validated = $this->sanitizeUserPayload($this->normalizeUserPayload($validated));
+        $validated = $this->sanitizeUserPayload($validated);
         $validated['access'] = $this->resolveUserAccessValue(
             $validated['role'],
             $validated['crud_permissions'] ?? [],

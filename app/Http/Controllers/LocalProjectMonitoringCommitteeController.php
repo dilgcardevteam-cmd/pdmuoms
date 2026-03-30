@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\InterventionNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Str;
@@ -391,21 +392,36 @@ class LocalProjectMonitoringCommitteeController extends Controller
             });
 
             $recipientIds = $recipients->pluck('idno')->merge($relatedUserIds);
-            if (!$isRegionalOffice && $action === 'approve') {
-                $regionalDilgIds = User::query()
-                    ->whereRaw('UPPER(TRIM(COALESCE(agency, ""))) = ?', ['DILG'])
-                    ->where('status', 'active')
-                    ->where(function ($query) {
-                        $query->whereRaw('LOWER(TRIM(COALESCE(province, ""))) = ?', ['regional office'])
-                            ->orWhereRaw('LOWER(TRIM(COALESCE(office, ""))) LIKE ?', ['%regional office%']);
-                    })
-                    ->pluck('idno');
-                $recipientIds = $recipientIds->merge($regionalDilgIds);
-            }
 
             $actorName = trim((string) ($actor->fname ?? '') . ' ' . (string) ($actor->lname ?? ''));
             if ($actorName === '') {
                 $actorName = 'DILG Regional Office';
+            }
+
+            $url = $targetOffice !== ''
+                ? route('local-project-monitoring-committee.edit', ['lpmc' => $targetOffice, 'year' => $document->year ?: now()->year])
+                : route('local-project-monitoring-committee.index');
+            $actorId = (int) auth()->id();
+            $notificationService = app(InterventionNotificationService::class);
+
+            if ($action === 'approve' && !$isRegionalOffice) {
+                $message = sprintf(
+                    '%s validated (DILG PO) %s for %s%s and it is awaiting DILG Regional Office validation.',
+                    $actorName,
+                    $this->formatDocumentLabel($document),
+                    $targetOffice !== '' ? $targetOffice : 'the LGU',
+                    $targetProvince !== '' ? ' - ' . $targetProvince : ''
+                );
+
+                $notificationService->notifyRegionalDilg(
+                    $actorId,
+                    $message,
+                    $url,
+                    'lpmc-' . (string) ($document->doc_type ?? 'document'),
+                    $document->quarter ?? null
+                );
+
+                return;
             }
 
             $actionLabel = $action === 'approve'
@@ -425,41 +441,90 @@ class LocalProjectMonitoringCommitteeController extends Controller
                 $message .= ' Remarks: ' . $remarks;
             }
 
-            $now = now();
+            $notificationService->notifyScopedLgu(
+                $targetProvince,
+                $targetOffice,
+                $recipientIds,
+                $actorId,
+                $message,
+                $url,
+                'lpmc-' . (string) ($document->doc_type ?? 'document'),
+                $document->quarter ?? null
+            );
+        } catch (\Throwable $error) {
+            Log::warning('Failed to create approval notifications (LPMC).', [
+                'document_id' => $document->id ?? null,
+                'office' => $document->office ?? null,
+                'error' => $error->getMessage(),
+            ]);
+        }
+    }
+
+    private function notifyWorkflowUsersOnUpload(LpmcDocument $document): void
+    {
+        try {
+            $actor = auth()->user();
+            if (!$actor) {
+                return;
+            }
+
+            $targetOffice = trim((string) ($document->office ?? ''));
+            $targetProvince = trim((string) ($document->province ?? ''));
+            if ($targetProvince === '' && $targetOffice !== '') {
+                $targetProvince = trim((string) ($this->findProvinceByOffice($targetOffice) ?? ''));
+            }
+
+            if ($targetOffice === '' && $targetProvince === '') {
+                return;
+            }
+
+            $actorName = $actor->fullName() ?: 'A user';
             $url = $targetOffice !== ''
                 ? route('local-project-monitoring-committee.edit', ['lpmc' => $targetOffice, 'year' => $document->year ?: now()->year])
                 : route('local-project-monitoring-committee.index');
-            $actorId = (int) auth()->id();
+            $actorId = (int) ($actor->idno ?? auth()->id());
+            $notificationService = app(InterventionNotificationService::class);
 
-            $rows = collect($recipientIds)
-                ->map(function ($id) {
-                    return (int) $id;
-                })
-                ->filter(function ($id) use ($actorId) {
-                    return $id > 0 && $id !== $actorId;
-                })
-                ->unique()
-                ->values()
-                ->map(function ($recipientId) use ($message, $url, $document, $now) {
-                    return [
-                        'user_id' => $recipientId,
-                        'message' => $message,
-                        'url' => $url,
-                        'document_type' => 'lpmc-' . (string) ($document->doc_type ?? 'document'),
-                        'quarter' => $document->quarter ?? null,
-                        'read_at' => null,
-                        'created_at' => $now,
-                        'updated_at' => $now,
-                    ];
-                })
-                ->values()
-                ->all();
+            if ($actor->isLguScopedUser() && $targetProvince !== '') {
+                $message = sprintf(
+                    '%s uploaded %s for %s%s and it is awaiting DILG Provincial Office validation.',
+                    $actorName,
+                    $this->formatDocumentLabel($document),
+                    $targetOffice !== '' ? $targetOffice : 'the LGU',
+                    $targetProvince !== '' ? ' - ' . $targetProvince : ''
+                );
 
-            if (!empty($rows)) {
-                DB::table('tbnotifications')->insert($rows);
+                $notificationService->notifyProvincialDilg(
+                    $targetProvince,
+                    $actorId,
+                    $message,
+                    $url,
+                    'lpmc-' . (string) ($document->doc_type ?? 'document'),
+                    $document->quarter ?? null
+                );
+
+                return;
+            }
+
+            if ($actor->isDilgUser() && !$actor->isRegionalOfficeAssignment()) {
+                $message = sprintf(
+                    '%s uploaded %s for %s%s and it is awaiting DILG Regional Office validation.',
+                    $actorName,
+                    $this->formatDocumentLabel($document),
+                    $targetOffice !== '' ? $targetOffice : 'the LGU',
+                    $targetProvince !== '' ? ' - ' . $targetProvince : ''
+                );
+
+                $notificationService->notifyRegionalDilg(
+                    $actorId,
+                    $message,
+                    $url,
+                    'lpmc-' . (string) ($document->doc_type ?? 'document'),
+                    $document->quarter ?? null
+                );
             }
         } catch (\Throwable $error) {
-            Log::warning('Failed to create approval notifications (LPMC).', [
+            Log::warning('Failed to create upload notifications (LPMC).', [
                 'document_id' => $document->id ?? null,
                 'office' => $document->office ?? null,
                 'error' => $error->getMessage(),
@@ -479,11 +544,11 @@ class LocalProjectMonitoringCommitteeController extends Controller
         }
 
         $user = auth()->user();
-        if ($user && $user->agency === 'LGU' && !empty($user->office)) {
+        if ($user && $user->isLguScopedUser() && $user->normalizedOffice() !== '') {
             $officeRows = array_values(array_filter($officeRows, function ($row) use ($user) {
-                return $row['city_municipality'] === $user->office;
+                return $user->matchesAssignedOffice((string) ($row['city_municipality'] ?? ''));
             }));
-        } elseif ($user && $user->agency === 'DILG' && !empty($user->province)) {
+        } elseif ($user && $user->isDilgUser() && !empty($user->province)) {
             $selectedProvince = $request->query('province');
             $userProvince = !empty($selectedProvince) ? $selectedProvince : $user->province;
             if ($userProvince !== 'Regional Office') {
@@ -648,6 +713,8 @@ class LocalProjectMonitoringCommitteeController extends Controller
         if ($isMountainProvinceDilgUploader) {
             $this->logActivity($officeName, 'validate_po', 'Validated (DILG PO)', $document, null, $uploadedAt);
         }
+
+        $this->notifyWorkflowUsersOnUpload($document);
 
         return redirect()
             ->back()

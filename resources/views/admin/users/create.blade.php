@@ -181,7 +181,7 @@
                                 <option value="{{ $roleValue }}" @selected(old('role') === $roleValue)>{{ $roleLabel }}</option>
                             @endforeach
                         </select>
-                        <p style="color: #64748b; font-size: 12px; margin-top: 6px;">Regional oversees region, Provincial oversees province, LGU is the lowest scope. Module access for each role is configured on the Role Configuration page.</p>
+                        <p style="color: #64748b; font-size: 12px; margin-top: 6px;">Role selection controls access scope only. Agency, province, and office stay based on the values you choose in the profile fields.</p>
                         @error('role')
                             <p style="color: #dc2626; font-size: 12px; margin-top: 4px;">{{ $message }}</p>
                         @enderror
@@ -317,30 +317,9 @@
         };
 
         const agencySelect = document.getElementById('agencySelect');
-        const roleSelect = document.getElementById('roleSelect');
         const positionSelect = document.getElementById('positionSelect');
         const provinceSelect = document.getElementById('provinceSelect');
         const officeSelect = document.getElementById('officeSelect');
-
-        function syncAgencyWithRole() {
-            if (!roleSelect) {
-                return;
-            }
-
-            const role = roleSelect.value;
-            let nextAgency = '';
-
-            if (role === 'user_lgu') {
-                nextAgency = 'LGU';
-            } else if (role === 'user_regional' || role === 'user_provincial') {
-                nextAgency = 'DILG';
-            }
-
-            if (nextAgency !== '' && agencySelect.value !== nextAgency) {
-                agencySelect.value = nextAgency;
-                agencySelect.dispatchEvent(new Event('change'));
-            }
-        }
 
         // Update position dropdown based on agency
         agencySelect.addEventListener('change', function() {
@@ -414,9 +393,7 @@
             }
         });
 
-        roleSelect?.addEventListener('change', syncAgencyWithRole);
         // Trigger change event to populate position if agency is pre-selected
-        syncAgencyWithRole();
         if (agencySelect.value) {
             agencySelect.dispatchEvent(new Event('change'));
         }

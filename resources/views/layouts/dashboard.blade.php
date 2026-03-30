@@ -1683,6 +1683,7 @@
                 $canViewFundUtilizationReports = Auth::user()->hasCrudPermission('fund_utilization_reports', 'view');
                 $canViewLpmcReports = Auth::user()->hasCrudPermission('local_project_monitoring_committee', 'view');
                 $canViewRoadMaintenanceReports = Auth::user()->hasCrudPermission('road_maintenance_status_reports', 'view');
+                $canViewTicketingSystem = Auth::user()->hasCrudPermission('ticketing_system', 'view');
                 $canViewSubaybayanUploads = Auth::user()->hasCrudPermission('subaybayan_data_uploads', 'view');
                 $canViewRssaLgsfUploads = $canViewSubaybayanUploads;
                 $canViewRlipLimeUploads = Auth::user()->hasCrudPermission('rlip_lime_data_uploads', 'view');
@@ -1877,6 +1878,70 @@
                         <i class="fas fa-folder-open"></i>
                         <span>Pre-Implementation Documents</span>
                     </a>
+                </li>
+            @endif
+            @if($canViewTicketingSystem)
+                <li>
+                    @php
+                        $ticketingMenuActive = request()->routeIs('ticketing.*');
+                    @endphp
+                    <a href="#" class="@if($ticketingMenuActive) active @endif submenu-toggle" onclick="toggleSubmenu(event, 'ticketingMenu')">
+                        <i class="fas fa-ticket"></i>
+                        <span>Ticketing System</span>
+                        <i class="fas fa-chevron-down submenu-chevron" style="margin-left: auto; font-size: 12px;"></i>
+                    </a>
+                    <ul id="ticketingMenu" class="submenu" style="display: {{ $ticketingMenuActive ? 'block' : 'none' }};">
+                        <li>
+                            <a href="{{ route('ticketing.dashboard') }}" class="@if(request()->routeIs('ticketing.dashboard')) active @endif">
+                                <i class="fas fa-chart-pie"></i>
+                                <span>Ticket Dashboard</span>
+                            </a>
+                        </li>
+                        @if(Auth::user()->isLguUser())
+                            <li>
+                                <a href="{{ route('ticketing.create') }}" class="@if(request()->routeIs('ticketing.create')) active @endif">
+                                    <i class="fas fa-plus-circle"></i>
+                                    <span>Submit Ticket</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{{ route('ticketing.my-tickets') }}" class="@if(request()->routeIs('ticketing.my-tickets')) active @endif">
+                                    <i class="fas fa-list"></i>
+                                    <span>View My Tickets</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{{ route('ticketing.track') }}" class="@if(request()->routeIs('ticketing.track')) active @endif">
+                                    <i class="fas fa-route"></i>
+                                    <span>Track Ticket Status</span>
+                                </a>
+                            </li>
+                        @endif
+                        @if(Auth::user()->isProvincialUser())
+                            <li>
+                                <a href="{{ route('ticketing.province.index') }}" class="@if(request()->routeIs('ticketing.province.*')) active @endif">
+                                    <i class="fas fa-building"></i>
+                                    <span>Provincial Ticket List</span>
+                                </a>
+                            </li>
+                        @endif
+                        @if(Auth::user()->isRegionalUser())
+                            <li>
+                                <a href="{{ route('ticketing.region.index') }}" class="@if(request()->routeIs('ticketing.region.*')) active @endif">
+                                    <i class="fas fa-building-circle-check"></i>
+                                    <span>Regional Ticket List</span>
+                                </a>
+                            </li>
+                        @endif
+                        @if(Auth::user()->isSuperAdmin())
+                            <li>
+                                <a href="{{ route('ticketing.admin.index') }}" class="@if(request()->routeIs('ticketing.admin.*')) active @endif">
+                                    <i class="fas fa-shield-halved"></i>
+                                    <span>Admin Monitoring</span>
+                                </a>
+                            </li>
+                        @endif
+                    </ul>
                 </li>
             @endif
             <li>

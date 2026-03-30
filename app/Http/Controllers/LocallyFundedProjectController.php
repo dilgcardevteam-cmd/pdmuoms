@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\FundUtilizationReport;
 use App\Models\LocallyFundedProject;
+use App\Services\InterventionNotificationService;
 use App\Support\InputSanitizer;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -13,6 +14,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 
 class LocallyFundedProjectController extends Controller
 {
@@ -24,6 +26,185 @@ class LocallyFundedProjectController extends Controller
         $this->middleware('crud_permission:locally_funded_projects,add')->only(['create', 'store']);
         $this->middleware('crud_permission:locally_funded_projects,update')->only(['edit', 'update']);
         $this->middleware('crud_permission:locally_funded_projects,delete')->only(['destroy']);
+    }
+
+    private function comparableLocationSql(string $columnExpression): string
+    {
+        return "TRIM(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(SUBSTRING_INDEX(TRIM(COALESCE({$columnExpression}, '')), ',', 1)), '(capital)', ''), 'municipality of ', ''), 'city of ', ''), ' municipality', ''), ' city', ''), '  ', ' '))";
+    }
+
+    private function applyOfficeScopeToLocationQuery($query, string $cityColumnExpression, string $officeLower, string $officeComparableLower): void
+    {
+        if ($officeLower === '') {
+            return;
+        }
+
+        $officeNeedle = $officeComparableLower !== '' ? $officeComparableLower : $officeLower;
+        $cityComparableExpression = $this->comparableLocationSql($cityColumnExpression);
+
+        $query->where(function ($subQuery) use ($cityColumnExpression, $officeLower, $officeNeedle, $cityComparableExpression) {
+            $subQuery->whereRaw('LOWER(TRIM(COALESCE(' . $cityColumnExpression . ', ""))) = ?', [$officeLower])
+                ->orWhereRaw("{$cityComparableExpression} = ?", [$officeNeedle]);
+        });
+    }
+
+    private function applyUserScopeToLocationQuery($query, string $provinceColumnExpression, string $cityColumnExpression, string $regionColumnExpression): void
+    {
+        $user = Auth::user();
+        if (!$user || $user->isSuperAdmin()) {
+            return;
+        }
+
+        $province = trim((string) $user->province);
+        $office = trim((string) $user->office);
+        $region = trim((string) $user->region);
+        $provinceLower = $user->normalizedProvince();
+        $officeLower = $user->normalizedOffice();
+        $regionLower = $user->normalizedRegion();
+        $officeComparableLower = $user->normalizedOfficeComparable();
+        $isRegionalOfficeUser = $user->isRegionalUser() || $user->isRegionalOfficeAssignment();
+
+        if ($user->isLguScopedUser()) {
+            if ($office !== '') {
+                if ($province !== '') {
+                    $query->whereRaw('LOWER(TRIM(COALESCE(' . $provinceColumnExpression . ', ""))) = ?', [$provinceLower]);
+                }
+
+                $this->applyOfficeScopeToLocationQuery($query, $cityColumnExpression, $officeLower, $officeComparableLower);
+                return;
+            }
+
+            if ($province !== '') {
+                $query->whereRaw('LOWER(TRIM(COALESCE(' . $provinceColumnExpression . ', ""))) = ?', [$provinceLower]);
+            }
+
+            return;
+        }
+
+        if ($user->isProvincialUser()) {
+            if ($province !== '') {
+                $query->whereRaw('LOWER(TRIM(COALESCE(' . $provinceColumnExpression . ', ""))) = ?', [$provinceLower]);
+            } elseif ($region !== '') {
+                $query->whereRaw('LOWER(TRIM(COALESCE(' . $regionColumnExpression . ', ""))) = ?', [$regionLower]);
+            }
+
+            return;
+        }
+
+        if ($user->isRegionalUser()) {
+            if ($region !== '') {
+                $query->whereRaw('LOWER(TRIM(COALESCE(' . $regionColumnExpression . ', ""))) = ?', [$regionLower]);
+            }
+
+            return;
+        }
+
+        if (!$user->isDilgUser()) {
+            return;
+        }
+
+        if ($isRegionalOfficeUser) {
+            if ($region !== '') {
+                $query->whereRaw('LOWER(TRIM(COALESCE(' . $regionColumnExpression . ', ""))) = ?', [$regionLower]);
+            }
+
+            return;
+        }
+
+        if ($province !== '') {
+            $query->whereRaw('LOWER(TRIM(COALESCE(' . $provinceColumnExpression . ', ""))) = ?', [$provinceLower]);
+        } elseif ($region !== '') {
+            $query->whereRaw('LOWER(TRIM(COALESCE(' . $regionColumnExpression . ', ""))) = ?', [$regionLower]);
+        }
+    }
+
+    private function userCanAccessLocation(?User $user, ?string $province, ?string $city, ?string $region = null, ?string $office = null): bool
+    {
+        if (!$user) {
+            return false;
+        }
+
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        $recordProvinceLower = Str::lower(trim((string) $province));
+        $recordRegionLower = Str::lower(trim((string) $region));
+        $recordCity = trim((string) $city);
+        $recordOffice = trim((string) $office);
+
+        if ($user->isLguScopedUser()) {
+            $assignedProvince = $user->normalizedProvince();
+            if ($assignedProvince !== '' && $recordProvinceLower !== $assignedProvince) {
+                return false;
+            }
+
+            if ($user->normalizedOffice() === '') {
+                return $assignedProvince === '' || $recordProvinceLower === $assignedProvince;
+            }
+
+            return $user->matchesAssignedOffice($recordCity) || $user->matchesAssignedOffice($recordOffice);
+        }
+
+        if ($user->isProvincialUser()) {
+            if ($user->normalizedProvince() !== '') {
+                return $recordProvinceLower === $user->normalizedProvince();
+            }
+
+            if ($user->normalizedRegion() !== '') {
+                return $recordRegionLower === $user->normalizedRegion();
+            }
+
+            return true;
+        }
+
+        if ($user->isRegionalUser()) {
+            return $user->normalizedRegion() === '' || $recordRegionLower === $user->normalizedRegion();
+        }
+
+        if (!$user->isDilgUser()) {
+            return true;
+        }
+
+        if ($user->isRegionalOfficeAssignment()) {
+            return $user->normalizedRegion() === '' || $recordRegionLower === $user->normalizedRegion();
+        }
+
+        if ($user->normalizedProvince() !== '') {
+            return $recordProvinceLower === $user->normalizedProvince();
+        }
+
+        if ($user->normalizedRegion() !== '') {
+            return $recordRegionLower === $user->normalizedRegion();
+        }
+
+        return true;
+    }
+
+    private function authorizeLocallyFundedProjectAccess(LocallyFundedProject $project): void
+    {
+        $province = $project->province;
+        $cityMunicipality = $project->city_municipality;
+        $region = $project->region;
+
+        $projectCode = trim((string) $project->subaybayan_project_code);
+        if ($projectCode !== '' && Schema::hasTable('subay_project_profiles')) {
+            $subayRow = DB::table('subay_project_profiles')
+                ->where('project_code', $projectCode)
+                ->first(['province', 'city_municipality', 'region']);
+
+            if ($subayRow) {
+                $province = trim((string) $province) !== '' ? $province : ($subayRow->province ?? null);
+                $cityMunicipality = trim((string) $cityMunicipality) !== ''
+                    ? $cityMunicipality
+                    : ($subayRow->city_municipality ?? null);
+                $region = trim((string) $region) !== '' ? $region : ($subayRow->region ?? null);
+            }
+        }
+
+        if (!$this->userCanAccessLocation(Auth::user(), $province, $cityMunicipality, $region, $project->office)) {
+            abort(403);
+        }
     }
 
     private function getProjectFormOptions(): array
@@ -70,6 +251,18 @@ class LocallyFundedProjectController extends Controller
         ];
 
         return compact('provinces', 'provinceMunicipalities', 'fundSources', 'fundingYears', 'procurementTypes', 'statusOptions');
+    }
+
+    private function applyLocallyFundedSourceScope($query, string $sourceExpression): void
+    {
+        $query->where(function ($subQuery) use ($sourceExpression) {
+            $subQuery->whereRaw('UPPER(TRIM(COALESCE(' . $sourceExpression . ', ""))) IN (?, ?, ?, ?)', [
+                'SBDP',
+                'CMGP',
+                'GEF',
+                'SAFPB',
+            ])->orWhereRaw('UPPER(TRIM(COALESCE(' . $sourceExpression . ', ""))) LIKE ?', ['%FALGU%']);
+        });
     }
 
     private function mergeCleanCurrencyInputs(Request $request): void
@@ -249,7 +442,6 @@ class LocallyFundedProjectController extends Controller
             }
 
             $actorId = (int) Auth::id();
-            $actorAgency = strtoupper(trim((string) ($actor->agency ?? '')));
             $actorName = trim((string) ($actor->fname ?? '') . ' ' . (string) ($actor->lname ?? ''));
             if ($actorName === '') {
                 $actorName = 'A user';
@@ -271,69 +463,48 @@ class LocallyFundedProjectController extends Controller
                 $projectDescriptor .= ' - ' . $projectProvince;
             }
 
-            $baseMessage = sprintf(
-                '%s %s for %s.',
-                $actorName,
-                trim($activityLabel),
-                $projectDescriptor
-            );
-
-            $recipientIds = collect();
-
             $targetProvince = trim((string) ($actor->province ?? ''));
             if ($targetProvince === '') {
                 $targetProvince = $projectProvince;
             }
 
-            if ($notifyProvinceDilgForLgu && $actorAgency === 'LGU' && $targetProvince !== '') {
-                $provinceDilgRecipients = User::query()
-                    ->whereRaw('UPPER(TRIM(COALESCE(agency, ""))) = ?', ['DILG'])
-                    ->whereRaw('LOWER(TRIM(COALESCE(province, ""))) = ?', [strtolower($targetProvince)])
-                    ->whereRaw('LOWER(TRIM(COALESCE(province, ""))) <> ?', ['regional office'])
-                    ->where('status', 'active')
-                    ->pluck('idno');
+            $url = route('locally-funded-project.show', $project);
+            $notificationService = app(InterventionNotificationService::class);
 
-                $recipientIds = $recipientIds->merge($provinceDilgRecipients);
-            }
+            if ($actor->isLguScopedUser() && $targetProvince !== '') {
+                $message = sprintf(
+                    '%s %s for %s and it is awaiting DILG Provincial Office review.',
+                    $actorName,
+                    trim($activityLabel),
+                    $projectDescriptor
+                );
 
-            $regionalRecipients = User::query()
-                ->whereRaw('UPPER(TRIM(COALESCE(agency, ""))) = ?', ['DILG'])
-                ->where('status', 'active')
-                ->where(function ($query) {
-                    $query->whereRaw('LOWER(TRIM(COALESCE(province, ""))) = ?', ['regional office'])
-                        ->orWhereRaw('LOWER(TRIM(COALESCE(office, ""))) LIKE ?', ['%regional office%']);
-                })
-                ->pluck('idno');
+                $notificationService->notifyProvincialDilg(
+                    $targetProvince,
+                    $actorId,
+                    $message,
+                    $url,
+                    'locally-funded-update'
+                );
 
-            $recipientIds = $recipientIds
-                ->merge($regionalRecipients)
-                ->filter(function ($recipientId) use ($actorId) {
-                    return (int) $recipientId !== $actorId;
-                })
-                ->unique()
-                ->values();
-
-            if ($recipientIds->isEmpty()) {
                 return;
             }
 
-            $url = route('locally-funded-project.show', $project);
-            $now = now();
+            if ($actor->isDilgUser() && !$actor->isRegionalOfficeAssignment()) {
+                $message = sprintf(
+                    '%s %s for %s and it is awaiting DILG Regional Office review.',
+                    $actorName,
+                    trim($activityLabel),
+                    $projectDescriptor
+                );
 
-            $rows = $recipientIds->map(function ($recipientId) use ($baseMessage, $url, $now) {
-                return [
-                    'user_id' => (int) $recipientId,
-                    'message' => $baseMessage,
-                    'url' => $url,
-                    'document_type' => 'locally-funded-update',
-                    'quarter' => null,
-                    'read_at' => null,
-                    'created_at' => $now,
-                    'updated_at' => $now,
-                ];
-            })->all();
-
-            DB::table('tbnotifications')->insert($rows);
+                $notificationService->notifyRegionalDilg(
+                    $actorId,
+                    $message,
+                    $url,
+                    'locally-funded-update'
+                );
+            }
         } catch (\Throwable $error) {
             Log::warning('Failed to create locally funded update notifications.', [
                 'project_id' => $project->id ?? null,
@@ -541,24 +712,6 @@ class LocallyFundedProjectController extends Controller
         $forceFundSource = '';
         $currentYear = now()->year;
         $currentMonth = now()->month;
-        $user = Auth::user();
-        $agency = strtoupper(trim((string) $user->agency));
-        $province = trim((string) $user->province);
-        $office = trim((string) $user->office);
-        $region = trim((string) $user->region);
-        $provinceLower = strtolower($province);
-        $officeLower = strtolower($office);
-        $regionLower = strtolower($region);
-        $officeBaseLower = trim((string) preg_replace('/,.*$/', '', $officeLower));
-        $officeComparableLower = trim((string) preg_replace('/^(municipality|city)\s+of\s+/i', '', $officeBaseLower));
-        $isRegionalOfficeUser = $user->isRegionalUser()
-            || (
-                $agency === 'DILG'
-                && (
-                    str_contains($provinceLower, 'regional office')
-                    || str_contains($officeLower, 'regional office')
-                )
-            );
 
         if (!Schema::hasTable('subay_project_profiles')) {
             $options = $this->getProjectFormOptions();
@@ -636,57 +789,16 @@ class LocallyFundedProjectController extends Controller
             });
         }
 
-        $subayCityComparableExpression = "TRIM(REPLACE(REPLACE(LOWER(SUBSTRING_INDEX(COALESCE(spp.city_municipality, ''), ',', 1)), 'municipality of ', ''), 'city of ', ''))";
-        $applyOfficeScopeToSubay = function ($query) use ($officeLower, $officeComparableLower, $subayCityComparableExpression) {
-            if ($officeLower === '') {
-                return;
-            }
+        $projectProvinceExpression = 'COALESCE(lfp.province, spp.province)';
+        $projectCityExpression = 'COALESCE(lfp.city_municipality, spp.city_municipality)';
+        $projectRegionExpression = 'COALESCE(lfp.region, spp.region)';
 
-            $officeNeedle = $officeComparableLower !== '' ? $officeComparableLower : $officeLower;
-
-            $query->where(function ($subQuery) use ($officeLower, $officeNeedle, $subayCityComparableExpression) {
-                $subQuery->whereRaw('LOWER(TRIM(COALESCE(spp.city_municipality, ""))) = ?', [$officeLower])
-                    ->orWhereRaw("{$subayCityComparableExpression} = ?", [$officeNeedle]);
-            });
-        };
-
-        // Superadmins should see the full listing regardless of their profile geography.
-        if (!$user->isSuperAdmin()) {
-            // Filter based on the user's hierarchical role and assigned geography.
-            if ($user->isLguUser() || $agency === 'LGU') {
-                if ($office !== '') {
-                    if ($province !== '') {
-                        $query->whereRaw('LOWER(TRIM(COALESCE(spp.province, ""))) = ?', [$provinceLower]);
-                        $applyOfficeScopeToSubay($query);
-                    } else {
-                        $applyOfficeScopeToSubay($query);
-                    }
-                } elseif ($province !== '') {
-                    // If no office is specified for LGU, show their province.
-                    $query->whereRaw('LOWER(TRIM(COALESCE(spp.province, ""))) = ?', [$provinceLower]);
-                }
-            } elseif ($user->isProvincialUser()) {
-                if ($province !== '') {
-                    $query->whereRaw('LOWER(TRIM(COALESCE(spp.province, ""))) = ?', [$provinceLower]);
-                } elseif ($region !== '') {
-                    $query->whereRaw('LOWER(TRIM(COALESCE(spp.region, ""))) = ?', [$regionLower]);
-                }
-            } elseif ($user->isRegionalUser()) {
-                if ($region !== '') {
-                    $query->whereRaw('LOWER(TRIM(COALESCE(spp.region, ""))) = ?', [$regionLower]);
-                }
-            } elseif ($agency === 'DILG') {
-                if ($isRegionalOfficeUser) {
-                    if ($region !== '') {
-                        $query->whereRaw('LOWER(TRIM(COALESCE(spp.region, ""))) = ?', [$regionLower]);
-                    }
-                } elseif ($province !== '') {
-                    $query->whereRaw('LOWER(TRIM(COALESCE(spp.province, ""))) = ?', [$provinceLower]);
-                } elseif ($region !== '') {
-                    $query->whereRaw('LOWER(TRIM(COALESCE(spp.region, ""))) = ?', [$regionLower]);
-                }
-            }
-        }
+        $this->applyUserScopeToLocationQuery(
+            $query,
+            $projectProvinceExpression,
+            $projectCityExpression,
+            $projectRegionExpression
+        );
 
         $select = [
             'spp.project_code',
@@ -767,10 +879,31 @@ class LocallyFundedProjectController extends Controller
             $filters['fund_source'] = '';
         }
 
-        $query->whereRaw(
-            "UPPER(TRIM(COALESCE(lfp.fund_source, spp.program, ''))) <> ?",
-            ['SGLGIF']
-        );
+        $this->applyLocallyFundedSourceScope($query, 'COALESCE(lfp.fund_source, spp.program)');
+
+        $scopedLocationOptionsQuery = clone $query;
+
+        $scopedProvinceOptions = (clone $scopedLocationOptionsQuery)
+            ->selectRaw('TRIM(COALESCE(' . $projectProvinceExpression . ", '')) as province")
+            ->whereRaw('TRIM(COALESCE(' . $projectProvinceExpression . ", '')) <> ''")
+            ->distinct()
+            ->orderBy('province')
+            ->pluck('province')
+            ->values()
+            ->all();
+
+        $scopedProvinceMunicipalities = (clone $scopedLocationOptionsQuery)
+            ->selectRaw('TRIM(COALESCE(' . $projectProvinceExpression . ", '')) as province")
+            ->selectRaw('TRIM(COALESCE(' . $projectCityExpression . ", '')) as city_municipality")
+            ->whereRaw('TRIM(COALESCE(' . $projectProvinceExpression . ", '')) <> ''")
+            ->whereRaw('TRIM(COALESCE(' . $projectCityExpression . ", '')) <> ''")
+            ->distinct()
+            ->orderBy('province')
+            ->orderBy('city_municipality')
+            ->get()
+            ->groupBy('province')
+            ->map(fn ($rows) => $rows->pluck('city_municipality')->filter()->values()->all())
+            ->toArray();
 
         if ($filters['project_code'] !== '') {
             $projectCodeKeyword = '%' . strtolower($filters['project_code']) . '%';
@@ -783,9 +916,9 @@ class LocallyFundedProjectController extends Controller
                 $subQuery
                     ->whereRaw('LOWER(spp.project_code) LIKE ?', [$keyword])
                     ->orWhereRaw('LOWER(spp.project_title) LIKE ?', [$keyword])
-                    ->orWhereRaw('LOWER(spp.province) LIKE ?', [$keyword])
-                    ->orWhereRaw('LOWER(spp.city_municipality) LIKE ?', [$keyword])
-                    ->orWhereRaw('LOWER(spp.barangay) LIKE ?', [$keyword])
+                    ->orWhereRaw('LOWER(TRIM(COALESCE(lfp.province, spp.province, ""))) LIKE ?', [$keyword])
+                    ->orWhereRaw('LOWER(TRIM(COALESCE(lfp.city_municipality, spp.city_municipality, ""))) LIKE ?', [$keyword])
+                    ->orWhereRaw('LOWER(TRIM(COALESCE(lfp.barangay, spp.barangay, ""))) LIKE ?', [$keyword])
                     ->orWhereRaw('LOWER(COALESCE(lfp.fund_source, spp.program)) LIKE ?', [$keyword])
                     ->orWhereRaw('LOWER(COALESCE(lfp.mode_of_procurement, spp.procurement_type, spp.procurement)) LIKE ?', [$keyword]);
             });
@@ -811,11 +944,11 @@ class LocallyFundedProjectController extends Controller
         }
 
         if ($filters['province'] !== '') {
-            $query->whereRaw('LOWER(TRIM(COALESCE(spp.province, \'\'))) = ?', [strtolower($filters['province'])]);
+            $query->whereRaw('LOWER(TRIM(COALESCE(lfp.province, spp.province, \'\'))) = ?', [strtolower($filters['province'])]);
         }
 
         if ($filters['city'] !== '') {
-            $query->whereRaw('LOWER(TRIM(COALESCE(spp.city_municipality, \'\'))) = ?', [strtolower($filters['city'])]);
+            $query->whereRaw('LOWER(TRIM(COALESCE(lfp.city_municipality, spp.city_municipality, \'\'))) = ?', [strtolower($filters['city'])]);
         }
 
         if ($filters['procurement'] !== '') {
@@ -1098,6 +1231,12 @@ class LocallyFundedProjectController extends Controller
         }
 
         $options = $this->getProjectFormOptions();
+        $options['provinces'] = !empty($scopedProvinceOptions)
+            ? $scopedProvinceOptions
+            : ($options['provinces'] ?? []);
+        $options['provinceMunicipalities'] = !empty($scopedProvinceMunicipalities)
+            ? $scopedProvinceMunicipalities
+            : ($options['provinceMunicipalities'] ?? []);
         $options['fundSources'] = collect($options['fundSources'] ?? [])
             ->reject(function ($source) {
                 return strcasecmp((string) $source, 'SGLGIF') === 0;
@@ -1137,6 +1276,7 @@ class LocallyFundedProjectController extends Controller
 
         $existing = LocallyFundedProject::where('subaybayan_project_code', $projectCode)->first();
         if ($existing) {
+            $this->authorizeLocallyFundedProjectAccess($existing);
             $this->ensureFundUtilizationReport($existing);
             return redirect()->route('locally-funded-project.show', $existing);
         }
@@ -1145,9 +1285,11 @@ class LocallyFundedProjectController extends Controller
             abort(404);
         }
 
-        $subay = DB::table('subay_project_profiles')
-            ->where('project_code', $projectCode)
-            ->first();
+        $subayQuery = DB::table('subay_project_profiles as spp')
+            ->select('spp.*')
+            ->where('spp.project_code', $projectCode);
+        $this->applyUserScopeToLocationQuery($subayQuery, 'spp.province', 'spp.city_municipality', 'spp.region');
+        $subay = $subayQuery->first();
 
         if (!$subay) {
             abort(404);
@@ -1283,6 +1425,7 @@ class LocallyFundedProjectController extends Controller
         } catch (\Illuminate\Database\QueryException $e) {
             $project = LocallyFundedProject::where('subaybayan_project_code', $projectCode)->first();
             if ($project) {
+                $this->authorizeLocallyFundedProjectAccess($project);
                 $this->ensureFundUtilizationReport($project);
                 return redirect()->route('locally-funded-project.show', $project);
             }
@@ -1304,9 +1447,11 @@ class LocallyFundedProjectController extends Controller
             abort(404);
         }
 
-        $project = DB::table('subay_project_profiles')
-            ->where('project_code', $projectCode)
-            ->first();
+        $projectQuery = DB::table('subay_project_profiles as spp')
+            ->select('spp.*')
+            ->where('spp.project_code', $projectCode);
+        $this->applyUserScopeToLocationQuery($projectQuery, 'spp.province', 'spp.city_municipality', 'spp.region');
+        $project = $projectQuery->first();
 
         if (!$project) {
             abort(404);
@@ -1328,6 +1473,8 @@ class LocallyFundedProjectController extends Controller
      */
     public function show(LocallyFundedProject $project)
     {
+        $this->authorizeLocallyFundedProjectAccess($project);
+
         $currentYear = now()->year;
         $currentMonth = now()->month;
         $parseNumericValue = static function ($value): ?float {
@@ -2149,6 +2296,8 @@ class LocallyFundedProjectController extends Controller
 
     public function viewPcrMov(LocallyFundedProject $project)
     {
+        $this->authorizeLocallyFundedProjectAccess($project);
+
         if (!$project->pcr_mov_file_path) {
             abort(404, 'PCR MOV document not found');
         }
@@ -2179,6 +2328,8 @@ class LocallyFundedProjectController extends Controller
      */
     public function edit(LocallyFundedProject $project)
     {
+        $this->authorizeLocallyFundedProjectAccess($project);
+
         // Cordillera Administrative Region (CAR) provinces
         $provinces = [
             'Abra',
@@ -2356,6 +2507,8 @@ class LocallyFundedProjectController extends Controller
      */
     public function update(Request $request, LocallyFundedProject $project)
     {
+        $this->authorizeLocallyFundedProjectAccess($project);
+
         $section = $request->input('section');
         $user = Auth::user();
         $canEditProjectProfile = $user
@@ -3048,6 +3201,8 @@ class LocallyFundedProjectController extends Controller
      */
     public function destroy(LocallyFundedProject $project)
     {
+        $this->authorizeLocallyFundedProjectAccess($project);
+
         $project->delete();
         return redirect()->route('projects.locally-funded')
             ->with('success', 'Locally funded project deleted successfully!');

@@ -255,7 +255,7 @@
                                 <div class="user-preview-access-card">
                                     <div class="user-preview-role-picker-head">
                                         <label class="user-preview-label">Role Classification <span class="user-preview-required">*</span></label>
-                                        <p>Select from the available role classifications. The assigned role is checked below.</p>
+                                        <p>Select from the available role classifications. Changing the role updates access only and does not overwrite the saved agency or location fields.</p>
                                     </div>
                                     <select
                                         id="roleSelect"
@@ -1260,25 +1260,6 @@
                 }
             }
 
-            function syncAgencyWithRole() {
-                if (!roleSelect) {
-                    return;
-                }
-
-                const role = roleSelect.value;
-                let nextAgency = '';
-
-                if (role === 'user_lgu') {
-                    nextAgency = 'LGU';
-                } else if (role === 'user_regional' || role === 'user_provincial') {
-                    nextAgency = 'DILG';
-                }
-
-                if (nextAgency !== '' && agencySelect.value !== nextAgency) {
-                    agencySelect.value = nextAgency;
-                }
-            }
-
             function updateProvinceDropdown(preserveCurrent) {
                 const selectedAgency = agencySelect.value;
                 const currentProvince = preserveCurrent ? provinceSelect.value : '';
@@ -1460,10 +1441,6 @@
             });
 
             roleSelect?.addEventListener('change', function () {
-                syncAgencyWithRole();
-                updatePositionDropdown(false);
-                updateProvinceDropdown(false);
-                updateOfficeDropdown(false);
                 syncRoleOptionState();
                 if (isEditMode) {
                     setPermissionCheckboxes(Array.isArray(permissionsByRole[roleSelect.value]) ? permissionsByRole[roleSelect.value] : []);
@@ -1490,7 +1467,6 @@
                 });
             });
 
-            syncAgencyWithRole();
             syncDependentFields(true);
             setActiveTab('personal');
             setActiveAccessTab('role');

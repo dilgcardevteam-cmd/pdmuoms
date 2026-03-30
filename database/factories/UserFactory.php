@@ -24,8 +24,19 @@ class UserFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => fake()->name(),
-            'email' => fake()->unique()->safeEmail(),
+            'fname' => fake()->firstName(),
+            'lname' => fake()->lastName(),
+            'agency' => 'LGU',
+            'position' => 'Planning Officer',
+            'region' => 'CAR',
+            'province' => 'Benguet',
+            'office' => fake()->city(),
+            'emailaddress' => fake()->unique()->safeEmail(),
+            'mobileno' => '09' . fake()->numerify('#########'),
+            'username' => fake()->unique()->userName(),
+            'role' => \App\Models\User::ROLE_LGU,
+            'status' => 'active',
+            'access' => '',
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\RbisAnnualCertificationDocument;
+use App\Services\InterventionNotificationService;
 use App\Support\InputSanitizer;
 use App\Models\User;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -138,15 +139,13 @@ class RbisAnnualCertificationController extends Controller
             return false;
         }
 
-        $agency = strtoupper(trim((string) $user->agency));
         $userProvince = trim((string) $user->province);
-        $userOffice = trim((string) $user->office);
 
-        if ($agency === 'LGU') {
-            return $userOffice !== '' && $userOffice === $officeName;
+        if ($user->isLguScopedUser()) {
+            return $user->matchesAssignedOffice($officeName);
         }
 
-        if ($agency === 'DILG') {
+        if ($user->isDilgUser()) {
             if ($userProvince === '' || $userProvince === 'Regional Office') {
                 return true;
             }
@@ -435,21 +434,35 @@ class RbisAnnualCertificationController extends Controller
             });
 
             $recipientIds = $recipients->pluck('idno')->merge($relatedUserIds);
-            if (!$isRegionalOffice) {
-                $regionalDilgIds = User::query()
-                    ->whereRaw('UPPER(TRIM(COALESCE(agency, ""))) = ?', ['DILG'])
-                    ->where('status', 'active')
-                    ->where(function ($query) {
-                        $query->whereRaw('LOWER(TRIM(COALESCE(province, ""))) = ?', ['regional office'])
-                            ->orWhereRaw('LOWER(TRIM(COALESCE(office, ""))) LIKE ?', ['%regional office%']);
-                    })
-                    ->pluck('idno');
-                $recipientIds = $recipientIds->merge($regionalDilgIds);
-            }
 
             $actorName = trim((string) ($actor->fname ?? '') . ' ' . (string) ($actor->lname ?? ''));
             if ($actorName === '') {
                 $actorName = 'DILG Regional Office';
+            }
+
+            $url = $targetOffice !== ''
+                ? route('rbis-annual-certification.edit', ['office' => $targetOffice, 'year' => $document->document_year ?: now()->year])
+                : route('rbis-annual-certification.index');
+            $actorId = (int) auth()->id();
+            $notificationService = app(InterventionNotificationService::class);
+
+            if ($action === 'approve' && !$isRegionalOffice) {
+                $message = sprintf(
+                    '%s validated (DILG PO) %s for %s%s and it is awaiting DILG Regional Office validation.',
+                    $actorName,
+                    $this->formatDocumentLabel($document),
+                    $targetOffice !== '' ? $targetOffice : 'the LGU',
+                    $targetProvince !== '' ? ' - ' . $targetProvince : ''
+                );
+
+                $notificationService->notifyRegionalDilg(
+                    $actorId,
+                    $message,
+                    $url,
+                    'rbis-annual-certification'
+                );
+
+                return;
             }
 
             $actionLabel = $action === 'approve'
@@ -469,41 +482,87 @@ class RbisAnnualCertificationController extends Controller
                 $message .= ' Remarks: ' . $remarks;
             }
 
-            $now = now();
+            $notificationService->notifyScopedLgu(
+                $targetProvince,
+                $targetOffice,
+                $recipientIds,
+                $actorId,
+                $message,
+                $url,
+                'rbis-annual-certification'
+            );
+        } catch (\Throwable $error) {
+            Log::warning('Failed to create approval notifications (RBIS).', [
+                'document_id' => $document->id ?? null,
+                'office' => $officeName,
+                'error' => $error->getMessage(),
+            ]);
+        }
+    }
+
+    private function notifyWorkflowUsersOnUpload(RbisAnnualCertificationDocument $document, string $officeName): void
+    {
+        try {
+            $actor = auth()->user();
+            if (!$actor) {
+                return;
+            }
+
+            $targetOffice = trim((string) $officeName);
+            $targetProvince = trim((string) ($document->province ?? ''));
+            if ($targetProvince === '' && $targetOffice !== '') {
+                $targetProvince = trim((string) ($this->findProvinceByOffice($targetOffice) ?? ''));
+            }
+
+            if ($targetOffice === '' && $targetProvince === '') {
+                return;
+            }
+
+            $actorName = $actor->fullName() ?: 'A user';
             $url = $targetOffice !== ''
                 ? route('rbis-annual-certification.edit', ['office' => $targetOffice, 'year' => $document->document_year ?: now()->year])
                 : route('rbis-annual-certification.index');
-            $actorId = (int) auth()->id();
+            $actorId = (int) ($actor->idno ?? auth()->id());
+            $notificationService = app(InterventionNotificationService::class);
 
-            $rows = collect($recipientIds)
-                ->map(function ($id) {
-                    return (int) $id;
-                })
-                ->filter(function ($id) use ($actorId) {
-                    return $id > 0 && $id !== $actorId;
-                })
-                ->unique()
-                ->values()
-                ->map(function ($recipientId) use ($message, $url, $now) {
-                    return [
-                        'user_id' => $recipientId,
-                        'message' => $message,
-                        'url' => $url,
-                        'document_type' => 'rbis-annual-certification',
-                        'quarter' => null,
-                        'read_at' => null,
-                        'created_at' => $now,
-                        'updated_at' => $now,
-                    ];
-                })
-                ->values()
-                ->all();
+            if ($actor->isLguScopedUser() && $targetProvince !== '') {
+                $message = sprintf(
+                    '%s uploaded %s for %s%s and it is awaiting DILG Provincial Office validation.',
+                    $actorName,
+                    $this->formatDocumentLabel($document),
+                    $targetOffice !== '' ? $targetOffice : 'the LGU',
+                    $targetProvince !== '' ? ' - ' . $targetProvince : ''
+                );
 
-            if (!empty($rows)) {
-                DB::table('tbnotifications')->insert($rows);
+                $notificationService->notifyProvincialDilg(
+                    $targetProvince,
+                    $actorId,
+                    $message,
+                    $url,
+                    'rbis-annual-certification'
+                );
+
+                return;
+            }
+
+            if ($actor->isDilgUser() && !$actor->isRegionalOfficeAssignment()) {
+                $message = sprintf(
+                    '%s uploaded %s for %s%s and it is awaiting DILG Regional Office validation.',
+                    $actorName,
+                    $this->formatDocumentLabel($document),
+                    $targetOffice !== '' ? $targetOffice : 'the LGU',
+                    $targetProvince !== '' ? ' - ' . $targetProvince : ''
+                );
+
+                $notificationService->notifyRegionalDilg(
+                    $actorId,
+                    $message,
+                    $url,
+                    'rbis-annual-certification'
+                );
             }
         } catch (\Throwable $error) {
-            Log::warning('Failed to create approval notifications (RBIS).', [
+            Log::warning('Failed to create upload notifications (RBIS).', [
                 'document_id' => $document->id ?? null,
                 'office' => $officeName,
                 'error' => $error->getMessage(),
@@ -522,11 +581,11 @@ class RbisAnnualCertificationController extends Controller
         }
 
         $user = auth()->user();
-        if ($user && $user->agency === 'LGU' && !empty($user->office)) {
+        if ($user && $user->isLguScopedUser() && $user->normalizedOffice() !== '') {
             $officeRows = array_values(array_filter($officeRows, function ($row) use ($user) {
-                return $row['city_municipality'] === $user->office;
+                return $user->matchesAssignedOffice((string) ($row['city_municipality'] ?? ''));
             }));
-        } elseif ($user && $user->agency === 'DILG' && !empty($user->province) && $user->province !== 'Regional Office') {
+        } elseif ($user && $user->isDilgUser() && !empty($user->province) && $user->province !== 'Regional Office') {
             $officeRows = array_values(array_filter($officeRows, function ($row) use ($user) {
                 return $row['province'] === $user->province;
             }));
@@ -687,6 +746,8 @@ class RbisAnnualCertificationController extends Controller
         if ($isMountainProvinceDilgUploader) {
             $this->logActivity($officeName, 'validate_po', 'Validated (DILG PO)', $document, null, $uploadedAt);
         }
+
+        $this->notifyWorkflowUsersOnUpload($document, $officeName);
 
         return back()->with('success', 'Annual certification document uploaded successfully.');
     }

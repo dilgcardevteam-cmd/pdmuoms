@@ -586,22 +586,16 @@ class SglgifProjectController extends Controller
             return $query;
         }
 
-        $agency = strtoupper(trim((string) $user->agency));
         $province = trim((string) $user->province);
         $office = trim((string) $user->office);
         $region = trim((string) $user->region);
 
-        $provinceLower = mb_strtolower($province);
-        $officeLower = mb_strtolower($office);
-        $regionLower = mb_strtolower($region);
-        $officeBaseLower = trim((string) preg_replace('/,.*$/', '', $officeLower));
-        $officeComparableLower = trim((string) preg_replace('/^(municipality|city)\s+of\s+/i', '', $officeBaseLower));
-        $cityComparableExpression = "TRIM(REPLACE(REPLACE(LOWER(SUBSTRING_INDEX(COALESCE(spp.city_municipality, ''), ',', 1)), 'municipality of ', ''), 'city of ', ''))";
-        $isRegionalOfficeUser = $agency === 'DILG'
-            && (
-                str_contains($provinceLower, 'regional office')
-                || str_contains($officeLower, 'regional office')
-            );
+        $provinceLower = $user->normalizedProvince();
+        $officeLower = $user->normalizedOffice();
+        $regionLower = $user->normalizedRegion();
+        $officeComparableLower = $user->normalizedOfficeComparable();
+        $cityComparableExpression = "TRIM(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(SUBSTRING_INDEX(COALESCE(spp.city_municipality, ''), ',', 1)), '(capital)', ''), 'municipality of ', ''), 'city of ', ''), ' municipality', ''), ' city', ''), '  ', ' '))";
+        $isRegionalOfficeUser = $user->isRegionalOfficeAssignment();
 
         $applyOfficeScope = function ($query) use ($officeLower, $officeComparableLower, $cityComparableExpression) {
             if ($officeLower === '') {
@@ -617,7 +611,7 @@ class SglgifProjectController extends Controller
             });
         };
 
-        if ($agency === 'LGU') {
+        if ($user->isLguScopedUser()) {
             if ($office !== '') {
                 if ($province !== '') {
                     $query->whereRaw('LOWER(TRIM(COALESCE(spp.province, ""))) = ?', [$provinceLower]);
@@ -632,7 +626,7 @@ class SglgifProjectController extends Controller
             return $query;
         }
 
-        if ($agency !== 'DILG') {
+        if (!$user->isDilgUser()) {
             return $query;
         }
 

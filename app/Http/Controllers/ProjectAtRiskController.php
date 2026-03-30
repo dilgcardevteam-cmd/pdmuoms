@@ -690,22 +690,16 @@ class ProjectAtRiskController extends Controller
             return;
         }
 
-        $agency = strtoupper(trim((string) $user->agency));
         $province = trim((string) $user->province);
         $office = trim((string) $user->office);
         $region = trim((string) $user->region);
-        $provinceLower = strtolower($province);
-        $officeLower = strtolower($office);
-        $regionLower = strtolower($region);
-        $officeBaseLower = trim((string) preg_replace('/,.*$/', '', $officeLower));
-        $officeComparableLower = trim((string) preg_replace('/^(municipality|city)\s+of\s+/i', '', $officeBaseLower));
-        $isRegionalOfficeUser = $agency === 'DILG'
-            && (
-                str_contains($provinceLower, 'regional office')
-                || str_contains($officeLower, 'regional office')
-            );
+        $provinceLower = $user->normalizedProvince();
+        $officeLower = $user->normalizedOffice();
+        $regionLower = $user->normalizedRegion();
+        $officeComparableLower = $user->normalizedOfficeComparable();
+        $isRegionalOfficeUser = $user->isRegionalOfficeAssignment();
 
-        if ($agency === 'LGU') {
+        if ($user->isLguScopedUser()) {
             if ($province !== '') {
                 $query->whereRaw('LOWER(TRIM(COALESCE(province, ""))) = ?', [$provinceLower]);
             }
@@ -716,7 +710,7 @@ class ProjectAtRiskController extends Controller
             return;
         }
 
-        if ($agency !== 'DILG') {
+        if (!$user->isDilgUser()) {
             return;
         }
 
@@ -741,7 +735,7 @@ class ProjectAtRiskController extends Controller
         }
 
         $officeNeedle = $officeComparableLower !== '' ? $officeComparableLower : $officeLower;
-        $cityComparableExpression = "TRIM(REPLACE(REPLACE(LOWER(SUBSTRING_INDEX(COALESCE(city_municipality, ''), ',', 1)), 'municipality of ', ''), 'city of ', ''))";
+        $cityComparableExpression = "TRIM(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(SUBSTRING_INDEX(COALESCE(city_municipality, ''), ',', 1)), '(capital)', ''), 'municipality of ', ''), 'city of ', ''), ' municipality', ''), ' city', ''), '  ', ' '))";
 
         $query->where(function ($subQuery) use ($officeLower, $officeNeedle, $cityComparableExpression) {
             $subQuery->whereRaw('LOWER(TRIM(COALESCE(city_municipality, ""))) = ?', [$officeLower])

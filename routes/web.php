@@ -246,20 +246,16 @@ Route::middleware(['auth'])->group(function () {
             }
 
             $user = Auth::user();
-            $agency = strtoupper(trim((string) $user->agency));
             $province = trim((string) $user->province);
             $office = trim((string) $user->office);
             $region = trim((string) $user->region);
-            $provinceLower = strtolower($province);
-            $officeLower = strtolower($office);
-            $regionLower = strtolower($region);
-            $officeBaseLower = trim((string) preg_replace('/,.*$/', '', $officeLower));
-            $officeComparableLower = trim((string) preg_replace('/^(municipality|city)\s+of\s+/i', '', $officeBaseLower));
-            $isRegionalOfficeUser = $agency === 'DILG'
-                && (
-                    str_contains($provinceLower, 'regional office')
-                    || str_contains($officeLower, 'regional office')
-                );
+            $provinceLower = $user->normalizedProvince();
+            $officeLower = $user->normalizedOffice();
+            $regionLower = $user->normalizedRegion();
+            $officeComparableLower = $user->normalizedOfficeComparable();
+            $isLguScopedUser = $user->isLguScopedUser();
+            $isDilgUser = $user->isDilgUser();
+            $isRegionalOfficeUser = $user->isRegionalOfficeAssignment();
 
             $requestedPrograms = request()->input('program', []);
             if (!is_array($requestedPrograms)) {
@@ -296,7 +292,7 @@ Route::middleware(['auth'])->group(function () {
                 'project_statuses' => collect(),
             ];
 
-            $subayCityComparableExpression = "TRIM(REPLACE(REPLACE(LOWER(SUBSTRING_INDEX(COALESCE(spp.city_municipality, ''), ',', 1)), 'municipality of ', ''), 'city of ', ''))";
+            $subayCityComparableExpression = "TRIM(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(SUBSTRING_INDEX(COALESCE(spp.city_municipality, ''), ',', 1)), '(capital)', ''), 'municipality of ', ''), 'city of ', ''), ' municipality', ''), ' city', ''), '  ', ' '))";
             $applyOfficeScopeToSubay = function ($query) use ($officeLower, $officeComparableLower, $subayCityComparableExpression) {
                 if ($officeLower === '') {
                     return;
@@ -311,16 +307,17 @@ Route::middleware(['auth'])->group(function () {
             };
 
             $applyRoleScopeToSubay = function ($query) use (
-                $agency,
                 $province,
                 $office,
                 $region,
                 $provinceLower,
                 $regionLower,
+                $isLguScopedUser,
+                $isDilgUser,
                 $isRegionalOfficeUser,
                 $applyOfficeScopeToSubay
             ) {
-                if ($agency === 'LGU') {
+                if ($isLguScopedUser) {
                     if ($office !== '') {
                         if ($province !== '') {
                             $query->whereRaw('LOWER(TRIM(COALESCE(spp.province, ""))) = ?', [$provinceLower]);
@@ -331,7 +328,7 @@ Route::middleware(['auth'])->group(function () {
                     } elseif ($province !== '') {
                         $query->whereRaw('LOWER(TRIM(COALESCE(spp.province, ""))) = ?', [$provinceLower]);
                     }
-                } elseif ($agency === 'DILG') {
+                } elseif ($isDilgUser) {
                     if ($isRegionalOfficeUser) {
                         // Regional Office users can see all projects.
                     } elseif ($province !== '') {
@@ -1262,8 +1259,8 @@ Route::middleware(['auth'])->group(function () {
                 }
             } else {
                 $fallbackQuery = LocallyFundedProject::query();
-                $fallbackCityComparableExpression = "TRIM(REPLACE(REPLACE(LOWER(SUBSTRING_INDEX(COALESCE(city_municipality, ''), ',', 1)), 'municipality of ', ''), 'city of ', ''))";
-                $fallbackOfficeComparableExpression = "TRIM(REPLACE(REPLACE(LOWER(SUBSTRING_INDEX(COALESCE(office, ''), ',', 1)), 'municipality of ', ''), 'city of ', ''))";
+                $fallbackCityComparableExpression = "TRIM(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(SUBSTRING_INDEX(COALESCE(city_municipality, ''), ',', 1)), '(capital)', ''), 'municipality of ', ''), 'city of ', ''), ' municipality', ''), ' city', ''), '  ', ' '))";
+                $fallbackOfficeComparableExpression = "TRIM(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(SUBSTRING_INDEX(COALESCE(office, ''), ',', 1)), '(capital)', ''), 'municipality of ', ''), 'city of ', ''), ' municipality', ''), ' city', ''), '  ', ' '))";
                 $applyOfficeScopeToFallback = function ($query) use (
                     $officeLower,
                     $officeComparableLower,
@@ -1289,7 +1286,7 @@ Route::middleware(['auth'])->group(function () {
                     });
                 };
 
-                if ($agency === 'LGU') {
+                if ($isLguScopedUser) {
                     if ($office !== '') {
                         if ($province !== '') {
                             $fallbackQuery->whereRaw('LOWER(TRIM(COALESCE(province, ""))) = ?', [$provinceLower]);
@@ -1300,7 +1297,7 @@ Route::middleware(['auth'])->group(function () {
                     } elseif ($province !== '') {
                         $fallbackQuery->whereRaw('LOWER(TRIM(COALESCE(province, ""))) = ?', [$provinceLower]);
                     }
-                } elseif ($agency === 'DILG') {
+                } elseif ($isDilgUser) {
                     if ($isRegionalOfficeUser) {
                         // Regional Office users can see all projects
                     } elseif ($province !== '') {
@@ -1566,6 +1563,45 @@ Route::middleware(['auth'])->group(function () {
     // Change password routes
     Route::get('/change-password', [App\Http\Controllers\ChangePasswordController::class, 'show'])->name('password.show');
     Route::put('/change-password', [App\Http\Controllers\ChangePasswordController::class, 'update'])->name('password.update');
+
+    Route::prefix('ticketing')->name('ticketing.')->middleware('crud_permission:ticketing_system,view')->group(function () {
+        Route::get('/dashboard', [App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
+        Route::get('/tickets/{ticket}', [App\Http\Controllers\TicketController::class, 'show'])->name('show');
+        Route::get('/tickets/{ticket}/attachments/{attachment}', [App\Http\Controllers\TicketController::class, 'downloadAttachment'])->name('attachments.download');
+        Route::get('/tickets/{ticket}/history', [App\Http\Controllers\TicketHistoryController::class, 'index'])->name('history.index');
+        Route::post('/tickets/{ticket}/comments', [App\Http\Controllers\TicketCommentController::class, 'store'])->name('comments.store');
+
+        Route::middleware('role:lgu')->group(function () {
+            Route::get('/submit', [App\Http\Controllers\TicketController::class, 'create'])->name('create');
+            Route::post('/submit', [App\Http\Controllers\TicketController::class, 'store'])->name('store');
+            Route::get('/my-tickets', [App\Http\Controllers\TicketController::class, 'myTickets'])->name('my-tickets');
+            Route::get('/track', [App\Http\Controllers\TicketController::class, 'track'])->name('track');
+        });
+
+        Route::prefix('province')->name('province.')->middleware('role:province')->group(function () {
+            Route::get('/tickets', [App\Http\Controllers\TicketController::class, 'provincialIndex'])->name('index');
+            Route::post('/tickets/{ticket}/accept', [App\Http\Controllers\TicketController::class, 'provinceAccept'])->name('accept');
+            Route::post('/tickets/{ticket}/start-review', [App\Http\Controllers\TicketController::class, 'provinceStartReview'])->name('start-review');
+            Route::post('/tickets/{ticket}/resolve', [App\Http\Controllers\TicketController::class, 'provinceResolve'])->name('resolve');
+            Route::post('/tickets/{ticket}/escalate', [App\Http\Controllers\TicketController::class, 'provinceEscalate'])->name('escalate');
+        });
+
+        Route::prefix('region')->name('region.')->middleware('role:region')->group(function () {
+            Route::get('/tickets', [App\Http\Controllers\TicketController::class, 'regionalIndex'])->name('index');
+            Route::post('/tickets/{ticket}/accept', [App\Http\Controllers\TicketController::class, 'regionAccept'])->name('accept');
+            Route::post('/tickets/{ticket}/start-review', [App\Http\Controllers\TicketController::class, 'regionStartReview'])->name('start-review');
+            Route::post('/tickets/{ticket}/resolve', [App\Http\Controllers\TicketController::class, 'regionResolve'])->name('resolve');
+            Route::post('/tickets/{ticket}/forward', [App\Http\Controllers\TicketController::class, 'regionForward'])->name('forward');
+        });
+
+        Route::prefix('admin')->name('admin.')->middleware('role:admin')->group(function () {
+            Route::get('/tickets', [App\Http\Controllers\AdminController::class, 'index'])->name('index');
+            Route::post('/categories', [App\Http\Controllers\AdminController::class, 'storeCategory'])->name('categories.store');
+            Route::put('/categories/{category}', [App\Http\Controllers\AdminController::class, 'updateCategory'])->name('categories.update');
+            Route::delete('/categories/{category}', [App\Http\Controllers\AdminController::class, 'destroyCategory'])->name('categories.destroy');
+            Route::post('/tickets/{ticket}/close', [App\Http\Controllers\AdminController::class, 'closeTicket'])->name('close');
+        });
+    });
     
     // User Management routes (superadmin only)
     Route::middleware('superadmin')->group(function () {

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\PdNoPbbmMonthlyDocument;
+use App\Services\InterventionNotificationService;
 use App\Support\InputSanitizer;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -123,15 +124,13 @@ class PdNoPbbmMonthlyReportController extends Controller
             return false;
         }
 
-        $agency = strtoupper(trim((string) $user->agency));
         $userProvince = trim((string) $user->province);
-        $userOffice = trim((string) $user->office);
 
-        if ($agency === 'LGU') {
-            return $userOffice !== '' && $userOffice === $officeName;
+        if ($user->isLguScopedUser()) {
+            return $user->matchesAssignedOffice($officeName);
         }
 
-        if ($agency === 'DILG') {
+        if ($user->isDilgUser()) {
             if ($userProvince === '' || $userProvince === 'Regional Office') {
                 return true;
             }
@@ -360,15 +359,11 @@ class PdNoPbbmMonthlyReportController extends Controller
         ]);
     }
 
-    private function notifyProvincialDilgUsersOnUpload(PdNoPbbmMonthlyDocument $document): void
+    private function notifyWorkflowUsersOnUpload(PdNoPbbmMonthlyDocument $document): void
     {
         try {
-            if (!Schema::hasTable('tbnotifications')) {
-                return;
-            }
-
             $actor = auth()->user();
-            if (!$actor || strtoupper(trim((string) ($actor->agency ?? ''))) !== 'LGU') {
+            if (!$actor) {
                 return;
             }
 
@@ -382,65 +377,58 @@ class PdNoPbbmMonthlyReportController extends Controller
                 return;
             }
 
-            $provincialDilgIds = User::query()
-                ->whereRaw('UPPER(TRIM(COALESCE(agency, ""))) = ?', ['DILG'])
-                ->where('status', 'active')
-                ->whereRaw('LOWER(TRIM(COALESCE(province, ""))) = ?', [strtolower($targetProvince)])
-                ->whereRaw('LOWER(TRIM(COALESCE(province, ""))) <> ?', ['regional office'])
-                ->pluck('idno');
-
-            if ($provincialDilgIds->isEmpty()) {
-                return;
-            }
-
             $actorName = trim((string) ($actor->fname ?? '') . ' ' . (string) ($actor->lname ?? ''));
             if ($actorName === '') {
-                $actorName = 'LGU User';
+                $actorName = 'A user';
             }
-
-            $message = sprintf(
-                '%s uploaded %s for %s%s and is awaiting DILG Provincial Office validation.',
-                $actorName,
-                $this->formatDocumentLabel($document),
-                $targetOffice !== '' ? $targetOffice : 'the LGU',
-                $targetProvince !== '' ? ' - ' . $targetProvince : ''
-            );
 
             $now = now();
             $url = $targetOffice !== ''
                 ? route('reports.monthly.pd-no-pbbm-2025-1572-1573.edit', ['office' => $targetOffice, 'year' => $document->year ?: now()->year])
                 : route('reports.monthly.pd-no-pbbm-2025-1572-1573');
             $actorId = (int) auth()->id();
+            $notificationService = app(InterventionNotificationService::class);
 
-            $rows = $provincialDilgIds
-                ->map(function ($id) {
-                    return (int) $id;
-                })
-                ->filter(function ($id) use ($actorId) {
-                    return $id > 0 && $id !== $actorId;
-                })
-                ->unique()
-                ->values()
-                ->map(function ($recipientId) use ($message, $url, $document, $now) {
-                    return [
-                        'user_id' => $recipientId,
-                        'message' => $message,
-                        'url' => $url,
-                        'document_type' => 'pd-no-pbbm-2025-1572-1573',
-                        'quarter' => $document->month ?? null,
-                        'read_at' => null,
-                        'created_at' => $now,
-                        'updated_at' => $now,
-                    ];
-                })
-                ->values()
-                ->all();
+            if ($actor->isLguScopedUser()) {
+                $message = sprintf(
+                    '%s uploaded %s for %s%s and it is awaiting DILG Provincial Office validation.',
+                    $actorName,
+                    $this->formatDocumentLabel($document),
+                    $targetOffice !== '' ? $targetOffice : 'the LGU',
+                    $targetProvince !== '' ? ' - ' . $targetProvince : ''
+                );
 
-            if (!empty($rows)) {
-                DB::table('tbnotifications')->insert($rows);
+                $notificationService->notifyProvincialDilg(
+                    $targetProvince,
+                    $actorId,
+                    $message,
+                    $url,
+                    'pd-no-pbbm-2025-1572-1573',
+                    $document->month ?? null
+                );
+
+                return;
+            }
+
+            if ($actor->isDilgUser() && !$actor->isRegionalOfficeAssignment()) {
+                $message = sprintf(
+                    '%s uploaded %s for %s%s and it is awaiting DILG Regional Office validation.',
+                    $actorName,
+                    $this->formatDocumentLabel($document),
+                    $targetOffice !== '' ? $targetOffice : 'the LGU',
+                    $targetProvince !== '' ? ' - ' . $targetProvince : ''
+                );
+
+                $notificationService->notifyRegionalDilg(
+                    $actorId,
+                    $message,
+                    $url,
+                    'pd-no-pbbm-2025-1572-1573',
+                    $document->month ?? null
+                );
             }
         } catch (\Throwable $error) {
-            Log::warning('Failed to create upload notifications for DILG Provincial Office (PD No. PBBM-2025-1572-1573).', [
+            Log::warning('Failed to create workflow upload notifications (PD No. PBBM-2025-1572-1573).', [
                 'document_id' => $document->id ?? null,
                 'office' => $document->office ?? null,
                 'error' => $error->getMessage(),
@@ -529,21 +517,37 @@ class PdNoPbbmMonthlyReportController extends Controller
                     ->whereRaw('LOWER(TRIM(COALESCE(province, ""))) <> ?', ['regional office'])
                     ->pluck('idno');
                 $recipientIds = $recipientIds->merge($provincialDilgIds);
-            } elseif (!$isRegionalOffice) {
-                $regionalDilgIds = User::query()
-                    ->whereRaw('UPPER(TRIM(COALESCE(agency, ""))) = ?', ['DILG'])
-                    ->where('status', 'active')
-                    ->where(function ($query) {
-                        $query->whereRaw('LOWER(TRIM(COALESCE(province, ""))) = ?', ['regional office'])
-                            ->orWhereRaw('LOWER(TRIM(COALESCE(office, ""))) LIKE ?', ['%regional office%']);
-                    })
-                    ->pluck('idno');
-                $recipientIds = $recipientIds->merge($regionalDilgIds);
             }
 
             $actorName = trim((string) ($actor->fname ?? '') . ' ' . (string) ($actor->lname ?? ''));
             if ($actorName === '') {
                 $actorName = 'DILG Regional Office';
+            }
+
+            $url = $targetOffice !== ''
+                ? route('reports.monthly.pd-no-pbbm-2025-1572-1573.edit', ['office' => $targetOffice, 'year' => $document->year ?: now()->year])
+                : route('reports.monthly.pd-no-pbbm-2025-1572-1573');
+            $actorId = (int) auth()->id();
+            $notificationService = app(InterventionNotificationService::class);
+
+            if ($action === 'approve' && !$isRegionalOffice) {
+                $message = sprintf(
+                    '%s validated (DILG PO) %s for %s%s and it is awaiting DILG Regional Office validation.',
+                    $actorName,
+                    $this->formatDocumentLabel($document),
+                    $targetOffice !== '' ? $targetOffice : 'the LGU',
+                    $targetProvince !== '' ? ' - ' . $targetProvince : ''
+                );
+
+                $notificationService->notifyRegionalDilg(
+                    $actorId,
+                    $message,
+                    $url,
+                    'pd-no-pbbm-2025-1572-1573',
+                    $document->month ?? null
+                );
+
+                return;
             }
 
             $actionLabel = $action === 'approve'
@@ -563,39 +567,16 @@ class PdNoPbbmMonthlyReportController extends Controller
                 $message .= ' Remarks: ' . $remarks;
             }
 
-            $now = now();
-            $url = $targetOffice !== ''
-                ? route('reports.monthly.pd-no-pbbm-2025-1572-1573.edit', ['office' => $targetOffice, 'year' => $document->year ?: now()->year])
-                : route('reports.monthly.pd-no-pbbm-2025-1572-1573');
-            $actorId = (int) auth()->id();
-
-            $rows = collect($recipientIds)
-                ->map(function ($id) {
-                    return (int) $id;
-                })
-                ->filter(function ($id) use ($actorId) {
-                    return $id > 0 && $id !== $actorId;
-                })
-                ->unique()
-                ->values()
-                ->map(function ($recipientId) use ($message, $url, $document, $now) {
-                    return [
-                        'user_id' => $recipientId,
-                        'message' => $message,
-                        'url' => $url,
-                        'document_type' => 'pd-no-pbbm-2025-1572-1573',
-                        'quarter' => $document->month ?? null,
-                        'read_at' => null,
-                        'created_at' => $now,
-                        'updated_at' => $now,
-                    ];
-                })
-                ->values()
-                ->all();
-
-            if (!empty($rows)) {
-                DB::table('tbnotifications')->insert($rows);
-            }
+            $notificationService->notifyScopedLgu(
+                $targetProvince,
+                $targetOffice,
+                $recipientIds,
+                $actorId,
+                $message,
+                $url,
+                'pd-no-pbbm-2025-1572-1573',
+                $document->month ?? null
+            );
         } catch (\Throwable $error) {
             Log::warning('Failed to create approval notifications (PD No. PBBM-2025-1572-1573).', [
                 'document_id' => $document->id ?? null,
@@ -617,11 +598,11 @@ class PdNoPbbmMonthlyReportController extends Controller
         }
 
         $user = auth()->user();
-        if ($user && $user->agency === 'LGU' && !empty($user->office)) {
+        if ($user && $user->isLguScopedUser() && $user->normalizedOffice() !== '') {
             $officeRows = array_values(array_filter($officeRows, function ($row) use ($user) {
-                return $row['city_municipality'] === $user->office;
+                return $user->matchesAssignedOffice((string) ($row['city_municipality'] ?? ''));
             }));
-        } elseif ($user && $user->agency === 'DILG' && !empty($user->province)) {
+        } elseif ($user && $user->isDilgUser() && !empty($user->province)) {
             $selectedProvince = $request->query('province');
             $userProvince = !empty($selectedProvince) ? $selectedProvince : $user->province;
             if ($userProvince !== 'Regional Office') {
@@ -793,7 +774,7 @@ class PdNoPbbmMonthlyReportController extends Controller
         }
 
         $this->logActivity($officeName, 'upload', 'Uploaded', $document, null, $uploadedAt);
-        $this->notifyProvincialDilgUsersOnUpload($document);
+        $this->notifyWorkflowUsersOnUpload($document);
         if ($isMountainProvinceDilgUploader) {
             $this->logActivity($officeName, 'validate_po', 'Validated (DILG PO)', $document, null, $uploadedAt);
         }

@@ -6,6 +6,7 @@ use App\Notifications\VerifyEmailNotification;
 use App\Support\RolePermissionRegistry;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
@@ -251,6 +252,21 @@ class User extends Authenticatable implements MustVerifyEmail
         ];
     }
 
+    public static function roleAliases(): array
+    {
+        return [
+            'admin' => [self::ROLE_SUPERADMIN],
+            'superadmin' => [self::ROLE_SUPERADMIN],
+            'central' => [self::ROLE_SUPERADMIN],
+            'central_office' => [self::ROLE_SUPERADMIN],
+            'province' => [self::ROLE_PROVINCIAL],
+            'provincial' => [self::ROLE_PROVINCIAL],
+            'region' => [self::ROLE_REGIONAL],
+            'regional' => [self::ROLE_REGIONAL],
+            'lgu' => [self::ROLE_LGU],
+        ];
+    }
+
     public function normalizedRole(): string
     {
         return strtolower(trim((string) $this->role));
@@ -259,6 +275,11 @@ class User extends Authenticatable implements MustVerifyEmail
     public function roleLabel(): string
     {
         return self::roleOptions()[$this->normalizedRole()] ?? ucwords(str_replace('_', ' ', $this->normalizedRole()));
+    }
+
+    public function fullName(): string
+    {
+        return trim(implode(' ', array_filter([$this->fname, $this->lname])));
     }
 
     public function isSuperAdmin(): bool
@@ -279,6 +300,106 @@ class User extends Authenticatable implements MustVerifyEmail
     public function isLguUser(): bool
     {
         return $this->normalizedRole() === self::ROLE_LGU;
+    }
+
+    public function isActive(): bool
+    {
+        return strtolower(trim((string) $this->status)) === 'active';
+    }
+
+    public function isCentralOfficeAdmin(): bool
+    {
+        return $this->isSuperAdmin();
+    }
+
+    public function matchesRoleAlias(string $role): bool
+    {
+        $normalizedAlias = strtolower(trim($role));
+        $allowedRoles = self::roleAliases()[$normalizedAlias] ?? [$normalizedAlias];
+
+        return in_array($this->normalizedRole(), $allowedRoles, true);
+    }
+
+    public function normalizedAgency(): string
+    {
+        return Str::lower(trim((string) $this->agency));
+    }
+
+    public function normalizedRegion(): string
+    {
+        return Str::lower(trim((string) $this->region));
+    }
+
+    public function normalizedRegionComparable(?string $value = null): string
+    {
+        $normalizedValue = Str::lower(trim((string) ($value ?? $this->region)));
+        $normalizedValue = preg_replace('/\([^)]*\)/', ' ', $normalizedValue) ?? $normalizedValue;
+        $normalizedValue = preg_replace('/[^a-z0-9\s-]/i', ' ', $normalizedValue) ?? $normalizedValue;
+        $normalizedValue = preg_replace('/\s+/', ' ', $normalizedValue) ?? $normalizedValue;
+
+        return trim($normalizedValue);
+    }
+
+    public function normalizedProvince(): string
+    {
+        return Str::lower(trim((string) $this->province));
+    }
+
+    public function normalizedOffice(): string
+    {
+        return Str::lower(trim((string) $this->office));
+    }
+
+    public function normalizedOfficeComparable(?string $value = null): string
+    {
+        $normalizedValue = Str::lower(trim((string) ($value ?? $this->office)));
+        $baseValue = trim((string) preg_replace('/,.*$/', '', $normalizedValue));
+        $baseValue = preg_replace('/\([^)]*\)/', ' ', $baseValue) ?? $baseValue;
+        $baseValue = preg_replace('/^(municipality|city)\s+of\s+/i', '', $baseValue) ?? $baseValue;
+        $baseValue = preg_replace('/\s+(municipality|city)$/i', '', $baseValue) ?? $baseValue;
+        $baseValue = preg_replace('/[^a-z0-9\s-]/i', ' ', $baseValue) ?? $baseValue;
+        $baseValue = preg_replace('/\s+/', ' ', $baseValue) ?? $baseValue;
+
+        return trim($baseValue);
+    }
+
+    public function isDilgUser(): bool
+    {
+        return $this->normalizedAgency() === 'dilg';
+    }
+
+    public function isLguScopedUser(): bool
+    {
+        return $this->isLguUser() || $this->normalizedAgency() === 'lgu';
+    }
+
+    public function isRegionalOfficeAssignment(): bool
+    {
+        if (!$this->isDilgUser() || $this->isLguScopedUser()) {
+            return false;
+        }
+
+        return str_contains($this->normalizedProvince(), 'regional office')
+            || str_contains($this->normalizedOffice(), 'regional office');
+    }
+
+    public function matchesAssignedOffice(?string $value): bool
+    {
+        $assignedOffice = $this->normalizedOffice();
+        $candidate = Str::lower(trim((string) $value));
+
+        if ($assignedOffice === '' || $candidate === '') {
+            return false;
+        }
+
+        if ($candidate === $assignedOffice) {
+            return true;
+        }
+
+        $assignedComparable = $this->normalizedOfficeComparable();
+
+        return $assignedComparable !== ''
+            && $this->normalizedOfficeComparable($candidate) === $assignedComparable;
     }
 
     public function defaultCrudPermissions(): array
@@ -400,5 +521,15 @@ class User extends Authenticatable implements MustVerifyEmail
         $permissionKeys = $this->permissionCandidateKeys($aspect, $action);
 
         return count(array_intersect($permissionKeys, $permissions)) > 0;
+    }
+
+    public function submittedTickets(): HasMany
+    {
+        return $this->hasMany(Ticket::class, 'submitted_by', 'idno');
+    }
+
+    public function assignedTickets(): HasMany
+    {
+        return $this->hasMany(Ticket::class, 'assigned_to', 'idno');
     }
 }

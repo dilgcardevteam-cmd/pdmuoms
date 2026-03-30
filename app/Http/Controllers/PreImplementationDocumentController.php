@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\PreImplementationDocument;
 use App\Models\PreImplementationDocumentFile;
+use App\Services\InterventionNotificationService;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -189,6 +190,7 @@ class PreImplementationDocumentController extends Controller
         $folder = 'pre-implementation/projects/' . Str::slug((string) $project->project_code, '_');
         $now = now();
         $userId = Auth::user()->idno ?? null;
+        $uploadedDocumentTypes = [];
 
         foreach (array_keys($this->documentFieldMap()) as $field) {
             if (!$request->hasFile($field)) {
@@ -234,13 +236,99 @@ class PreImplementationDocumentController extends Controller
                 null,
                 $now
             );
+
+            $uploadedDocumentTypes[] = $field;
         }
 
         $document->save();
 
+        if (!empty($uploadedDocumentTypes)) {
+            $this->notifyUploadInterventionRecipients($project, $uploadedDocumentTypes);
+        }
+
         return redirect()
             ->route('pre-implementation-documents.show', $project->project_code)
             ->with('success', 'Pre-implementation documents saved successfully.');
+    }
+
+    private function notifyUploadInterventionRecipients(object $project, array $documentTypes): void
+    {
+        try {
+            $actor = Auth::user();
+            if (!$actor || empty($documentTypes)) {
+                return;
+            }
+
+            $targetProvince = trim((string) ($project->province ?? ''));
+            $targetOffice = trim((string) ($project->city_municipality ?? ''));
+            if ($targetProvince === '' && $targetOffice === '') {
+                return;
+            }
+
+            $actorId = (int) ($actor->idno ?? Auth::id());
+            $actorName = $actor->fullName() ?: 'A user';
+            $projectLabel = trim((string) ($project->project_code ?? ''));
+            $projectTitle = trim((string) ($project->project_title ?? ''));
+            if ($projectTitle !== '') {
+                $projectLabel .= ' (' . $projectTitle . ')';
+            }
+
+            $documentSummary = count($documentTypes) === 1
+                ? $this->formatDocumentLabel((string) $documentTypes[0])
+                : number_format(count($documentTypes)) . ' pre-implementation documents';
+
+            $messageContext = $projectLabel !== '' ? $projectLabel : 'the project';
+            if ($targetOffice !== '') {
+                $messageContext .= ' - ' . $targetOffice;
+            }
+            if ($targetProvince !== '') {
+                $messageContext .= ' - ' . $targetProvince;
+            }
+
+            $url = route('pre-implementation-documents.show', ['projectCode' => $project->project_code]);
+            $notificationService = app(InterventionNotificationService::class);
+
+            if ($actor->isLguScopedUser() && $targetProvince !== '') {
+                $message = sprintf(
+                    '%s uploaded %s for %s and it is awaiting DILG Provincial Office validation.',
+                    $actorName,
+                    $documentSummary,
+                    $messageContext
+                );
+
+                $notificationService->notifyProvincialDilg(
+                    $targetProvince,
+                    $actorId,
+                    $message,
+                    $url,
+                    'pre-implementation-upload'
+                );
+
+                return;
+            }
+
+            if ($actor->isDilgUser() && !$actor->isRegionalOfficeAssignment()) {
+                $message = sprintf(
+                    '%s uploaded %s for %s and it is awaiting DILG Regional Office validation.',
+                    $actorName,
+                    $documentSummary,
+                    $messageContext
+                );
+
+                $notificationService->notifyRegionalDilg(
+                    $actorId,
+                    $message,
+                    $url,
+                    'pre-implementation-upload'
+                );
+            }
+        } catch (\Throwable $error) {
+            Log::warning('Failed to create upload notifications (Pre-Implementation).', [
+                'project_code' => $project->project_code ?? null,
+                'document_types' => $documentTypes,
+                'error' => $error->getMessage(),
+            ]);
+        }
     }
 
     public function viewDocument(string $projectCode, string $documentType)
@@ -490,17 +578,6 @@ class PreImplementationDocumentController extends Controller
             });
 
             $recipientIds = $recipients->pluck('idno')->merge($relatedUserIds);
-            if (!$isRegionalOffice) {
-                $regionalDilgIds = User::query()
-                    ->whereRaw('UPPER(TRIM(COALESCE(agency, ""))) = ?', ['DILG'])
-                    ->where('status', 'active')
-                    ->where(function ($query) {
-                        $query->whereRaw('LOWER(TRIM(COALESCE(province, ""))) = ?', ['regional office'])
-                            ->orWhereRaw('LOWER(TRIM(COALESCE(office, ""))) LIKE ?', ['%regional office%']);
-                    })
-                    ->pluck('idno');
-                $recipientIds = $recipientIds->merge($regionalDilgIds);
-            }
 
             $actorName = trim((string) ($actor->fname ?? '') . ' ' . (string) ($actor->lname ?? ''));
             if ($actorName === '') {
@@ -512,6 +589,32 @@ class PreImplementationDocumentController extends Controller
             $projectLabel = $projectCode;
             if ($projectTitle !== '') {
                 $projectLabel .= ' (' . $projectTitle . ')';
+            }
+
+            $url = $projectCode !== ''
+                ? route('pre-implementation-documents.show', ['projectCode' => $projectCode])
+                : route('pre-implementation-documents.index');
+            $actorId = (int) Auth::id();
+            $notificationService = app(InterventionNotificationService::class);
+
+            if ($action === 'approve' && !$isRegionalOffice) {
+                $message = sprintf(
+                    '%s validated (DILG PO) %s for %s%s%s and it is awaiting DILG Regional Office validation.',
+                    $actorName,
+                    $this->formatDocumentLabel($documentType),
+                    $projectLabel !== '' ? $projectLabel : 'a project',
+                    $targetOffice !== '' ? ' - ' . $targetOffice : '',
+                    $targetProvince !== '' ? ' - ' . $targetProvince : ''
+                );
+
+                $notificationService->notifyRegionalDilg(
+                    $actorId,
+                    $message,
+                    $url,
+                    substr('pre-implementation-' . $documentType, 0, 100)
+                );
+
+                return;
             }
 
             $actionLabel = $action === 'approve'
@@ -532,39 +635,15 @@ class PreImplementationDocumentController extends Controller
                 $message .= ' Remarks: ' . $remarks;
             }
 
-            $now = now();
-            $url = $projectCode !== ''
-                ? route('pre-implementation-documents.show', ['projectCode' => $projectCode])
-                : route('pre-implementation-documents.index');
-            $actorId = (int) Auth::id();
-
-            $rows = collect($recipientIds)
-                ->map(function ($id) {
-                    return (int) $id;
-                })
-                ->filter(function ($id) use ($actorId) {
-                    return $id > 0 && $id !== $actorId;
-                })
-                ->unique()
-                ->values()
-                ->map(function ($recipientId) use ($message, $url, $documentType, $now) {
-                    return [
-                        'user_id' => $recipientId,
-                        'message' => $message,
-                        'url' => $url,
-                        'document_type' => substr('pre-implementation-' . $documentType, 0, 100),
-                        'quarter' => null,
-                        'read_at' => null,
-                        'created_at' => $now,
-                        'updated_at' => $now,
-                    ];
-                })
-                ->values()
-                ->all();
-
-            if (!empty($rows)) {
-                DB::table('tbnotifications')->insert($rows);
-            }
+            $notificationService->notifyScopedLgu(
+                $targetProvince,
+                $targetOffice,
+                $recipientIds,
+                $actorId,
+                $message,
+                $url,
+                substr('pre-implementation-' . $documentType, 0, 100)
+            );
         } catch (\Throwable $error) {
             Log::warning('Failed to create approval notifications (Pre-Implementation).', [
                 'project_code' => $project->project_code ?? null,
@@ -764,34 +843,48 @@ class PreImplementationDocumentController extends Controller
 
     private function buildAccessibleSubayQuery($user)
     {
-        $agency = strtoupper(trim((string) ($user->agency ?? '')));
         $province = trim((string) ($user->province ?? ''));
         $office = trim((string) ($user->office ?? ''));
         $region = trim((string) ($user->region ?? ''));
-        $provinceLower = strtolower($province);
-        $officeLower = strtolower($office);
-        $regionLower = strtolower($region);
+        $provinceLower = $user->normalizedProvince();
+        $officeLower = $user->normalizedOffice();
+        $officeComparableLower = $user->normalizedOfficeComparable();
+        $regionLower = $user->normalizedRegion();
         $fundSourceExpression = $this->fundSourceExpression('spp');
         $lfpSources = $this->subaybayanLfpFundSources();
         $lfpSourcePlaceholders = implode(', ', array_fill(0, count($lfpSources), '?'));
+        $cityComparableExpression = "TRIM(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(SUBSTRING_INDEX(COALESCE(spp.city_municipality, ''), ',', 1)), '(capital)', ''), 'municipality of ', ''), 'city of ', ''), ' municipality', ''), ' city', ''), '  ', ' '))";
 
         $query = DB::table('subay_project_profiles as spp')
             ->whereRaw('CAST(NULLIF(TRIM(COALESCE(spp.funding_year, \'\')), \'\') AS UNSIGNED) >= 2024')
             ->whereRaw("{$fundSourceExpression} IN ({$lfpSourcePlaceholders})", $lfpSources);
 
-        if ($agency === 'LGU') {
+        if ($user->isLguScopedUser()) {
             if ($office !== '') {
+                $officeNeedle = $officeComparableLower !== '' ? $officeComparableLower : $officeLower;
                 if ($province !== '') {
                     $query
                         ->whereRaw('LOWER(spp.province) = ?', [$provinceLower])
-                        ->whereRaw('LOWER(spp.city_municipality) = ?', [$officeLower]);
+                        ->where(function ($subQuery) use ($officeLower, $officeNeedle, $cityComparableExpression) {
+                            $subQuery->whereRaw('LOWER(spp.city_municipality) = ?', [$officeLower]);
+
+                            if ($officeNeedle !== '') {
+                                $subQuery->orWhereRaw("{$cityComparableExpression} = ?", [$officeNeedle]);
+                            }
+                        });
                 } else {
-                    $query->whereRaw('LOWER(spp.city_municipality) = ?', [$officeLower]);
+                    $query->where(function ($subQuery) use ($officeLower, $officeNeedle, $cityComparableExpression) {
+                        $subQuery->whereRaw('LOWER(spp.city_municipality) = ?', [$officeLower]);
+
+                        if ($officeNeedle !== '') {
+                            $subQuery->orWhereRaw("{$cityComparableExpression} = ?", [$officeNeedle]);
+                        }
+                    });
                 }
             } elseif ($province !== '') {
                 $query->whereRaw('LOWER(spp.province) = ?', [$provinceLower]);
             }
-        } elseif ($agency === 'DILG') {
+        } elseif ($user->isDilgUser()) {
             if ($provinceLower === 'regional office') {
                 // Regional Office can access all matched projects.
             } elseif ($province !== '') {

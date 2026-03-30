@@ -29,6 +29,28 @@ class FundUtilizationReportController extends Controller
         $this->middleware('crud_permission:fund_utilization_reports,delete')->only(['deleteDocument']);
     }
 
+    private function fundUtilizationFundSources(): array
+    {
+        return ['SBDP', 'FALGU', 'CMGP'];
+    }
+
+    private function isSglgifFundSource(?string $value): bool
+    {
+        return strtoupper(trim((string) $value)) === 'SGLGIF';
+    }
+
+    private function applyNonSglgifSourceScope($query, string $sourceExpression): void
+    {
+        $query->whereRaw('UPPER(TRIM(COALESCE(' . $sourceExpression . ', ""))) <> ?', ['SGLGIF']);
+    }
+
+    private function ensureFundUtilizationSourceAllowed(?string $fundSource): void
+    {
+        if ($this->isSglgifFundSource($fundSource)) {
+            abort(404);
+        }
+    }
+
     private function syncMissingLfpReports(): void
     {
         if (!Schema::hasTable('tbfur')) {
@@ -38,6 +60,7 @@ class FundUtilizationReportController extends Controller
         $now = now();
 
         LocallyFundedProject::query()
+            ->whereRaw('UPPER(TRIM(COALESCE(fund_source, ""))) <> ?', ['SGLGIF'])
             ->whereNotExists(function ($query) {
                 $query->select(DB::raw(1))
                     ->from('tbfur')
@@ -142,6 +165,7 @@ class FundUtilizationReportController extends Controller
         DB::table('subay_project_profiles')
             ->whereNotNull('project_code')
             ->whereRaw('TRIM(project_code) <> ""')
+            ->whereRaw('UPPER(TRIM(COALESCE(program, ""))) <> ?', ['SGLGIF'])
             ->whereNotExists(function ($query) {
                 $query->select(DB::raw(1))
                     ->from('tbfur')
@@ -205,11 +229,13 @@ class FundUtilizationReportController extends Controller
     {
         $report = FundUtilizationReport::where('project_code', $projectCode)->first();
         if ($report) {
+            $this->ensureFundUtilizationSourceAllowed($report->fund_source);
             $report->is_lfp = false;
             return $report;
         }
 
         $lfpProject = LocallyFundedProject::where('subaybayan_project_code', $projectCode)->firstOrFail();
+        $this->ensureFundUtilizationSourceAllowed($lfpProject->fund_source);
 
         // Ensure LFP projects have a parent tbfur row so upload FKs can be satisfied.
         $report = FundUtilizationReport::firstOrCreate(
@@ -321,16 +347,40 @@ class FundUtilizationReportController extends Controller
 
         $filterOptions = [
             'fund_sources' => collect([
-                FundUtilizationReport::query()->select('fund_source')->distinct()->pluck('fund_source'),
-                LocallyFundedProject::query()->select('fund_source')->distinct()->pluck('fund_source')
-            ])->flatten()->unique()->sort()->values(),
+                FundUtilizationReport::query()
+                    ->whereRaw('UPPER(TRIM(COALESCE(fund_source, ""))) <> ?', ['SGLGIF'])
+                    ->select('fund_source')
+                    ->distinct()
+                    ->pluck('fund_source'),
+                LocallyFundedProject::query()
+                    ->whereRaw('UPPER(TRIM(COALESCE(fund_source, ""))) <> ?', ['SGLGIF'])
+                    ->select('fund_source')
+                    ->distinct()
+                    ->pluck('fund_source')
+            ])->flatten()->reject(fn ($value) => $this->isSglgifFundSource($value))->unique()->sort()->values(),
             'funding_years' => collect([
-                FundUtilizationReport::query()->select('funding_year')->distinct()->pluck('funding_year'),
-                LocallyFundedProject::query()->select('funding_year')->distinct()->pluck('funding_year')
+                FundUtilizationReport::query()
+                    ->whereRaw('UPPER(TRIM(COALESCE(fund_source, ""))) <> ?', ['SGLGIF'])
+                    ->select('funding_year')
+                    ->distinct()
+                    ->pluck('funding_year'),
+                LocallyFundedProject::query()
+                    ->whereRaw('UPPER(TRIM(COALESCE(fund_source, ""))) <> ?', ['SGLGIF'])
+                    ->select('funding_year')
+                    ->distinct()
+                    ->pluck('funding_year')
             ])->flatten()->unique()->sortDesc()->values(),
             'provinces' => collect([
-                FundUtilizationReport::query()->select('province')->distinct()->pluck('province'),
-                LocallyFundedProject::query()->select('province')->distinct()->pluck('province')
+                FundUtilizationReport::query()
+                    ->whereRaw('UPPER(TRIM(COALESCE(fund_source, ""))) <> ?', ['SGLGIF'])
+                    ->select('province')
+                    ->distinct()
+                    ->pluck('province'),
+                LocallyFundedProject::query()
+                    ->whereRaw('UPPER(TRIM(COALESCE(fund_source, ""))) <> ?', ['SGLGIF'])
+                    ->select('province')
+                    ->distinct()
+                    ->pluck('province')
             ])->flatten()->unique()->sort()->values(),
         ];
 
@@ -505,11 +555,12 @@ class FundUtilizationReportController extends Controller
         $province = trim((string) $request->query('province', ''));
 
         $user = Auth::user();
-        $agency = $user ? strtoupper(trim((string) $user->agency)) : '';
         $userProvince = $user ? trim((string) $user->province) : '';
-        $userOffice = $user ? trim((string) $user->office) : '';
-        $userProvinceLower = strtolower($userProvince);
-        $userOfficeLower = strtolower($userOffice);
+        $userProvinceLower = $user ? $user->normalizedProvince() : '';
+        $userOfficeLower = $user ? $user->normalizedOffice() : '';
+        $userOfficeComparableLower = $user ? $user->normalizedOfficeComparable() : '';
+        $isLguScopedUser = $user ? $user->isLguScopedUser() : false;
+        $isDilgUser = $user ? $user->isDilgUser() : false;
 
         // Build query for Fund Utilization Reports
         $furQuery = FundUtilizationReport::query()
@@ -555,29 +606,63 @@ class FundUtilizationReportController extends Controller
                 'locally_funded_projects.user_id'
             ]);
 
+        $this->applyNonSglgifSourceScope($furQuery, 'COALESCE(locally_funded_projects.fund_source, tbfur.fund_source, spp.program)');
+        $this->applyNonSglgifSourceScope($lfpQuery, 'locally_funded_projects.fund_source');
+
         // Apply user scoping
-        if ($agency === 'LGU') {
+        if ($isLguScopedUser) {
             if ($userOfficeLower !== '') {
                 if ($userProvinceLower !== '') {
                     $furQuery->whereRaw('LOWER(tbfur.province) = ?', [$userProvinceLower]);
                     $lfpQuery->whereRaw('LOWER(locally_funded_projects.province) = ?', [$userProvinceLower]);
                 }
 
-                $furQuery->where(function ($subQuery) use ($userOfficeLower) {
+                $officeNeedle = $userOfficeComparableLower !== '' ? $userOfficeComparableLower : $userOfficeLower;
+                $furImplementingUnitComparableExpression = "TRIM(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(SUBSTRING_INDEX(COALESCE(tbfur.implementing_unit, ''), ',', 1)), '(capital)', ''), 'municipality of ', ''), 'city of ', ''), ' municipality', ''), ' city', ''), '  ', ' '))";
+                $lfpOfficeComparableExpression = "TRIM(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(SUBSTRING_INDEX(COALESCE(locally_funded_projects.office, ''), ',', 1)), '(capital)', ''), 'municipality of ', ''), 'city of ', ''), ' municipality', ''), ' city', ''), '  ', ' '))";
+                $lfpCityComparableExpression = "TRIM(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(SUBSTRING_INDEX(COALESCE(locally_funded_projects.city_municipality, ''), ',', 1)), '(capital)', ''), 'municipality of ', ''), 'city of ', ''), ' municipality', ''), ' city', ''), '  ', ' '))";
+                $sppCityComparableExpression = "TRIM(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(SUBSTRING_INDEX(COALESCE(spp.city_municipality, ''), ',', 1)), '(capital)', ''), 'municipality of ', ''), 'city of ', ''), ' municipality', ''), ' city', ''), '  ', ' '))";
+
+                $furQuery->where(function ($subQuery) use (
+                    $userOfficeLower,
+                    $officeNeedle,
+                    $furImplementingUnitComparableExpression,
+                    $lfpOfficeComparableExpression,
+                    $lfpCityComparableExpression,
+                    $sppCityComparableExpression
+                ) {
                     $subQuery->whereRaw('LOWER(tbfur.implementing_unit) = ?', [$userOfficeLower])
                         ->orWhereRaw('LOWER(locally_funded_projects.office) = ?', [$userOfficeLower])
                         ->orWhereRaw('LOWER(locally_funded_projects.city_municipality) = ?', [$userOfficeLower])
                         ->orWhereRaw('LOWER(spp.city_municipality) = ?', [$userOfficeLower]);
+
+                    if ($officeNeedle !== '') {
+                        $subQuery->orWhereRaw("{$furImplementingUnitComparableExpression} = ?", [$officeNeedle])
+                            ->orWhereRaw("{$lfpOfficeComparableExpression} = ?", [$officeNeedle])
+                            ->orWhereRaw("{$lfpCityComparableExpression} = ?", [$officeNeedle])
+                            ->orWhereRaw("{$sppCityComparableExpression} = ?", [$officeNeedle]);
+                    }
                 });
-                $lfpQuery->where(function ($subQuery) use ($userOfficeLower) {
+
+                $lfpQuery->where(function ($subQuery) use (
+                    $userOfficeLower,
+                    $officeNeedle,
+                    $lfpOfficeComparableExpression,
+                    $lfpCityComparableExpression
+                ) {
                     $subQuery->whereRaw('LOWER(locally_funded_projects.office) = ?', [$userOfficeLower])
                         ->orWhereRaw('LOWER(locally_funded_projects.city_municipality) = ?', [$userOfficeLower]);
+
+                    if ($officeNeedle !== '') {
+                        $subQuery->orWhereRaw("{$lfpOfficeComparableExpression} = ?", [$officeNeedle])
+                            ->orWhereRaw("{$lfpCityComparableExpression} = ?", [$officeNeedle]);
+                    }
                 });
             } elseif ($userProvinceLower !== '') {
                 $furQuery->whereRaw('LOWER(tbfur.province) = ?', [$userProvinceLower]);
                 $lfpQuery->whereRaw('LOWER(locally_funded_projects.province) = ?', [$userProvinceLower]);
             }
-        } elseif ($agency === 'DILG' && $userProvinceLower !== '' && $userProvinceLower !== 'regional office') {
+        } elseif ($isDilgUser && $userProvinceLower !== '' && $userProvinceLower !== 'regional office') {
             $furQuery->whereRaw('LOWER(tbfur.province) = ?', [$userProvinceLower]);
             $lfpQuery->whereRaw('LOWER(locally_funded_projects.province) = ?', [$userProvinceLower]);
         }
@@ -802,7 +887,7 @@ class FundUtilizationReportController extends Controller
         $currentUserOffice = Auth::user()->office;
         
         // Fund source and funding year options
-        $fundSources = ['SBDP', 'FALGU', 'CMGP', 'SGLGIF'];
+        $fundSources = $this->fundUtilizationFundSources();
         $fundingYears = [2025, 2024, 2023, 2022, 2021];
         
         return view('reports.fund-utilization.create', compact('provinces', 'provinceMunicipalities', 'currentUserOffice', 'fundSources', 'fundingYears'));
@@ -838,7 +923,15 @@ class FundUtilizationReportController extends Controller
             'province' => 'required|string',
             'implementing_unit' => 'required|string',
             'barangay' => 'required|string',
-            'fund_source' => 'required|string',
+            'fund_source' => [
+                'required',
+                'string',
+                function ($attribute, $value, $fail) {
+                    if ($this->isSglgifFundSource($value)) {
+                        $fail('SGLGIF projects are excluded from Fund Utilization.');
+                    }
+                },
+            ],
             'funding_year' => 'required|integer',
             'allocation' => 'required|numeric|min:0',
             'contract_amount' => 'required|numeric|min:0',
@@ -858,6 +951,7 @@ class FundUtilizationReportController extends Controller
     public function edit($projectCode)
     {
         $report = FundUtilizationReport::findOrFail($projectCode);
+        $this->ensureFundUtilizationSourceAllowed($report->fund_source);
 
         // Check if user has permission to edit (only DILG users)
         $user = Auth::user();
@@ -888,7 +982,7 @@ class FundUtilizationReportController extends Controller
         ];
 
         // Fund source and funding year options
-        $fundSources = ['SBDP', 'FALGU', 'CMGP', 'SGLGIF'];
+        $fundSources = $this->fundUtilizationFundSources();
         $fundingYears = [2025, 2024, 2023, 2022, 2021];
         $projectStatuses = ['Ongoing', 'Completed', 'Cancelled', 'On Hold'];
 
@@ -901,6 +995,7 @@ class FundUtilizationReportController extends Controller
     public function update(Request $request, $projectCode)
     {
         $report = FundUtilizationReport::findOrFail($projectCode);
+        $this->ensureFundUtilizationSourceAllowed($report->fund_source);
 
         // Check if user has permission to update (only DILG users)
         $user = Auth::user();
@@ -913,7 +1008,15 @@ class FundUtilizationReportController extends Controller
             'province' => 'required|string',
             'implementing_unit' => 'required|string',
             'barangay' => 'required|string',
-            'fund_source' => 'required|string',
+            'fund_source' => [
+                'required',
+                'string',
+                function ($attribute, $value, $fail) {
+                    if ($this->isSglgifFundSource($value)) {
+                        $fail('SGLGIF projects are excluded from Fund Utilization.');
+                    }
+                },
+            ],
             'funding_year' => 'required|integer',
             'allocation' => 'required|numeric|min:0',
             'contract_amount' => 'required|numeric|min:0',
@@ -938,6 +1041,7 @@ class FundUtilizationReportController extends Controller
         // If not found in FUR, try to find in LocallyFundedProject by subaybayan_project_code
         if (!$report) {
             $lfpProject = LocallyFundedProject::where('subaybayan_project_code', $projectCode)->firstOrFail();
+            $this->ensureFundUtilizationSourceAllowed($lfpProject->fund_source);
             
             // Create a temporary FUR-like object from LFP data for the view
             $report = new \stdClass();
@@ -954,6 +1058,7 @@ class FundUtilizationReportController extends Controller
             $report->is_lfp = true;
             $report->lfp_id = $lfpProject->id;
         } else {
+            $this->ensureFundUtilizationSourceAllowed($report->fund_source);
             $report->is_lfp = false;
         }
         
@@ -1860,6 +1965,7 @@ class FundUtilizationReportController extends Controller
     public function viewDocument($projectCode, $docType, $quarter)
     {
         $report = FundUtilizationReport::findOrFail($projectCode);
+        $this->ensureFundUtilizationSourceAllowed($report->fund_source);
         
         $docTypeMap = [
             'mov' => ['table' => 'tbfur_mov_uploads', 'column' => 'mov_file_path'],
@@ -2465,6 +2571,10 @@ class FundUtilizationReportController extends Controller
         // Get the project
         $project = FundUtilizationReport::find($projectCode);
         if (!$project) {
+            return response()->json(['error' => 'Project not found'], 404);
+        }
+
+        if ($this->isSglgifFundSource($project->fund_source)) {
             return response()->json(['error' => 'Project not found'], 404);
         }
 

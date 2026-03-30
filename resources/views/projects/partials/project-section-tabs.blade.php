@@ -5,7 +5,7 @@
             'key' => 'locally-funded',
             'label' => 'Locally Funded Projects',
             'icon' => 'fa-hand-holding-usd',
-            'url' => route('dashboard'),
+            'url' => route('projects.locally-funded'),
         ],
         [
             'key' => 'rlip-lime',

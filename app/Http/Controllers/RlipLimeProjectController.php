@@ -402,22 +402,17 @@ class RlipLimeProjectController extends Controller
             return $rows;
         }
 
-        $agency = strtoupper(trim((string) $user->agency));
         $province = trim((string) $user->province);
         $office = trim((string) $user->office);
         $region = trim((string) $user->region);
 
-        $provinceLower = mb_strtolower($province);
-        $officeLower = mb_strtolower($office);
-        $regionLower = mb_strtolower($region);
-        $officeComparable = $this->normalizeOfficeComparable($officeLower);
-        $isRegionalOffice = $agency === 'DILG'
-            && (
-                str_contains($provinceLower, 'regional office')
-                || str_contains($officeLower, 'regional office')
-            );
+        $provinceLower = $user->normalizedProvince();
+        $officeLower = $user->normalizedOffice();
+        $regionLower = $user->normalizedRegion();
+        $officeComparable = $user->normalizedOfficeComparable();
+        $isRegionalOffice = $user->isRegionalOfficeAssignment();
 
-        if ($agency === 'LGU') {
+        if ($user->isLguScopedUser()) {
             $rows = $rows->filter(function (array $row) use ($provinceLower) {
                 if ($provinceLower === '') {
                     return true;
@@ -439,7 +434,7 @@ class RlipLimeProjectController extends Controller
             return $rows->values();
         }
 
-        if ($agency !== 'DILG') {
+        if (!$user->isDilgUser()) {
             return $rows->values();
         }
 
@@ -623,7 +618,11 @@ class RlipLimeProjectController extends Controller
     private function normalizeOfficeComparable(string $value): string
     {
         $base = trim((string) preg_replace('/,.*$/', '', $value));
+        $base = preg_replace('/\([^)]*\)/', ' ', $base) ?? $base;
         $base = preg_replace('/^(municipality|city)\s+of\s+/i', '', $base) ?? $base;
+        $base = preg_replace('/\s+(municipality|city)$/i', '', $base) ?? $base;
+        $base = preg_replace('/[^a-z0-9\s-]/i', ' ', $base) ?? $base;
+        $base = preg_replace('/\s+/', ' ', $base) ?? $base;
 
         return trim($base);
     }

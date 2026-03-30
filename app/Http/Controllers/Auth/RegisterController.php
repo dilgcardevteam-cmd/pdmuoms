@@ -100,7 +100,7 @@ class RegisterController extends Controller
             'password' => Hash::make($data['password']),
             'role' => User::ROLE_LGU,
             'status' => 'inactive',
-            'access' => User::ACCESS_SCOPE_NONE,
+            'access' => null,
         ]);
     }
 

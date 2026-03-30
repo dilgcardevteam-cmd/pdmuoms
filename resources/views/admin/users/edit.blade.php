@@ -189,7 +189,7 @@
                                 <option value="{{ $roleValue }}" @selected($user->role === $roleValue)>{{ $roleLabel }}</option>
                             @endforeach
                         </select>
-                        <p style="color: #64748b; font-size: 12px; margin-top: 6px;">Regional users oversee their region, Provincial users their province, and LGU users stay at local scope.</p>
+                        <p style="color: #64748b; font-size: 12px; margin-top: 6px;">Changing the role updates access scope only. Agency, province, and office stay as currently saved unless you edit them directly.</p>
                         @error('role')
                             <p style="color: #dc2626; font-size: 12px; margin-top: 4px;">{{ $message }}</p>
                         @enderror
@@ -319,30 +319,9 @@
         };
 
         const agencySelect = document.getElementById('agencySelect');
-        const roleSelect = document.getElementById('roleSelect');
         const positionSelect = document.getElementById('positionSelect');
         const provinceSelect = document.getElementById('provinceSelect');
         const officeSelect = document.getElementById('officeSelect');
-
-        function syncAgencyWithRole() {
-            if (!roleSelect) {
-                return;
-            }
-
-            const role = roleSelect.value;
-            let nextAgency = '';
-
-            if (role === 'user_lgu') {
-                nextAgency = 'LGU';
-            } else if (role === 'user_regional' || role === 'user_provincial') {
-                nextAgency = 'DILG';
-            }
-
-            if (nextAgency !== '' && agencySelect.value !== nextAgency) {
-                agencySelect.value = nextAgency;
-                agencySelect.dispatchEvent(new Event('change'));
-            }
-        }
 
         // Update position dropdown
         agencySelect.addEventListener('change', function() {
@@ -416,9 +395,7 @@
         agencySelect.addEventListener('change', updateOfficeDropdown);
         provinceSelect.addEventListener('change', updateOfficeDropdown);
 
-        roleSelect?.addEventListener('change', syncAgencyWithRole);
         // Trigger change events to populate if data is pre-selected
-        syncAgencyWithRole();
         if (agencySelect.value) {
             agencySelect.dispatchEvent(new Event('change'));
         }

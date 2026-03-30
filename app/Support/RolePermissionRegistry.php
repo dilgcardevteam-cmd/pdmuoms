@@ -93,6 +93,18 @@ class RolePermissionRegistry
                 ],
             ],
             [
+                'module' => 'Support Services',
+                'description' => 'Operational support modules for issue resolution, ticket routing, and user assistance.',
+                'items' => [
+                    [
+                        'aspect' => 'ticketing_system',
+                        'label' => 'Ticketing System',
+                        'description' => 'Submit, track, review, escalate, forward, and monitor support tickets based on the assigned role scope.',
+                        'actions' => ['view', 'add', 'update'],
+                    ],
+                ],
+            ],
+            [
                 'module' => 'Data Management',
                 'description' => 'Upload and manage source datasets used by the project monitoring and reportorial pages.',
                 'items' => [
@@ -241,17 +253,33 @@ class RolePermissionRegistry
             'sglgif_data_uploads.delete',
         ];
 
+        $ticketingPermissions = [
+            User::ROLE_SUPERADMIN => ['*'],
+            User::ROLE_REGIONAL => [
+                'ticketing_system.view',
+                'ticketing_system.update',
+            ],
+            User::ROLE_PROVINCIAL => [
+                'ticketing_system.view',
+                'ticketing_system.update',
+            ],
+            User::ROLE_LGU => [
+                'ticketing_system.view',
+                'ticketing_system.add',
+            ],
+        ];
+
         return [
             User::ROLE_SUPERADMIN => ['*'],
-            User::ROLE_REGIONAL => array_merge($reportorialPermissions, $projectMonitoringPermissions, $dataManagementPermissions, [
+            User::ROLE_REGIONAL => array_merge($reportorialPermissions, $projectMonitoringPermissions, $dataManagementPermissions, $ticketingPermissions[User::ROLE_REGIONAL], [
                 'locally_funded_projects.update',
             ]),
-            User::ROLE_PROVINCIAL => array_merge($reportorialPermissions, $projectMonitoringPermissions, [
+            User::ROLE_PROVINCIAL => array_merge($reportorialPermissions, $projectMonitoringPermissions, $ticketingPermissions[User::ROLE_PROVINCIAL], [
                 'locally_funded_projects.update',
                 'pre_implementation_documents.view',
                 'pre_implementation_documents.add',
             ]),
-            User::ROLE_LGU => array_merge($reportorialPermissions, $projectMonitoringPermissions, [
+            User::ROLE_LGU => array_merge($reportorialPermissions, $projectMonitoringPermissions, $ticketingPermissions[User::ROLE_LGU], [
                 'pre_implementation_documents.view',
                 'pre_implementation_documents.add',
             ]),

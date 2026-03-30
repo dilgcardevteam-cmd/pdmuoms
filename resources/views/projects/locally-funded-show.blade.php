@@ -1379,7 +1379,6 @@
             </div>
             <div class="contract-info-grid" style="display: grid; grid-template-columns: repeat(3, minmax(260px, 1fr)); gap: 14px;">
                 <div><strong>Mode of Procurement:</strong> {{ $project->mode_of_procurement }}</div>
-                <div><strong>Implementing Unit:</strong> {{ $project->implementing_unit }}</div>
                 <div><strong>Date of Posting (ITB):</strong> {{ $project->date_posting_itb ? $project->date_posting_itb->format('F j, Y') : '' }}</div>
                 <div><strong>Date of Bid Opening:</strong> {{ $project->date_bid_opening ? $project->date_bid_opening->format('F j, Y') : '' }}</div>
                 <div><strong>Date of NOA:</strong> {{ $project->date_noa ? $project->date_noa->format('F j, Y') : '' }}</div>
