@@ -285,7 +285,7 @@ class PreImplementationDocumentController extends Controller
                 $messageContext .= ' - ' . $targetProvince;
             }
 
-            $url = route('pre-implementation-documents.show', ['projectCode' => $project->project_code]);
+$url = route('pre-implementation-documents.show', ['projectCode' => $project->project_code], false);
             $notificationService = app(InterventionNotificationService::class);
 
             if ($actor->isLguScopedUser() && $targetProvince !== '') {
@@ -591,9 +591,9 @@ class PreImplementationDocumentController extends Controller
                 $projectLabel .= ' (' . $projectTitle . ')';
             }
 
-            $url = $projectCode !== ''
-                ? route('pre-implementation-documents.show', ['projectCode' => $projectCode])
-                : route('pre-implementation-documents.index');
+$url = $projectCode !== ''
+                ? route('pre-implementation-documents.show', ['projectCode' => $projectCode], false)
+                : route('pre-implementation-documents.index', [], false);
             $actorId = (int) Auth::id();
             $notificationService = app(InterventionNotificationService::class);
 

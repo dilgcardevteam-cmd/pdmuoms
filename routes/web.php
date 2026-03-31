@@ -204,7 +204,9 @@ Route::middleware(['auth'])->group(function () {
             ->where('id', $id)
             ->update(['read_at' => now(), 'updated_at' => now()]);
 
-        return redirect($notification->url ?: route('fund-utilization.index'));
+        $notificationUrl = \App\Support\NotificationUrl::normalizeForRedirect($notification->url);
+
+        return redirect($notificationUrl ?: route('fund-utilization.index'));
     })->name('notifications.read');
 
     Route::post('/notifications/clear', function () {
@@ -366,6 +368,16 @@ Route::middleware(['auth'])->group(function () {
 
                 $placeholders = implode(', ', array_fill(0, count($normalizedValues), '?'));
                 $query->whereRaw("LOWER(TRIM(COALESCE({$column}, ''))) IN ({$placeholders})", $normalizedValues);
+            };
+
+            $excludeSglgifFromSubay = function ($query) {
+                $query->whereRaw('UPPER(TRIM(COALESCE(spp.project_code, ""))) NOT LIKE ?', ['SGLGIF%'])
+                    ->whereRaw('UPPER(TRIM(COALESCE(spp.program, ""))) <> ?', ['SGLGIF']);
+            };
+
+            $excludeSglgifFromFallback = function ($query) {
+                $query->whereRaw('UPPER(TRIM(COALESCE(subaybayan_project_code, ""))) NOT LIKE ?', ['SGLGIF%'])
+                    ->whereRaw('UPPER(TRIM(COALESCE(fund_source, ""))) <> ?', ['SGLGIF']);
             };
 
             $applyDashboardFiltersToSubay = function ($query) use ($filters, $applyExactFilterToSubay, $applyExactMultiFilterToSubay) {
@@ -893,6 +905,7 @@ Route::middleware(['auth'])->group(function () {
                     ->whereNotNull('spp.project_code')
                     ->whereRaw('TRIM(spp.project_code) <> ""');
 
+                $excludeSglgifFromSubay($subayBaseQuery);
                 $applyRoleScopeToSubay($subayBaseQuery);
 
                 $filterOptions['provinces'] = (clone $subayBaseQuery)
@@ -1259,6 +1272,7 @@ Route::middleware(['auth'])->group(function () {
                 }
             } else {
                 $fallbackQuery = LocallyFundedProject::query();
+                $excludeSglgifFromFallback($fallbackQuery);
                 $fallbackCityComparableExpression = "TRIM(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(SUBSTRING_INDEX(COALESCE(city_municipality, ''), ',', 1)), '(capital)', ''), 'municipality of ', ''), 'city of ', ''), ' municipality', ''), ' city', ''), '  ', ' '))";
                 $fallbackOfficeComparableExpression = "TRIM(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(SUBSTRING_INDEX(COALESCE(office, ''), ',', 1)), '(capital)', ''), 'municipality of ', ''), 'city of ', ''), ' municipality', ''), ' city', ''), '  ', ' '))";
                 $applyOfficeScopeToFallback = function ($query) use (

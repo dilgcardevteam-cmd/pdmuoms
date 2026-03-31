@@ -8,29 +8,65 @@
     <p>Quarterly upload monitoring for all provinces, cities, and municipalities.</p>
 </div>
 
+@php
+    $activeFilters = array_merge([
+        'province' => '',
+        'city' => '',
+    ], $filters ?? []);
+    $provinceMunicipalities = $filterOptions['provinceMunicipalities'] ?? [];
+    $selectedProvinceFilter = trim((string) ($activeFilters['province'] ?? ''));
+    if ($selectedProvinceFilter !== '' && array_key_exists($selectedProvinceFilter, $provinceMunicipalities)) {
+        $cityOptions = collect($provinceMunicipalities[$selectedProvinceFilter] ?? []);
+    } else {
+        $cityOptions = collect($provinceMunicipalities)->flatten(1);
+    }
+    $cityOptions = $cityOptions
+        ->map(fn($city) => trim((string) $city))
+        ->filter()
+        ->unique()
+        ->sort()
+        ->values();
+@endphp
+
 <div class="row">
     <div class="col-12">
         <div class="card">
             <div class="card-body">
-                <div style="margin-bottom: 16px; display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap;">
-                    <div style="position: relative; width: 100%; max-width: 420px;">
-                        <i class="fas fa-search" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #6b7280; font-size: 12px;"></i>
-                        <input
-                            type="text"
-                            id="road-maintenance-search"
-                            placeholder="Search province or city/municipality..."
-                            style="width: 100%; padding: 10px 12px 10px 32px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; background-color: #f9fafb;"
-                        >
-                    </div>
-                    <form method="GET" style="display: inline-flex; align-items: center; gap: 8px;">
-                        <label for="reporting-year" style="font-size: 13px; color: #374151; font-weight: 600;">Year</label>
-                        <select id="reporting-year" name="year" onchange="this.form.submit()" style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; background-color: #fff;">
-                            @for ($yearOption = now()->year + 1; $yearOption >= now()->year - 5; $yearOption--)
-                                <option value="{{ $yearOption }}" @selected($reportingYear === $yearOption)>
-                                    {{ $yearOption }}
-                                </option>
-                            @endfor
-                        </select>
+                <div style="background: #ffffff; padding: 16px 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); margin-bottom: 20px; border: 1px solid #e5e7eb;">
+                    <form id="road-maintenance-filters-form" method="GET" action="{{ route('road-maintenance-status.index') }}" style="display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;">
+                        <input type="hidden" name="per_page" value="{{ $perPage ?? 15 }}">
+                        <div style="flex: 0 0 120px; min-width: 120px;">
+                            <label for="road-maintenance-year" style="display: block; margin-bottom: 6px; color: #374151; font-size: 12px; font-weight: 600;">Year</label>
+                            <select id="road-maintenance-year" name="year" style="width: 100%; height: 42px; padding: 0 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; background-color: #f9fafb; color: #374151;">
+                                @for ($yearOption = now()->year + 1; $yearOption >= now()->year - 5; $yearOption--)
+                                    <option value="{{ $yearOption }}" @selected($reportingYear === $yearOption)>{{ $yearOption }}</option>
+                                @endfor
+                            </select>
+                        </div>
+                        <div style="flex: 1 1 180px; min-width: 180px;">
+                            <label for="road-maintenance-filter-province" style="display: block; margin-bottom: 6px; color: #374151; font-size: 12px; font-weight: 600;">Province</label>
+                            <select id="road-maintenance-filter-province" name="province" style="width: 100%; height: 42px; padding: 0 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; background-color: #f9fafb; color: #374151;">
+                                <option value="">All Provinces</option>
+                                @foreach(($filterOptions['provinces'] ?? []) as $option)
+                                    <option value="{{ $option }}" @selected((string) $activeFilters['province'] === (string) $option)>{{ $option }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div style="flex: 1 1 220px; min-width: 220px;">
+                            <label for="road-maintenance-filter-city" style="display: block; margin-bottom: 6px; color: #374151; font-size: 12px; font-weight: 600;">City / Municipality</label>
+                            <select id="road-maintenance-filter-city" name="city" data-selected-city="{{ $activeFilters['city'] }}" style="width: 100%; height: 42px; padding: 0 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; background-color: #f9fafb; color: #374151;">
+                                <option value="">All Cities / Municipalities</option>
+                                @foreach($cityOptions as $city)
+                                    <option value="{{ $city }}" @selected((string) $activeFilters['city'] === (string) $city)>{{ $city }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <button type="submit" style="flex: 0 0 auto; height: 42px; padding: 0 18px; background-color: #2563eb; color: white; border: 1px solid #2563eb; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px;">
+                            <i class="fas fa-filter"></i> Apply
+                        </button>
+                        <a href="{{ route('road-maintenance-status.index', ['year' => $reportingYear, 'per_page' => $perPage ?? 15]) }}" style="flex: 0 0 auto; height: 42px; padding: 0 18px; background-color: #6b7280; color: white; border: 1px solid #6b7280; border-radius: 8px; font-size: 13px; font-weight: 600; white-space: nowrap; display: inline-flex; align-items: center; text-decoration: none;">
+                            Clear
+                        </a>
                     </form>
                 </div>
 
@@ -88,12 +124,6 @@
                                     </td>
                                 </tr>
                             @endforelse
-                            <tr id="road-maintenance-no-results" style="display: none; border-bottom: 1px solid #e5e7eb; transition: all 0.3s ease;">
-                                <td colspan="7" style="padding: 40px; text-align: center; color: #6b7280;">
-                                    <i class="fas fa-search" style="font-size: 32px; margin-bottom: 10px; display: block;"></i>
-                                    No matching records found.
-                                </td>
-                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -173,35 +203,46 @@
 
 <script>
     (function () {
-        const searchInput = document.getElementById('road-maintenance-search');
-        const tableBody = document.getElementById('road-maintenance-table-body');
-        const noResultsRow = document.getElementById('road-maintenance-no-results');
+        const provinceSelect = document.getElementById('road-maintenance-filter-province');
+        const citySelect = document.getElementById('road-maintenance-filter-city');
+        const locationData = @json($provinceMunicipalities ?? []);
 
-        if (!searchInput || !tableBody) return;
+        if (!provinceSelect || !citySelect) return;
 
-        searchInput.addEventListener('input', function () {
-            const query = this.value.trim().toLowerCase();
-            const rows = Array.from(tableBody.querySelectorAll('tr'))
-                .filter(row => row.id !== 'road-maintenance-no-results');
+        const getAllCities = () => Object.keys(locationData).reduce((all, province) => {
+            return all.concat(locationData[province] || []);
+        }, []);
 
-            let visibleCount = 0;
+        const rebuildCityOptions = (selectedProvince, preserveSelection = true) => {
+            const selectedCity = preserveSelection ? (citySelect.value || citySelect.dataset.selectedCity || '') : '';
+            const cityList = selectedProvince && Object.prototype.hasOwnProperty.call(locationData, selectedProvince)
+                ? (locationData[selectedProvince] || [])
+                : getAllCities();
 
-            rows.forEach(row => {
-                const cells = row.querySelectorAll('td');
-                if (!cells.length) return;
+            const uniqueCities = Array.from(new Set(cityList
+                .map((city) => (city || '').trim())
+                .filter(Boolean)))
+                .sort((left, right) => left.localeCompare(right));
 
-                const province = (cells[0].textContent || '').trim().toLowerCase();
-                const city = (cells[1].textContent || '').trim().toLowerCase();
-                const matches = province.includes(query) || city.includes(query);
+            citySelect.innerHTML = '<option value="">All Cities / Municipalities</option>';
 
-                row.style.display = matches ? '' : 'none';
-                if (matches) visibleCount += 1;
+            uniqueCities.forEach((city) => {
+                const option = document.createElement('option');
+                option.value = city;
+                option.textContent = city;
+                citySelect.appendChild(option);
             });
 
-            if (noResultsRow) {
-                noResultsRow.style.display = visibleCount === 0 ? '' : 'none';
+            if (selectedCity && uniqueCities.includes(selectedCity)) {
+                citySelect.value = selectedCity;
             }
+        };
+
+        provinceSelect.addEventListener('change', function () {
+            rebuildCityOptions(this.value, false);
         });
+
+        rebuildCityOptions(provinceSelect.value, true);
     })();
 </script>
 @endsection

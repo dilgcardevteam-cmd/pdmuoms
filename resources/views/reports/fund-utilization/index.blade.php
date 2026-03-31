@@ -21,6 +21,30 @@
         </div>
     @endif
 
+    @php
+        $activeFilters = array_merge([
+            'search' => '',
+            'program' => '',
+            'fund_source' => '',
+            'funding_year' => '',
+            'province' => '',
+            'city' => '',
+        ], $filters ?? []);
+        $provinceMunicipalities = $filterOptions['provinceMunicipalities'] ?? [];
+        $selectedProvinceFilter = trim((string) ($activeFilters['province'] ?? ''));
+        if ($selectedProvinceFilter !== '' && array_key_exists($selectedProvinceFilter, $provinceMunicipalities)) {
+            $cityOptions = collect($provinceMunicipalities[$selectedProvinceFilter] ?? []);
+        } else {
+            $cityOptions = collect($provinceMunicipalities)->flatten(1);
+        }
+        $cityOptions = $cityOptions
+            ->map(fn($city) => trim((string) $city))
+            ->filter()
+            ->unique()
+            ->sort()
+            ->values();
+    @endphp
+
     <div style="background: white; padding: 16px 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); margin-bottom: 20px; border: 1px solid #e5e7eb;">
         <form id="fund-utilization-filters" method="GET" action="{{ route('fund-utilization.index') }}" style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
             <input type="hidden" name="per_page" value="{{ $perPage ?? 10 }}">
@@ -29,33 +53,45 @@
                 <input
                     type="text"
                     name="search"
-                    value="{{ $filters['search'] ?? '' }}"
+                    value="{{ $activeFilters['search'] }}"
                     placeholder="Search project code, title, province..."
                     style="width: 100%; height: 42px; padding: 0 12px 0 34px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; background-color: #f9fafb; color: #374151; box-sizing: border-box; outline: none;"
                 >
             </div>
+            <select name="program" style="flex: 1 1 140px; min-width: 140px; height: 42px; padding: 0 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; background-color: #f9fafb; color: #374151;">
+                <option value="">All Programs</option>
+                @foreach(($filterOptions['programs'] ?? []) as $option)
+                    <option value="{{ $option }}" {{ ($activeFilters['program'] ?? '') === $option ? 'selected' : '' }}>{{ $option }}</option>
+                @endforeach
+            </select>
             <select name="fund_source" style="flex: 1 1 140px; min-width: 140px; height: 42px; padding: 0 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; background-color: #f9fafb; color: #374151;">
                 <option value="">All Fund Sources</option>
                 @foreach(($filterOptions['fund_sources'] ?? []) as $option)
-                    <option value="{{ $option }}" {{ ($filters['fund_source'] ?? '') === $option ? 'selected' : '' }}>{{ $option }}</option>
+                    <option value="{{ $option }}" {{ ($activeFilters['fund_source'] ?? '') === $option ? 'selected' : '' }}>{{ $option }}</option>
                 @endforeach
             </select>
             <select name="funding_year" style="flex: 1 1 120px; min-width: 120px; height: 42px; padding: 0 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; background-color: #f9fafb; color: #374151;">
                 <option value="">All Years</option>
                 @foreach(($filterOptions['funding_years'] ?? []) as $option)
-                    <option value="{{ $option }}" {{ (string) ($filters['funding_year'] ?? '') === (string) $option ? 'selected' : '' }}>{{ $option }}</option>
+                    <option value="{{ $option }}" {{ (string) ($activeFilters['funding_year'] ?? '') === (string) $option ? 'selected' : '' }}>{{ $option }}</option>
                 @endforeach
             </select>
-            <select name="province" style="flex: 1 1 140px; min-width: 140px; height: 42px; padding: 0 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; background-color: #f9fafb; color: #374151;">
+            <select id="fund-utilization-filter-province" name="province" style="flex: 1 1 140px; min-width: 140px; height: 42px; padding: 0 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; background-color: #f9fafb; color: #374151;">
                 <option value="">All Provinces</option>
                 @foreach(($filterOptions['provinces'] ?? []) as $option)
-                    <option value="{{ $option }}" {{ ($filters['province'] ?? '') === $option ? 'selected' : '' }}>{{ $option }}</option>
+                    <option value="{{ $option }}" {{ ($activeFilters['province'] ?? '') === $option ? 'selected' : '' }}>{{ $option }}</option>
+                @endforeach
+            </select>
+            <select id="fund-utilization-filter-city" name="city" data-selected-city="{{ $activeFilters['city'] }}" style="flex: 1 1 170px; min-width: 170px; height: 42px; padding: 0 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; background-color: #f9fafb; color: #374151;">
+                <option value="">All Cities / Municipalities</option>
+                @foreach($cityOptions as $city)
+                    <option value="{{ $city }}" {{ ($activeFilters['city'] ?? '') === $city ? 'selected' : '' }}>{{ $city }}</option>
                 @endforeach
             </select>
             <button type="submit" style="flex: 0 0 auto; height: 42px; padding: 0 18px; background-color: #2563eb; color: white; border: 1px solid #2563eb; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; hover: background-color: #e5e7eb; transition: background-color 0.2s;">
                 <i class="fas fa-filter"></i> Apply
             </button>
-            <a href="{{ route('fund-utilization.index') }}" style="flex: 0 0 auto; height: 42px; padding: 0 18px; background-color: #6b7280; color: white; border: 1px solid #6b7280; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; text-decoration: none; transition: background-color 0.2s;">
+            <a href="{{ route('fund-utilization.index', ['per_page' => $perPage ?? 10]) }}" style="flex: 0 0 auto; height: 42px; padding: 0 18px; background-color: #6b7280; color: white; border: 1px solid #6b7280; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; text-decoration: none; transition: background-color 0.2s;">
                 Reset
             </a>
         </form>
@@ -148,9 +184,11 @@
                     </div>
                     <form method="GET" action="{{ route('fund-utilization.index') }}" style="display: inline-flex; align-items: center;">
                         <input type="hidden" name="search" value="{{ $filters['search'] ?? '' }}">
+                        <input type="hidden" name="program" value="{{ $filters['program'] ?? '' }}">
                         <input type="hidden" name="fund_source" value="{{ $filters['fund_source'] ?? '' }}">
                         <input type="hidden" name="funding_year" value="{{ $filters['funding_year'] ?? '' }}">
                         <input type="hidden" name="province" value="{{ $filters['province'] ?? '' }}">
+                        <input type="hidden" name="city" value="{{ $filters['city'] ?? '' }}">
                         <select id="per-page" name="per_page" onchange="this.form.submit()" aria-label="Rows per page" title="Rows per page" style="padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px;">
                             @foreach([10, 15, 25, 50] as $option)
                                 <option value="{{ $option }}" {{ (int) ($perPage ?? 10) === $option ? 'selected' : '' }}>{{ $option }}</option>
@@ -244,6 +282,51 @@
             // Redirect to the export URL
             window.location.href = url.toString();
         });
+
+        (function () {
+            const provinceSelect = document.getElementById('fund-utilization-filter-province');
+            const citySelect = document.getElementById('fund-utilization-filter-city');
+            const locationData = @json($provinceMunicipalities ?? []);
+
+            if (!provinceSelect || !citySelect) {
+                return;
+            }
+
+            const getAllCities = () => Object.keys(locationData).reduce((all, province) => {
+                return all.concat(locationData[province] || []);
+            }, []);
+
+            const rebuildCityOptions = (selectedProvince, preserveSelection = true) => {
+                const selectedCity = preserveSelection ? (citySelect.value || citySelect.dataset.selectedCity || '') : '';
+                const cityList = selectedProvince && Object.prototype.hasOwnProperty.call(locationData, selectedProvince)
+                    ? (locationData[selectedProvince] || [])
+                    : getAllCities();
+
+                const uniqueCities = Array.from(new Set(cityList
+                    .map((city) => (city || '').trim())
+                    .filter(Boolean)))
+                    .sort((left, right) => left.localeCompare(right));
+
+                citySelect.innerHTML = '<option value="">All Cities / Municipalities</option>';
+
+                uniqueCities.forEach((city) => {
+                    const option = document.createElement('option');
+                    option.value = city;
+                    option.textContent = city;
+                    citySelect.appendChild(option);
+                });
+
+                if (selectedCity && uniqueCities.includes(selectedCity)) {
+                    citySelect.value = selectedCity;
+                }
+            };
+
+            provinceSelect.addEventListener('change', function () {
+                rebuildCityOptions(this.value, false);
+            });
+
+            rebuildCityOptions(provinceSelect.value, true);
+        })();
     </script>
 
     <style>

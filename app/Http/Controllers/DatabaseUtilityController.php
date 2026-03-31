@@ -10,6 +10,7 @@ use App\Models\RolePermissionSetting;
 use App\Models\User;
 use App\Services\DatabaseBackupService;
 use App\Support\InputSanitizer;
+use App\Support\NotificationUrl;
 use App\Support\RolePermissionRegistry;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -290,17 +291,18 @@ class DatabaseUtilityController extends Controller
             $senderName = trim((string) ($sender?->username ?? 'PDMU PDMUOMS'));
         }
 
-        $actionUrl = $redirectPath ? url($redirectPath) : route('dashboard');
+        $actionUrl = $redirectPath ? url($redirectPath) : route('dashboard', [], false);
+        $notificationUrl = NotificationUrl::normalizeForStorage($actionUrl);
         $systemMessage = $this->formatBulkNotificationSystemMessage($title, $message);
         $now = now();
 
-        foreach (array_chunk($recipients->map(function (User $recipient) use ($systemMessage, $actionUrl, $now, $senderId, $senderName): array {
+        foreach (array_chunk($recipients->map(function (User $recipient) use ($systemMessage, $notificationUrl, $now, $senderId, $senderName): array {
             return [
                 'user_id' => (int) $recipient->idno,
                 'sender_user_id' => $senderId,
                 'sender_name' => $senderName,
                 'message' => $systemMessage,
-                'url' => $actionUrl,
+                'url' => $notificationUrl,
                 'document_type' => 'bulk-notification',
                 'quarter' => null,
                 'read_at' => null,

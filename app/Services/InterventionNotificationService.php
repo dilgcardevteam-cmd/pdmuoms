@@ -3,12 +3,27 @@
 namespace App\Services;
 
 use App\Models\User;
+use App\Support\NotificationUrl;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class InterventionNotificationService
 {
+    /**
+     * @param iterable<int|string|null> $recipientIds
+     */
+    public function notifyRecipientIds(
+        iterable $recipientIds,
+        int $actorId,
+        string $message,
+        string $url,
+        string $documentType,
+        ?string $quarter = null
+    ): void {
+        $this->insertNotifications($recipientIds, $actorId, $message, $url, $documentType, $quarter);
+    }
+
     public function notifyProvincialDilg(
         ?string $province,
         int $actorId,
@@ -107,6 +122,7 @@ class InterventionNotificationService
             return;
         }
 
+        $url = NotificationUrl::normalizeForStorage($url);
         $now = now();
         $rows = collect($recipientIds)
             ->map(function ($recipientId) {

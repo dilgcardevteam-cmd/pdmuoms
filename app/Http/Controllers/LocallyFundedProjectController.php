@@ -92,10 +92,6 @@ class LocallyFundedProjectController extends Controller
         }
 
         if ($user->isRegionalUser()) {
-            if ($region !== '') {
-                $query->whereRaw('LOWER(TRIM(COALESCE(' . $regionColumnExpression . ', ""))) = ?', [$regionLower]);
-            }
-
             return;
         }
 
@@ -159,7 +155,7 @@ class LocallyFundedProjectController extends Controller
         }
 
         if ($user->isRegionalUser()) {
-            return $user->normalizedRegion() === '' || $recordRegionLower === $user->normalizedRegion();
+            return true;
         }
 
         if (!$user->isDilgUser()) {
@@ -253,8 +249,23 @@ class LocallyFundedProjectController extends Controller
         return compact('provinces', 'provinceMunicipalities', 'fundSources', 'fundingYears', 'procurementTypes', 'statusOptions');
     }
 
-    private function applyLocallyFundedSourceScope($query, string $sourceExpression): void
+    private function isSglgifProjectCode(?string $projectCode): bool
     {
+        return str_starts_with(strtoupper(trim((string) $projectCode)), 'SGLGIF');
+    }
+
+    private function isExcludedSglgifLocallyFundedProject(?string $fundSource, ?string $projectCode = null): bool
+    {
+        return $this->isSglgifProjectCode($projectCode)
+            || strtoupper(trim((string) $fundSource)) === 'SGLGIF';
+    }
+
+    private function applyLocallyFundedSourceScope($query, string $sourceExpression, ?string $projectCodeExpression = null): void
+    {
+        if ($projectCodeExpression !== null) {
+            $query->whereRaw('UPPER(TRIM(COALESCE(' . $projectCodeExpression . ', ""))) NOT LIKE ?', ['SGLGIF%']);
+        }
+
         $query->where(function ($subQuery) use ($sourceExpression) {
             $subQuery->whereRaw('UPPER(TRIM(COALESCE(' . $sourceExpression . ', ""))) IN (?, ?, ?, ?)', [
                 'SBDP',
@@ -363,7 +374,7 @@ class LocallyFundedProjectController extends Controller
         }
 
         $projectCode = trim((string) $project->subaybayan_project_code);
-        if ($projectCode === '') {
+        if ($projectCode === '' || $this->isExcludedSglgifLocallyFundedProject($project->fund_source, $projectCode)) {
             return;
         }
 
@@ -468,7 +479,7 @@ class LocallyFundedProjectController extends Controller
                 $targetProvince = $projectProvince;
             }
 
-            $url = route('locally-funded-project.show', $project);
+$url = route('locally-funded-project.show', $project, false);
             $notificationService = app(InterventionNotificationService::class);
 
             if ($actor->isLguScopedUser() && $targetProvince !== '') {
@@ -666,6 +677,8 @@ class LocallyFundedProjectController extends Controller
                     ->from('tbfur')
                     ->whereColumn('tbfur.project_code', 'locally_funded_projects.subaybayan_project_code');
             })
+            ->whereRaw('UPPER(TRIM(COALESCE(fund_source, ""))) <> ?', ['SGLGIF'])
+            ->whereRaw('UPPER(TRIM(COALESCE(subaybayan_project_code, ""))) NOT LIKE ?', ['SGLGIF%'])
             ->orderBy('id')
             ->chunkById(200, function ($projects) use ($now) {
                 $rows = [];
@@ -879,7 +892,11 @@ class LocallyFundedProjectController extends Controller
             $filters['fund_source'] = '';
         }
 
-        $this->applyLocallyFundedSourceScope($query, 'COALESCE(lfp.fund_source, spp.program)');
+        $this->applyLocallyFundedSourceScope(
+            $query,
+            'COALESCE(lfp.fund_source, spp.program)',
+            'COALESCE(lfp.subaybayan_project_code, spp.project_code)'
+        );
 
         $scopedLocationOptionsQuery = clone $query;
 

@@ -575,6 +575,10 @@ class RbisAnnualCertificationController extends Controller
         $reportingYear = $this->resolveReportingYear($request);
         $officeRows = $this->buildOfficeRows($this->getSortedOfficesByProvince());
         $perPage = (int) $request->query('per_page', 15);
+        $filters = [
+            'province' => trim((string) $request->query('province', '')),
+            'city' => trim((string) $request->query('city', '')),
+        ];
         $allowedPerPage = [10, 15, 25, 50];
         if (!in_array($perPage, $allowedPerPage, true)) {
             $perPage = 15;
@@ -588,6 +592,33 @@ class RbisAnnualCertificationController extends Controller
         } elseif ($user && $user->isDilgUser() && !empty($user->province) && $user->province !== 'Regional Office') {
             $officeRows = array_values(array_filter($officeRows, function ($row) use ($user) {
                 return $row['province'] === $user->province;
+            }));
+        }
+
+        $scopedOfficeRows = collect($officeRows);
+        $filterOptions = [
+            'provinces' => $scopedOfficeRows
+                ->pluck('province')
+                ->filter()
+                ->unique()
+                ->sort()
+                ->values()
+                ->all(),
+            'provinceMunicipalities' => $scopedOfficeRows
+                ->groupBy('province')
+                ->map(fn ($rows) => $rows->pluck('city_municipality')->filter()->values()->all())
+                ->toArray(),
+        ];
+
+        if ($filters['province'] !== '') {
+            $officeRows = array_values(array_filter($officeRows, function ($row) use ($filters) {
+                return (string) ($row['province'] ?? '') === $filters['province'];
+            }));
+        }
+
+        if ($filters['city'] !== '') {
+            $officeRows = array_values(array_filter($officeRows, function ($row) use ($filters) {
+                return (string) ($row['city_municipality'] ?? '') === $filters['city'];
             }));
         }
 
@@ -627,7 +658,16 @@ class RbisAnnualCertificationController extends Controller
                 ->pluck('total', 'office');
         }
 
-        return view('reports.rbis-annual-certification.index', compact('officeRows', 'uploadCountsByOffice', 'totalProvinces', 'totalOffices', 'reportingYear', 'perPage'));
+        return view('reports.rbis-annual-certification.index', compact(
+            'officeRows',
+            'uploadCountsByOffice',
+            'totalProvinces',
+            'totalOffices',
+            'reportingYear',
+            'perPage',
+            'filters',
+            'filterOptions'
+        ));
     }
 
     public function edit(Request $request, $id)

@@ -28,7 +28,6 @@
             'CMGP' => 'fa-people-group',
             'GEF' => 'fa-leaf',
             'SAFPB' => 'fa-bridge',
-            'SGLGIF' => 'fa-city',
         ];
 
         $fundSourceStyleMap = [
@@ -37,7 +36,6 @@
             'CMGP' => ['bg' => 'linear-gradient(180deg, #fffaf4 0%, #fff7ed 100%)', 'border' => '#fed7aa', 'iconBg' => 'linear-gradient(180deg, #fff4e5 0%, #ffedd5 100%)', 'iconColor' => '#c2410c', 'labelColor' => '#7c2d12'],  // orange
             'GEF' => ['bg' => 'linear-gradient(180deg, #f4feff 0%, #ecfeff 100%)', 'border' => '#a5f3fc', 'iconBg' => 'linear-gradient(180deg, #e6fcff 0%, #cffafe 100%)', 'iconColor' => '#0e7490', 'labelColor' => '#164e63'],   // cyan
             'SAFPB' => ['bg' => 'linear-gradient(180deg, #fff8f8 0%, #fef2f2 100%)', 'border' => '#fecaca', 'iconBg' => 'linear-gradient(180deg, #fff1f1 0%, #fee2e2 100%)', 'iconColor' => '#dc2626', 'labelColor' => '#7f1d1d'], // red
-            'SGLGIF' => ['bg' => 'linear-gradient(180deg, #fff8ff 0%, #fdf4ff 100%)', 'border' => '#e9d5ff', 'iconBg' => 'linear-gradient(180deg, #faf2ff 0%, #f3e8ff 100%)', 'iconColor' => '#7e22ce', 'labelColor' => '#581c87'], // purple
         ];
 
         $financialMetricStyleMap = [

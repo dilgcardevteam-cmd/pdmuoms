@@ -460,6 +460,20 @@ class LocalProjectMonitoringCommitteeController extends Controller
         }
     }
 
+    private function provincialUploadRecipientIds(?string $province)
+    {
+        $normalizedProvince = Str::lower(trim((string) $province));
+        if ($normalizedProvince === '') {
+            return collect();
+        }
+
+        return User::query()
+            ->where('status', 'active')
+            ->where('role', User::ROLE_PROVINCIAL)
+            ->whereRaw('LOWER(TRIM(COALESCE(province, ""))) = ?', [$normalizedProvince])
+            ->pluck('idno');
+    }
+
     private function notifyWorkflowUsersOnUpload(LpmcDocument $document): void
     {
         try {
@@ -494,14 +508,26 @@ class LocalProjectMonitoringCommitteeController extends Controller
                     $targetProvince !== '' ? ' - ' . $targetProvince : ''
                 );
 
-                $notificationService->notifyProvincialDilg(
-                    $targetProvince,
-                    $actorId,
-                    $message,
-                    $url,
-                    'lpmc-' . (string) ($document->doc_type ?? 'document'),
-                    $document->quarter ?? null
-                );
+                $recipientIds = $this->provincialUploadRecipientIds($targetProvince);
+                if ($recipientIds->isNotEmpty()) {
+                    $notificationService->notifyRecipientIds(
+                        $recipientIds,
+                        $actorId,
+                        $message,
+                        $url,
+                        'lpmc-' . (string) ($document->doc_type ?? 'document'),
+                        $document->quarter ?? null
+                    );
+                } else {
+                    $notificationService->notifyProvincialDilg(
+                        $targetProvince,
+                        $actorId,
+                        $message,
+                        $url,
+                        'lpmc-' . (string) ($document->doc_type ?? 'document'),
+                        $document->quarter ?? null
+                    );
+                }
 
                 return;
             }
@@ -531,6 +557,53 @@ class LocalProjectMonitoringCommitteeController extends Controller
             ]);
         }
     }
+
+    private function normalizeOfficeDocumentStatus(?LpmcDocument $document): string
+    {
+        if (!$document || empty($document->file_path)) {
+            return 'no_upload';
+        }
+
+        $status = trim(Str::lower((string) ($document->status ?? '')));
+
+        if ($status === 'approved') {
+            return 'approved';
+        }
+
+        if ($status === 'returned') {
+            return 'returned';
+        }
+
+        if ($status === 'pending_ro') {
+            return 'pending_ro';
+        }
+
+        return 'pending_po';
+    }
+
+    private function officeMatchesStatusFilter(array $officeDocuments, string $filter): bool
+    {
+        $normalizedFilter = trim(Str::lower($filter));
+        if ($normalizedFilter === '' || $normalizedFilter === 'all') {
+            return true;
+        }
+
+        $documents = collect($officeDocuments)
+            ->filter(function ($document) {
+                return $document instanceof LpmcDocument;
+            })
+            ->values();
+
+        if ($normalizedFilter === 'no_upload') {
+            return $documents->every(function (LpmcDocument $document) {
+                return $this->normalizeOfficeDocumentStatus($document) === 'no_upload';
+            });
+        }
+
+        return $documents->contains(function (LpmcDocument $document) use ($normalizedFilter) {
+            return $this->normalizeOfficeDocumentStatus($document) === $normalizedFilter;
+        });
+    }
     /**
      * Display a listing of the resource.
      */
@@ -538,6 +611,12 @@ class LocalProjectMonitoringCommitteeController extends Controller
     {
         $officeRows = $this->buildOfficeRows($this->getOffices());
         $perPage = (int) $request->query('per_page', 15);
+        $filters = [
+            'search' => trim((string) $request->query('search', '')),
+            'province' => trim((string) $request->query('province', '')),
+            'city' => trim((string) $request->query('city', '')),
+            'status' => trim((string) $request->query('status', '')),
+        ];
         $allowedPerPage = [10, 15, 25, 50];
         if (!in_array($perPage, $allowedPerPage, true)) {
             $perPage = 15;
@@ -548,7 +627,13 @@ class LocalProjectMonitoringCommitteeController extends Controller
             $officeRows = array_values(array_filter($officeRows, function ($row) use ($user) {
                 return $user->matchesAssignedOffice((string) ($row['city_municipality'] ?? ''));
             }));
-        } elseif ($user && $user->isDilgUser() && !empty($user->province)) {
+        } elseif (
+            $user
+            && $user->isDilgUser()
+            && !empty($user->province)
+            && !$user->isRegionalUser()
+            && !$user->isRegionalOfficeAssignment()
+        ) {
             $selectedProvince = $request->query('province');
             $userProvince = !empty($selectedProvince) ? $selectedProvince : $user->province;
             if ($userProvince !== 'Regional Office') {
@@ -556,6 +641,83 @@ class LocalProjectMonitoringCommitteeController extends Controller
                     return $row['province'] === $userProvince;
                 }));
             }
+        }
+
+        $filterOptions = [
+            'provinces' => collect($officeRows)
+                ->pluck('province')
+                ->filter()
+                ->unique()
+                ->sort()
+                ->values()
+                ->all(),
+            'provinceMunicipalities' => collect($officeRows)
+                ->groupBy('province')
+                ->map(function ($rows) {
+                    return collect($rows)
+                        ->pluck('city_municipality')
+                        ->map(function ($city) {
+                            return trim((string) $city);
+                        })
+                        ->filter()
+                        ->unique()
+                        ->sort()
+                        ->values()
+                        ->all();
+                })
+                ->toArray(),
+            'statuses' => [
+                'no_upload' => 'No Upload',
+                'pending_po' => 'For PO Approval',
+                'pending_ro' => 'For RO Approval',
+                'approved' => 'Approved',
+                'returned' => 'Returned',
+            ],
+        ];
+
+        $documentsByOffice = [];
+        $allOfficeNames = collect($officeRows)
+            ->pluck('city_municipality')
+            ->unique()
+            ->values()
+            ->all();
+
+        if (!empty($allOfficeNames)) {
+            $documents = LpmcDocument::whereIn('office', $allOfficeNames)->get();
+            foreach ($documents as $doc) {
+                $key = $doc->doc_type . '|' . ($doc->year ?? '') . '|' . ($doc->quarter ?? '');
+                $documentsByOffice[$doc->office][$key] = $doc;
+            }
+        }
+
+        if ($filters['search'] !== '') {
+            $keyword = Str::lower($filters['search']);
+            $officeRows = array_values(array_filter($officeRows, function ($row) use ($keyword) {
+                $province = Str::lower(trim((string) ($row['province'] ?? '')));
+                $office = Str::lower(trim((string) ($row['city_municipality'] ?? '')));
+
+                return str_contains($province, $keyword) || str_contains($office, $keyword);
+            }));
+        }
+
+        if ($filters['province'] !== '') {
+            $officeRows = array_values(array_filter($officeRows, function ($row) use ($filters) {
+                return (string) ($row['province'] ?? '') === $filters['province'];
+            }));
+        }
+
+        if ($filters['city'] !== '') {
+            $officeRows = array_values(array_filter($officeRows, function ($row) use ($filters) {
+                return (string) ($row['city_municipality'] ?? '') === $filters['city'];
+            }));
+        }
+
+        if ($filters['status'] !== '') {
+            $officeRows = array_values(array_filter($officeRows, function ($row) use ($documentsByOffice, $filters) {
+                $officeName = (string) ($row['city_municipality'] ?? '');
+
+                return $this->officeMatchesStatusFilter($documentsByOffice[$officeName] ?? [], $filters['status']);
+            }));
         }
 
         $page = LengthAwarePaginator::resolveCurrentPage('page');
@@ -571,22 +733,7 @@ class LocalProjectMonitoringCommitteeController extends Controller
             ]
         ))->withQueryString();
 
-        $officeNames = $officeRows->getCollection()
-            ->pluck('city_municipality')
-            ->unique()
-            ->values()
-            ->all();
-
-        $documentsByOffice = [];
-        if (!empty($officeNames)) {
-            $documents = LpmcDocument::whereIn('office', $officeNames)->get();
-            foreach ($documents as $doc) {
-                $key = $doc->doc_type . '|' . ($doc->year ?? '') . '|' . ($doc->quarter ?? '');
-                $documentsByOffice[$doc->office][$key] = $doc;
-            }
-        }
-
-        return view('reports.local-project-monitoring-committee.index', compact('officeRows', 'documentsByOffice', 'perPage'));
+        return view('reports.local-project-monitoring-committee.index', compact('officeRows', 'documentsByOffice', 'perPage', 'filters', 'filterOptions'));
     }
 
     /**
@@ -671,6 +818,13 @@ class LocalProjectMonitoringCommitteeController extends Controller
             ->where('year', $year)
             ->where('quarter', $quarter)
             ->first();
+
+        if ($existingDocument && !empty($existingDocument->file_path) && $existingDocument->status !== 'returned') {
+            return redirect()
+                ->back()
+                ->with('error', 'Document already submitted. Upload is disabled until the current file is returned.');
+        }
+
         $oldFilePath = $existingDocument?->file_path;
 
         $file = $request->file('document');

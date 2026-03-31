@@ -5,25 +5,25 @@
             'key' => 'locally-funded',
             'label' => 'Locally Funded Projects',
             'icon' => 'fa-hand-holding-usd',
-            'url' => route('projects.locally-funded'),
+            'url' => route('dashboard', ['tab' => 'locally-funded'], false),
         ],
         [
             'key' => 'rlip-lime',
             'label' => 'RLIP / LIME 20% Development Fund',
             'icon' => 'fa-leaf',
-            'url' => route('projects.rlip-lime.dashboard'),
+            'url' => route('projects.rlip-lime.dashboard', [], false),
         ],
         [
             'key' => 'rssa',
             'label' => 'Rapid Subproject Sustainability Assessment',
             'icon' => 'fa-list-check',
-            'url' => route('projects.rssa'),
+            'url' => route('projects.rssa', [], false),
         ],
         [
             'key' => 'sglgif',
             'label' => 'SGLG Incentive Fund',
             'icon' => 'fa-award',
-            'url' => route('projects.sglgif'),
+            'url' => route('projects.sglgif', [], false),
         ],
     ];
 @endphp

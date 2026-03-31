@@ -542,6 +542,10 @@ class RoadMaintenanceStatusReportController extends Controller
         $reportingYear = $this->resolveReportingYear($request);
         $officeRows = $this->buildOfficeRows($this->getOffices());
         $perPage = (int) $request->query('per_page', 15);
+        $filters = [
+            'province' => trim((string) $request->query('province', '')),
+            'city' => trim((string) $request->query('city', '')),
+        ];
         $allowedPerPage = [10, 15, 25, 50];
         if (!in_array($perPage, $allowedPerPage, true)) {
             $perPage = 15;
@@ -553,13 +557,38 @@ class RoadMaintenanceStatusReportController extends Controller
                 return $user->matchesAssignedOffice((string) ($row['city_municipality'] ?? ''));
             }));
         } elseif ($user && $user->isDilgUser() && !empty($user->province)) {
-            $selectedProvince = $request->query('province');
-            $userProvince = !empty($selectedProvince) ? $selectedProvince : $user->province;
-            if ($userProvince !== 'Regional Office') {
-                $officeRows = array_values(array_filter($officeRows, function ($row) use ($userProvince) {
-                    return $row['province'] === $userProvince;
+            if ($user->province !== 'Regional Office') {
+                $officeRows = array_values(array_filter($officeRows, function ($row) use ($user) {
+                    return $row['province'] === $user->province;
                 }));
             }
+        }
+
+        $scopedOfficeRows = collect($officeRows);
+        $filterOptions = [
+            'provinces' => $scopedOfficeRows
+                ->pluck('province')
+                ->filter()
+                ->unique()
+                ->sort()
+                ->values()
+                ->all(),
+            'provinceMunicipalities' => $scopedOfficeRows
+                ->groupBy('province')
+                ->map(fn ($rows) => $rows->pluck('city_municipality')->filter()->values()->all())
+                ->toArray(),
+        ];
+
+        if ($filters['province'] !== '') {
+            $officeRows = array_values(array_filter($officeRows, function ($row) use ($filters) {
+                return (string) ($row['province'] ?? '') === $filters['province'];
+            }));
+        }
+
+        if ($filters['city'] !== '') {
+            $officeRows = array_values(array_filter($officeRows, function ($row) use ($filters) {
+                return (string) ($row['city_municipality'] ?? '') === $filters['city'];
+            }));
         }
 
         $page = LengthAwarePaginator::resolveCurrentPage('page');
@@ -594,7 +623,14 @@ class RoadMaintenanceStatusReportController extends Controller
             }
         }
 
-        return view('reports.road-maintenance-status.index', compact('officeRows', 'documentsByOffice', 'reportingYear', 'perPage'));
+        return view('reports.road-maintenance-status.index', compact(
+            'officeRows',
+            'documentsByOffice',
+            'reportingYear',
+            'perPage',
+            'filters',
+            'filterOptions'
+        ));
     }
 
     public function create()

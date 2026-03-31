@@ -24,6 +24,13 @@
         </div>
     @endif
 
+    @if (session('error'))
+        <div style="background-color: #fef2f2; border: 1px solid #fecaca; color: #991b1b; padding: 16px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+            <i class="fas fa-exclamation-circle"></i>
+            <span>{{ session('error') }}</span>
+        </div>
+    @endif
+
     <div style="background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); margin-bottom: 20px;">
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;">
             <div>
@@ -85,6 +92,7 @@
                     $isRegionalOfficeUserForUpload = Auth::user()->agency === 'DILG' && Auth::user()->province === 'Regional Office';
                     $hasFile = $doc && $doc->file_path;
                     $isReturned = $doc && $doc->status === 'returned';
+                    $disableUploadInput = ($hasFile && !$isReturned) || $isRegionalOfficeUserForUpload;
                     $isApprovedRo = $doc && $doc->approved_at_dilg_ro;
                     $isPendingRo = $doc && $doc->approved_at_dilg_po && !$doc->approved_at_dilg_ro;
                     $statusLabel = 'Pending Upload';
@@ -260,22 +268,27 @@
                         type="file"
                         name="document"
                         required
-                        @disabled($isRegionalOfficeUserForUpload)
+                        @disabled($disableUploadInput)
                         class="ops-upload-input"
-                        style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 12px; margin-bottom: 8px;"
+                        style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 12px; margin-bottom: 8px; background-color: {{ $disableUploadInput ? '#f3f4f6' : '#ffffff' }}; cursor: {{ $disableUploadInput ? 'not-allowed' : 'auto' }};"
                         onchange="showLpmcSaveButton(this, '{{ $buttonId }}', '{{ $filenameId }}')"
                     >
-                    @if ($isRegionalOfficeUserForUpload)
+                    @if ($disableUploadInput)
                         <div style="margin-bottom: 8px; font-size: 11px; color: #6b7280;">
-                            Regional Office cannot upload files. Choose file is disabled.
+                            @if ($isRegionalOfficeUserForUpload)
+                                Regional Office cannot upload files. Choose file is disabled.
+                            @else
+                                File already submitted. Choose file is disabled until the current file is returned.
+                            @endif
                         </div>
                     @endif
                     <div id="{{ $filenameId }}" class="ops-upload-filename" style="display: none; margin-bottom: 8px; font-size: 12px; color: #6b7280;"></div>
                     <button
                         type="submit"
                         id="{{ $buttonId }}"
+                        @disabled($disableUploadInput)
                         class="ops-upload-submit"
-                        style="width: 100%; padding: 8px 12px; background-color: #002C76; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12px; opacity: 0; pointer-events: none; transition: all 0.3s ease;"
+                        style="width: 100%; padding: 8px 12px; background-color: #002C76; color: white; border: none; border-radius: 6px; cursor: {{ $disableUploadInput ? 'not-allowed' : 'pointer' }}; font-weight: 600; font-size: 12px; opacity: {{ $disableUploadInput ? '0.55' : '0' }}; pointer-events: none; transition: all 0.3s ease;"
                     >
                         Upload
                     </button>
@@ -368,6 +381,7 @@
                                     $disableQuarterUpload = $isQuarterClosed;
                                     $hasFile = $doc && $doc->file_path;
                                     $isReturned = $doc && $doc->status === 'returned';
+                                    $disableUploadInput = ($hasFile && !$isReturned) || $isRegionalOfficeUserForUpload || $disableQuarterUpload;
                                     $isApprovedRo = $doc && $doc->approved_at_dilg_ro;
                                     $isPendingRo = $doc && $doc->approved_at_dilg_po && !$doc->approved_at_dilg_ro;
                                     $statusLabel = 'Pending Upload';
@@ -543,24 +557,27 @@
                                         type="file"
                                         name="document"
                                         required
-                                        @disabled($isRegionalOfficeUserForUpload || $disableQuarterUpload)
-                                        style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 12px; margin-bottom: 8px;"
+                                        @disabled($disableUploadInput)
+                                        style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 12px; margin-bottom: 8px; background-color: {{ $disableUploadInput ? '#f3f4f6' : '#ffffff' }}; cursor: {{ $disableUploadInput ? 'not-allowed' : 'auto' }};"
                                         onchange="showLpmcSaveButton(this, '{{ $buttonId }}', '{{ $filenameId }}')"
                                     >
-                                    @if ($disableQuarterUpload)
+                                    @if ($disableUploadInput)
                                         <div style="margin-bottom: 8px; font-size: 11px; color: #6b7280;">
-                                            Uploads are closed for {{ $label }}.
-                                        </div>
-                                    @elseif ($isRegionalOfficeUserForUpload)
-                                        <div style="margin-bottom: 8px; font-size: 11px; color: #6b7280;">
-                                            Regional Office cannot upload files. Choose file is disabled.
+                                            @if ($disableQuarterUpload)
+                                                Uploads are closed for {{ $label }}.
+                                            @elseif ($isRegionalOfficeUserForUpload)
+                                                Regional Office cannot upload files. Choose file is disabled.
+                                            @else
+                                                File already submitted. Choose file is disabled until the current file is returned.
+                                            @endif
                                         </div>
                                     @endif
                                     <div id="{{ $filenameId }}" style="display: none; margin-bottom: 8px; font-size: 12px; color: #6b7280;"></div>
                                     <button
                                         type="submit"
                                         id="{{ $buttonId }}"
-                                        style="width: 100%; padding: 8px 12px; background-color: #002C76; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12px; opacity: 0; pointer-events: none; transition: all 0.3s ease;"
+                                        @disabled($disableUploadInput)
+                                        style="width: 100%; padding: 8px 12px; background-color: #002C76; color: white; border: none; border-radius: 6px; cursor: {{ $disableUploadInput ? 'not-allowed' : 'pointer' }}; font-weight: 600; font-size: 12px; opacity: {{ $disableUploadInput ? '0.55' : '0' }}; pointer-events: none; transition: all 0.3s ease;"
                                     >
                                         Upload
                                     </button>
@@ -738,11 +755,11 @@
                 });
             });
 
-            document.querySelectorAll('.ops-detail-page button[id^="lpmc-doc-btn-"]').forEach(function (btn) {
+            document.querySelectorAll('.ops-detail-page button[id^="lpmc-doc-btn-"], .ops-detail-page button[id^="lpmc-q-btn-"]').forEach(function (btn) {
                 btn.classList.add('ops-upload-submit');
             });
 
-            document.querySelectorAll('.ops-detail-page div[id^="lpmc-doc-file-"]').forEach(function (filenameDiv) {
+            document.querySelectorAll('.ops-detail-page div[id^="lpmc-doc-file-"], .ops-detail-page div[id^="lpmc-q-file-"]').forEach(function (filenameDiv) {
                 filenameDiv.classList.add('ops-upload-filename');
                 if (filenameDiv.textContent && filenameDiv.textContent.trim().length > 0) {
                     filenameDiv.classList.add('has-file');

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Ticket;
 use App\Models\User;
+use App\Support\NotificationUrl;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -35,7 +36,7 @@ class TicketNotificationService
             recipients: $recipients,
             sender: $actor,
             message: $message,
-            url: route('ticketing.show', $ticket),
+            url: route('ticketing.show', $ticket, false),
             documentType: 'ticketing-system',
         );
     }
@@ -58,7 +59,7 @@ class TicketNotificationService
             recipients: $recipients,
             sender: $actor,
             message: $message,
-            url: route('ticketing.show', $ticket),
+            url: route('ticketing.show', $ticket, false),
             documentType: 'ticketing-system',
         );
     }
@@ -74,6 +75,7 @@ class TicketNotificationService
             return;
         }
 
+        $url = NotificationUrl::normalizeForStorage($url);
         $senderId = (int) $sender->getKey();
         $senderName = $this->resolveActorName($sender);
         $now = now();
