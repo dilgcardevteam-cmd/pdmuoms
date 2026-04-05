@@ -291,7 +291,7 @@
             @endif
         </aside>
 
-        <div class="msg-chat" id="msgChatRoot" data-thread="{{ $selectedThreadId }}" data-latest-thread-id="{{ $latestConversationId }}" data-latest-global-id="{{ (int) ($latestGlobalMessageId ?? 0) }}">
+        <div class="msg-chat" id="msgChatRoot" data-thread="{{ $selectedThreadId }}" data-auth-user="{{ (int) auth()->id() }}" data-latest-thread-id="{{ $latestConversationId }}" data-latest-global-id="{{ (int) ($latestGlobalMessageId ?? 0) }}">
             <div class="msg-chat-main" id="msgChatMain">
                 <div class="msg-chat-compose-panel{{ $composeOpen ? ' is-open' : '' }}" id="msgChatComposePanel">
                     @php
@@ -766,6 +766,7 @@ body.msg-group-info-open{overflow:hidden}
 .msg-row{display:flex;align-items:flex-end;gap:8px;margin-bottom:14px}
 .msg-row.left{justify-content:flex-start}
 .msg-row.right{justify-content:flex-end}
+.msg-row.is-pending{opacity:.78}
 .msg-bubble-stack{display:grid;gap:6px;max-width:min(720px,calc(100% - 48px))}
 .msg-bubble-stack.outgoing{justify-items:end}
 .msg-bubble-stack.incoming{justify-items:start;gap:4px;max-width:min(780px,calc(100% - 34px))}
@@ -1406,6 +1407,7 @@ body.msg-image-modal-open{overflow:hidden}
 
     let latestThreadId = Number(chatRoot.dataset.latestThreadId || 0);
     let latestGlobalId = Number(chatRoot.dataset.latestGlobalId || 0);
+    const authUserId = Number(chatRoot.dataset.authUser || 0);
     const currentThread = Number(chatRoot.dataset.thread || 0);
     const unreadIndicators = Array.from(document.querySelectorAll('[data-unread-total]'));
     const chatBody = document.getElementById('msgChatBody');
@@ -1420,10 +1422,11 @@ body.msg-image-modal-open{overflow:hidden}
     const imageModalTitle = document.getElementById('msgImageModalTitle');
     const imageModalClose = document.getElementById('msgImageModalClose');
     const imageModalCloseTargets = Array.from(document.querySelectorAll('[data-image-modal-close]'));
-    const POLL_MS = 7000;
+    const POLL_MS = 1000;
     const CHAT_INPUT_MAX_HEIGHT = 80;
     const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
     const MAX_PENDING_IMAGES = 10;
+    let optimisticMessageId = 0;
     let uploadNoticeTimer = 0;
     let pendingImageId = 0;
     let pendingImages = [];
@@ -1682,7 +1685,36 @@ body.msg-image-modal-open{overflow:hidden}
     const escapeHtml = (value) => String(value || '')
         .replaceAll('&', '&amp;')
         .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;');
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+
+    const withSocketHeaders = (headers = {}) => {
+        const nextHeaders = { ...headers };
+        const socketId = typeof window.Echo?.socketId === 'function' ? window.Echo.socketId() : '';
+
+        if (socketId) {
+            nextHeaders['X-Socket-ID'] = socketId;
+        }
+
+        return nextHeaders;
+    };
+
+    const setComposerBusy = (busy) => {
+        const isBusy = busy === true;
+
+        if (sendMessageInput instanceof HTMLTextAreaElement) {
+            sendMessageInput.disabled = isBusy;
+        }
+
+        if (sendImageButton instanceof HTMLButtonElement) {
+            sendImageButton.disabled = isBusy;
+        }
+
+        if (sendImageInput instanceof HTMLInputElement) {
+            sendImageInput.disabled = isBusy;
+        }
+    };
 
     const isNearBottom = () => {
         if (!chatBody) {
@@ -1757,6 +1789,66 @@ body.msg-image-modal-open{overflow:hidden}
         ].join('');
     };
 
+    const messageRowMarkup = (entry) => {
+        const mine = Boolean(entry?.is_mine);
+        const pending = Boolean(entry?.is_pending);
+        const images = Array.isArray(entry?.images) ? entry.images : [];
+        const messageText = String(entry?.message || '');
+        const rowAttributes = [
+            'class="msg-row ' + (mine ? 'right' : 'left') + (pending ? ' is-pending' : '') + '"',
+            pending && entry?.id ? 'data-optimistic-id="' + escapeHtml(entry.id) + '"' : '',
+        ].filter(Boolean).join(' ');
+
+        return [
+            '<div ' + rowAttributes + '>',
+            mine ? '' : incomingAvatarMarkup(),
+            '<div class="msg-bubble-stack ' + (mine ? 'outgoing' : 'incoming') + '">',
+            renderImageGallery(images, mine),
+            messageText !== ''
+                ? '<div class="msg-bubble ' + (mine ? 'outgoing' : 'incoming') + '"><div class="msg-text">' + escapeHtml(messageText).replaceAll('\n', '<br>') + '</div></div>'
+                : '',
+            '<div class="msg-meta ' + (mine ? 'out' : '') + '"><span>' + escapeHtml(entry?.time || '') + '</span></div>',
+            '</div>',
+            '</div>',
+        ].join('');
+    };
+
+    const appendOptimisticMessage = (entry) => {
+        if (!(chatBody instanceof HTMLElement)) {
+            return '';
+        }
+
+        const optimisticId = 'optimistic-' + (++optimisticMessageId);
+        const emptyThread = chatBody.querySelector('.msg-empty-thread');
+        if (emptyThread) {
+            emptyThread.remove();
+        }
+
+        chatBody.insertAdjacentHTML('beforeend', messageRowMarkup({
+            ...entry,
+            id: optimisticId,
+            is_mine: true,
+            is_pending: true,
+        }));
+        scrollToBottom();
+
+        return optimisticId;
+    };
+
+    const removeOptimisticMessage = (id) => {
+        if (!(chatBody instanceof HTMLElement) || !id) {
+            return;
+        }
+
+        const selector = '[data-optimistic-id="' + CSS.escape(String(id)) + '"]';
+        const row = chatBody.querySelector(selector);
+        row?.remove();
+
+        if (!chatBody.children.length) {
+            chatBody.innerHTML = '<div class="msg-empty-thread msg-empty-thread-chat">No messages yet. Start this conversation below.</div>';
+        }
+    };
+
     const renderMessages = (messages) => {
         if (!chatBody) {
             return;
@@ -1769,23 +1861,7 @@ body.msg-image-modal-open{overflow:hidden}
             return;
         }
 
-        chatBody.innerHTML = normalized.map((entry) => {
-            const mine = Boolean(entry.is_mine);
-            const images = Array.isArray(entry.images) ? entry.images : [];
-            const messageText = String(entry.message || '');
-            return [
-                '<div class="msg-row ' + (mine ? 'right' : 'left') + '">',
-                mine ? '' : incomingAvatarMarkup(),
-                '<div class="msg-bubble-stack ' + (mine ? 'outgoing' : 'incoming') + '">',
-                renderImageGallery(images, mine),
-                messageText !== ''
-                    ? '<div class="msg-bubble ' + (mine ? 'outgoing' : 'incoming') + '"><div class="msg-text">' + escapeHtml(messageText).replaceAll('\n', '<br>') + '</div></div>'
-                    : '',
-                '<div class="msg-meta ' + (mine ? 'out' : '') + '"><span>' + escapeHtml(entry.time || '') + '</span></div>',
-                '</div>',
-                '</div>'
-            ].join('');
-        }).join('');
+        chatBody.innerHTML = normalized.map((entry) => messageRowMarkup(entry)).join('');
 
         if (keepAtBottom) {
             scrollToBottom();
@@ -1794,7 +1870,7 @@ body.msg-image-modal-open{overflow:hidden}
 
     const fetchConversation = async () => {
         if (currentThread <= 0 || !conversationUrl) {
-            return;
+            return false;
         }
 
         const query = new URLSearchParams({ thread: String(currentThread) });
@@ -1807,7 +1883,7 @@ body.msg-image-modal-open{overflow:hidden}
         });
 
         if (!response.ok) {
-            return;
+            return false;
         }
 
         const payload = await response.json();
@@ -1818,10 +1894,14 @@ body.msg-image-modal-open{overflow:hidden}
             latestThreadId = latestId;
         }
         updateUnread(payload.unread_count || 0);
+        return true;
     };
 
-    const poll = async () => {
-        if (document.visibilityState !== 'visible') {
+    const poll = async (options = {}) => {
+        const skipVisibilityCheck = options.skipVisibilityCheck === true;
+        const forceConversationRefresh = options.forceConversationRefresh === true;
+
+        if (!skipVisibilityCheck && document.visibilityState !== 'visible') {
             return;
         }
 
@@ -1850,9 +1930,10 @@ body.msg-image-modal-open{overflow:hidden}
 
             updateUnread(serverUnread);
 
-            const shouldRefreshConversation = currentThread > 0 && serverLatestThreadId > latestThreadId;
+            const shouldRefreshConversation = currentThread > 0
+                && (serverLatestThreadId > latestThreadId || forceConversationRefresh);
 
-            if (shouldRefreshConversation && !hasUserInputFocus()) {
+            if (shouldRefreshConversation && (!hasUserInputFocus() || forceConversationRefresh)) {
                 await fetchConversation();
             }
 
@@ -1866,6 +1947,29 @@ body.msg-image-modal-open{overflow:hidden}
             // keep polling silent on transient failures
         }
     };
+
+    const handleRealtimeThreadUpdate = async (event) => {
+        const incomingThreadId = Number(event?.thread_id || 0);
+        const isCurrentThread = currentThread > 0 && incomingThreadId === currentThread;
+
+        if (isCurrentThread) {
+            await fetchConversation();
+            return;
+        }
+
+        await poll({
+            skipVisibilityCheck: true,
+        });
+    };
+
+    if (authUserId > 0 && window.Echo && typeof window.Echo.private === 'function') {
+        window.Echo.private(`users.${authUserId}.messages`)
+            .listen('.message.thread.updated', (event) => {
+                handleRealtimeThreadUpdate(event).catch(() => {
+                    // ignore socket refresh failures and let polling recover
+                });
+            });
+    }
 
     if (sendMessageInput instanceof HTMLTextAreaElement) {
         syncSendMessageHeight();
@@ -1966,9 +2070,14 @@ body.msg-image-modal-open{overflow:hidden}
                 return;
             }
             const content = String(messageInput.value || '').trim();
+            const originalContent = String(messageInput.value || '');
             const selectedImages = pendingImages
                 .map((entry) => entry.file)
                 .filter((file) => file instanceof File);
+            const optimisticImages = pendingImages.map((entry) => ({
+                url: entry.previewUrl,
+                name: entry.name,
+            }));
             const hasImage = selectedImages.length > 0;
 
             if (!content && !hasImage) {
@@ -1992,22 +2101,33 @@ body.msg-image-modal-open{overflow:hidden}
             selectedImages.forEach((selectedImage) => {
                 formData.append('images[]', selectedImage, pendingImageFileName(selectedImage));
             });
+            const optimisticId = appendOptimisticMessage({
+                message: content,
+                images: optimisticImages,
+                time: hasImage && !content ? 'Sending image...' : 'Sending...',
+            });
+            messageInput.value = '';
+            syncSendMessageHeight();
             try {
                 if (submitButton) {
                     submitButton.disabled = true;
                 }
+                setComposerBusy(true);
 
                 const response = await fetch(sendForm.action, {
                     method: 'POST',
                     body: formData,
-                    headers: {
+                    headers: withSocketHeaders({
                         'X-Requested-With': 'XMLHttpRequest',
                         'Accept': 'application/json',
-                    },
+                    }),
                     credentials: 'same-origin',
                 });
 
                 if (response.status === 422) {
+                    removeOptimisticMessage(optimisticId);
+                    messageInput.value = originalContent;
+                    syncSendMessageHeight();
                     const payload = await response.json().catch(() => null);
                     const messageError = payload?.errors?.message?.[0]
                         || payload?.errors?.images?.[0]
@@ -2020,24 +2140,35 @@ body.msg-image-modal-open{overflow:hidden}
                 }
 
                 if (!response.ok) {
+                    removeOptimisticMessage(optimisticId);
+                    messageInput.value = originalContent;
+                    syncSendMessageHeight();
                     window.location.reload();
                     return;
                 }
 
-                const payload = await response.json().catch(() => null);
+                await response.json().catch(() => null);
                 messageInput.value = '';
-                clearPendingImages({ clearNotice: false });
                 closeImageModal();
                 syncSendMessageHeight();
-                setUploadNotice(String(payload?.notice || (hasImage ? 'Images sent.' : 'Message sent.')), 'success', 2600);
-                await fetchConversation();
+                setUploadNotice('');
+                const synced = await fetchConversation();
+                if (!synced) {
+                    window.location.reload();
+                    return;
+                }
+                clearPendingImages({ clearNotice: true });
                 scrollToBottom();
             } catch (error) {
+                removeOptimisticMessage(optimisticId);
+                messageInput.value = originalContent;
+                syncSendMessageHeight();
                 window.location.reload();
             } finally {
                 if (submitButton) {
                     submitButton.disabled = false;
                 }
+                setComposerBusy(false);
             }
         });
     }
