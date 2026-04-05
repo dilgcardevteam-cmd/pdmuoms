@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\MessageThreadUpdated;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Http\JsonResponse;
@@ -13,6 +14,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -489,6 +491,7 @@ class MessageController extends Controller
         }
 
         DB::table('user_messages')->insert($rows);
+        $this->broadcastThreadUpdates($memberIds, $threadId);
 
         $storedImageCount = $storedImages->count();
 
@@ -971,6 +974,36 @@ class MessageController extends Controller
             ->merge($manualUnreadThreadIds)
             ->unique()
             ->count();
+    }
+
+    private function broadcastThreadUpdates(Collection $memberIds, int $threadId): void
+    {
+        if ($threadId <= 0) {
+            return;
+        }
+
+        $recipientIds = $memberIds
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
+
+        if ($recipientIds === []) {
+            return;
+        }
+
+        app()->terminating(function () use ($recipientIds, $threadId) {
+            try {
+                broadcast(new MessageThreadUpdated($recipientIds, $threadId))->toOthers();
+            } catch (\Throwable $exception) {
+                Log::warning('Failed to broadcast realtime message update.', [
+                    'thread_id' => $threadId,
+                    'recipient_ids' => $recipientIds,
+                    'error' => $exception->getMessage(),
+                ]);
+            }
+        });
     }
 
     private function groupConversationEntries(Collection $conversation, int $authId): Collection
