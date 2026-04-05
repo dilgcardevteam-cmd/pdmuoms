@@ -24,4 +24,8 @@ Homestead.yaml
 Thumbs.db
 .env
 .env
+<<<<<<< HEAD
 .env
+=======
+*.example
+>>>>>>> 344f7530156c04ebcc9cd91cceb9a02d176e1ca7
