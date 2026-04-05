@@ -34,7 +34,7 @@
     $selectedGroupSecondaryInitials = 'U';
     $selectedGroupPrimaryAvatarClass = 'msg-avatar-theme-0';
     $selectedGroupSecondaryAvatarClass = 'msg-avatar-theme-1';
-    $selectedLogoUrl = asset('PDMUOMS.png');
+    $selectedLogoUrl = asset('PRISM2.png');
     if ($selectedUser) {
         $selectedName = trim((string) (($selectedUser->fname ?? '') . ' ' . ($selectedUser->lname ?? '')));
         $selectedName = $selectedName !== '' ? $selectedName : 'Unknown User';

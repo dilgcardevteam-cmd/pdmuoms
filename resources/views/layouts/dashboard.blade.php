@@ -1451,7 +1451,7 @@
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <a href="{{ route('dashboard') }}" class="sidebar-brand-link" aria-label="Go to dashboard">
-                <img src="{{ asset('PDMUOMS.png') }}" alt="PDMUOMS" class="sidebar-logo sidebar-logo--expanded">
+                <img src="{{ asset('PRISM2.png') }}" alt="PRISM" class="sidebar-logo sidebar-logo--expanded">
                 <img src="{{ asset('DILG-Logo.png') }}" alt="DILG Logo" class="sidebar-logo sidebar-logo--collapsed">
             </a>
         </div>

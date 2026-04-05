@@ -30,10 +30,8 @@ Route::get('/reset-password', [App\Http\Controllers\Auth\ForgotPasswordControlle
 Route::post('/reset-password', [App\Http\Controllers\Auth\ForgotPasswordController::class, 'resetPassword'])->name('forgot-password.reset-submit');
 
 Route::get('/', function () {
-    return Auth::check()
-        ? redirect()->route('dashboard')
-        : redirect()->route('login');
-});
+    return view('landing');
+})->name('landing');
 
 // Public API endpoint for municipality projects
 Route::get('/api/municipality-projects', function () {

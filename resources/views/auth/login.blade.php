@@ -255,7 +255,7 @@
     <div class="login-container">
         <img src="{{ asset('DILG-Logo.png') }}" alt="DILG Logo" style="display: block; margin: 0 auto 8px; width: 100px;">
         <h2>Project Development and Management Unit</h2>
-        <h3>Operations Management System (PDMUOMS)</h3>
+        <h3>Reporting, Inspection, and Monitoring System</h3>
         
         @if ($errors->any())
             <div style="background-color: #fee; border: 1px solid #fcc; color: #c33; padding: 12px; border-radius: 6px; margin-bottom: 16px; font-size: 14px;">

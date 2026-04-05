@@ -5,6 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
         <title>{{ config('app.name', 'PDMU') }}</title>
+        <link rel="icon" href="{{ asset('DILG-Logo.png') }}" type="image/png">
 
         @include('partials.google-sans-font')
 
