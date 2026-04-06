@@ -82,7 +82,7 @@ class RegisterController extends Controller
      * @param  array  $data
      * @return \App\Models\User
      */
-    protected function create(array $data)
+    protected function create(array $data, Request $request)
     {
         $agency = strtoupper(trim((string) ($data['agency'] ?? '')));
 
@@ -98,9 +98,10 @@ class RegisterController extends Controller
             'mobileno' => preg_replace('/\D+/', '', (string) ($data['mobileno'] ?? '')),
             'username' => InputSanitizer::sanitizePlainText($data['username'] ?? null),
             'password' => Hash::make($data['password']),
-            'role' => User::ROLE_LGU,
+            'role' => null,
             'status' => 'inactive',
             'access' => null,
+            'registration_ip_address' => $this->resolveRegistrationIpAddress($request),
         ]);
     }
 
@@ -137,13 +138,21 @@ class RegisterController extends Controller
                 return redirect()->back()->withErrors($validator)->withInput();
             }
 
-            $user = $this->create($validator->validated());
+            $user = $this->create($validator->validated(), $request);
             event(new Registered($user));
+
+            Log::info('User registered successfully.', [
+                'user_id' => $user->getKey(),
+                'username' => $user->username,
+                'emailaddress' => $user->emailaddress,
+                'registration_ip_address' => $user->registration_ip_address,
+                'registered_at' => $user->created_at?->toDateTimeString(),
+            ]);
 
             if ($request->expectsJson()) {
                 return response()->json([
                     'success' => true,
-                    'message' => 'Registration successful. Verify your email, then wait for administrator approval before logging in.',
+                    'message' => 'Registration successful. Verify your email, then wait for an administrator to assign your role and activate your account before logging in.',
                     'redirect' => route('login')
                 ]);
             }
@@ -154,6 +163,7 @@ class RegisterController extends Controller
             Log::error('User registration failed.', [
                 'username' => $request->input('username'),
                 'emailaddress' => $request->input('emailaddress'),
+                'registration_ip_address' => $this->resolveRegistrationIpAddress($request),
                 'error' => $e->getMessage(),
             ]);
 
@@ -349,5 +359,16 @@ class RegisterController extends Controller
             static fn (array $matches): string => Str::lower($matches[0]),
             $formatted
         ) ?? $formatted;
+    }
+
+    private function resolveRegistrationIpAddress(Request $request): ?string
+    {
+        $ipAddress = trim((string) $request->ip());
+
+        if ($ipAddress === '') {
+            return null;
+        }
+
+        return filter_var($ipAddress, FILTER_VALIDATE_IP) ? $ipAddress : null;
     }
 }

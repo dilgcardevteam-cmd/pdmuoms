@@ -2844,12 +2844,7 @@
                             @method('PUT')
                             <input type="hidden" name="section" value="monitoring">
                             <label for="pcr_submission_deadline" style="display: block; font-weight: 600; color: #374151; margin-bottom: 6px;">Deadline of PCR Submission</label>
-                            @php
-                                $computedPcrDeadline = $project->target_date_completion
-                                    ? $project->target_date_completion->copy()->addDays(30)
-                                    : $project->pcr_submission_deadline;
-                            @endphp
-                            <input type="date" id="pcr_submission_deadline" name="pcr_submission_deadline" value="{{ old('pcr_submission_deadline', $computedPcrDeadline ? $computedPcrDeadline->format('Y-m-d') : '') }}"
+                            <input type="date" id="pcr_submission_deadline" name="pcr_submission_deadline" value="{{ old('pcr_submission_deadline', $effectivePcrSubmissionDeadline ? $effectivePcrSubmissionDeadline->format('Y-m-d') : '') }}"
                                    data-post-implementation-edit="true" data-ro-only="true" disabled
                                    style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; box-sizing: border-box; background-color: #f3f4f6;">
                             @if($pcrSubmissionDeadlineUpdatedByName || $project->pcr_submission_deadline_updated_at)
@@ -2956,12 +2951,7 @@
                             @method('PUT')
                             <input type="hidden" name="section" value="monitoring">
                             <label for="rssa_report_deadline" style="display: block; font-weight: 600; color: #374151; margin-bottom: 6px;">Deadline of RSSA Report</label>
-                            @php
-                                $computedRssaDeadline = $project->target_date_completion
-                                    ? $project->target_date_completion->copy()->addDays(395)
-                                    : $project->rssa_report_deadline;
-                            @endphp
-                            <input type="date" id="rssa_report_deadline" name="rssa_report_deadline" value="{{ old('rssa_report_deadline', $computedRssaDeadline ? $computedRssaDeadline->format('Y-m-d') : '') }}"
+                            <input type="date" id="rssa_report_deadline" name="rssa_report_deadline" value="{{ old('rssa_report_deadline', $effectiveRssaReportDeadline ? $effectiveRssaReportDeadline->format('Y-m-d') : '') }}"
                                    data-post-implementation-edit="true" data-ro-only="true" disabled
                                    style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; box-sizing: border-box; background-color: #f3f4f6;">
                             @if($rssaReportDeadlineUpdatedByName || $project->rssa_report_deadline_updated_at)

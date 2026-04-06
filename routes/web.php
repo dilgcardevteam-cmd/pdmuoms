@@ -1630,12 +1630,22 @@ Route::middleware(['auth'])->group(function () {
             ->name('utilities.notifications.broadcast');
         Route::get('/utilities/role-configuration', [App\Http\Controllers\DatabaseUtilityController::class, 'roleConfiguration'])
             ->name('utilities.role-configuration.index');
+        Route::post('/utilities/role-configuration/role-definitions', [App\Http\Controllers\DatabaseUtilityController::class, 'storeRoleDefinition'])
+            ->name('utilities.role-configuration.role-definitions.store');
+        Route::put('/utilities/role-configuration/role-definitions/{role}', [App\Http\Controllers\DatabaseUtilityController::class, 'updateRoleDefinition'])
+            ->name('utilities.role-configuration.role-definitions.update');
+        Route::delete('/utilities/role-configuration/role-definitions/{role}', [App\Http\Controllers\DatabaseUtilityController::class, 'destroyRoleDefinition'])
+            ->name('utilities.role-configuration.role-definitions.destroy');
         Route::put('/utilities/role-configuration/roles/{role}', [App\Http\Controllers\DatabaseUtilityController::class, 'updateRoleConfiguration'])
-            ->whereIn('role', ['user_regional', 'user_provincial', 'user_lgu'])
             ->name('utilities.role-configuration.roles.update');
         Route::delete('/utilities/role-configuration/roles/{role}', [App\Http\Controllers\DatabaseUtilityController::class, 'resetRoleConfiguration'])
-            ->whereIn('role', ['user_regional', 'user_provincial', 'user_lgu'])
             ->name('utilities.role-configuration.roles.reset');
+        Route::get('/utilities/deadlines-configuration', [App\Http\Controllers\DatabaseUtilityController::class, 'deadlinesConfiguration'])
+            ->name('utilities.deadlines-configuration.index');
+        Route::get('/utilities/deadlines-configuration/lgu-reportorial-requirements', [App\Http\Controllers\DatabaseUtilityController::class, 'lguReportorialRequirements'])
+            ->name('utilities.deadlines-configuration.lgu-reportorial');
+        Route::get('/utilities/deadlines-configuration/dilg-reportorial-requirements', [App\Http\Controllers\DatabaseUtilityController::class, 'dilgReportorialRequirements'])
+            ->name('utilities.deadlines-configuration.dilg-reportorial');
         Route::get('/utilities/location-configuration', [App\Http\Controllers\DatabaseUtilityController::class, 'locationConfiguration'])
             ->name('utilities.location-configuration.index');
         Route::post('/utilities/location-configuration/import/{dataset}', [App\Http\Controllers\DatabaseUtilityController::class, 'importLocationDataset'])

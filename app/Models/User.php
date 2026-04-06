@@ -19,6 +19,7 @@ class User extends Authenticatable implements MustVerifyEmail
     public const ROLE_SUPERADMIN = 'superadmin';
     public const ROLE_REGIONAL = 'user_regional';
     public const ROLE_PROVINCIAL = 'user_provincial';
+    public const ROLE_MLGOO = 'user_mlgoo';
     public const ROLE_LGU = 'user_lgu';
 
     public const ACCESS_SCOPE_ALL = 'crud:*';
@@ -59,6 +60,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'role',
         'status',
         'access',
+        'registration_ip_address',
         'verification_token',
         'email_verified_at',
     ];
@@ -123,6 +125,8 @@ class User extends Authenticatable implements MustVerifyEmail
         return [
             'password' => 'hashed',
             'email_verified_at' => 'datetime',
+            'created_at' => 'datetime',
+            'updated_at' => 'datetime',
         ];
     }
 
@@ -244,10 +248,53 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public static function roleOptions(): array
     {
+        return array_merge(self::activeBuiltInRoleOptions(), UserRole::roleOptions());
+    }
+
+    public static function allRoleOptions(): array
+    {
+        $roleOptions = self::builtInRoleOptions();
+
+        foreach (UserRole::builtInOverrides() as $roleKey => $definition) {
+            if (($definition['label'] ?? '') !== '') {
+                $roleOptions[$roleKey] = $definition['label'];
+            }
+        }
+
+        foreach (UserRole::definitions() as $definition) {
+            if (!UserRole::isBuiltInRoleKey($definition['role_key'])) {
+                $roleOptions[$definition['role_key']] = $definition['label'];
+            }
+        }
+
+        return $roleOptions;
+    }
+
+    public static function activeBuiltInRoleOptions(): array
+    {
+        $roleOptions = self::builtInRoleOptions();
+
+        foreach (UserRole::builtInOverrides() as $roleKey => $definition) {
+            if (($definition['is_active'] ?? true) === false) {
+                unset($roleOptions[$roleKey]);
+                continue;
+            }
+
+            if (($definition['label'] ?? '') !== '') {
+                $roleOptions[$roleKey] = $definition['label'];
+            }
+        }
+
+        return $roleOptions;
+    }
+
+    public static function builtInRoleOptions(): array
+    {
         return [
             self::ROLE_SUPERADMIN => 'Superadmin',
             self::ROLE_REGIONAL => 'Regional User',
             self::ROLE_PROVINCIAL => 'Provincial User',
+            self::ROLE_MLGOO => 'MLGOO User',
             self::ROLE_LGU => 'LGU User',
         ];
     }
@@ -263,7 +310,8 @@ class User extends Authenticatable implements MustVerifyEmail
             'provincial' => [self::ROLE_PROVINCIAL],
             'region' => [self::ROLE_REGIONAL],
             'regional' => [self::ROLE_REGIONAL],
-            'lgu' => [self::ROLE_LGU],
+            'mlgoo' => [self::ROLE_MLGOO],
+            'lgu' => [self::ROLE_LGU, self::ROLE_MLGOO],
         ];
     }
 
@@ -272,9 +320,20 @@ class User extends Authenticatable implements MustVerifyEmail
         return strtolower(trim((string) $this->role));
     }
 
+    public function hasAssignedRole(): bool
+    {
+        return $this->normalizedRole() !== '';
+    }
+
     public function roleLabel(): string
     {
-        return self::roleOptions()[$this->normalizedRole()] ?? ucwords(str_replace('_', ' ', $this->normalizedRole()));
+        $normalizedRole = $this->normalizedRole();
+
+        if ($normalizedRole === '') {
+            return 'Unassigned';
+        }
+
+        return self::allRoleOptions()[$normalizedRole] ?? ucwords(str_replace('_', ' ', $normalizedRole));
     }
 
     public function fullName(): string
@@ -297,9 +356,14 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->normalizedRole() === self::ROLE_PROVINCIAL;
     }
 
+    public function isMlgooUser(): bool
+    {
+        return $this->normalizedRole() === self::ROLE_MLGOO;
+    }
+
     public function isLguUser(): bool
     {
-        return $this->normalizedRole() === self::ROLE_LGU;
+        return in_array($this->normalizedRole(), [self::ROLE_LGU, self::ROLE_MLGOO], true);
     }
 
     public function isActive(): bool

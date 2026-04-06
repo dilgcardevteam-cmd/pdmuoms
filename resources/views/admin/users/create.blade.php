@@ -4,7 +4,12 @@
 @section('page-title', 'Create User')
 
 @section('content')
-    @php($roleOptions = \App\Models\User::roleOptions())
+    @php
+        $roleOptions = \App\Models\User::roleOptions();
+        $requestedRole = strtolower(trim((string) request()->query('role', '')));
+        $defaultRole = array_key_exists($requestedRole, $roleOptions) ? $requestedRole : '';
+        $selectedRoleValue = old('role', $defaultRole);
+    @endphp
     <div class="content-header">
         <h1>Create New User</h1>
         <p>Add a new user to the system</p>
@@ -176,9 +181,9 @@
                     <div>
                         <label style="display: block; margin-bottom: 8px; color: #374151; font-weight: 500; font-size: 14px;">Role <span style="color: #dc2626;">*</span></label>
                         <select id="roleSelect" name="role" required style="width: 100%; padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; @error('role') border-color: #dc2626; @enderror">
-                            <option value="" disabled selected>Select Role</option>
+                            <option value="" disabled @selected($selectedRoleValue === '')>Select Role</option>
                             @foreach($roleOptions as $roleValue => $roleLabel)
-                                <option value="{{ $roleValue }}" @selected(old('role') === $roleValue)>{{ $roleLabel }}</option>
+                                <option value="{{ $roleValue }}" @selected($selectedRoleValue === $roleValue)>{{ $roleLabel }}</option>
                             @endforeach
                         </select>
                         <p style="color: #64748b; font-size: 12px; margin-top: 6px;">Role selection controls access scope only. Agency, province, and office stay based on the values you choose in the profile fields.</p>

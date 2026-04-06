@@ -8,6 +8,7 @@ use App\Models\BackupAutomationSetting;
 use App\Models\DatabaseBackupRun;
 use App\Models\RolePermissionSetting;
 use App\Models\User;
+use App\Models\UserRole;
 use App\Services\DatabaseBackupService;
 use App\Support\InputSanitizer;
 use App\Support\NotificationUrl;
@@ -16,12 +17,14 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class DatabaseUtilityController extends Controller
@@ -161,10 +164,10 @@ class DatabaseUtilityController extends Controller
                     'route' => route('utilities.location-configuration.index'),
                 ],
                 [
-                    'icon' => 'fas fa-envelope',
-                    'title' => 'Mail Configuration',
-                    'description' => 'Confirm the outgoing mail settings used for notifications, verification emails, and automated backup delivery.',
-                    'route' => null,
+                    'icon' => 'fas fa-calendar-alt',
+                    'title' => 'Deadlines Configuration',
+                    'description' => 'Reserved area for deadline-related configuration used across project monitoring and reportorial workflows.',
+                    'route' => route('utilities.deadlines-configuration.index'),
                 ],
                 [
                     'icon' => 'fas fa-database',
@@ -186,8 +189,9 @@ class DatabaseUtilityController extends Controller
                     WHEN '" . User::ROLE_SUPERADMIN . "' THEN 1
                     WHEN '" . User::ROLE_REGIONAL . "' THEN 2
                     WHEN '" . User::ROLE_PROVINCIAL . "' THEN 3
-                    WHEN '" . User::ROLE_LGU . "' THEN 4
-                    ELSE 5
+                    WHEN '" . User::ROLE_MLGOO . "' THEN 4
+                    WHEN '" . User::ROLE_LGU . "' THEN 5
+                    ELSE 6
                 END
             ")
             ->orderBy('lname')
@@ -212,6 +216,127 @@ class DatabaseUtilityController extends Controller
             'roleOptions' => User::roleOptions(),
             'totalActiveUsers' => $activeUsers->count(),
         ]);
+    }
+
+    public function deadlinesConfiguration(): View
+    {
+        return view('admin.utilities.deadlines-configuration', [
+            'deadlineCards' => [
+                [
+                    'icon' => 'fas fa-landmark',
+                    'icon_background' => '#ede9fe',
+                    'icon_color' => '#6d28d9',
+                    'title' => 'LGU Reportorial Requirements',
+                    'description' => 'Container for LGU reportorial requirement items and future commands.',
+                    'route' => route('utilities.deadlines-configuration.lgu-reportorial'),
+                ],
+                [
+                    'icon' => 'fas fa-file-signature',
+                    'icon_background' => '#dcfce7',
+                    'icon_color' => '#166534',
+                    'title' => 'DILG Reportorial Requirements',
+                    'description' => 'Container for DILG reportorial requirement items and future commands.',
+                    'route' => route('utilities.deadlines-configuration.dilg-reportorial'),
+                ],
+            ],
+        ]);
+    }
+
+    public function lguReportorialRequirements(): View
+    {
+        return view('admin.utilities.lgu-reportorial-requirements', [
+            'timelineCards' => $this->buildLguReportorialTimelineCards(),
+        ]);
+    }
+
+    public function dilgReportorialRequirements(): View
+    {
+        return view('admin.utilities.dilg-reportorial-requirements');
+    }
+
+    private function buildLguReportorialTimelineCards(): array
+    {
+        $module = collect(RolePermissionRegistry::modules())
+            ->first(fn (array $entry) => strtolower(trim((string) ($entry['module'] ?? ''))) === 'lgu reportorial requirements');
+
+        $timelineCards = [
+            'annual' => [
+                'badge' => 'Annual',
+                'icon' => 'fas fa-calendar-check',
+                'title' => 'Annual Requirements',
+                'description' => 'Use this section for reportorial requirements submitted once per year.',
+            ],
+            'quarterly' => [
+                'badge' => 'Quarterly',
+                'icon' => 'fas fa-chart-line',
+                'title' => 'Quarterly Requirements',
+                'description' => 'Use this section for reportorial requirements submitted every quarter.',
+            ],
+            'monthly' => [
+                'badge' => 'Monthly',
+                'icon' => 'fas fa-calendar-day',
+                'title' => 'Monthly Requirements',
+                'description' => 'Use this section for recurring reportorial requirements submitted each month.',
+            ],
+        ];
+
+        $routeMap = [
+            'rbis_annual_certification' => [
+                'route' => route('rbis-annual-certification.index'),
+                'icon' => 'fas fa-bridge',
+            ],
+            'fund_utilization_reports' => [
+                'route' => route('fund-utilization.index'),
+                'icon' => 'fas fa-coins',
+            ],
+            'local_project_monitoring_committee' => [
+                'route' => route('local-project-monitoring-committee.index'),
+                'icon' => 'fas fa-users-cog',
+            ],
+            'road_maintenance_status_reports' => [
+                'route' => route('road-maintenance-status.index'),
+                'icon' => 'fas fa-road',
+            ],
+            'pd_no_pbbm_monthly_reports' => [
+                'route' => route('reports.monthly.pd-no-pbbm-2025-1572-1573'),
+                'icon' => 'fas fa-file-alt',
+            ],
+        ];
+
+        $itemsByTimeline = collect($module['items'] ?? [])
+            ->map(function (array $item) use ($routeMap): ?array {
+                $label = trim((string) ($item['label'] ?? ''));
+                if ($label === '') {
+                    return null;
+                }
+
+                [$timelineLabel, $itemLabel] = array_pad(explode(' / ', $label, 2), 2, '');
+                $timelineKey = strtolower(trim($timelineLabel));
+                $aspect = strtolower(trim((string) ($item['aspect'] ?? '')));
+                $routeMeta = $routeMap[$aspect] ?? null;
+
+                return [
+                    'timeline' => $timelineKey,
+                    'label' => trim($itemLabel) !== '' ? trim($itemLabel) : $label,
+                    'description' => trim((string) ($item['description'] ?? '')),
+                    'route' => $routeMeta['route'] ?? null,
+                    'icon' => $routeMeta['icon'] ?? 'fas fa-file-circle-check',
+                ];
+            })
+            ->filter(fn (?array $item) => $item !== null && array_key_exists($item['timeline'], $timelineCards))
+            ->groupBy('timeline');
+
+        return collect($timelineCards)
+            ->map(function (array $card, string $timeline) use ($itemsByTimeline): array {
+                return [
+                    ...$card,
+                    'items' => $itemsByTimeline->get($timeline, collect())
+                        ->values()
+                        ->all(),
+                ];
+            })
+            ->values()
+            ->all();
     }
 
     public function sendBulkNotification(Request $request): RedirectResponse
@@ -377,7 +502,146 @@ class DatabaseUtilityController extends Controller
             'accessGrantModules' => RolePermissionRegistry::modules(),
             'roleDescriptions' => RolePermissionRegistry::roleDescriptions(),
             'roleConfigurations' => $this->buildRoleConfigurations(),
+            'roleManagementCards' => $this->buildRoleManagementCards(),
         ]);
+    }
+
+    public function storeRoleDefinition(Request $request): RedirectResponse|JsonResponse
+    {
+        $payload = $this->validatedRoleDefinitionPayload($request);
+        $roleKey = UserRole::generateUniqueRoleKey($payload['label']);
+
+        $roleDefinition = UserRole::query()->create([
+            'role_key' => $roleKey,
+            'label' => $payload['label'],
+            'base_role' => '',
+            'description' => $payload['description'],
+        ]);
+
+        UserRole::flushRoleCache();
+        RolePermissionSetting::flushPermissionsCache();
+
+        $redirectUrl = route('utilities.role-configuration.index', ['role' => $roleDefinition->role_key]);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Role created successfully.',
+                'role' => $roleDefinition->role_key,
+                'redirect_url' => $redirectUrl,
+            ]);
+        }
+
+        return redirect()
+            ->to($redirectUrl)
+            ->with('success', 'Role created successfully.');
+    }
+
+    public function updateRoleDefinition(Request $request, string $role): RedirectResponse|JsonResponse
+    {
+        $normalizedRole = strtolower(trim($role));
+        $isBuiltInRole = array_key_exists($normalizedRole, User::builtInRoleOptions());
+
+        if ($normalizedRole === User::ROLE_SUPERADMIN) {
+            return $this->roleDefinitionRejectedResponse($request, 'Superadmin cannot be edited here.');
+        }
+
+        if (!$isBuiltInRole && !UserRole::query()->where('role_key', $normalizedRole)->exists()) {
+            abort(404);
+        }
+
+        $roleDefinition = $isBuiltInRole
+            ? UserRole::query()->firstOrNew(['role_key' => $normalizedRole])
+            : $this->findCustomRoleDefinition($role);
+        $payload = $this->validatedRoleDefinitionPayload($request, $roleDefinition);
+
+        $roleDefinition->fill([
+            'role_key' => $normalizedRole,
+            'label' => $payload['label'],
+            'base_role' => '',
+            'description' => $payload['description'],
+            'is_active' => true,
+        ])->save();
+
+        UserRole::flushRoleCache();
+        RolePermissionSetting::flushPermissionsCache();
+
+        $redirectUrl = route('utilities.role-configuration.index', ['role' => $roleDefinition->role_key]);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Role updated successfully.',
+                'role' => $roleDefinition->role_key,
+                'redirect_url' => $redirectUrl,
+            ]);
+        }
+
+        return redirect()
+            ->to($redirectUrl)
+            ->with('success', 'Role updated successfully.');
+    }
+
+    public function destroyRoleDefinition(Request $request, string $role): RedirectResponse|JsonResponse
+    {
+        $normalizedRole = strtolower(trim($role));
+        $isBuiltInRole = array_key_exists($normalizedRole, User::builtInRoleOptions());
+
+        if ($normalizedRole === User::ROLE_SUPERADMIN) {
+            return $this->roleDefinitionRejectedResponse($request, 'Superadmin cannot be deleted here.');
+        }
+
+        $roleDefinition = $isBuiltInRole
+            ? UserRole::query()->firstOrNew(['role_key' => $normalizedRole])
+            : $this->findCustomRoleDefinition($role);
+        $assignedUsersCount = User::query()
+            ->whereRaw('LOWER(TRIM(COALESCE(role, ""))) = ?', [$normalizedRole])
+            ->count();
+
+        if ($assignedUsersCount > 0) {
+            $message = 'Reassign the ' . number_format($assignedUsersCount) . ' user(s) assigned to this role before deleting it.';
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => $message,
+                ], 422);
+            }
+
+            return redirect()
+                ->back()
+                ->with('error', $message);
+        }
+
+        RolePermissionSetting::query()
+            ->where('role', $normalizedRole)
+            ->delete();
+
+        if ($isBuiltInRole) {
+            $roleDefinition->fill([
+                'role_key' => $normalizedRole,
+                'label' => User::allRoleOptions()[$normalizedRole] ?? (User::builtInRoleOptions()[$normalizedRole] ?? $normalizedRole),
+                'base_role' => '',
+                'description' => RolePermissionRegistry::roleDescriptions()[$normalizedRole] ?? UserRole::defaultDescriptionFor(),
+                'is_active' => false,
+            ])->save();
+        } else {
+            $roleDefinition->delete();
+        }
+
+        UserRole::flushRoleCache();
+        RolePermissionSetting::flushPermissionsCache();
+
+        $nextRole = collect(RolePermissionRegistry::configurableRoles())->first() ?? User::ROLE_REGIONAL;
+        $redirectUrl = route('utilities.role-configuration.index', ['role' => $nextRole]);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Role deleted successfully.',
+                'redirect_url' => $redirectUrl,
+            ]);
+        }
+
+        return redirect()
+            ->to($redirectUrl)
+            ->with('success', 'Role deleted successfully.');
     }
 
     public function updateRoleConfiguration(Request $request, string $role): RedirectResponse|JsonResponse
@@ -460,6 +724,68 @@ class DatabaseUtilityController extends Controller
         return redirect()
             ->route('utilities.role-configuration.index', ['role' => $normalizedRole])
             ->with('success', 'Role configuration reset to the default baseline.');
+    }
+
+    private function findCustomRoleDefinition(string $role): UserRole
+    {
+        $normalizedRole = strtolower(trim($role));
+        $roleDefinition = UserRole::query()
+            ->where('role_key', $normalizedRole)
+            ->first();
+
+        if ($roleDefinition instanceof UserRole) {
+            return $roleDefinition;
+        }
+
+        abort(404);
+    }
+
+    private function validatedRoleDefinitionPayload(Request $request, ?UserRole $existingRole = null): array
+    {
+        $validated = $request->validate([
+            'label' => ['required', 'string', 'max:80'],
+        ]);
+
+        $label = InputSanitizer::sanitizePlainText((string) $validated['label']);
+        $normalizedLabel = Str::lower($label);
+
+        if ($label === '') {
+            throw ValidationException::withMessages([
+                'label' => 'Enter a role name.',
+            ]);
+        }
+
+        $allRoleOptions = collect(User::allRoleOptions());
+        if ($existingRole instanceof UserRole && $existingRole->role_key !== '') {
+            $allRoleOptions->forget(strtolower(trim((string) $existingRole->role_key)));
+        }
+
+        $roleNameExists = $allRoleOptions
+            ->contains(fn (string $existingLabel): bool => Str::lower(trim($existingLabel)) === $normalizedLabel);
+
+        if ($roleNameExists) {
+            throw ValidationException::withMessages([
+                'label' => 'That role name already exists.',
+            ]);
+        }
+
+        return [
+            'label' => $label,
+            'description' => UserRole::defaultDescriptionFor(),
+        ];
+    }
+
+    private function roleDefinitionRejectedResponse(Request $request, string $message): RedirectResponse|JsonResponse
+    {
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => $message,
+            ], 422);
+        }
+
+        return redirect()
+            ->route('utilities.role-configuration.index')
+            ->with('error', $message);
     }
 
     public function locationConfiguration(): View
@@ -883,6 +1209,51 @@ class DatabaseUtilityController extends Controller
                     'description' => RolePermissionRegistry::roleDescriptions()[$role] ?? null,
                     'permissions' => RolePermissionRegistry::permissionsForRole($role, $configuredPermissions),
                     'uses_recommended_defaults' => $setting === null,
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    private function buildRoleManagementCards(): array
+    {
+        $roleCounts = User::query()
+            ->selectRaw('LOWER(TRIM(COALESCE(role, ""))) as role_key')
+            ->selectRaw('COUNT(*) as total_users')
+            ->selectRaw("SUM(CASE WHEN LOWER(TRIM(COALESCE(status, ''))) = 'active' THEN 1 ELSE 0 END) as active_users")
+            ->selectRaw("SUM(CASE WHEN LOWER(TRIM(COALESCE(status, ''))) = 'inactive' THEN 1 ELSE 0 END) as inactive_users")
+            ->groupBy('role_key')
+            ->get()
+            ->keyBy('role_key');
+
+        $roleDescriptions = RolePermissionRegistry::roleDescriptions();
+
+        return collect(User::roleOptions())
+            ->map(function (string $label, string $role) use ($roleCounts, $roleDescriptions): array {
+                $countRow = $roleCounts->get($role);
+                $isConfigurableRole = in_array($role, RolePermissionRegistry::configurableRoles(), true);
+                $customRoleDefinition = UserRole::findDefinition($role);
+                $isCustomRole = $customRoleDefinition !== null;
+
+                return [
+                    'role' => $role,
+                    'label' => $label,
+                    'description' => $roleDescriptions[$role] ?? 'Manage users assigned to this role classification.',
+                    'kind' => $isCustomRole ? 'custom' : 'builtin',
+                    'total_users' => (int) ($countRow->total_users ?? 0),
+                    'active_users' => (int) ($countRow->active_users ?? 0),
+                    'inactive_users' => (int) ($countRow->inactive_users ?? 0),
+                    'users_route' => route('users.index', ['role' => $role]),
+                    'create_route' => route('users.create', ['role' => $role]),
+                    'role_configuration_route' => $isConfigurableRole
+                        ? route('utilities.role-configuration.index', ['role' => $role])
+                        : null,
+                    'role_definition_update_route' => $role !== User::ROLE_SUPERADMIN
+                        ? route('utilities.role-configuration.role-definitions.update', ['role' => $role])
+                        : null,
+                    'role_definition_delete_route' => $role !== User::ROLE_SUPERADMIN
+                        ? route('utilities.role-configuration.role-definitions.destroy', ['role' => $role])
+                        : null,
                 ];
             })
             ->values()

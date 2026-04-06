@@ -5,7 +5,11 @@
 
 @section('content')
     @php
-        $activeRole = request()->query('role', $roleConfigurations[0]['role'] ?? \App\Models\User::ROLE_REGIONAL);
+        $availableRoleKeys = collect($roleConfigurations)->pluck('role')->all();
+        $requestedActiveRole = strtolower(trim((string) request()->query('role', $availableRoleKeys[0] ?? \App\Models\User::ROLE_REGIONAL)));
+        $activeRole = in_array($requestedActiveRole, $availableRoleKeys, true)
+            ? $requestedActiveRole
+            : ($availableRoleKeys[0] ?? \App\Models\User::ROLE_REGIONAL);
     @endphp
 
     @if (session('success'))
@@ -36,10 +40,22 @@
             <p>Manage centralized CRUD access for each hierarchy role used by the application.</p>
         </div>
 
-        <a href="{{ route('utilities.system-setup.index') }}" class="role-config-back-link" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 8px; background: linear-gradient(180deg, #0a4cb3 0%, #002c76 100%); color: #ffffff; text-decoration: none; font-size: 13px; font-weight: 600; border: 1px solid #002c76; box-shadow: 0 8px 18px rgba(0, 44, 118, 0.18);">
-            <i class="fas fa-arrow-left"></i>
-            <span>Back to System Setup</span>
-        </a>
+        <div class="role-config-page-actions" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <button
+                type="button"
+                class="role-config-manage-users-btn"
+                data-role-management-open
+                style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 8px; background: #ffffff; color: #002c76; text-decoration: none; font-size: 13px; font-weight: 700; border: 1px solid #bfdbfe; box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08); cursor: pointer;"
+            >
+                <i class="fas fa-users-cog"></i>
+                <span>Manage User Roles</span>
+            </button>
+
+            <a href="{{ route('utilities.system-setup.index') }}" class="role-config-back-link" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 8px; background: linear-gradient(180deg, #0a4cb3 0%, #002c76 100%); color: #ffffff; text-decoration: none; font-size: 13px; font-weight: 600; border: 1px solid #002c76; box-shadow: 0 8px 18px rgba(0, 44, 118, 0.18);">
+                <i class="fas fa-arrow-left"></i>
+                <span>Back to System Setup</span>
+            </a>
+        </div>
     </div>
 
     <section class="role-config-shell" style="background: white; padding: 28px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);">
@@ -137,9 +153,9 @@
                         <div style="font-size: 12px; color: #64748b; line-height: 1.7;">
                             Tick or untick access items to save the permission matrix automatically for every user assigned to the <strong>{{ $roleConfiguration['label'] }}</strong> role.
                         </div>
-                        <div class="role-config-save-status" data-role-config-save-status aria-live="polite">
+                        <div class="role-config-save-status" data-role-config-save-status data-state="idle" aria-live="polite">
                             <span class="role-config-save-status__spinner" aria-hidden="true"></span>
-                            <span class="role-config-save-status__text" data-role-config-save-status-text>No unsaved changes.</span>
+                            <span class="role-config-save-status__text" data-role-config-save-status-text></span>
                         </div>
                     </div>
 
@@ -225,7 +241,602 @@
         @endforeach
     </section>
 
+    <div class="role-management-modal" data-role-management-modal hidden>
+        <div class="role-management-modal__backdrop" data-role-management-close></div>
+        <div class="role-management-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="role-management-modal-title">
+            <div class="role-management-modal__header">
+                <div>
+                    <p class="role-management-modal__eyebrow">Superadmin Controls</p>
+                    <h2 id="role-management-modal-title" class="role-management-modal__title">Manage User Roles</h2>
+                    <p class="role-management-modal__description">
+                        Review role counts, open filtered users, and use the toolbar to manage the selected role.
+                    </p>
+                </div>
+                <button type="button" class="role-management-modal__close" data-role-management-close aria-label="Close manage user roles modal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="role-management-toolbar">
+                <div class="role-management-toolbar__selection" data-role-toolbar-selection>
+                    Select a role card to edit or review role actions.
+                </div>
+                <div class="role-management-toolbar__actions">
+                    <button
+                        type="button"
+                        class="role-management-toolbar__button role-management-toolbar__button--secondary"
+                        data-role-toolbar-add
+                        data-confirm-skip="true"
+                        title="Add an official role."
+                    >
+                        <i class="fas fa-plus"></i>
+                        <span>Add Role</span>
+                    </button>
+                    <button
+                        type="button"
+                        class="role-management-toolbar__button role-management-toolbar__button--ghost"
+                        data-role-toolbar-edit
+                        data-confirm-skip="true"
+                        title="Select a role to edit."
+                    >
+                        <i class="fas fa-pen"></i>
+                        <span>Edit Role</span>
+                    </button>
+                    <button
+                        type="button"
+                        class="role-management-toolbar__button role-management-toolbar__button--danger"
+                        data-role-toolbar-delete
+                        data-confirm-skip="true"
+                        title="Select a role to review deletion options."
+                    >
+                        <i class="fas fa-trash-alt"></i>
+                        <span>Delete Role</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="role-management-modal__grid">
+                @foreach ($roleManagementCards as $roleCard)
+                    <article
+                        class="role-management-card"
+                        data-role-management-card
+                        data-role-kind="{{ $roleCard['kind'] }}"
+                        data-role-id="{{ $roleCard['role'] }}"
+                        data-role-label="{{ $roleCard['label'] }}"
+                        data-edit-url="{{ $roleCard['role_configuration_route'] ?? '' }}"
+                        data-role-update-url="{{ $roleCard['role_definition_update_route'] ?? '' }}"
+                        data-role-delete-url="{{ $roleCard['role_definition_delete_route'] ?? '' }}"
+                        tabindex="0"
+                    >
+                        <div class="role-management-card__top">
+                            <div>
+                                <h3 class="role-management-card__title">{{ $roleCard['label'] }}</h3>
+                                <p class="role-management-card__description">{{ $roleCard['description'] }}</p>
+                            </div>
+                            <span class="role-management-card__count">
+                                {{ number_format($roleCard['total_users']) }} user{{ $roleCard['total_users'] === 1 ? '' : 's' }}
+                            </span>
+                        </div>
+
+                        <div class="role-management-card__stats">
+                            <div class="role-management-stat">
+                                <span class="role-management-stat__label">Active</span>
+                                <strong class="role-management-stat__value">{{ number_format($roleCard['active_users']) }}</strong>
+                            </div>
+                            <div class="role-management-stat">
+                                <span class="role-management-stat__label">Inactive</span>
+                                <strong class="role-management-stat__value">{{ number_format($roleCard['inactive_users']) }}</strong>
+                            </div>
+                        </div>
+
+                        <div class="role-management-card__actions">
+                            <a href="{{ $roleCard['users_route'] }}" class="role-management-action role-management-action--primary">
+                                <i class="fas fa-users"></i>
+                                <span>Users</span>
+                            </a>
+                        </div>
+                    </article>
+                @endforeach
+            </div>
+        </div>
+    </div>
+
+    <div class="role-entry-modal" data-role-entry-modal hidden>
+        <div class="role-entry-modal__backdrop" data-role-entry-close></div>
+        <div class="role-entry-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="role-entry-modal-title">
+            <form
+                data-role-entry-form
+                data-confirm-skip="true"
+                data-store-url="{{ route('utilities.role-configuration.role-definitions.store') }}"
+                data-index-url="{{ route('utilities.role-configuration.index') }}"
+            >
+                @csrf
+                <input type="hidden" data-role-entry-mode value="create">
+                <input type="hidden" data-role-entry-id value="">
+                <input type="hidden" data-role-entry-submit-url value="">
+
+                <div class="role-entry-modal__header">
+                    <div>
+                        <p class="role-entry-modal__eyebrow">Official Role</p>
+                        <h3 id="role-entry-modal-title" class="role-entry-modal__title">Add Role</h3>
+                        <p class="role-entry-modal__description" data-role-entry-description>
+                            Enter the role name. Saving creates an official role, then you can configure its access from the role matrix.
+                        </p>
+                    </div>
+                    <button type="button" class="role-entry-modal__close" data-role-entry-close aria-label="Close role entry modal">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <label class="role-entry-modal__field">
+                    <span class="role-entry-modal__label">Role Name</span>
+                    <input
+                        type="text"
+                        class="role-entry-modal__input"
+                        data-role-entry-name
+                        maxlength="80"
+                        placeholder="Example: Cluster Coordinator"
+                        required
+                    >
+                </label>
+
+                <p class="role-entry-modal__hint">
+                    New roles start with no configured permissions until you set them on the Role Configuration page.
+                </p>
+
+                <div class="role-entry-modal__actions">
+                    <button type="button" class="role-entry-modal__button role-entry-modal__button--secondary" data-role-entry-close>
+                        Cancel
+                    </button>
+                    <button
+                        type="submit"
+                        class="role-entry-modal__button role-entry-modal__button--primary"
+                        data-confirm-skip="true"
+                    >
+                        Save Role
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="role-config-toast-stack" data-role-config-toast-stack aria-live="polite" aria-atomic="true"></div>
+
     <style>
+        body.role-management-modal-open {
+            overflow: hidden;
+        }
+
+        .role-management-modal[hidden] {
+            display: none;
+        }
+
+        .role-management-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 1200;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        .role-management-modal__backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(2px);
+            transition: background 0.2s ease;
+        }
+
+        .role-management-modal__dialog {
+            position: relative;
+            width: min(920px, 100%);
+            max-height: calc(100vh - 32px);
+            overflow: auto;
+            border-radius: 16px;
+            background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+            border: 1px solid #dbeafe;
+            box-shadow: 0 24px 60px rgba(15, 23, 42, 0.24);
+            padding: 18px;
+            transition: filter 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
+        }
+
+        .role-management-modal.is-backgrounded .role-management-modal__backdrop {
+            background: rgba(15, 23, 42, 0.74);
+        }
+
+        .role-management-modal.is-backgrounded .role-management-modal__dialog {
+            filter: blur(3px);
+            transform: scale(0.99);
+            opacity: 0.72;
+            pointer-events: none;
+            user-select: none;
+        }
+
+        .role-management-modal__header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 14px;
+            margin-bottom: 14px;
+        }
+
+        .role-management-modal__eyebrow {
+            margin: 0 0 4px;
+            color: #1d4ed8;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .role-management-modal__title {
+            margin: 0 0 4px;
+            color: #002C76;
+            font-size: 20px;
+        }
+
+        .role-management-modal__description {
+            margin: 0;
+            color: #475569;
+            font-size: 12px;
+            line-height: 1.55;
+            max-width: 560px;
+        }
+
+        .role-management-modal__close {
+            width: 34px;
+            height: 34px;
+            border: 1px solid #dbeafe;
+            border-radius: 999px;
+            background: #ffffff;
+            color: #334155;
+            cursor: pointer;
+            font-size: 12px;
+            flex: 0 0 auto;
+        }
+
+        .role-management-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+            padding: 10px 12px;
+            border-radius: 12px;
+            border: 1px solid #dbeafe;
+            background: #f8fbff;
+        }
+
+        .role-management-toolbar__selection {
+            color: #475569;
+            font-size: 11px;
+            line-height: 1.5;
+        }
+
+        .role-management-toolbar__actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .role-management-toolbar__button {
+            appearance: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 7px 10px;
+            border-radius: 8px;
+            font-size: 10px;
+            font-weight: 700;
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .role-management-toolbar__button--secondary {
+            background: #eff6ff;
+            border-color: #bfdbfe;
+            color: #1d4ed8;
+        }
+
+        .role-management-toolbar__button--ghost {
+            background: #ffffff;
+            border-color: #dbe4f0;
+            color: #475569;
+        }
+
+        .role-management-toolbar__button--danger {
+            background: #fff1f2;
+            border-color: #fecaca;
+            color: #be123c;
+        }
+
+        .role-management-toolbar__button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .role-entry-modal[hidden] {
+            display: none;
+        }
+
+        .role-entry-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 1250;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        .role-entry-modal__backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.48);
+        }
+
+        .role-entry-modal__dialog {
+            position: relative;
+            width: min(420px, 100%);
+            border-radius: 16px;
+            background: #ffffff;
+            border: 1px solid #dbeafe;
+            box-shadow: 0 24px 50px rgba(15, 23, 42, 0.22);
+            padding: 18px;
+        }
+
+        .role-entry-modal__header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        .role-entry-modal__eyebrow {
+            margin: 0 0 4px;
+            color: #1d4ed8;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .role-entry-modal__title {
+            margin: 0 0 4px;
+            color: #002C76;
+            font-size: 18px;
+        }
+
+        .role-entry-modal__description,
+        .role-entry-modal__hint {
+            margin: 0;
+            color: #64748b;
+            font-size: 12px;
+            line-height: 1.55;
+        }
+
+        .role-entry-modal__close {
+            width: 34px;
+            height: 34px;
+            border: 1px solid #dbeafe;
+            border-radius: 999px;
+            background: #ffffff;
+            color: #334155;
+            cursor: pointer;
+            font-size: 12px;
+            flex: 0 0 auto;
+        }
+
+        .role-entry-modal__field {
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        .role-entry-modal__label {
+            display: block;
+            margin-bottom: 6px;
+            color: #0f172a;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .role-entry-modal__input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            font-size: 13px;
+            color: #0f172a;
+            outline: none;
+        }
+
+        .role-entry-modal__input:focus {
+            border-color: #1d4ed8;
+            box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.12);
+        }
+
+        .role-entry-modal__hint {
+            margin-top: 4px;
+        }
+
+        .role-entry-modal__actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 16px;
+        }
+
+        .role-entry-modal__button {
+            appearance: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 9px 12px;
+            border-radius: 10px;
+            border: 1px solid transparent;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .role-entry-modal__button--secondary {
+            background: #ffffff;
+            border-color: #dbe4f0;
+            color: #475569;
+        }
+
+        .role-entry-modal__button--primary {
+            background: #002C76;
+            color: #ffffff;
+        }
+
+        .role-management-modal__grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+            gap: 10px;
+        }
+
+        .role-management-card {
+            border-radius: 12px;
+            border: 1px solid #dbe4f0;
+            background: #ffffff;
+            padding: 10px;
+            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05);
+            cursor: pointer;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+        }
+
+        .role-management-card:hover {
+            border-color: #bfdbfe;
+        }
+
+        .role-management-card.is-selected {
+            border-color: #1d4ed8;
+            background: #f8fbff;
+            box-shadow: 0 12px 22px rgba(29, 78, 216, 0.12);
+        }
+
+        .role-management-card--custom {
+            border-style: dashed;
+        }
+
+        .role-management-card__top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .role-management-card__top > div {
+            min-width: 0;
+        }
+
+        .role-management-card__title {
+            margin: 0 0 3px;
+            color: #0f172a;
+            font-size: 14px;
+            line-height: 1.25;
+        }
+
+        .role-management-card__description {
+            margin: 0;
+            color: #64748b;
+            font-size: 10px;
+            line-height: 1.35;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .role-management-card__count {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 3px 6px;
+            border-radius: 999px;
+            background: #eff6ff;
+            color: #1d4ed8;
+            font-size: 9px;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        .role-management-card__stats {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+
+        .role-management-stat {
+            border-radius: 8px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 7px 8px;
+        }
+
+        .role-management-stat__label {
+            display: block;
+            color: #64748b;
+            font-size: 9px;
+            font-weight: 700;
+            margin-bottom: 2px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .role-management-stat__value {
+            color: #0f172a;
+            font-size: 14px;
+            line-height: 1.1;
+        }
+
+        .role-management-card__actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .role-management-action {
+            appearance: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 6px 8px;
+            border-radius: 8px;
+            font-size: 10px;
+            font-weight: 700;
+            text-decoration: none;
+            border: 1px solid transparent;
+            transition: all 0.2s ease;
+            flex: 1 1 100%;
+            cursor: pointer;
+        }
+
+        .role-management-action--primary {
+            background: #002C76;
+            color: #ffffff;
+        }
+
+        .role-management-action:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .role-management-action:hover,
+        .role-config-manage-users-btn:hover {
+            transform: translateY(-1px);
+        }
+
         .role-config-tabs {
             display: flex;
             flex-wrap: wrap;
@@ -259,6 +870,71 @@
 
         .role-config-back-link {
             justify-content: center;
+        }
+
+        .role-config-toast-stack {
+            position: fixed;
+            top: 88px;
+            right: 24px;
+            z-index: 1400;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: none;
+            width: min(360px, calc(100vw - 32px));
+        }
+
+        .role-config-toast {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 12px 14px;
+            border-radius: 12px;
+            border: 1px solid transparent;
+            box-shadow: 0 18px 38px rgba(15, 23, 42, 0.18);
+            background: #ffffff;
+            color: #0f172a;
+            pointer-events: auto;
+            transform: translateY(-8px);
+            opacity: 0;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+        }
+
+        .role-config-toast.is-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .role-config-toast--success {
+            border-color: #bbf7d0;
+            background: #f0fdf4;
+            color: #166534;
+        }
+
+        .role-config-toast--info {
+            border-color: #bfdbfe;
+            background: #eff6ff;
+            color: #1d4ed8;
+        }
+
+        .role-config-toast--error {
+            border-color: #fecaca;
+            background: #fff1f2;
+            color: #be123c;
+        }
+
+        .role-config-toast__icon {
+            flex: 0 0 auto;
+            font-size: 14px;
+            line-height: 1.4;
+            margin-top: 1px;
+        }
+
+        .role-config-toast__message {
+            flex: 1 1 auto;
+            font-size: 13px;
+            font-weight: 700;
+            line-height: 1.45;
         }
 
         .role-config-panel {
@@ -367,17 +1043,31 @@
 
         .role-config-status-row {
             display: flex;
-            flex-direction: column;
-            gap: 6px;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .role-config-status-row > :first-child {
+            flex: 1 1 auto;
+            min-width: 0;
         }
 
         .role-config-save-status {
             display: inline-flex;
             align-items: center;
+            justify-content: flex-end;
             gap: 8px;
+            margin-left: auto;
             font-size: 12px;
             font-weight: 700;
             color: #64748b;
+            text-align: right;
+            min-height: 18px;
+        }
+
+        .role-config-save-status[data-state="idle"] {
+            visibility: hidden;
         }
 
         .role-config-save-status__spinner {
@@ -439,6 +1129,11 @@
                 gap: 12px;
             }
 
+            .role-config-page-actions {
+                width: 100%;
+            }
+
+            .role-config-manage-users-btn,
             .role-config-back-link {
                 width: 100%;
             }
@@ -469,6 +1164,45 @@
                 width: 100%;
             }
 
+            .role-management-modal {
+                padding: 12px;
+            }
+
+            .role-management-modal__dialog {
+                max-height: calc(100vh - 24px);
+                padding: 18px 14px;
+                border-radius: 16px;
+            }
+
+            .role-management-modal__header {
+                gap: 12px;
+            }
+
+            .role-management-modal__title {
+                font-size: 20px;
+            }
+
+            .role-management-toolbar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .role-management-toolbar__actions {
+                width: 100%;
+            }
+
+            .role-management-toolbar__button {
+                flex: 1 1 calc(50% - 4px);
+            }
+
+            .role-entry-modal__dialog {
+                padding: 16px 14px;
+            }
+
+            .role-management-modal__grid {
+                grid-template-columns: 1fr;
+            }
+
             .role-config-tabs {
                 flex-wrap: nowrap;
                 overflow-x: auto;
@@ -488,16 +1222,27 @@
                 width: auto;
             }
 
+            .role-config-toast-stack {
+                top: 76px;
+                right: 12px;
+                left: 12px;
+                width: auto;
+            }
+
             .role-config-panel-header {
                 margin-bottom: 14px !important;
             }
 
             .role-config-status-row {
+                flex-direction: column;
                 gap: 10px;
             }
 
             .role-config-save-status {
                 align-self: flex-start;
+                margin-left: 0;
+                justify-content: flex-start;
+                text-align: left;
             }
 
             .crud-permission-table-wrap {
@@ -612,6 +1357,478 @@
             const tabs = Array.from(document.querySelectorAll('[data-role-config-tab]'));
             const panels = Array.from(document.querySelectorAll('[data-role-config-panel]'));
             const roleConfigForms = Array.from(document.querySelectorAll('[data-role-config-form]'));
+            const roleManagementModal = document.querySelector('[data-role-management-modal]');
+            const roleManagementGrid = roleManagementModal?.querySelector('.role-management-modal__grid');
+            let roleManagementCards = roleManagementModal
+                ? Array.from(roleManagementModal.querySelectorAll('[data-role-management-card]'))
+                : [];
+            const roleManagementOpenButtons = Array.from(document.querySelectorAll('[data-role-management-open]'));
+            const roleManagementCloseButtons = roleManagementModal
+                ? Array.from(roleManagementModal.querySelectorAll('[data-role-management-close]'))
+                : [];
+            const roleEntryModal = document.querySelector('[data-role-entry-modal]');
+            const roleEntryCloseButtons = roleEntryModal
+                ? Array.from(roleEntryModal.querySelectorAll('[data-role-entry-close]'))
+                : [];
+            const roleEntryForm = roleEntryModal?.querySelector('[data-role-entry-form]');
+            const roleEntryModeInput = roleEntryModal?.querySelector('[data-role-entry-mode]');
+            const roleEntryIdInput = roleEntryModal?.querySelector('[data-role-entry-id]');
+            const roleEntrySubmitUrlInput = roleEntryModal?.querySelector('[data-role-entry-submit-url]');
+            const roleEntryNameInput = roleEntryModal?.querySelector('[data-role-entry-name]');
+            const roleEntryTitle = roleEntryModal?.querySelector('.role-entry-modal__title');
+            const roleEntryDescription = roleEntryModal?.querySelector('[data-role-entry-description]');
+            const roleToolbarAddButton = roleManagementModal?.querySelector('[data-role-toolbar-add]');
+            const roleToolbarSelection = roleManagementModal?.querySelector('[data-role-toolbar-selection]');
+            const roleToolbarEditButton = roleManagementModal?.querySelector('[data-role-toolbar-edit]');
+            const roleToolbarDeleteButton = roleManagementModal?.querySelector('[data-role-toolbar-delete]');
+            const roleConfigToastStack = document.querySelector('[data-role-config-toast-stack]');
+            const roleSuccessToastStorageKey = 'pdmuoms-role-management-success-toast-v1';
+
+            const showRoleConfigToast = (message, type = 'info') => {
+                const normalizedMessage = String(message || '').trim();
+                if (normalizedMessage === '' || !roleConfigToastStack) {
+                    return;
+                }
+
+                const toast = document.createElement('div');
+                const resolvedType = ['success', 'error', 'info'].includes(type) ? type : 'info';
+                const iconClass = resolvedType === 'success'
+                    ? 'fas fa-check-circle'
+                    : (resolvedType === 'error' ? 'fas fa-exclamation-circle' : 'fas fa-info-circle');
+
+                toast.className = `role-config-toast role-config-toast--${resolvedType}`;
+                toast.innerHTML = `
+                    <span class="role-config-toast__icon" aria-hidden="true"><i class="${iconClass}"></i></span>
+                    <div class="role-config-toast__message"></div>
+                `;
+
+                toast.querySelector('.role-config-toast__message').textContent = normalizedMessage;
+                roleConfigToastStack.appendChild(toast);
+
+                window.requestAnimationFrame(() => {
+                    toast.classList.add('is-visible');
+                });
+
+                const removeToast = () => {
+                    toast.classList.remove('is-visible');
+                    window.setTimeout(() => {
+                        toast.remove();
+                    }, 220);
+                };
+
+                window.setTimeout(removeToast, 3200);
+            };
+
+            const showRoleToolbarMessage = (message) => showRoleConfigToast(message, 'info');
+
+            const showRoleToolbarSuccess = (message) => showRoleConfigToast(message, 'success');
+
+            const showRoleToolbarError = (message) => showRoleConfigToast(message, 'error');
+
+            const queueRoleToolbarSuccess = (message) => {
+                const normalizedMessage = String(message || '').trim();
+                if (normalizedMessage === '') {
+                    return;
+                }
+
+                try {
+                    window.sessionStorage.setItem(roleSuccessToastStorageKey, normalizedMessage);
+                } catch (error) {
+                    showRoleToolbarSuccess(normalizedMessage);
+                }
+            };
+
+            const flushQueuedRoleToolbarSuccess = () => {
+                try {
+                    const message = window.sessionStorage.getItem(roleSuccessToastStorageKey);
+                    if (!message) {
+                        return;
+                    }
+
+                    window.sessionStorage.removeItem(roleSuccessToastStorageKey);
+                    showRoleToolbarSuccess(message);
+                } catch (error) {
+                    // Ignore storage access issues and continue without a queued toast.
+                }
+            };
+
+            const readJsonErrorMessage = (data, fallbackMessage) => {
+                if (data && typeof data.message === 'string' && data.message.trim() !== '') {
+                    return data.message.trim();
+                }
+
+                if (data && typeof data.errors === 'object' && data.errors !== null) {
+                    for (const fieldErrors of Object.values(data.errors)) {
+                        if (Array.isArray(fieldErrors) && typeof fieldErrors[0] === 'string' && fieldErrors[0].trim() !== '') {
+                            return fieldErrors[0].trim();
+                        }
+                    }
+                }
+
+                return fallbackMessage;
+            };
+
+            const attachRoleManagementCardEvents = (card) => {
+                card.addEventListener('click', (event) => {
+                    const interactiveTarget = event.target.closest('a, button');
+                    if (interactiveTarget) {
+                        return;
+                    }
+
+                    setSelectedRoleCard(card);
+                });
+
+                card.addEventListener('keydown', (event) => {
+                    if (event.key !== 'Enter' && event.key !== ' ') {
+                        return;
+                    }
+
+                    event.preventDefault();
+                    setSelectedRoleCard(card);
+                });
+            };
+
+            const refreshRoleManagementCards = () => {
+                if (!roleManagementGrid) {
+                    return;
+                }
+
+                roleManagementCards = Array.from(roleManagementGrid.querySelectorAll('[data-role-management-card]'));
+                roleManagementCards.forEach((card) => {
+                    if (card.dataset.roleEventsBound === 'true') {
+                        return;
+                    }
+
+                    attachRoleManagementCardEvents(card);
+                    card.dataset.roleEventsBound = 'true';
+                });
+            };
+
+            const openRoleEntryModal = ({ mode = 'create', id = '', label = '', submitUrl = '' } = {}) => {
+                if (!roleEntryModal || !roleEntryForm) {
+                    return;
+                }
+
+                roleEntryModeInput.value = mode;
+                roleEntryIdInput.value = id;
+                roleEntrySubmitUrlInput.value = submitUrl;
+                roleEntryNameInput.value = label;
+                roleEntryTitle.textContent = mode === 'edit' ? 'Edit Role' : 'Add Role';
+                if (roleEntryDescription) {
+                    roleEntryDescription.textContent = mode === 'edit'
+                        ? 'Update the official role name. Saving keeps the role available across user management and role configuration.'
+                        : 'Enter the role name. Saving creates an official role, then you can configure its access from the role matrix.';
+                }
+                roleEntryModal.hidden = false;
+                roleEntryNameInput.focus();
+                roleEntryNameInput.select();
+            };
+
+            const closeRoleEntryModal = () => {
+                if (!roleEntryModal || !roleEntryForm) {
+                    return;
+                }
+
+                roleEntryModal.hidden = true;
+                roleEntryForm.reset();
+                roleEntryModeInput.value = 'create';
+                roleEntryIdInput.value = '';
+                roleEntrySubmitUrlInput.value = '';
+            };
+
+            const findRoleManagementCard = ({ roleKind = '', roleId = '', roleLabel = '' } = {}) => {
+                return roleManagementCards.find((card) => {
+                    const cardKind = (card.dataset.roleKind || '').trim();
+                    const cardId = (card.dataset.roleId || '').trim();
+                    const cardLabel = (card.dataset.roleLabel || '').trim();
+
+                    return cardKind === roleKind
+                        && (roleId === '' || cardId === roleId)
+                        && (roleLabel === '' || cardLabel === roleLabel);
+                }) ?? null;
+            };
+
+            const reopenRoleManagementModal = (selection = null) => {
+                if (!roleManagementModal) {
+                    return;
+                }
+
+                refreshRoleManagementCards();
+                roleManagementModal.hidden = false;
+                document.body.classList.add('role-management-modal-open');
+                setSelectedRoleCard(selection ? findRoleManagementCard(selection) : null);
+            };
+
+            const queueRoleManagementModalReopen = (selection = null) => {
+                window.setTimeout(() => {
+                    reopenRoleManagementModal(selection);
+                }, 0);
+            };
+
+            const setRoleManagementBackgrounded = (backgrounded) => {
+                if (!roleManagementModal) {
+                    return;
+                }
+
+                roleManagementModal.classList.toggle('is-backgrounded', backgrounded);
+            };
+
+            const setSelectedRoleCard = (selectedCard = null) => {
+                roleManagementCards.forEach((card) => {
+                    card.classList.toggle('is-selected', card === selectedCard);
+                });
+
+                const selectedRoleKind = selectedCard?.dataset.roleKind?.trim() || '';
+                const selectedRoleId = selectedCard?.dataset.roleId?.trim() || '';
+                const selectedRoleLabel = selectedCard?.dataset.roleLabel?.trim() || '';
+                const editUrl = selectedCard?.dataset.editUrl?.trim() || '';
+                const roleUpdateUrl = selectedCard?.dataset.roleUpdateUrl?.trim() || '';
+                const roleDeleteUrl = selectedCard?.dataset.roleDeleteUrl?.trim() || '';
+
+                if (roleToolbarSelection) {
+                    roleToolbarSelection.textContent = selectedRoleLabel === ''
+                        ? 'Select a role card to edit or review role actions.'
+                        : `Selected role: ${selectedRoleLabel}${selectedRoleKind === 'custom' ? ' (Custom)' : ''}`;
+                }
+
+                if (roleToolbarAddButton) {
+                    roleToolbarAddButton.title = selectedRoleLabel === ''
+                        ? 'Add an official role.'
+                        : `Add a role based on ${selectedRoleLabel}`;
+                }
+
+                if (roleToolbarEditButton) {
+                    roleToolbarEditButton.dataset.roleKind = selectedRoleKind;
+                    roleToolbarEditButton.dataset.roleId = selectedRoleId;
+                    roleToolbarEditButton.dataset.roleLabel = selectedRoleLabel;
+                    roleToolbarEditButton.dataset.updateUrl = roleUpdateUrl;
+                    roleToolbarEditButton.dataset.url = editUrl;
+                    roleToolbarEditButton.title = selectedRoleLabel === ''
+                        ? 'Select a role to edit.'
+                        : `Edit ${selectedRoleLabel}`;
+                }
+
+                if (roleToolbarDeleteButton) {
+                    roleToolbarDeleteButton.dataset.roleKind = selectedRoleKind;
+                    roleToolbarDeleteButton.dataset.roleId = selectedRoleId;
+                    roleToolbarDeleteButton.dataset.roleLabel = selectedRoleLabel;
+                    roleToolbarDeleteButton.dataset.deleteUrl = roleDeleteUrl;
+                    roleToolbarDeleteButton.title = selectedRoleLabel === ''
+                        ? 'Select a role to review deletion options.'
+                        : `Delete ${selectedRoleLabel}`;
+                }
+            };
+
+            const openRoleManagementModal = () => {
+                if (!roleManagementModal) {
+                    return;
+                }
+
+                setRoleManagementBackgrounded(false);
+                reopenRoleManagementModal();
+                roleManagementModal.querySelector('.role-management-modal__close')?.focus();
+            };
+
+            const closeRoleManagementModal = () => {
+                if (!roleManagementModal) {
+                    return;
+                }
+
+                setRoleManagementBackgrounded(false);
+                closeRoleEntryModal();
+                roleManagementModal.hidden = true;
+                document.body.classList.remove('role-management-modal-open');
+            };
+
+            roleManagementOpenButtons.forEach((button) => {
+                button.addEventListener('click', openRoleManagementModal);
+            });
+
+            roleManagementCloseButtons.forEach((button) => {
+                button.addEventListener('click', closeRoleManagementModal);
+            });
+
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape' && roleEntryModal && !roleEntryModal.hidden) {
+                    closeRoleEntryModal();
+                    return;
+                }
+
+                if (event.key === 'Escape' && roleManagementModal && !roleManagementModal.hidden) {
+                    if (roleManagementModal.classList.contains('is-backgrounded')) {
+                        return;
+                    }
+
+                    closeRoleManagementModal();
+                }
+            });
+
+            roleEntryCloseButtons.forEach((button) => {
+                button.addEventListener('click', closeRoleEntryModal);
+            });
+
+            refreshRoleManagementCards();
+            flushQueuedRoleToolbarSuccess();
+
+            roleToolbarEditButton?.addEventListener('click', () => {
+                const roleKind = roleToolbarEditButton.dataset.roleKind || '';
+                const selectedRoleId = roleToolbarEditButton.dataset.roleId || '';
+                const selectedRoleLabel = roleToolbarEditButton.dataset.roleLabel || '';
+                const updateUrl = roleToolbarEditButton.dataset.updateUrl || '';
+                const editUrl = roleToolbarEditButton.dataset.url || '';
+
+                if (updateUrl !== '') {
+                    if (selectedRoleId === '' || selectedRoleLabel === '') {
+                        showRoleToolbarMessage('Select a role first.');
+                        return;
+                    }
+
+                    openRoleEntryModal({
+                        mode: 'edit',
+                        id: selectedRoleId,
+                        label: selectedRoleLabel,
+                        submitUrl: updateUrl,
+                    });
+                    return;
+                }
+
+                if (editUrl === '') {
+                    showRoleToolbarMessage('Select an editable role first.');
+                    return;
+                }
+
+                window.location.href = editUrl;
+            });
+
+            roleToolbarAddButton?.addEventListener('click', () => {
+                openRoleEntryModal({ mode: 'create' });
+            });
+
+            roleToolbarDeleteButton?.addEventListener('click', () => {
+                const selectedRoleKind = roleToolbarDeleteButton.dataset.roleKind || '';
+                const selectedRoleId = roleToolbarDeleteButton.dataset.roleId || '';
+                const selectedRoleLabel = roleToolbarDeleteButton.dataset.roleLabel || '';
+                const deleteUrl = roleToolbarDeleteButton.dataset.deleteUrl || '';
+                if (selectedRoleLabel === '') {
+                    showRoleToolbarMessage('Select a role first.');
+                    return;
+                }
+
+                if (selectedRoleId === '' || deleteUrl === '') {
+                    showRoleToolbarMessage(`${selectedRoleLabel} cannot be deleted here.`);
+                    return;
+                }
+
+                const selectedRoleState = {
+                    roleKind: selectedRoleKind,
+                    roleId: selectedRoleId,
+                    roleLabel: selectedRoleLabel,
+                };
+
+                setRoleManagementBackgrounded(true);
+                window.openConfirmationModal(
+                    `Delete the role ${selectedRoleLabel}?`,
+                    async () => {
+                        const csrfToken = roleEntryForm?.querySelector('input[name="_token"]')?.value || '';
+
+                        try {
+                            const payload = new FormData();
+                            payload.append('_token', csrfToken);
+                            payload.append('_method', 'DELETE');
+
+                            const response = await fetch(deleteUrl, {
+                                method: 'POST',
+                                headers: {
+                                    'Accept': 'application/json',
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                },
+                                body: payload,
+                            });
+                            const data = await response.json().catch(() => ({}));
+
+                            if (!response.ok) {
+                                throw new Error(readJsonErrorMessage(data, 'Unable to delete role.'));
+                            }
+
+                            queueRoleToolbarSuccess(data.message || `Role ${selectedRoleLabel} deleted.`);
+                            window.location.href = data.redirect_url || roleEntryForm?.dataset.indexUrl || window.location.href;
+                        } catch (error) {
+                            setRoleManagementBackgrounded(false);
+                            setSelectedRoleCard(findRoleManagementCard(selectedRoleState));
+                            showRoleToolbarMessage(error.message || 'Unable to delete role.');
+                        }
+                    },
+                    () => {
+                        setRoleManagementBackgrounded(false);
+                        setSelectedRoleCard(findRoleManagementCard(selectedRoleState));
+                        roleToolbarDeleteButton?.focus();
+                    }
+                );
+            });
+
+            roleEntryForm?.addEventListener('submit', async (event) => {
+                event.preventDefault();
+
+                const mode = roleEntryModeInput.value === 'edit' ? 'edit' : 'create';
+                const roleLabel = roleEntryNameInput.value.trim().replace(/\s+/g, ' ');
+                const submitUrl = mode === 'edit'
+                    ? roleEntrySubmitUrlInput.value.trim()
+                    : (roleEntryForm.dataset.storeUrl || '').trim();
+
+                if (roleLabel === '') {
+                    showRoleToolbarMessage('Enter a role name.');
+                    roleEntryNameInput.focus();
+                    return;
+                }
+
+                if (submitUrl === '') {
+                    showRoleToolbarMessage('Role form is not configured correctly.');
+                    return;
+                }
+
+                const csrfToken = roleEntryForm.querySelector('input[name="_token"]')?.value || '';
+                const submitButton = roleEntryForm.querySelector('button[type="submit"]');
+                const cancelButton = roleEntryForm.querySelector('[data-role-entry-close]');
+
+                try {
+                    submitButton?.setAttribute('disabled', 'disabled');
+                    cancelButton?.setAttribute('disabled', 'disabled');
+
+                    const payload = new FormData();
+                    payload.append('_token', csrfToken);
+                    payload.append('label', roleLabel);
+
+                    if (mode === 'edit') {
+                        payload.append('_method', 'PUT');
+                    }
+
+                    const response = await fetch(submitUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                        body: payload,
+                    });
+                    const data = await response.json().catch(() => ({}));
+
+                    if (!response.ok) {
+                        throw new Error(readJsonErrorMessage(data, 'Unable to save role.'));
+                    }
+
+                    queueRoleToolbarSuccess(data.message || (mode === 'edit'
+                        ? `Role ${roleLabel} updated.`
+                        : `Role ${roleLabel} created.`));
+                    window.location.href = data.redirect_url || roleEntryForm.dataset.indexUrl || window.location.href;
+                } catch (error) {
+                    showRoleToolbarMessage(error.message || 'Unable to save role.');
+                    roleEntryNameInput.focus();
+                    roleEntryNameInput.select();
+                } finally {
+                    submitButton?.removeAttribute('disabled');
+                    cancelButton?.removeAttribute('disabled');
+                }
+            });
 
             const activatePanel = (panelId) => {
                 tabs.forEach((tab) => {
@@ -712,7 +1929,8 @@
 
                 form.dataset.savedPermissions = JSON.stringify(data.permissions || checkedPermissions);
                 updateBadgeState(form, Boolean(data.uses_recommended_defaults));
-                setSaveStatus(form, 'saved', data.message || 'Changes saved.');
+                setSaveStatus(form, 'idle', '');
+                showRoleToolbarSuccess(data.message || 'Role configuration updated successfully.');
             };
 
             const resetForm = async (form) => {
@@ -741,7 +1959,8 @@
                 setCheckedPermissions(form, permissions);
                 form.dataset.savedPermissions = JSON.stringify([...permissions].sort());
                 updateBadgeState(form, Boolean(data.uses_recommended_defaults));
-                setSaveStatus(form, 'saved', data.message || 'Role configuration reset.');
+                setSaveStatus(form, 'idle', '');
+                showRoleToolbarSuccess(data.message || 'Role configuration reset.');
             };
 
             roleConfigForms.forEach((form) => {
@@ -757,6 +1976,7 @@
                         } catch (error) {
                             setCheckedPermissions(form, previousPermissions);
                             setSaveStatus(form, 'error', error.message || 'Unable to save role configuration.');
+                            showRoleToolbarError(error.message || 'Unable to save role configuration.');
                         } finally {
                             setInputsDisabled(form, false);
                         }
@@ -784,6 +2004,7 @@
                             } catch (error) {
                                 setCheckedPermissions(form, previousPermissions);
                                 setSaveStatus(form, 'error', error.message || 'Unable to reset role configuration.');
+                                showRoleToolbarError(error.message || 'Unable to reset role configuration.');
                                 setInputsDisabled(form, false);
                             } finally {
                                 setInputsDisabled(form, false);

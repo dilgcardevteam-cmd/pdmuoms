@@ -18,27 +18,111 @@ class UserManagementController extends Controller
         $this->middleware('superadmin');
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        $users = User::query()
-            ->orderByRaw("
-                CASE LOWER(TRIM(COALESCE(role, '')))
-                    WHEN '" . User::ROLE_SUPERADMIN . "' THEN 1
-                    WHEN '" . User::ROLE_REGIONAL . "' THEN 2
-                    WHEN '" . User::ROLE_PROVINCIAL . "' THEN 3
-                    WHEN '" . User::ROLE_LGU . "' THEN 4
-                    ELSE 5
-                END
-            ")
-            ->orderBy('lname')
-            ->orderBy('fname')
-            ->paginate(15);
+        $roleOptions = User::roleOptions();
+        $statusOptions = [
+            'active' => 'Active',
+            'inactive' => 'Inactive',
+        ];
+        $provinceOptions = $this->provinceOptions();
+        $selectedRole = strtolower(trim((string) $request->query('role', '')));
+        $selectedStatus = strtolower(trim((string) $request->query('status', '')));
+        $selectedProvince = trim((string) $request->query('province', ''));
+        $selectedLgu = trim((string) $request->query('lgu', ''));
+        $search = trim((string) $request->query('search', ''));
+        $lguOptions = $this->lguOptions($selectedProvince);
+
+        $usersQuery = User::query()
+            ->orderByRaw("CASE WHEN LOWER(TRIM(COALESCE(status, ''))) = 'inactive' THEN 0 ELSE 1 END")
+            ->orderByDesc('created_at')
+            ->orderByDesc('idno');
+
+        if ($search !== '') {
+            $searchKeyword = '%' . strtolower($search) . '%';
+
+            $usersQuery->where(function ($query) use ($searchKeyword) {
+                $query
+                    ->whereRaw("LOWER(TRIM(COALESCE(CONCAT_WS(' ', fname, lname), ''))) LIKE ?", [$searchKeyword])
+                    ->orWhereRaw("LOWER(TRIM(COALESCE(emailaddress, ''))) LIKE ?", [$searchKeyword])
+                    ->orWhereRaw("LOWER(TRIM(COALESCE(username, ''))) LIKE ?", [$searchKeyword])
+                    ->orWhereRaw("LOWER(TRIM(COALESCE(agency, ''))) LIKE ?", [$searchKeyword])
+                    ->orWhereRaw("LOWER(TRIM(COALESCE(position, ''))) LIKE ?", [$searchKeyword])
+                    ->orWhereRaw("LOWER(TRIM(COALESCE(region, ''))) LIKE ?", [$searchKeyword])
+                    ->orWhereRaw("LOWER(TRIM(COALESCE(province, ''))) LIKE ?", [$searchKeyword])
+                    ->orWhereRaw("LOWER(TRIM(COALESCE(office, ''))) LIKE ?", [$searchKeyword]);
+            });
+        }
+
+        if ($selectedRole !== '' && array_key_exists($selectedRole, $roleOptions)) {
+            $usersQuery->whereRaw('LOWER(TRIM(COALESCE(role, ""))) = ?', [$selectedRole]);
+        } else {
+            $selectedRole = '';
+        }
+
+        if ($selectedStatus !== '' && array_key_exists($selectedStatus, $statusOptions)) {
+            $usersQuery->whereRaw('LOWER(TRIM(COALESCE(status, ""))) = ?', [$selectedStatus]);
+        } else {
+            $selectedStatus = '';
+        }
+
+        if ($selectedProvince !== '') {
+            $usersQuery->whereRaw('LOWER(TRIM(COALESCE(province, ""))) = ?', [strtolower($selectedProvince)]);
+        }
+
+        if ($selectedLgu !== '') {
+            $usersQuery
+                ->whereRaw('LOWER(TRIM(COALESCE(agency, ""))) = ?', ['lgu'])
+                ->whereRaw('LOWER(TRIM(COALESCE(office, ""))) = ?', [strtolower($selectedLgu)]);
+        }
+
+        $users = $usersQuery->paginate(15)->withQueryString();
 
         return view('admin.users.index', [
             'users' => $users,
             'accessGrantModules' => $this->accessGrantModules(),
             'crudActionOptions' => RolePermissionRegistry::actionOptions(),
+            'roleOptions' => $roleOptions,
+            'statusOptions' => $statusOptions,
+            'provinceOptions' => $provinceOptions,
+            'lguOptions' => $lguOptions,
+            'filters' => [
+                'search' => $search,
+                'role' => $selectedRole,
+                'status' => $selectedStatus,
+                'province' => $selectedProvince,
+                'lgu' => $selectedLgu,
+            ],
         ]);
+    }
+
+    private function provinceOptions(): array
+    {
+        return User::query()
+            ->selectRaw("TRIM(COALESCE(province, '')) as value")
+            ->whereRaw("TRIM(COALESCE(province, '')) <> ''")
+            ->distinct()
+            ->orderBy('value')
+            ->pluck('value')
+            ->all();
+    }
+
+    private function lguOptions(string $selectedProvince = ''): array
+    {
+        $query = User::query()
+            ->selectRaw("TRIM(COALESCE(office, '')) as value")
+            ->whereRaw("LOWER(TRIM(COALESCE(agency, ''))) = ?", ['lgu'])
+            ->whereRaw("TRIM(COALESCE(office, '')) <> ''");
+
+        if ($selectedProvince !== '') {
+            $query->whereRaw('LOWER(TRIM(COALESCE(province, ""))) = ?', [strtolower($selectedProvince)]);
+        }
+
+        return $query
+            ->distinct()
+            ->orderBy('value')
+            ->pluck('value')
+            ->all();
     }
 
     public function create()

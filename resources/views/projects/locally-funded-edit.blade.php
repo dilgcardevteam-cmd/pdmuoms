@@ -661,7 +661,7 @@
                         <div style="display: grid; gap: 12px;">
                             <div>
                                 <label for="pcr_submission_deadline" style="display: block; font-weight: 600; color: #374151; margin-bottom: 6px;">Deadline of PCR Submission</label>
-                                <input type="date" id="pcr_submission_deadline" name="pcr_submission_deadline" value="{{ old('pcr_submission_deadline', $project->pcr_submission_deadline ? $project->pcr_submission_deadline->format('Y-m-d') : '') }}"
+                                <input type="date" id="pcr_submission_deadline" name="pcr_submission_deadline" value="{{ old('pcr_submission_deadline', $effectivePcrSubmissionDeadline ? $effectivePcrSubmissionDeadline->format('Y-m-d') : '') }}"
                                        style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; box-sizing: border-box;">
                                 <button type="submit" class="monitoring-save" style="display: none; margin-top: 8px; align-items: center; padding: 8px 16px; background-color: #002C76; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13px; text-decoration: none; transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(0, 44, 118, 0.2);">
                                     <i class="fas fa-save" style="margin-right: 6px;"></i> Save
@@ -699,7 +699,7 @@
                         <div style="display: grid; gap: 12px;">
                             <div>
                                 <label for="rssa_report_deadline" style="display: block; font-weight: 600; color: #374151; margin-bottom: 6px;">Deadline of RSSA Report</label>
-                                <input type="date" id="rssa_report_deadline" name="rssa_report_deadline" value="{{ old('rssa_report_deadline', $project->rssa_report_deadline ? $project->rssa_report_deadline->format('Y-m-d') : '') }}"
+                                <input type="date" id="rssa_report_deadline" name="rssa_report_deadline" value="{{ old('rssa_report_deadline', $effectiveRssaReportDeadline ? $effectiveRssaReportDeadline->format('Y-m-d') : '') }}"
                                        style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; box-sizing: border-box;">
                                 <button type="submit" class="monitoring-save" style="display: none; margin-top: 8px; align-items: center; padding: 8px 16px; background-color: #002C76; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13px; text-decoration: none; transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(0, 44, 118, 0.2);">
                                     <i class="fas fa-save" style="margin-right: 6px;"></i> Save

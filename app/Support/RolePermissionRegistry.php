@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\UserRole;
 use App\Models\User;
 
 class RolePermissionRegistry
@@ -185,21 +186,25 @@ class RolePermissionRegistry
 
     public static function configurableRoles(): array
     {
-        return [
-            User::ROLE_REGIONAL,
-            User::ROLE_PROVINCIAL,
-            User::ROLE_LGU,
-        ];
+        return array_values(array_merge([
+            ...array_values(array_filter([
+                User::ROLE_REGIONAL,
+                User::ROLE_PROVINCIAL,
+                User::ROLE_MLGOO,
+                User::ROLE_LGU,
+            ], fn (string $role): bool => array_key_exists($role, User::activeBuiltInRoleOptions()))),
+        ], array_keys(UserRole::roleOptions())));
     }
 
     public static function roleDescriptions(): array
     {
-        return [
+        return array_merge([
             User::ROLE_SUPERADMIN => 'Highest access. Superadmin keeps full access across all modules and system utilities.',
             User::ROLE_REGIONAL => 'Can oversee projects within the designated region, including its provinces and LGUs.',
             User::ROLE_PROVINCIAL => 'Can oversee projects within the designated province, including LGUs inside that province.',
+            User::ROLE_MLGOO => 'Municipal LGU Operations Officer scope. Access is limited to the assigned municipality or city and its submitted records.',
             User::ROLE_LGU => 'Lowest operational scope. Access is limited to the assigned LGU and its submitted records.',
-        ];
+        ], UserRole::descriptions());
     }
 
     public static function defaultPermissionsByRole(): array
@@ -267,6 +272,10 @@ class RolePermissionRegistry
                 'ticketing_system.view',
                 'ticketing_system.add',
             ],
+            User::ROLE_MLGOO => [
+                'ticketing_system.view',
+                'ticketing_system.add',
+            ],
         ];
 
         return [
@@ -276,6 +285,10 @@ class RolePermissionRegistry
             ]),
             User::ROLE_PROVINCIAL => array_merge($reportorialPermissions, $projectMonitoringPermissions, $ticketingPermissions[User::ROLE_PROVINCIAL], [
                 'locally_funded_projects.update',
+                'pre_implementation_documents.view',
+                'pre_implementation_documents.add',
+            ]),
+            User::ROLE_MLGOO => array_merge($reportorialPermissions, $projectMonitoringPermissions, $ticketingPermissions[User::ROLE_MLGOO], [
                 'pre_implementation_documents.view',
                 'pre_implementation_documents.add',
             ]),

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\FundUtilizationReport;
+use App\Models\DeadlineConfiguration;
 use App\Models\LocallyFundedProject;
 use App\Services\InterventionNotificationService;
 use App\Support\InputSanitizer;
@@ -2308,7 +2309,19 @@ $url = route('locally-funded-project.show', $project, false);
             ? trim($remarksUsers[$project->rssa_remarks_updated_by]->fname . ' ' . $remarksUsers[$project->rssa_remarks_updated_by]->lname)
             : null;
 
-        return view('projects.locally-funded-show', compact('project', 'provinces', 'provinceMunicipalities', 'fundSources', 'fundingYears', 'physicalByMonth', 'physicalTimelineByPeriod', 'currentPhysical', 'currentYear', 'currentMonth', 'actualCompletionUpdatedByName', 'financialByMonth', 'financialTotals', 'financialBalance', 'financialUtilizationRate', 'physicalRemarksUpdatedByName', 'physicalRemarksEncodedByName', 'financialRemarksUpdatedByName', 'financialRemarksEncodedByName', 'poMonitoringDateUpdatedByName', 'poFinalInspectionUpdatedByName', 'poRemarksUpdatedByName', 'roMonitoringDateUpdatedByName', 'roFinalInspectionUpdatedByName', 'roRemarksUpdatedByName', 'pcrSubmissionDeadlineUpdatedByName', 'pcrDateSubmittedToPoUpdatedByName', 'pcrMovUploadedByName', 'pcrDateReceivedByRoUpdatedByName', 'pcrRemarksUpdatedByName', 'rssaReportDeadlineUpdatedByName', 'rssaSubmissionStatusUpdatedByName', 'rssaDateSubmittedToPoUpdatedByName', 'rssaDateReceivedByRoUpdatedByName', 'rssaDateSubmittedToCoUpdatedByName', 'rssaRemarksUpdatedByName', 'activityLogs'));
+        $deadlineConfiguration = $this->deadlineConfigurationForProject($project);
+        $effectivePcrSubmissionDeadline = $this->resolveEffectiveProjectDeadline(
+            $project,
+            $deadlineConfiguration,
+            'pcr_submission_deadline'
+        );
+        $effectiveRssaReportDeadline = $this->resolveEffectiveProjectDeadline(
+            $project,
+            $deadlineConfiguration,
+            'rssa_report_deadline'
+        );
+
+        return view('projects.locally-funded-show', compact('project', 'provinces', 'provinceMunicipalities', 'fundSources', 'fundingYears', 'physicalByMonth', 'physicalTimelineByPeriod', 'currentPhysical', 'currentYear', 'currentMonth', 'actualCompletionUpdatedByName', 'financialByMonth', 'financialTotals', 'financialBalance', 'financialUtilizationRate', 'physicalRemarksUpdatedByName', 'physicalRemarksEncodedByName', 'financialRemarksUpdatedByName', 'financialRemarksEncodedByName', 'poMonitoringDateUpdatedByName', 'poFinalInspectionUpdatedByName', 'poRemarksUpdatedByName', 'roMonitoringDateUpdatedByName', 'roFinalInspectionUpdatedByName', 'roRemarksUpdatedByName', 'pcrSubmissionDeadlineUpdatedByName', 'pcrDateSubmittedToPoUpdatedByName', 'pcrMovUploadedByName', 'pcrDateReceivedByRoUpdatedByName', 'pcrRemarksUpdatedByName', 'rssaReportDeadlineUpdatedByName', 'rssaSubmissionStatusUpdatedByName', 'rssaDateSubmittedToPoUpdatedByName', 'rssaDateReceivedByRoUpdatedByName', 'rssaDateSubmittedToCoUpdatedByName', 'rssaRemarksUpdatedByName', 'activityLogs', 'effectivePcrSubmissionDeadline', 'effectiveRssaReportDeadline'));
     }
 
     public function viewPcrMov(LocallyFundedProject $project)
@@ -2397,8 +2410,19 @@ $url = route('locally-funded-project.show', $project, false);
         request()->session()->flashInput($prefill);
 
         $section = request()->query('section');
+        $deadlineConfiguration = $this->deadlineConfigurationForProject($project);
+        $effectivePcrSubmissionDeadline = $this->resolveEffectiveProjectDeadline(
+            $project,
+            $deadlineConfiguration,
+            'pcr_submission_deadline'
+        );
+        $effectiveRssaReportDeadline = $this->resolveEffectiveProjectDeadline(
+            $project,
+            $deadlineConfiguration,
+            'rssa_report_deadline'
+        );
 
-        return view('projects.locally-funded-edit', compact('project', 'provinces', 'provinceMunicipalities', 'currentUserOffice', 'fundSources', 'fundingYears', 'section'));
+        return view('projects.locally-funded-edit', compact('project', 'provinces', 'provinceMunicipalities', 'currentUserOffice', 'fundSources', 'fundingYears', 'section', 'effectivePcrSubmissionDeadline', 'effectiveRssaReportDeadline'));
     }
 
     /**
@@ -3223,5 +3247,43 @@ $url = route('locally-funded-project.show', $project, false);
         $project->delete();
         return redirect()->route('projects.locally-funded')
             ->with('success', 'Locally funded project deleted successfully!');
+    }
+
+    private function deadlineConfigurationForProject(LocallyFundedProject $project): ?DeadlineConfiguration
+    {
+        $fundingYear = (int) ($project->funding_year ?? 0);
+        if ($fundingYear < 2020 || $fundingYear > 2099) {
+            return null;
+        }
+
+        return DeadlineConfiguration::query()
+            ->where('funding_year', $fundingYear)
+            ->first();
+    }
+
+    private function resolveEffectiveProjectDeadline(
+        LocallyFundedProject $project,
+        ?DeadlineConfiguration $deadlineConfiguration,
+        string $field
+    ): ?Carbon {
+        $projectDeadline = $project->{$field};
+        if ($projectDeadline instanceof Carbon) {
+            return $projectDeadline->copy();
+        }
+
+        $configuredDeadline = $deadlineConfiguration?->{$field};
+        if ($configuredDeadline instanceof Carbon) {
+            return $configuredDeadline->copy();
+        }
+
+        if ($field === 'pcr_submission_deadline' && $project->target_date_completion instanceof Carbon) {
+            return $project->target_date_completion->copy()->addDays(30);
+        }
+
+        if ($field === 'rssa_report_deadline' && $project->target_date_completion instanceof Carbon) {
+            return $project->target_date_completion->copy()->addDays(395);
+        }
+
+        return null;
     }
 }

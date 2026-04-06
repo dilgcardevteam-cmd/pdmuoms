@@ -7,6 +7,14 @@
     @php
         $activeUserTab = request()->query('tab') === 'access-grants' ? 'accessGrantsPanel' : 'usersPanel';
         $viewerIsSuperAdmin = Auth::user()->isSuperAdmin();
+        $selectedRole = $filters['role'] ?? '';
+        $selectedStatus = $filters['status'] ?? '';
+        $selectedProvince = $filters['province'] ?? '';
+        $selectedLgu = $filters['lgu'] ?? '';
+        $searchTerm = $filters['search'] ?? '';
+        $selectedRoleLabel = $selectedRole !== '' ? ($roleOptions[$selectedRole] ?? null) : null;
+        $selectedStatusLabel = $selectedStatus !== '' ? ($statusOptions[$selectedStatus] ?? null) : null;
+        $hasActiveFilters = $searchTerm !== '' || $selectedRole !== '' || $selectedStatus !== '' || $selectedProvince !== '' || $selectedLgu !== '';
     @endphp
 
     <div class="content-header">
@@ -56,11 +64,119 @@
     <section id="usersPanel" class="project-tab-panel {{ $activeUserTab === 'usersPanel' ? 'is-active' : '' }}" role="tabpanel">
         <div class="user-management-panel">
             <div class="user-management-header">
-                <h2 style="color: #002C76; font-size: 18px; margin: 0;">Active Users ({{ $users->total() }})</h2>
-                <a href="{{ route('users.create') }}" class="user-management-add-btn" style="padding: 10px 20px; background-color: #002C76; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px; text-decoration: none; display: flex; align-items: center; gap: 8px; transition: all 0.3s ease;">
+                <h2 style="color: #002C76; font-size: 18px; margin: 0;">Users ({{ $users->total() }})</h2>
+                <a href="{{ route('users.create', $selectedRole !== '' ? ['role' => $selectedRole] : []) }}" class="user-management-add-btn" style="padding: 10px 20px; background-color: #002C76; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px; text-decoration: none; display: flex; align-items: center; gap: 8px; transition: all 0.3s ease;">
                     <i class="fas fa-user-plus"></i> Add New User
                 </a>
             </div>
+
+            <form method="GET" action="{{ route('users.index') }}" class="user-filters-form">
+                <div class="user-filters-grid">
+                    <label class="user-filter-field">
+                        <span>Search</span>
+                        <div class="user-filter-input-wrap">
+                            <i class="fas fa-search" aria-hidden="true"></i>
+                            <input
+                                type="search"
+                                name="search"
+                                value="{{ $searchTerm }}"
+                                placeholder="Name, email, username, province, office"
+                            >
+                        </div>
+                    </label>
+
+                    <label class="user-filter-field">
+                        <span>Role</span>
+                        <select name="role">
+                            <option value="">All roles</option>
+                            @foreach($roleOptions as $roleValue => $roleLabel)
+                                <option value="{{ $roleValue }}" @selected($selectedRole === $roleValue)>{{ $roleLabel }}</option>
+                            @endforeach
+                        </select>
+                    </label>
+
+                    <label class="user-filter-field">
+                        <span>Status</span>
+                        <select name="status">
+                            <option value="">All statuses</option>
+                            @foreach($statusOptions as $statusValue => $statusLabel)
+                                <option value="{{ $statusValue }}" @selected($selectedStatus === $statusValue)>{{ $statusLabel }}</option>
+                            @endforeach
+                        </select>
+                    </label>
+
+                    <label class="user-filter-field">
+                        <span>Province</span>
+                        <select name="province">
+                            <option value="">All provinces</option>
+                            @foreach($provinceOptions as $provinceOption)
+                                <option value="{{ $provinceOption }}" @selected($selectedProvince === $provinceOption)>{{ $provinceOption }}</option>
+                            @endforeach
+                        </select>
+                    </label>
+
+                    <label class="user-filter-field">
+                        <span>LGU</span>
+                        <select name="lgu">
+                            <option value="">All LGUs</option>
+                            @if($selectedLgu !== '' && !in_array($selectedLgu, $lguOptions, true))
+                                <option value="{{ $selectedLgu }}" selected>{{ $selectedLgu }}</option>
+                            @endif
+                            @foreach($lguOptions as $lguOption)
+                                <option value="{{ $lguOption }}" @selected($selectedLgu === $lguOption)>{{ $lguOption }}</option>
+                            @endforeach
+                        </select>
+                    </label>
+                </div>
+
+                <div class="user-filter-actions">
+                    <button type="submit" class="user-filter-btn user-filter-btn--apply">
+                        <i class="fas fa-filter" aria-hidden="true"></i>
+                        <span>Apply Filters</span>
+                    </button>
+                    @if($hasActiveFilters)
+                        <a href="{{ route('users.index') }}" class="user-filter-btn user-filter-btn--clear">
+                            <i class="fas fa-undo" aria-hidden="true"></i>
+                            <span>Clear Filters</span>
+                        </a>
+                    @endif
+                </div>
+            </form>
+
+            @if($hasActiveFilters)
+                <div class="user-filter-summary">
+                    <div class="user-filter-summary__content">
+                        <p class="user-filter-summary__title">Filtered results</p>
+                        <p class="user-filter-summary__text">
+                            Showing {{ $users->total() }} matching user{{ $users->total() === 1 ? '' : 's' }}.
+                        </p>
+                        <div class="user-filter-summary__chips">
+                            @if($searchTerm !== '')
+                                <span class="user-filter-chip">Search: {{ $searchTerm }}</span>
+                            @endif
+                            @if($selectedRoleLabel)
+                                <span class="user-filter-chip">Role: {{ $selectedRoleLabel }}</span>
+                            @endif
+                            @if($selectedStatusLabel)
+                                <span class="user-filter-chip">Status: {{ $selectedStatusLabel }}</span>
+                            @endif
+                            @if($selectedProvince !== '')
+                                <span class="user-filter-chip">Province: {{ $selectedProvince }}</span>
+                            @endif
+                            @if($selectedLgu !== '')
+                                <span class="user-filter-chip">LGU: {{ $selectedLgu }}</span>
+                            @endif
+                        </div>
+                    </div>
+
+                    @if($selectedRoleLabel)
+                        <a href="{{ route('users.create', ['role' => $selectedRole]) }}" class="user-filter-summary__add">
+                            <i class="fas fa-user-plus" aria-hidden="true"></i>
+                            <span>Add {{ $selectedRoleLabel }}</span>
+                        </a>
+                    @endif
+                </div>
+            @endif
 
             <div class="user-table-wrap">
                 <table style="width: 100%; border-collapse: collapse;">
@@ -84,9 +200,11 @@
                                 <td style="padding: 15px 12px; color: #6b7280; font-size: 13px;">{{ $user->username }}</td>
                                 <td style="padding: 15px 12px;">
                                     <span style="padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;
-                                        @if($user->isSuperAdmin()) background-color: #fee2e2; color: #991b1b;
+                                        @if(!$user->hasAssignedRole()) background-color: #e5e7eb; color: #475569;
+                                        @elseif($user->isSuperAdmin()) background-color: #fee2e2; color: #991b1b;
                                         @elseif($user->isRegionalUser()) background-color: #dbeafe; color: #1d4ed8;
                                         @elseif($user->isProvincialUser()) background-color: #ede9fe; color: #6d28d9;
+                                        @elseif($user->isMlgooUser()) background-color: #fef3c7; color: #92400e;
                                         @else background-color: #dcfce7; color: #166534; @endif">
                                         {{ $user->roleLabel() }}
                                     </span>
@@ -123,7 +241,7 @@
                             <tr>
                                 <td colspan="6" style="padding: 40px; text-align: center; color: #9ca3af;">
                                     <i class="fas fa-inbox" style="font-size: 32px; margin-bottom: 10px;"></i>
-                                    <p>No users found</p>
+                                    <p>{{ $hasActiveFilters ? 'No users matched the current filters.' : 'No users found' }}</p>
                                 </td>
                             </tr>
                         @endforelse
@@ -143,9 +261,11 @@
                                 <div class="user-mobile-card__summary">
                                     <div class="user-mobile-card__badges">
                                         <span style="padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;
-                                            @if($user->isSuperAdmin()) background-color: #fee2e2; color: #991b1b;
+                                            @if(!$user->hasAssignedRole()) background-color: #e5e7eb; color: #475569;
+                                            @elseif($user->isSuperAdmin()) background-color: #fee2e2; color: #991b1b;
                                             @elseif($user->isRegionalUser()) background-color: #dbeafe; color: #1d4ed8;
                                             @elseif($user->isProvincialUser()) background-color: #ede9fe; color: #6d28d9;
+                                            @elseif($user->isMlgooUser()) background-color: #fef3c7; color: #92400e;
                                             @else background-color: #dcfce7; color: #166534; @endif">
                                             {{ $user->roleLabel() }}
                                         </span>
@@ -199,13 +319,13 @@
                 @empty
                     <div class="user-mobile-empty">
                         <i class="fas fa-inbox" style="font-size: 28px;"></i>
-                        <p style="margin: 0;">No users found</p>
+                        <p style="margin: 0;">{{ $hasActiveFilters ? 'No users matched the current filters.' : 'No users found' }}</p>
                     </div>
                 @endforelse
             </div>
 
             <div style="margin-top: 20px;">
-                {{ $users->links() }}
+                @include('admin.users.partials.pagination', ['paginator' => $users])
             </div>
         </div>
     </section>
@@ -231,6 +351,32 @@
                     </div>
                 @endif
 
+                @if($hasActiveFilters)
+                    <div class="user-filter-summary" style="margin-bottom: 20px;">
+                        <div class="user-filter-summary__content">
+                            <p class="user-filter-summary__title">Current filters also apply here</p>
+                            <p class="user-filter-summary__text">Switch back to the Users tab to adjust the current filter set.</p>
+                            <div class="user-filter-summary__chips">
+                                @if($searchTerm !== '')
+                                    <span class="user-filter-chip">Search: {{ $searchTerm }}</span>
+                                @endif
+                                @if($selectedRoleLabel)
+                                    <span class="user-filter-chip">Role: {{ $selectedRoleLabel }}</span>
+                                @endif
+                                @if($selectedStatusLabel)
+                                    <span class="user-filter-chip">Status: {{ $selectedStatusLabel }}</span>
+                                @endif
+                                @if($selectedProvince !== '')
+                                    <span class="user-filter-chip">Province: {{ $selectedProvince }}</span>
+                                @endif
+                                @if($selectedLgu !== '')
+                                    <span class="user-filter-chip">LGU: {{ $selectedLgu }}</span>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                @endif
+
                 <div class="access-grant-table-wrap">
                     <table class="access-grant-table">
                         <thead>
@@ -253,13 +399,13 @@
                                     </td>
                                     <td class="access-grant-cell-muted">{{ $user->emailaddress }}</td>
                                     <td>
-                                        <span class="access-role-badge access-role-badge--{{ $user->role }}">
+                                        <span class="access-role-badge access-role-badge--{{ $user->normalizedRole() !== '' ? $user->normalizedRole() : 'unassigned' }}">
                                             {{ $user->roleLabel() }}
                                         </span>
                                     </td>
                                     <td>
-                                        <span class="access-state-badge {{ $user->hasCustomCrudPermissions() ? 'access-state-badge--custom' : ($user->isSuperAdmin() ? 'access-state-badge--all' : 'access-state-badge--role') }}">
-                                            {{ $user->hasCustomCrudPermissions() ? 'Custom user override' : ($user->isSuperAdmin() ? 'Full access by role' : 'Managed from Role Configuration') }}
+                                        <span class="access-state-badge {{ !$user->hasAssignedRole() ? 'access-state-badge--empty' : ($user->hasCustomCrudPermissions() ? 'access-state-badge--custom' : ($user->isSuperAdmin() ? 'access-state-badge--all' : 'access-state-badge--role')) }}">
+                                            {{ !$user->hasAssignedRole() ? 'Role not assigned' : ($user->hasCustomCrudPermissions() ? 'Custom user override' : ($user->isSuperAdmin() ? 'Full access by role' : 'Managed from Role Configuration')) }}
                                         </span>
                                     </td>
                                     <td style="text-align: center;">
@@ -281,13 +427,15 @@
                                         <div class="access-grant-detail">
                                             <div class="access-grant-note" style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
                                                 <span>
-                                                    @if($user->hasCustomCrudPermissions())
+                                                    @if(!$user->hasAssignedRole())
+                                                        This account has no assigned role yet. Assign a role from the user profile before role-based access can be applied.
+                                                    @elseif($user->hasCustomCrudPermissions())
                                                         This user currently uses a custom permission override on top of the <strong>{{ $user->roleLabel() }}</strong> role. Edit the user profile to change or remove the override.
                                                     @else
                                                         Access is managed by role configuration. Update the <strong>{{ $user->roleLabel() }}</strong> role on the Role Configuration page to affect this user.
                                                     @endif
                                                 </span>
-                                                @if(!$user->isSuperAdmin())
+                                                @if($user->hasAssignedRole() && !$user->isSuperAdmin())
                                                     <a href="{{ route('utilities.role-configuration.index', ['role' => $user->role]) }}" style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; background-color: #002C76; color: white; border-radius: 8px; text-decoration: none; font-size: 12px; font-weight: 700;">
                                                         Open Role Configuration
                                                     </a>
@@ -358,7 +506,7 @@
                 </div>
 
                 <div style="margin-top: 20px;">
-                    {{ $users->appends(['tab' => 'access-grants'])->links() }}
+                    @include('admin.users.partials.pagination', ['paginator' => $users->appends(['tab' => 'access-grants'])])
                 </div>
             </div>
         </section>
@@ -404,6 +552,61 @@
             display: block;
         }
 
+        .users-pagination {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .users-pagination__button,
+        .users-pagination__page,
+        .users-pagination__ellipsis {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 38px;
+            padding: 0 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #1f2937;
+            background: #ffffff;
+            text-decoration: none;
+        }
+
+        .users-pagination__button:hover,
+        .users-pagination__page:hover {
+            background: #f8fafc;
+            border-color: #94a3b8;
+        }
+
+        .users-pagination__page {
+            min-width: 38px;
+            padding: 0;
+        }
+
+        .users-pagination__page--active {
+            background: #002C76;
+            border-color: #002C76;
+            color: #ffffff;
+        }
+
+        .users-pagination__button--disabled {
+            background: #f1f5f9;
+            color: #94a3b8;
+            border-color: #cbd5e1;
+            cursor: not-allowed;
+        }
+
+        .users-pagination__ellipsis {
+            border-style: dashed;
+            color: #64748b;
+            min-width: 38px;
+            padding: 0;
+        }
+
         .user-management-panel {
             background: white;
             padding: 30px;
@@ -418,6 +621,190 @@
             margin-bottom: 25px;
             gap: 16px;
             flex-wrap: wrap;
+        }
+
+        .user-filters-form {
+            margin-bottom: 18px;
+            padding: 18px;
+            border: 1px solid #dbeafe;
+            border-radius: 16px;
+            background: linear-gradient(180deg, #f8fbff 0%, #eff6ff 100%);
+        }
+
+        .user-filters-grid {
+            display: grid;
+            grid-template-columns: minmax(240px, 1.6fr) repeat(4, minmax(160px, 1fr));
+            gap: 14px;
+        }
+
+        .user-filter-field {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .user-filter-field > span {
+            color: #334155;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .user-filter-input-wrap {
+            position: relative;
+        }
+
+        .user-filter-input-wrap i {
+            position: absolute;
+            top: 50%;
+            left: 14px;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            font-size: 13px;
+            pointer-events: none;
+        }
+
+        .user-filter-field input,
+        .user-filter-field select {
+            width: 100%;
+            min-height: 46px;
+            border: 1px solid #cbd5e1;
+            border-radius: 12px;
+            background: #ffffff;
+            color: #0f172a;
+            font-size: 14px;
+            padding: 0 14px;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .user-filter-input-wrap input {
+            padding-left: 40px;
+        }
+
+        .user-filter-field input:focus,
+        .user-filter-field select:focus {
+            outline: none;
+            border-color: #60a5fa;
+            box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.16);
+        }
+
+        .user-filter-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 14px;
+        }
+
+        .user-filter-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: 42px;
+            padding: 0 16px;
+            border: 1px solid transparent;
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: 700;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .user-filter-btn--apply {
+            margin-left: auto;
+            background: #002C76;
+            color: #ffffff;
+        }
+
+        .user-filter-btn--apply:hover {
+            background: #001f59;
+            transform: translateY(-1px);
+        }
+
+        .user-filter-btn--clear {
+            background: #ffffff;
+            border-color: #cbd5e1;
+            color: #334155;
+        }
+
+        .user-filter-btn--clear:hover {
+            background: #f8fafc;
+            border-color: #94a3b8;
+        }
+
+        .user-filter-summary {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin-bottom: 18px;
+            padding: 14px 16px;
+            border: 1px solid #dbeafe;
+            border-radius: 14px;
+            background: #f8fbff;
+        }
+
+        .user-filter-summary__content {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .user-filter-summary__title,
+        .user-filter-summary__text {
+            margin: 0;
+        }
+
+        .user-filter-summary__title {
+            color: #0f172a;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .user-filter-summary__text {
+            color: #475569;
+            font-size: 13px;
+        }
+
+        .user-filter-summary__chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .user-filter-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: #dbeafe;
+            color: #1d4ed8;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .user-filter-summary__add {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            border-radius: 10px;
+            background: #002C76;
+            color: #ffffff;
+            text-decoration: none;
+            font-size: 12px;
+            font-weight: 700;
+            transition: all 0.2s ease;
+        }
+
+        .user-filter-summary__add:hover {
+            background: #001f59;
+            transform: translateY(-1px);
         }
 
         .user-table-wrap {
@@ -666,9 +1053,19 @@
             color: #6d28d9;
         }
 
+        .access-role-badge--user_mlgoo {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
         .access-role-badge--user_lgu {
             background: #dcfce7;
             color: #166534;
+        }
+
+        .access-role-badge--unassigned {
+            background: #e5e7eb;
+            color: #475569;
         }
 
         .access-state-badge--role {
@@ -869,6 +1266,25 @@
             .user-management-add-btn {
                 width: 100%;
                 justify-content: center;
+            }
+
+            .user-filters-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .user-filter-actions,
+            .user-filter-summary {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .user-filter-btn,
+            .user-filter-summary__add {
+                width: 100%;
+            }
+
+            .user-filter-btn--apply {
+                margin-left: 0;
             }
 
             .user-table-wrap {

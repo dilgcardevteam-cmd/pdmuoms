@@ -10,7 +10,10 @@
         $accessGrantModules = \App\Support\RolePermissionRegistry::modules();
         $crudActionOptions = \App\Support\RolePermissionRegistry::actionOptions();
         $selectedRole = $user->normalizedRole();
-        $roleDescription = $roleDescriptions[$selectedRole] ?? null;
+        $unassignedRoleDescription = 'No role is assigned yet. An administrator must choose a role before this account receives role-based access.';
+        $roleDescription = $selectedRole !== ''
+            ? ($roleDescriptions[$selectedRole] ?? 'Role access follows the configured module scope for this classification.')
+            : $unassignedRoleDescription;
         $permissionsByRole = collect(array_keys($roleOptions))
             ->mapWithKeys(function (string $role) {
                 return [
@@ -75,6 +78,7 @@
                                 </div>
                             </div>
                             <p style="margin: 0; color: #6b7280; font-size: 14px;">{{ $user->username }}</p>
+                            <p class="user-preview-meta-text">Registered At: {{ $user->created_at ? $user->created_at->format('Y-m-d h:i A') : '-' }}</p>
                             <p class="user-preview-meta-text">Email Verified At: {{ $user->email_verified_at ? $user->email_verified_at->format('Y-m-d h:i A') : '-' }}</p>
                         </div>
                     </div>
@@ -266,6 +270,7 @@
                                         aria-hidden="true"
                                         tabindex="-1"
                                     >
+                                        <option value="" @selected($selectedRole === '') disabled>Unassigned - select a role</option>
                                         @foreach($roleOptions as $roleValue => $roleLabel)
                                             <option value="{{ $roleValue }}" @selected($selectedRole === $roleValue)>{{ $roleLabel }}</option>
                                         @endforeach
@@ -290,15 +295,13 @@
                                             </button>
                                         @endforeach
                                     </div>
-                                    @if($roleDescription)
-                                        <div class="user-preview-role-summary" id="userPreviewRoleSummary">
-                                            <span>Selected Role Scope</span>
-                                            <p>{{ $roleDescription }}</p>
-                                        </div>
-                                    @endif
+                                    <div class="user-preview-role-summary" id="userPreviewRoleSummary">
+                                        <span>Selected Role Scope</span>
+                                        <p>{{ $roleDescription }}</p>
+                                    </div>
                                     <div
                                         id="userPreviewRoleDescriptions"
-                                        data-role-descriptions='@json($roleDescriptions)'
+                                        data-role-descriptions='@json(array_merge(["" => $unassignedRoleDescription], $roleDescriptions))'
                                         hidden
                                     ></div>
                                     <div
@@ -444,6 +447,16 @@
                             <div>
                                 <label class="user-preview-label">Confirm Password</label>
                                 <input type="password" name="password_confirmation" value="" class="user-preview-input" data-editable autocomplete="new-password">
+                            </div>
+                            <div>
+                                <label class="user-preview-label">Registered At</label>
+                                <input type="text" value="{{ $user->created_at ? $user->created_at->format('Y-m-d h:i A') : '-' }}" class="user-preview-input user-preview-input--meta" disabled>
+                                <p class="user-preview-meta-text">Recorded when the account was first created.</p>
+                            </div>
+                            <div>
+                                <label class="user-preview-label">Registration IP Address</label>
+                                <input type="text" value="{{ $user->registration_ip_address ?: 'Not captured' }}" class="user-preview-input user-preview-input--meta" disabled>
+                                <p class="user-preview-meta-text">Best-effort client IP captured from the registration request.</p>
                             </div>
                         </div>
                     </div>
