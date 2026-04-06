@@ -34,11 +34,30 @@
                     <p>{{ $timelineCard['description'] }}</p>
                     <div class="reportorial-timeline-card__items">
                         @forelse ($timelineCard['items'] as $item)
+                            @php
+                                $opensDeadlineModal = !empty($item['route']);
+                            @endphp
                             @if (!empty($item['route']))
-                                <a href="{{ $item['route'] }}" class="reportorial-timeline-card__item-link">
+                                <a
+                                    href="{{ $item['route'] }}"
+                                    class="reportorial-timeline-card__item-link"
+                                    @if ($opensDeadlineModal)
+                                        data-deadline-modal-trigger="true"
+                                        data-deadline-aspect="{{ $item['aspect'] }}"
+                                        data-deadline-label="{{ $item['label'] }}"
+                                        data-deadline-timeline="{{ $timelineCard['badge'] }}"
+                                    @endif
+                                >
                                     <div class="reportorial-timeline-card__item-main">
                                         <i class="{{ $item['icon'] }}" aria-hidden="true"></i>
-                                        <span>{{ $item['label'] }}</span>
+                                        <div class="reportorial-timeline-card__item-copy">
+                                            <span class="reportorial-timeline-card__item-title">{{ $item['label'] }}</span>
+                                            @if ($opensDeadlineModal)
+                                                <span class="reportorial-timeline-card__item-status" data-deadline-status-for="{{ $item['aspect'] }}">
+                                                    Click to set deadline
+                                                </span>
+                                            @endif
+                                        </div>
                                     </div>
                                     <i class="fas fa-arrow-right reportorial-timeline-card__item-arrow" aria-hidden="true"></i>
                                 </a>
@@ -46,7 +65,9 @@
                                 <div class="reportorial-timeline-card__item">
                                     <div class="reportorial-timeline-card__item-main">
                                         <i class="{{ $item['icon'] }}" aria-hidden="true"></i>
-                                        <span>{{ $item['label'] }}</span>
+                                        <div class="reportorial-timeline-card__item-copy">
+                                            <span class="reportorial-timeline-card__item-title">{{ $item['label'] }}</span>
+                                        </div>
                                     </div>
                                 </div>
                             @endif
@@ -65,6 +86,62 @@
             <span>Back to Deadlines Configuration</span>
         </a>
     </section>
+
+    <div class="deadline-modal" id="deadlineDraftModal" hidden>
+        <div class="deadline-modal__backdrop" data-deadline-close></div>
+        <div class="deadline-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="deadlineDraftModalTitle">
+            <div class="deadline-modal__header">
+                <div>
+                    <span class="deadline-modal__eyebrow">Deadline Draft</span>
+                    <h2 id="deadlineDraftModalTitle">Set Deadline</h2>
+                    <p id="deadlineDraftModalDescription">Configure a frontend-only deadline draft for this requirement.</p>
+                </div>
+                <button type="button" class="deadline-modal__close" data-deadline-close aria-label="Close deadline modal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <form class="deadline-modal__form" id="deadlineDraftForm">
+                <div class="deadline-modal__field-grid">
+                    <div class="deadline-modal__field">
+                        <label for="deadlineDraftRequirement">Requirement</label>
+                        <input type="text" id="deadlineDraftRequirement" readonly>
+                    </div>
+                    <div class="deadline-modal__field">
+                        <label for="deadlineDraftTimeline">Timeline</label>
+                        <input type="text" id="deadlineDraftTimeline" readonly>
+                    </div>
+                    <div class="deadline-modal__field">
+                        <label for="deadlineDraftYear">Reporting Year</label>
+                        <select id="deadlineDraftYear" required>
+                            @for ($year = now()->year + 3; $year >= 2020; $year--)
+                                <option value="{{ $year }}" @selected($year === (int) now()->year)>{{ $year }}</option>
+                            @endfor
+                        </select>
+                    </div>
+                    <div class="deadline-modal__field">
+                        <label for="deadlineDraftDate">Deadline Date</label>
+                        <input type="date" id="deadlineDraftDate" required>
+                    </div>
+                </div>
+
+                <div class="deadline-modal__notice">
+                    This modal is UI-only for now. Saving will update the on-page draft preview only and will not write to the database yet.
+                </div>
+
+                <div class="deadline-modal__footer">
+                    <a href="#" class="deadline-modal__link" id="deadlineDraftOpenRoute">
+                        <i class="fas fa-up-right-from-square"></i>
+                        <span>Open Report Page</span>
+                    </a>
+                    <div class="deadline-modal__actions">
+                        <button type="button" class="deadline-modal__button deadline-modal__button--secondary" data-deadline-close>Cancel</button>
+                        <button type="submit" class="deadline-modal__button deadline-modal__button--primary">Save Draft</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <style>
         .reportorial-shell {
@@ -201,7 +278,7 @@
 
         .reportorial-timeline-card__item-main {
             display: inline-flex;
-            align-items: center;
+            align-items: flex-start;
             gap: 10px;
             min-width: 0;
         }
@@ -217,6 +294,24 @@
             color: #334155;
             font-size: 12px;
             line-height: 1.5;
+        }
+
+        .reportorial-timeline-card__item-copy {
+            display: grid;
+            gap: 3px;
+        }
+
+        .reportorial-timeline-card__item-title {
+            color: #334155;
+            font-size: 12px;
+            font-weight: 600;
+            line-height: 1.5;
+        }
+
+        .reportorial-timeline-card__item-status {
+            color: #1d4ed8;
+            font-size: 11px;
+            line-height: 1.4;
         }
 
         .reportorial-timeline-card__item-arrow {
@@ -250,6 +345,182 @@
             background: #eef4ff;
         }
 
+        .deadline-modal[hidden] {
+            display: none;
+        }
+
+        .deadline-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 1100;
+        }
+
+        .deadline-modal__backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.55);
+            backdrop-filter: blur(2px);
+        }
+
+        .deadline-modal__dialog {
+            position: relative;
+            width: min(100%, 680px);
+            margin: 7vh auto 0;
+            background: #ffffff;
+            border-radius: 18px;
+            border: 1px solid #bfdbfe;
+            box-shadow: 0 28px 60px rgba(15, 23, 42, 0.28);
+            padding: 24px;
+            z-index: 1;
+        }
+
+        .deadline-modal__header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 18px;
+        }
+
+        .deadline-modal__eyebrow {
+            display: inline-block;
+            margin-bottom: 6px;
+            color: #1d4ed8;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+
+        .deadline-modal__header h2 {
+            margin: 0;
+            color: #002c76;
+            font-size: 22px;
+            line-height: 1.25;
+        }
+
+        .deadline-modal__header p {
+            margin: 6px 0 0;
+            color: #64748b;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .deadline-modal__close {
+            width: 38px;
+            height: 38px;
+            border: 1px solid #dbeafe;
+            border-radius: 999px;
+            background: #f8fbff;
+            color: #1d4ed8;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 auto;
+        }
+
+        .deadline-modal__form {
+            display: grid;
+            gap: 16px;
+        }
+
+        .deadline-modal__field-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px;
+        }
+
+        .deadline-modal__field {
+            display: grid;
+            gap: 6px;
+        }
+
+        .deadline-modal__field label {
+            color: #334155;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .deadline-modal__field input,
+        .deadline-modal__field select {
+            width: 100%;
+            height: 42px;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            background: #ffffff;
+            color: #0f172a;
+            padding: 0 12px;
+            font-size: 13px;
+        }
+
+        .deadline-modal__field input[readonly] {
+            background: #f8fafc;
+            color: #475569;
+        }
+
+        .deadline-modal__notice {
+            border: 1px solid #bfdbfe;
+            border-radius: 12px;
+            background: #eff6ff;
+            color: #1e40af;
+            padding: 12px 14px;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        .deadline-modal__footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            flex-wrap: wrap;
+        }
+
+        .deadline-modal__actions {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .deadline-modal__button,
+        .deadline-modal__link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: 42px;
+            border-radius: 10px;
+            padding: 0 14px;
+            font-size: 13px;
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        .deadline-modal__button {
+            cursor: pointer;
+            border: 1px solid transparent;
+        }
+
+        .deadline-modal__button--secondary {
+            background: #e2e8f0;
+            border-color: #cbd5e1;
+            color: #334155;
+        }
+
+        .deadline-modal__button--primary {
+            background: linear-gradient(180deg, #0a4cb3 0%, #002c76 100%);
+            border-color: #002c76;
+            color: #ffffff;
+        }
+
+        .deadline-modal__link {
+            border: 1px solid #bfdbfe;
+            background: #ffffff;
+            color: #1d4ed8;
+        }
+
         @media (max-width: 640px) {
             .reportorial-shell {
                 padding: 16px;
@@ -258,6 +529,110 @@
             .reportorial-header {
                 flex-direction: column;
             }
+
+            .deadline-modal__dialog {
+                width: calc(100% - 20px);
+                margin-top: 4vh;
+                padding: 18px;
+            }
+
+            .deadline-modal__field-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
+
+    <script>
+        (() => {
+            const modal = document.getElementById('deadlineDraftModal');
+            const form = document.getElementById('deadlineDraftForm');
+            const requirementInput = document.getElementById('deadlineDraftRequirement');
+            const timelineInput = document.getElementById('deadlineDraftTimeline');
+            const yearInput = document.getElementById('deadlineDraftYear');
+            const dateInput = document.getElementById('deadlineDraftDate');
+            const description = document.getElementById('deadlineDraftModalDescription');
+            const openRouteLink = document.getElementById('deadlineDraftOpenRoute');
+            const triggers = document.querySelectorAll('[data-deadline-modal-trigger="true"]');
+
+            if (!modal || !form || triggers.length === 0) {
+                return;
+            }
+
+            let activeTrigger = null;
+
+            const closeModal = () => {
+                modal.hidden = true;
+                document.body.style.overflow = '';
+                activeTrigger = null;
+            };
+
+            const openModal = (trigger) => {
+                activeTrigger = trigger;
+                requirementInput.value = trigger.dataset.deadlineLabel || '';
+                timelineInput.value = trigger.dataset.deadlineTimeline || '';
+                description.textContent = 'Configure a frontend-only deadline draft for ' + (trigger.dataset.deadlineLabel || 'this requirement') + '.';
+                openRouteLink.href = trigger.getAttribute('href') || '#';
+                modal.hidden = false;
+                document.body.style.overflow = 'hidden';
+            };
+
+            const formatDate = (value) => {
+                const date = new Date(value + 'T00:00:00');
+                if (Number.isNaN(date.getTime())) {
+                    return value;
+                }
+
+                return date.toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                });
+            };
+
+            triggers.forEach((trigger) => {
+                trigger.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    openModal(trigger);
+                });
+            });
+
+            modal.querySelectorAll('[data-deadline-close]').forEach((element) => {
+                element.addEventListener('click', () => closeModal());
+            });
+
+            modal.addEventListener('click', (event) => {
+                if (event.target === modal) {
+                    closeModal();
+                }
+            });
+
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape' && !modal.hidden) {
+                    closeModal();
+                }
+            });
+
+            form.addEventListener('submit', (event) => {
+                event.preventDefault();
+
+                if (!activeTrigger) {
+                    closeModal();
+                    return;
+                }
+
+                if (!dateInput.value) {
+                    dateInput.focus();
+                    return;
+                }
+
+                const aspect = activeTrigger.dataset.deadlineAspect || '';
+                const status = document.querySelector('[data-deadline-status-for="' + aspect + '"]');
+                if (status) {
+                    status.textContent = 'Draft deadline: ' + formatDate(dateInput.value) + ' (CY ' + yearInput.value + ')';
+                }
+
+                closeModal();
+            });
+        })();
+    </script>
 @endsection

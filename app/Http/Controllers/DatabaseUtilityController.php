@@ -317,6 +317,7 @@ class DatabaseUtilityController extends Controller
 
                 return [
                     'timeline' => $timelineKey,
+                    'aspect' => $aspect,
                     'label' => trim($itemLabel) !== '' ? trim($itemLabel) : $label,
                     'description' => trim((string) ($item['description'] ?? '')),
                     'route' => $routeMeta['route'] ?? null,
