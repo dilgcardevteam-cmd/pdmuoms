@@ -3032,6 +3032,13 @@
             const endpoint = @json(route('pagasa-time.current'));
             let serverBaseMs = null;
             let syncedAtMs = null;
+            const getMonotonicNow = () => {
+                if (window.performance && typeof window.performance.now === 'function') {
+                    return window.performance.now();
+                }
+
+                return Date.now();
+            };
 
             function formatManila(date) {
                 return date.toLocaleString('en-US', {
@@ -3067,7 +3074,8 @@
                     return;
                 }
 
-                const now = new Date(serverBaseMs + (Date.now() - syncedAtMs));
+                const elapsedMs = Math.max(0, getMonotonicNow() - syncedAtMs);
+                const now = new Date(serverBaseMs + elapsedMs);
                 const formatted = formatManila(now);
 
                 updateGlobalClock(`PAGASA Time: ${formatted}`, '#002C76');
@@ -3095,7 +3103,7 @@
                     }
 
                     serverBaseMs = parsedMs;
-                    syncedAtMs = Date.now();
+                    syncedAtMs = getMonotonicNow();
                     tick();
                 } catch (error) {
                     updateGlobalClock('PAGASA Time unavailable', '#dc2626');

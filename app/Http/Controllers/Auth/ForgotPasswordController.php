@@ -32,9 +32,13 @@ class ForgotPasswordController extends Controller
      *
      * @return \Illuminate\View\View
      */
-    public function showLinkRequestForm()
+    public function showLinkRequestForm(Request $request)
     {
-        return view('auth.forgot-password');
+        $request->session()->forget('otp_email');
+
+        return view('auth.forgot-password', [
+            'showOtp' => false,
+        ]);
     }
 
     public function sendOtp(Request $request)

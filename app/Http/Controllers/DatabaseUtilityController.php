@@ -6,6 +6,7 @@ use App\Mail\AutomatedDatabaseBackupMail;
 use App\Mail\BulkNotificationMail;
 use App\Models\BackupAutomationSetting;
 use App\Models\DatabaseBackupRun;
+use App\Models\LguReportorialDeadline;
 use App\Models\RolePermissionSetting;
 use App\Models\User;
 use App\Models\UserRole;
@@ -17,6 +18,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -24,6 +26,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -244,8 +247,96 @@ class DatabaseUtilityController extends Controller
 
     public function lguReportorialRequirements(): View
     {
+        [$savedDeadlines, $latestDeadlinesByAspect] = $this->lguReportorialDeadlineData();
+
         return view('admin.utilities.lgu-reportorial-requirements', [
-            'timelineCards' => $this->buildLguReportorialTimelineCards(),
+            'timelineCards' => $this->buildLguReportorialTimelineCards($latestDeadlinesByAspect),
+            'savedDeadlines' => $savedDeadlines,
+            'deadlineSaveUrl' => route('utilities.deadlines-configuration.lgu-reportorial.store'),
+        ]);
+    }
+
+    public function storeLguReportorialDeadline(Request $request): JsonResponse
+    {
+        if (!Schema::hasTable('lgu_reportorial_deadlines')) {
+            return response()->json([
+                'message' => 'LGU reportorial deadlines table is not available yet. Run the migration first.',
+            ], 409);
+        }
+
+        $itemsByAspect = $this->lguReportorialAspectDefinitions();
+
+        $validated = $request->validate([
+            'aspect' => ['required', 'string', Rule::in(array_keys($itemsByAspect))],
+            'reporting_year' => ['required', 'integer', 'min:2020', 'max:2099'],
+            'reporting_period' => ['required', 'string', 'max:20'],
+            'deadline_date' => ['required', 'date'],
+            'deadline_time' => ['required', 'date_format:H:i'],
+        ]);
+
+        $aspect = strtolower(trim((string) $validated['aspect']));
+        $definition = $itemsByAspect[$aspect] ?? null;
+        if (!is_array($definition)) {
+            return response()->json([
+                'message' => 'Invalid LGU reportorial requirement selected.',
+            ], 422);
+        }
+
+        $timeline = strtolower(trim((string) ($definition['timeline'] ?? '')));
+        $allowedPeriods = $this->lguReportorialAllowedPeriods($timeline);
+        $reportingPeriod = trim((string) $validated['reporting_period']);
+
+        if (!in_array($reportingPeriod, $allowedPeriods, true)) {
+            return response()->json([
+                'message' => 'Invalid reporting period selected for this requirement.',
+                'errors' => [
+                    'reporting_period' => ['The selected reporting period is not allowed for this requirement.'],
+                ],
+            ], 422);
+        }
+
+        $record = LguReportorialDeadline::query()->updateOrCreate(
+            [
+                'aspect' => $aspect,
+                'reporting_year' => (int) $validated['reporting_year'],
+                'reporting_period' => $reportingPeriod,
+            ],
+            [
+                'timeline' => $timeline,
+                'deadline_date' => $validated['deadline_date'],
+                'deadline_time' => $validated['deadline_time'] . ':00',
+                'updated_by' => Auth::id(),
+            ]
+        );
+
+        $deadlineDate = $record->deadline_date instanceof Carbon
+            ? $record->deadline_date->format('Y-m-d')
+            : (string) $record->deadline_date;
+        $deadlineTime = $this->normalizeLguReportorialDeadlineTime($record->deadline_time);
+        $updatedByUser = Auth::user();
+
+        return response()->json([
+            'message' => 'Deadline saved successfully.',
+            'record' => [
+                'id' => (int) $record->id,
+                'aspect' => $aspect,
+                'timeline' => $timeline,
+                'reporting_year' => (int) $record->reporting_year,
+                'reporting_period' => (string) $record->reporting_period,
+                'deadline_date' => $deadlineDate,
+                'deadline_time' => $deadlineTime,
+                'deadline_display' => $this->formatLguReportorialDeadlineDisplay($deadlineDate, $deadlineTime),
+                'updated_at' => $record->updated_at?->toIso8601String(),
+                'updated_at_display' => $this->formatLguReportorialUpdatedAt($record->updated_at),
+                'updated_by' => $record->updated_by ? (int) $record->updated_by : null,
+                'updated_by_name' => $this->formatLguReportorialUserName($updatedByUser instanceof User ? $updatedByUser : null),
+            ],
+            'status_text' => $this->lguReportorialDeadlineStatusText(
+                $deadlineDate,
+                $deadlineTime,
+                (string) $record->reporting_period,
+                (int) $record->reporting_year
+            ),
         ]);
     }
 
@@ -254,12 +345,50 @@ class DatabaseUtilityController extends Controller
         return view('admin.utilities.dilg-reportorial-requirements');
     }
 
-    private function buildLguReportorialTimelineCards(): array
+    private function buildLguReportorialTimelineCards(array $latestDeadlinesByAspect = []): array
     {
-        $module = collect(RolePermissionRegistry::modules())
-            ->first(fn (array $entry) => strtolower(trim((string) ($entry['module'] ?? ''))) === 'lgu reportorial requirements');
+        $timelineCards = $this->lguReportorialTimelineDefinitions();
+        $itemsByTimeline = collect($this->lguReportorialItems())
+            ->groupBy('timeline');
 
-        $timelineCards = [
+        return collect($timelineCards)
+            ->map(function (array $card, string $timeline) use ($itemsByTimeline, $latestDeadlinesByAspect): array {
+                return [
+                    ...$card,
+                    'items' => $itemsByTimeline->get($timeline, collect())
+                        ->map(function (array $item) use ($latestDeadlinesByAspect): array {
+                            $latestDeadline = $latestDeadlinesByAspect[$item['aspect']] ?? null;
+
+                            return [
+                                ...$item,
+                                'saved_status_text' => is_array($latestDeadline)
+                                    ? (string) ($latestDeadline['status_text'] ?? '')
+                                    : '',
+                                'saved_period' => is_array($latestDeadline)
+                                    ? (string) ($latestDeadline['reporting_period'] ?? '')
+                                    : '',
+                                'saved_year' => is_array($latestDeadline)
+                                    ? (int) ($latestDeadline['reporting_year'] ?? 0)
+                                    : null,
+                                'saved_date' => is_array($latestDeadline)
+                                    ? (string) ($latestDeadline['deadline_date'] ?? '')
+                                    : '',
+                                'saved_time' => is_array($latestDeadline)
+                                    ? (string) ($latestDeadline['deadline_time'] ?? '')
+                                    : '',
+                            ];
+                        })
+                        ->values()
+                        ->all(),
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    private function lguReportorialTimelineDefinitions(): array
+    {
+        return [
             'annual' => [
                 'badge' => 'Annual',
                 'icon' => 'fas fa-calendar-check',
@@ -279,6 +408,14 @@ class DatabaseUtilityController extends Controller
                 'description' => 'Use this section for recurring reportorial requirements submitted each month.',
             ],
         ];
+    }
+
+    private function lguReportorialItems(): array
+    {
+        $module = collect(RolePermissionRegistry::modules())
+            ->first(fn (array $entry) => strtolower(trim((string) ($entry['module'] ?? ''))) === 'lgu reportorial requirements');
+
+        $timelineCards = $this->lguReportorialTimelineDefinitions();
 
         $routeMap = [
             'rbis_annual_certification' => [
@@ -303,7 +440,7 @@ class DatabaseUtilityController extends Controller
             ],
         ];
 
-        $itemsByTimeline = collect($module['items'] ?? [])
+        return collect($module['items'] ?? [])
             ->map(function (array $item) use ($routeMap): ?array {
                 $label = trim((string) ($item['label'] ?? ''));
                 if ($label === '') {
@@ -325,19 +462,182 @@ class DatabaseUtilityController extends Controller
                 ];
             })
             ->filter(fn (?array $item) => $item !== null && array_key_exists($item['timeline'], $timelineCards))
-            ->groupBy('timeline');
-
-        return collect($timelineCards)
-            ->map(function (array $card, string $timeline) use ($itemsByTimeline): array {
-                return [
-                    ...$card,
-                    'items' => $itemsByTimeline->get($timeline, collect())
-                        ->values()
-                        ->all(),
-                ];
-            })
             ->values()
             ->all();
+    }
+
+    private function lguReportorialAspectDefinitions(): array
+    {
+        return collect($this->lguReportorialItems())
+            ->keyBy(fn (array $item) => (string) ($item['aspect'] ?? ''))
+            ->all();
+    }
+
+    private function lguReportorialAllowedPeriods(string $timeline): array
+    {
+        return match (strtolower(trim($timeline))) {
+            'quarterly' => ['Q1', 'Q2', 'Q3', 'Q4'],
+            'annual' => ['Annual'],
+            'monthly' => $this->lguReportorialMonthlyPeriods(),
+            default => [],
+        };
+    }
+
+    private function lguReportorialMonthlyPeriods(): array
+    {
+        return [
+            'January',
+            'February',
+            'March',
+            'April',
+            'May',
+            'June',
+            'July',
+            'August',
+            'September',
+            'October',
+            'November',
+            'December',
+        ];
+    }
+
+    private function lguReportorialDeadlineData(): array
+    {
+        if (!Schema::hasTable('lgu_reportorial_deadlines')) {
+            return [[], []];
+        }
+
+        $savedDeadlines = [];
+        $latestDeadlinesByAspect = [];
+
+        $records = LguReportorialDeadline::query()
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
+            ->get();
+        $updaterIds = $records
+            ->pluck('updated_by')
+            ->filter(fn ($value) => is_numeric($value))
+            ->map(fn ($value) => (int) $value)
+            ->unique()
+            ->values();
+        $updatersById = $updaterIds->isEmpty()
+            ? collect()
+            : User::query()
+                ->select(['idno', 'fname', 'lname'])
+                ->whereIn('idno', $updaterIds->all())
+                ->get()
+                ->keyBy('idno');
+
+        foreach ($records as $record) {
+            $aspect = strtolower(trim((string) $record->aspect));
+            $period = trim((string) $record->reporting_period);
+            $year = (int) $record->reporting_year;
+            $deadlineDate = $record->deadline_date instanceof Carbon
+                ? $record->deadline_date->format('Y-m-d')
+                : trim((string) $record->deadline_date);
+            $deadlineTime = $this->normalizeLguReportorialDeadlineTime($record->deadline_time);
+
+            if ($aspect === '' || $period === '' || $year < 2020 || $deadlineDate === '') {
+                continue;
+            }
+
+            $entry = [
+                'id' => (int) $record->id,
+                'aspect' => $aspect,
+                'timeline' => (string) $record->timeline,
+                'reporting_year' => $year,
+                'reporting_period' => $period,
+                'deadline_date' => $deadlineDate,
+                'deadline_time' => $deadlineTime,
+                'deadline_display' => $this->formatLguReportorialDeadlineDisplay($deadlineDate, $deadlineTime),
+                'updated_at' => $record->updated_at?->toIso8601String(),
+                'updated_at_display' => $this->formatLguReportorialUpdatedAt($record->updated_at),
+                'updated_by' => $record->updated_by ? (int) $record->updated_by : null,
+                'updated_by_name' => $this->formatLguReportorialUserName(
+                    $record->updated_by ? $updatersById->get((int) $record->updated_by) : null
+                ),
+            ];
+
+            $savedDeadlines[$aspect][(string) $year][$period] = $entry;
+
+            if (!array_key_exists($aspect, $latestDeadlinesByAspect)) {
+                $latestDeadlinesByAspect[$aspect] = [
+                    ...$entry,
+                    'status_text' => $this->lguReportorialDeadlineStatusText($deadlineDate, $deadlineTime, $period, $year),
+                ];
+            }
+        }
+
+        return [$savedDeadlines, $latestDeadlinesByAspect];
+    }
+
+    private function lguReportorialDeadlineStatusText(string $deadlineDate, string $deadlineTime, string $period, int $year): string
+    {
+        return 'Saved deadline: '
+            . $this->formatLguReportorialDeadlineDisplay($deadlineDate, $deadlineTime)
+            . ' (' . $period . ', CY ' . $year . ')';
+    }
+
+    private function formatLguReportorialUpdatedAt(mixed $value): string
+    {
+        if ($value instanceof Carbon) {
+            return $value->format('M j, Y h:i A');
+        }
+
+        return '';
+    }
+
+    private function formatLguReportorialUserName(?User $user): string
+    {
+        if (!$user) {
+            return '';
+        }
+
+        $fullName = trim(implode(' ', array_filter([
+            trim((string) $user->fname),
+            trim((string) $user->lname),
+        ])));
+
+        return $fullName !== '' ? $fullName : trim((string) $user->username);
+    }
+
+    private function normalizeLguReportorialDeadlineTime(mixed $value): string
+    {
+        $normalized = trim((string) $value);
+        if ($normalized === '') {
+            return '';
+        }
+
+        foreach (['H:i:s', 'H:i'] as $format) {
+            try {
+                return Carbon::createFromFormat($format, $normalized)->format('H:i');
+            } catch (\Throwable) {
+                continue;
+            }
+        }
+
+        return '';
+    }
+
+    private function formatLguReportorialDeadlineDisplay(string $deadlineDate, string $deadlineTime = ''): string
+    {
+        try {
+            $formattedDate = Carbon::parse($deadlineDate)->format('M j, Y');
+        } catch (\Throwable) {
+            $formattedDate = $deadlineDate;
+        }
+
+        if ($deadlineTime === '') {
+            return $formattedDate;
+        }
+
+        try {
+            $formattedTime = Carbon::createFromFormat('H:i', $deadlineTime)->format('h:i A');
+        } catch (\Throwable) {
+            return $formattedDate;
+        }
+
+        return $formattedDate . ' ' . $formattedTime;
     }
 
     public function sendBulkNotification(Request $request): RedirectResponse

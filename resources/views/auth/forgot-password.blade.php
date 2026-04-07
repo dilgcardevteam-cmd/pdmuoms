@@ -232,13 +232,13 @@
 </head>
 <body>
     <div class="login-container">
-        <img src="/DILG-Logo.png" alt="DILG Logo" style="display: block; margin: 0 auto 8px; width: 100px;">
-        <h2>Project Development and Management Unit</h2>
-        <h3>Operations Management System (PDMUOMS)</h3>
         @php
             $showOtp = ($showOtp ?? false) || session()->has('otp_email');
             $emailValue = session('otp_email', old('email'));
         @endphp
+        <img src="/DILG-Logo.png" alt="DILG Logo" style="display: block; margin: 0 auto 8px; width: 100px;">
+        <h2>Project Development and Management Unit</h2>
+        <h3>Reporting, Inspection and Monitoring System (PRISM)</h3>
         @if($errors->any())
             <div class="error">
                 @foreach($errors->all() as $error)
@@ -247,9 +247,9 @@
             </div>
         @endif
         @if($showOtp)
-            <h2>OTP Verification</h2>
+            <h2 style="margin-top: 18px;">OTP Verification</h2>
             <p style="text-align: center; font-size: 13px; color: #6b7280; margin: 0 0 12px;">
-                Enter the 6-digit code sent to {{ $emailValue ?? 'your email' }}
+                Enter the 6-digit code sent to your email.
             </p>
             <form action="{{ route('forgot-password.verify-otp') }}" method="POST">
                 @csrf

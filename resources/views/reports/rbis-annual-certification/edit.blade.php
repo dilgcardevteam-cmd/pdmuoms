@@ -55,6 +55,28 @@
                     </select>
                 </form>
             </div>
+            <div>
+                <label style="display: block; color: #6b7280; font-size: 12px; font-weight: 600; text-transform: uppercase; margin-bottom: 4px;">Configured Deadline</label>
+                <p style="color: #111827; font-size: 15px; font-weight: 500; margin: 0;">
+                    {{ is_array($configuredDeadline ?? null) ? ($configuredDeadline['display'] ?? '—') : 'No deadline set by admin for this year' }}
+                </p>
+            </div>
+            @if (is_array($configuredDeadline ?? null) && !empty($configuredDeadline['deadline_iso']))
+                <div>
+                    <label id="rbis-deadline-countdown-label" style="display: block; color: #6b7280; font-size: 12px; font-weight: 600; text-transform: uppercase; margin-bottom: 4px; transition: color 0.2s ease;">Countdown</label>
+                    <p id="rbis-deadline-countdown" data-deadline-iso="{{ $configuredDeadline['deadline_iso'] }}" style="color: #1e3a8a; font-size: 15px; font-weight: 700; margin: 0; transition: color 0.2s ease;">
+                        Syncing...
+                    </p>
+                    <div data-pagasa-time data-rbis-deadline-source style="display: none;" aria-hidden="true"></div>
+                </div>
+            @elseif (is_array($configuredDeadline ?? null))
+                <div>
+                    <label style="display: block; color: #6b7280; font-size: 12px; font-weight: 600; text-transform: uppercase; margin-bottom: 4px;">Countdown</label>
+                    <p style="color: #92400e; font-size: 15px; font-weight: 500; margin: 0;">
+                        Unavailable
+                    </p>
+                </div>
+            @endif
         </div>
     </div>
 
@@ -190,7 +212,7 @@
                             Annual Certification Upload (CY {{ $reportingYear }})
                         </label>
                         <div style="font-size: 11px; color: #6b7280; margin-bottom: 8px;">
-                            Allowed formats: PDF, DOC, DOCX, XLS, XLSX, JPG, JPEG, PNG (max 10MB).
+                            Allowed format: PDF (max 15MB).
                         </div>
                         <div style="font-size: 11px; color: #6b7280; margin-bottom: 8px;">
                             @php
@@ -306,7 +328,7 @@
                             type="file"
                             name="document"
                             required
-                            accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
+                            accept=".pdf,application/pdf"
                             @disabled($disableUploadInput)
                             style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 12px; margin-bottom: 8px; background-color: {{ $disableUploadInput ? '#f3f4f6' : '#ffffff' }}; cursor: {{ $disableUploadInput ? 'not-allowed' : 'auto' }};"
                             onchange="showRbisSaveButton(this, '{{ $buttonId }}', '{{ $filenameId }}')"
@@ -671,6 +693,117 @@
                 closeRbisApprovalModal();
             }
         });
+
+        (function () {
+            const countdownEl = document.getElementById('rbis-deadline-countdown');
+            const countdownLabelEl = document.getElementById('rbis-deadline-countdown-label');
+            const pagasaTimeEl = document.querySelector('[data-rbis-deadline-source]');
+
+            if (!countdownEl || !pagasaTimeEl) {
+                return;
+            }
+
+            const deadlineIso = countdownEl.dataset.deadlineIso || '';
+            const deadlineMs = Date.parse(deadlineIso);
+
+            const getCountdownTheme = (remainingMs) => {
+                if (remainingMs <= 0) {
+                    return {
+                        labelColor: '#b91c1c',
+                        countdownColor: '#b91c1c',
+                    };
+                }
+
+                if (remainingMs <= 24 * 60 * 60 * 1000) {
+                    return {
+                        labelColor: '#b91c1c',
+                        countdownColor: '#b91c1c',
+                    };
+                }
+
+                if (remainingMs <= 3 * 24 * 60 * 60 * 1000) {
+                    return {
+                        labelColor: '#c2410c',
+                        countdownColor: '#c2410c',
+                    };
+                }
+
+                if (remainingMs <= 7 * 24 * 60 * 60 * 1000) {
+                    return {
+                        labelColor: '#b45309',
+                        countdownColor: '#b45309',
+                    };
+                }
+
+                return {
+                    labelColor: '#6b7280',
+                    countdownColor: '#1e3a8a',
+                };
+            };
+
+            const applyCountdownTheme = (theme) => {
+                if (countdownLabelEl) {
+                    countdownLabelEl.style.color = theme.labelColor;
+                }
+
+                countdownEl.style.color = theme.countdownColor;
+            };
+
+            const unavailableTheme = {
+                labelColor: '#92400e',
+                countdownColor: '#92400e',
+            };
+
+            const setCountdownState = (label, color) => {
+                countdownEl.textContent = label;
+                countdownEl.style.color = color;
+            };
+
+            const pad = (value) => String(value).padStart(2, '0');
+
+            const formatRemaining = (remainingMs) => {
+                const totalSeconds = Math.max(0, Math.floor(remainingMs / 1000));
+                const days = Math.floor(totalSeconds / 86400);
+                const hours = Math.floor((totalSeconds % 86400) / 3600);
+                const minutes = Math.floor((totalSeconds % 3600) / 60);
+                const seconds = totalSeconds % 60;
+
+                return `${days}d ${pad(hours)}h ${pad(minutes)}m ${pad(seconds)}s`;
+            };
+
+            if (Number.isNaN(deadlineMs)) {
+                applyCountdownTheme(unavailableTheme);
+                setCountdownState('Unavailable', '#92400e');
+                return;
+            }
+
+            const renderCountdown = () => {
+                const serverIso = pagasaTimeEl.dataset.pagasaIso || '';
+                const serverMs = Date.parse(serverIso);
+
+                if (!serverIso || Number.isNaN(serverMs)) {
+                    applyCountdownTheme(getCountdownTheme(8 * 24 * 60 * 60 * 1000));
+                    setCountdownState('Syncing...', '#1e3a8a');
+                    return;
+                }
+
+                const remainingMs = deadlineMs - serverMs;
+                applyCountdownTheme(getCountdownTheme(remainingMs));
+
+                if (remainingMs <= 0) {
+                    setCountdownState('Deadline reached', '#b91c1c');
+                    return;
+                }
+
+                setCountdownState(formatRemaining(remainingMs), '#1e3a8a');
+            };
+
+            renderCountdown();
+            const intervalId = window.setInterval(renderCountdown, 1000);
+            window.addEventListener('beforeunload', function () {
+                window.clearInterval(intervalId);
+            }, { once: true });
+        })();
     </script>
     </div>
 @endsection

@@ -1644,6 +1644,8 @@ Route::middleware(['auth'])->group(function () {
             ->name('utilities.deadlines-configuration.index');
         Route::get('/utilities/deadlines-configuration/lgu-reportorial-requirements', [App\Http\Controllers\DatabaseUtilityController::class, 'lguReportorialRequirements'])
             ->name('utilities.deadlines-configuration.lgu-reportorial');
+        Route::post('/utilities/deadlines-configuration/lgu-reportorial-requirements', [App\Http\Controllers\DatabaseUtilityController::class, 'storeLguReportorialDeadline'])
+            ->name('utilities.deadlines-configuration.lgu-reportorial.store');
         Route::get('/utilities/deadlines-configuration/dilg-reportorial-requirements', [App\Http\Controllers\DatabaseUtilityController::class, 'dilgReportorialRequirements'])
             ->name('utilities.deadlines-configuration.dilg-reportorial');
         Route::get('/utilities/location-configuration', [App\Http\Controllers\DatabaseUtilityController::class, 'locationConfiguration'])

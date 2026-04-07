@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\LguReportorialDeadline;
 use App\Models\RbisAnnualCertificationDocument;
 use App\Services\InterventionNotificationService;
 use App\Support\InputSanitizer;
@@ -104,6 +105,77 @@ class RbisAnnualCertificationController extends Controller
                         ->whereYear('uploaded_at', $reportingYear);
                 });
         });
+    }
+
+    private function resolveConfiguredDeadline(int $reportingYear): ?array
+    {
+        if (!Schema::hasTable('lgu_reportorial_deadlines')) {
+            return null;
+        }
+
+        $record = LguReportorialDeadline::query()
+            ->where('aspect', 'rbis_annual_certification')
+            ->where('reporting_year', $reportingYear)
+            ->where('reporting_period', 'Annual')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
+            ->first();
+
+        if (!$record) {
+            return null;
+        }
+
+        $deadlineDate = $record->deadline_date instanceof Carbon
+            ? $record->deadline_date->format('Y-m-d')
+            : trim((string) $record->deadline_date);
+        $deadlineTimeRaw = trim((string) $record->deadline_time);
+
+        if ($deadlineDate === '') {
+            return null;
+        }
+
+        $parsedDeadlineDate = null;
+        try {
+            $parsedDeadlineDate = Carbon::parse($deadlineDate)->setTimezone(config('app.timezone'));
+            $formattedDate = $parsedDeadlineDate->format('M j, Y');
+        } catch (\Throwable) {
+            $formattedDate = $deadlineDate;
+        }
+
+        $formattedTime = '';
+        foreach (['H:i:s', 'H:i'] as $timeFormat) {
+            try {
+                $formattedTime = Carbon::createFromFormat($timeFormat, $deadlineTimeRaw)->format('h:i A');
+                break;
+            } catch (\Throwable) {
+                continue;
+            }
+        }
+
+        $display = $formattedDate . ($formattedTime !== '' ? ' ' . $formattedTime : '');
+        $deadlineIso = null;
+        if ($parsedDeadlineDate && $deadlineTimeRaw !== '') {
+            foreach (['Y-m-d H:i:s', 'Y-m-d H:i'] as $dateTimeFormat) {
+                try {
+                    $deadlineIso = Carbon::createFromFormat(
+                        $dateTimeFormat,
+                        $deadlineDate . ' ' . $deadlineTimeRaw,
+                        config('app.timezone')
+                    )->toIso8601String();
+                    break;
+                } catch (\Throwable) {
+                    continue;
+                }
+            }
+        }
+
+        return [
+            'display' => $display,
+            'deadline_iso' => $deadlineIso,
+            'updated_at' => $record->updated_at?->setTimezone(config('app.timezone')),
+            'updated_by' => $record->updated_by ? (int) $record->updated_by : null,
+            'updated_by_name' => null,
+        ];
     }
 
     private function buildOfficeRows(array $officesByProvince): array
@@ -573,6 +645,7 @@ class RbisAnnualCertificationController extends Controller
     public function index(Request $request)
     {
         $reportingYear = $this->resolveReportingYear($request);
+        $configuredDeadline = $this->resolveConfiguredDeadline($reportingYear);
         $officeRows = $this->buildOfficeRows($this->getSortedOfficesByProvince());
         $perPage = (int) $request->query('per_page', 15);
         $filters = [
@@ -647,6 +720,7 @@ class RbisAnnualCertificationController extends Controller
             ->all();
 
         $uploadCountsByOffice = collect();
+        $latestDocumentsByOffice = collect();
         if (!empty($officeNames)) {
             $uploadCountsByOfficeQuery = RbisAnnualCertificationDocument::query()
                 ->whereIn('office', $officeNames)
@@ -656,14 +730,27 @@ class RbisAnnualCertificationController extends Controller
             $uploadCountsByOffice = $uploadCountsByOfficeQuery
                 ->groupBy('office')
                 ->pluck('total', 'office');
+
+            $latestDocumentsByOfficeQuery = RbisAnnualCertificationDocument::query()
+                ->whereIn('office', $officeNames)
+                ->orderByDesc('uploaded_at')
+                ->orderByDesc('id');
+            $this->applyReportingYearFilter($latestDocumentsByOfficeQuery, $reportingYear);
+
+            $latestDocumentsByOffice = $latestDocumentsByOfficeQuery
+                ->get()
+                ->unique('office')
+                ->keyBy('office');
         }
 
         return view('reports.rbis-annual-certification.index', compact(
             'officeRows',
             'uploadCountsByOffice',
+            'latestDocumentsByOffice',
             'totalProvinces',
             'totalOffices',
             'reportingYear',
+            'configuredDeadline',
             'perPage',
             'filters',
             'filterOptions'
@@ -706,7 +793,23 @@ class RbisAnnualCertificationController extends Controller
             ? User::whereIn('idno', $userIds)->get()->keyBy('idno')
             : collect();
 
-        return view('reports.rbis-annual-certification.edit', compact('officeName', 'province', 'documents', 'usersById', 'activityLogs', 'reportingYear'));
+        $configuredDeadline = $this->resolveConfiguredDeadline($reportingYear);
+        if (is_array($configuredDeadline) && !empty($configuredDeadline['updated_by'])) {
+            $deadlineUpdater = User::query()
+                ->select(['idno', 'fname', 'lname'])
+                ->where('idno', (int) $configuredDeadline['updated_by'])
+                ->first();
+
+            if ($deadlineUpdater) {
+                $deadlineUpdatedByName = trim(implode(' ', array_filter([
+                    trim((string) $deadlineUpdater->fname),
+                    trim((string) $deadlineUpdater->lname),
+                ])));
+                $configuredDeadline['updated_by_name'] = $deadlineUpdatedByName !== '' ? $deadlineUpdatedByName : 'Unknown';
+            }
+        }
+
+        return view('reports.rbis-annual-certification.edit', compact('officeName', 'province', 'documents', 'usersById', 'activityLogs', 'reportingYear', 'configuredDeadline'));
     }
 
     public function upload(Request $request, $id)
@@ -729,7 +832,7 @@ class RbisAnnualCertificationController extends Controller
         }
 
         $request->validate([
-            'document' => ['required', 'file', 'mimes:pdf,doc,docx,xls,xlsx,jpg,jpeg,png', 'max:10240'],
+            'document' => ['required', 'file', 'mimes:pdf', 'max:15360'],
             'year' => ['required', 'integer', 'between:2000,2100'],
         ]);
 

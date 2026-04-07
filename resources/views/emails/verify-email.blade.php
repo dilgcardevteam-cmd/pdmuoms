@@ -13,13 +13,13 @@
 <body>
     <div class="container">
         <div class="header">
-            <h2>PDMU PDMUOMS - Email Verification</h2>
+            <h2>PDMU Reporting, Inspection and Monitoring System (PRISM) - Email Verification</h2>
         </div>
         
         <div class="content">
             <p>Hello {{ $user->fname }} {{ $user->lname }}!</p>
             
-            <p>Thank you for registering with the <strong>PDMU Operations Management System (PDMUOMS)</strong>.</p>
+            <p>Thank you for registering with the <strong>PDMU Reporting, Inspection and Monitoring System (PRISM)</strong>.</p>
             
             <p>Your account has been successfully created. Please verify your email address by clicking the button below.</p>
 
@@ -38,12 +38,12 @@
             
             <hr>
             
-            <p>Best regards,<br>PDMU Operations Management System (PDMUOMS)</p>
+            <p>Best regards,<br>PDMU Reporting, Inspection and Monitoring System (PRISM)</p>
         </div>
         
         <div class="footer">
             <p>This is an automated email. Please do not reply to this message.</p>
-            <p>&copy; 2026 PDMU Operations Management System. All rights reserved.</p>
+            <p>&copy; 2026 PDMU Reporting, Inspection and Monitoring System (PRISM). All rights reserved.</p>
         </div>
     </div>
 </body>

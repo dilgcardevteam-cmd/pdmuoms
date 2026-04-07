@@ -13,7 +13,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h2>PDMU PDMUOMS - Password Reset OTP</h2>
+            <h2>PDMU Reporting, Inspection and Monitoring System (PRISM) - Password Reset OTP</h2>
         </div>
 
         <div class="content">
@@ -29,12 +29,12 @@
 
             <hr>
 
-            <p>Best regards,<br>PDMU Operations Management System (PDMUOMS)</p>
+            <p>Best regards,<br>PDMU Reporting, Inspection and Monitoring System (PRISM)</p>
         </div>
 
         <div class="footer">
             <p>This is an automated email. Please do not reply to this message.</p>
-            <p>&copy; 2026 PDMU Operations Management System. All rights reserved.</p>
+            <p>&copy; 2026 PDMU Reporting, Inspection and Monitoring System (PRISM). All rights reserved.</p>
         </div>
     </div>
 </body>
