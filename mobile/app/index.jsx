@@ -1,6 +1,7 @@
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
+  Alert,
     Image,
     KeyboardAvoidingView,
     Platform,
@@ -11,14 +12,32 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { useAuth } from "../contexts/AuthContext";
 import { APP_ROUTES } from "../constants/routes";
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { signIn } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleLoginPress = () => {
+  const handleLoginPress = async () => {
+    const trimmedUsername = username.trim();
+
+    if (!trimmedUsername || !password.trim()) {
+      Alert.alert("Login required", "Please enter your username and password.");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      await signIn({ username: trimmedUsername });
+    } finally {
+      setIsSubmitting(false);
+    }
+
     router.replace(APP_ROUTES.homeTab);
   };
 
@@ -75,9 +94,11 @@ export default function LoginScreen() {
             <Pressable
               className="h-[50px] w-full items-center justify-center self-center rounded-xl border border-[#0a4cb3] bg-[#dbeafe]"
               onPress={handleLoginPress}
+              disabled={isSubmitting}
+              style={({ pressed }) => ({ opacity: pressed || isSubmitting ? 0.75 : 1 })}
             >
               <Text className="text-[20px] font-bold text-[#002c76]">
-                Login
+                {isSubmitting ? "Signing in..." : "Login"}
               </Text>
             </Pressable>
           </View>

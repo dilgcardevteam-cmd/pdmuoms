@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Modal, Pressable, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { useAuth } from "../../../contexts/AuthContext";
 import { APP_ROUTES } from "../../../constants/routes";
 import { APP_COLORS } from "../../../constants/theme";
 
@@ -11,6 +12,7 @@ import { Feather } from "@expo/vector-icons";
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const { signOut } = useAuth();
   const [isLogoutModalVisible, setIsLogoutModalVisible] = useState(false);
 
   const containerStyle = { backgroundColor: APP_COLORS.background };
@@ -56,8 +58,9 @@ export default function SettingsScreen() {
     setIsLogoutModalVisible(false);
   };
 
-  const handleConfirmLogout = () => {
+  const handleConfirmLogout = async () => {
     setIsLogoutModalVisible(false);
+    await signOut();
     router.replace(APP_ROUTES.login);
   };
 

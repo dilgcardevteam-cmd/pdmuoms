@@ -3,12 +3,15 @@ import {
     DefaultTheme,
     ThemeProvider,
 } from "@react-navigation/native";
-import { Stack } from "expo-router";
+import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useColorScheme } from "react-native";
+import { useEffect } from "react";
+import { ActivityIndicator, View, useColorScheme } from "react-native";
 import "react-native-reanimated";
 import "../global.css";
 
+import { AuthProvider, useAuth } from "../contexts/AuthContext";
+import { APP_ROUTES } from "../constants/routes";
 import { APP_COLORS } from "../constants/theme";
 
 export const unstable_settings = {
@@ -34,9 +37,48 @@ function isLightHexColor(hexColor) {
 }
 
 export default function RootLayout() {
+  return (
+    <AuthProvider>
+      <RootNavigator />
+    </AuthProvider>
+  );
+}
+
+function RootNavigator() {
   const colorScheme = useColorScheme();
+  const router = useRouter();
+  const segments = useSegments();
+  const { isAuthenticated, isHydrating } = useAuth();
   const appBackgroundColor = APP_COLORS.background;
   const statusBarStyle = isLightHexColor(appBackgroundColor) ? "dark" : "light";
+
+  useEffect(() => {
+    if (isHydrating) {
+      return;
+    }
+
+    const inTabs = segments[0] === "(tabs)";
+
+    if (!isAuthenticated && inTabs) {
+      router.replace(APP_ROUTES.login);
+      return;
+    }
+
+    if (isAuthenticated && !inTabs) {
+      router.replace(APP_ROUTES.homeTab);
+    }
+  }, [isAuthenticated, isHydrating, router, segments]);
+
+  if (isHydrating) {
+    return (
+      <View
+        style={{ flex: 1, backgroundColor: appBackgroundColor }}
+        className="items-center justify-center"
+      >
+        <ActivityIndicator size="large" color={APP_COLORS.primary} />
+      </View>
+    );
+  }
 
   return (
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
