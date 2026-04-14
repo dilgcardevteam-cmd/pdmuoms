@@ -24,13 +24,12 @@ export default function TabLayout() {
 
   const drawerMenuGroups = [
     [
+      { label: "Home", icon: "grid" },
       { label: "Project Monitoring", icon: "trello" },
       { label: "Rapid Subproject Sustainability Assessment", icon: "list" },
       { label: "LGU Reportorial Requirements", icon: "file-text" },
       { label: "Pre-Implementation Documents", icon: "folder" },
       { label: "Ticketing System", icon: "message-square" },
-    ],
-    [
       { label: "Data Management", icon: "database" },
       { label: "User Management", icon: "users" },
       { label: "Utilities", icon: "tool" },
