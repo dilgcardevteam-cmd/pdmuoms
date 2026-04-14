@@ -1,5 +1,5 @@
 import { Feather } from "@expo/vector-icons";
-import { Tabs } from "expo-router";
+import { Tabs, usePathname, useRouter } from "expo-router";
 import { useRef, useState } from "react";
 import {
   Animated,
@@ -11,30 +11,105 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { TAB_ROUTES } from "../../constants/routes";
+import {
+  APP_ROUTES,
+  PROJECT_MONITORING_ROUTES,
+  TAB_ROUTES,
+} from "../../constants/routes";
 import { APP_COLORS } from "../../constants/theme";
 
+const PROJECT_MONITORING_KEY = "project-monitoring";
+const PROJECT_MONITORING_SUBMENU_HEIGHT = 208;
+const VISIBLE_TAB_ROUTE_NAMES = TAB_ROUTES.map((tab) => tab.route);
+
+const DRAWER_MENU_ITEMS = [
+  {
+    key: "home",
+    label: "Home",
+    icon: "grid",
+    route: APP_ROUTES.homeTab,
+  },
+  {
+    key: "project-monitoring",
+    label: "Project Monitoring",
+    icon: "trello",
+    children: [
+      {
+        key: "locally-funded-projects",
+        label: "Locally Funded Projects",
+        icon: "briefcase",
+        route: APP_ROUTES.projectMonitoring.locallyFundedProjects,
+      },
+      {
+        key: "rlip-lime-20-development-fund",
+        label: "RLIP/LIME-20% Development Fund",
+        icon: "feather",
+        route: APP_ROUTES.projectMonitoring.rlipLimeDevelopmentFund,
+      },
+      {
+        key: "project-at-risk",
+        label: "Project At Risk",
+        icon: "alert-triangle",
+        route: APP_ROUTES.projectMonitoring.projectAtRisk,
+      },
+      {
+        key: "sglgif-portal",
+        label: "SGLGIF Portal",
+        icon: "award",
+        route: APP_ROUTES.projectMonitoring.sglgifPortal,
+      },
+    ],
+  },
+  {
+    key: "rapid-subproject-sustainability-assessment",
+    label: "Rapid Subproject Sustainability Assessment",
+    icon: "list",
+  },
+  {
+    key: "lgu-reportorial-requirements",
+    label: "LGU Reportorial Requirements",
+    icon: "file-text",
+  },
+  {
+    key: "pre-implementation-documents",
+    label: "Pre-Implementation Documents",
+    icon: "folder",
+  },
+  {
+    key: "ticketing-system",
+    label: "Ticketing System",
+    icon: "message-square",
+  },
+  {
+    key: "data-management",
+    label: "Data Management",
+    icon: "database",
+  },
+  {
+    key: "user-management",
+    label: "User Management",
+    icon: "users",
+  },
+  {
+    key: "utilities",
+    label: "Utilities",
+    icon: "tool",
+  },
+];
+
 export default function TabLayout() {
+  const router = useRouter();
+  const pathname = usePathname();
   const insets = useSafeAreaInsets();
   const [isDrawerVisible, setIsDrawerVisible] = useState(false);
+  const [expandedMenus, setExpandedMenus] = useState({
+    "project-monitoring": false,
+  });
   const drawerProgress = useRef(new Animated.Value(0)).current;
+  const projectMonitoringAnimation = useRef(new Animated.Value(0)).current;
   const tabIndicatorIndex = useRef(new Animated.Value(0)).current;
   const previousTabIndex = useRef(0);
   const [tabTrackWidth, setTabTrackWidth] = useState(0);
-
-  const drawerMenuGroups = [
-    [
-      { label: "Home", icon: "grid" },
-      { label: "Project Monitoring", icon: "trello" },
-      { label: "Rapid Subproject Sustainability Assessment", icon: "list" },
-      { label: "LGU Reportorial Requirements", icon: "file-text" },
-      { label: "Pre-Implementation Documents", icon: "folder" },
-      { label: "Ticketing System", icon: "message-square" },
-      { label: "Data Management", icon: "database" },
-      { label: "User Management", icon: "users" },
-      { label: "Utilities", icon: "tool" },
-    ],
-  ];
 
   const activeTabColor = APP_COLORS.primary;
   const inactiveTabColor = APP_COLORS.primaryMuted;
@@ -90,19 +165,58 @@ export default function TabLayout() {
     });
   };
 
-  const renderTabBar = ({ state, descriptors, navigation }) => {
-    const activeIndex = state.index;
-    const indicatorWidth =
-      state.routes.length > 0 ? tabTrackWidth / state.routes.length : 0;
+  const toggleMenuSection = (sectionKey) => {
+    const willExpand = !expandedMenus[sectionKey];
 
-    if (previousTabIndex.current !== activeIndex) {
+    if (sectionKey === PROJECT_MONITORING_KEY) {
+      Animated.timing(projectMonitoringAnimation, {
+        toValue: willExpand ? 1 : 0,
+        duration: 220,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: false,
+      }).start();
+    }
+
+    setExpandedMenus((currentState) => ({
+      ...currentState,
+      [sectionKey]: !currentState[sectionKey],
+    }));
+  };
+
+  const handleDrawerItemPress = (routePath) => {
+    if (!routePath) {
+      return;
+    }
+
+    router.push(routePath);
+    closeDrawer();
+  };
+
+  const shouldHideBottomNavbar = pathname.includes("/project-monitoring/");
+
+  const renderTabBar = ({ state, descriptors, navigation }) => {
+    if (shouldHideBottomNavbar) {
+      return null;
+    }
+
+    const visibleRoutes = state.routes.filter((route) =>
+      VISIBLE_TAB_ROUTE_NAMES.includes(route.name)
+    );
+    const activeRoute = state.routes[state.index];
+    const activeVisibleIndex = visibleRoutes.findIndex(
+      (route) => route.key === activeRoute?.key
+    );
+    const indicatorWidth =
+      visibleRoutes.length > 0 ? tabTrackWidth / visibleRoutes.length : 0;
+
+    if (previousTabIndex.current !== activeVisibleIndex) {
       Animated.timing(tabIndicatorIndex, {
-        toValue: activeIndex,
+        toValue: activeVisibleIndex < 0 ? 0 : activeVisibleIndex,
         duration: 220,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }).start();
-      previousTabIndex.current = activeIndex;
+      previousTabIndex.current = activeVisibleIndex;
     }
 
     return (
@@ -145,11 +259,11 @@ export default function TabLayout() {
         </View>
 
         <View className="flex-row items-center justify-around pt-2.5 pb-3">
-          {state.routes.map((route, index) => {
+          {visibleRoutes.map((route, visibleIndex) => {
             const { options } = descriptors[route.key];
-            const isFocused = state.index === index;
+            const isFocused = activeRoute?.key === route.key;
             const label = options.title ?? route.name;
-            const iconName = TAB_ROUTES[index]?.icon;
+            const iconName = TAB_ROUTES[visibleIndex]?.icon;
             const tintColor = isFocused ? activeTabColor : inactiveTabColor;
 
             const handlePress = () => {
@@ -232,6 +346,17 @@ export default function TabLayout() {
             }}
           />
         ))}
+
+        {PROJECT_MONITORING_ROUTES.map((projectRoute) => (
+          <Tabs.Screen
+            key={projectRoute.route}
+            name={projectRoute.route}
+            options={{
+              title: projectRoute.title,
+              href: null,
+            }}
+          />
+        ))}
       </Tabs>
 
       {isDrawerVisible ? (
@@ -274,11 +399,26 @@ export default function TabLayout() {
             />
 
             <View className="mt-4">
-              {drawerMenuGroups.map((group, groupIndex) => (
-                <View key={`drawer-group-${groupIndex}`}>
-                  {group.map((item) => (
+              {DRAWER_MENU_ITEMS.map((item) => {
+                const hasChildren = Array.isArray(item.children) && item.children.length > 0;
+                const isExpanded = expandedMenus[item.key];
+                const isProjectMonitoringSection = item.key === PROJECT_MONITORING_KEY;
+                const submenuHeight = projectMonitoringAnimation.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, PROJECT_MONITORING_SUBMENU_HEIGHT],
+                });
+                const submenuTranslateY = projectMonitoringAnimation.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [-8, 0],
+                });
+                const chevronRotate = projectMonitoringAnimation.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: ["0deg", "180deg"],
+                });
+
+                return (
+                  <View key={item.key}>
                     <Pressable
-                      key={item.label}
                       className="mb-2 flex-row items-center rounded-xl px-2 py-2.5"
                       style={({ pressed }) => ({
                         backgroundColor: pressed
@@ -286,7 +426,16 @@ export default function TabLayout() {
                           : "transparent",
                         opacity: pressed ? 0.9 : 1,
                       })}
-                      onPress={() => {}}
+                      accessibilityRole="button"
+                      accessibilityState={hasChildren ? { expanded: !!isExpanded } : undefined}
+                      onPress={() => {
+                        if (hasChildren) {
+                          toggleMenuSection(item.key);
+                          return;
+                        }
+
+                        handleDrawerItemPress(item.route);
+                      }}
                     >
                       <Feather
                         name={item.icon}
@@ -296,11 +445,97 @@ export default function TabLayout() {
                       <Text className="ml-3 flex-1 text-[13px] leading-[18px] text-white/90">
                         {item.label}
                       </Text>
+                      {hasChildren ? (
+                        isProjectMonitoringSection ? (
+                          <Animated.View style={{ transform: [{ rotate: chevronRotate }] }}>
+                            <Feather
+                              name="chevron-down"
+                              size={16}
+                              color="#C4D7FF"
+                            />
+                          </Animated.View>
+                        ) : (
+                          <Feather
+                            name={isExpanded ? "chevron-up" : "chevron-down"}
+                            size={16}
+                            color="#C4D7FF"
+                          />
+                        )
+                      ) : null}
                     </Pressable>
-                  ))}
 
-                </View>
-              ))}
+                    {hasChildren && isProjectMonitoringSection ? (
+                      <Animated.View
+                        className="overflow-hidden"
+                        pointerEvents={isExpanded ? "auto" : "none"}
+                        style={{
+                          height: submenuHeight,
+                          opacity: projectMonitoringAnimation,
+                          transform: [{ translateY: submenuTranslateY }],
+                        }}
+                      >
+                        <View className="mb-2 ml-3 rounded-xl border border-white/20 bg-white/10 px-2 py-2">
+                          {item.children.map((childItem) => (
+                            <Pressable
+                              key={childItem.key}
+                              className="mb-1.5 flex-row items-center rounded-lg px-2 py-2"
+                              style={({ pressed }) => ({
+                                backgroundColor: pressed
+                                  ? "rgba(255, 255, 255, 0.16)"
+                                  : "transparent",
+                                opacity: pressed ? 0.92 : 1,
+                              })}
+                              accessibilityRole="button"
+                              onPress={() => {
+                                handleDrawerItemPress(childItem.route);
+                              }}
+                            >
+                              <Feather
+                                name={childItem.icon}
+                                size={14}
+                                color="#EAF1FF"
+                              />
+                              <Text className="ml-3 flex-1 text-[13px] leading-[18px] text-white">
+                                {childItem.label}
+                              </Text>
+                            </Pressable>
+                          ))}
+                        </View>
+                      </Animated.View>
+                    ) : null}
+
+                    {hasChildren && !isProjectMonitoringSection && isExpanded ? (
+                      <View className="mb-2 ml-3 rounded-xl border border-white/20 bg-white/10 px-2 py-2">
+                        {item.children.map((childItem) => (
+                          <Pressable
+                            key={childItem.key}
+                            className="mb-1.5 flex-row items-center rounded-lg px-2 py-2"
+                            style={({ pressed }) => ({
+                              backgroundColor: pressed
+                                ? "rgba(255, 255, 255, 0.16)"
+                                : "transparent",
+                              opacity: pressed ? 0.92 : 1,
+                            })}
+                            accessibilityRole="button"
+                            onPress={() => {
+                              handleDrawerItemPress(childItem.route);
+                            }}
+                          >
+                            <Feather
+                              name={childItem.icon}
+                              size={14}
+                              color="#EAF1FF"
+                            />
+                            <Text className="ml-3 flex-1 text-[13px] leading-[18px] text-white">
+                              {childItem.label}
+                            </Text>
+                          </Pressable>
+                        ))}
+                      </View>
+                    ) : null}
+                  </View>
+                );
+              })}
             </View>
           </Animated.View>
         </View>
