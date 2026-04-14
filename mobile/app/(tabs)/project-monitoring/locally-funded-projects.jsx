@@ -1,5 +1,5 @@
 import { Feather } from "@expo/vector-icons";
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -9,15 +9,13 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { API_URL } from "../../../constants/api";
-import { useWebAppRequest } from "../../../hooks/useWebAppRequest";
+import {
+  formatMoney,
+  formatPercent,
+  formatUpdatedAt,
+  useLocallyFundedProjects,
+} from "../../../hooks/useLocallyFundedProjects";
 import { APP_COLORS } from "../../../constants/theme";
-
-const pesoFormatter = new Intl.NumberFormat("en-PH", {
-  style: "currency",
-  currency: "PHP",
-  maximumFractionDigits: 2,
-});
 
 const statusPaletteByLabel = {
   completed: { backgroundColor: APP_COLORS.successLight, color: APP_COLORS.success },
@@ -28,45 +26,6 @@ const statusPaletteByLabel = {
   neutral: { backgroundColor: APP_COLORS.statusNeutralLight, color: APP_COLORS.statusNeutral },
 };
 
-function formatMoney(value) {
-  if (value === null || value === undefined || Number.isNaN(Number(value))) {
-    return "-";
-  }
-
-  return pesoFormatter.format(Number(value));
-}
-
-function formatPercent(value) {
-  if (value === null || value === undefined || Number.isNaN(Number(value))) {
-    return "0.00%";
-  }
-
-  return `${Number(value).toFixed(2)}%`;
-}
-
-function formatUpdatedAt(value) {
-  if (!value) {
-    return "-";
-  }
-
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return "-";
-  }
-
-  const month = parsed.toLocaleString("en-US", { month: "short" });
-  const day = String(parsed.getDate()).padStart(2, "0");
-  const year = parsed.getFullYear();
-  const time = parsed
-    .toLocaleString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true,
-    })
-    .replace(/\s/g, "");
-
-  return `${month} ${day}, ${year} ${time}`;
-}
 
 function getStatusPalette(statusValue) {
   const normalized = String(statusValue || "").trim().toLowerCase();
@@ -98,32 +57,12 @@ function getStatusPalette(statusValue) {
   return statusPaletteByLabel.neutral;
 }
 
-function normalizeProjectRow(row) {
-  return {
-    id: row.lfp_id || row.subaybayan_project_code,
-    code: row.subaybayan_project_code || "-",
-    title: row.project_name || row.subaybayan_project_code || "Untitled Project",
-    province: row.province || "-",
-    city: row.city_municipality || "-",
-    barangay: row.barangay || "-",
-    fundingYear: row.funding_year || "-",
-    fundSource: row.fund_source || "-",
-    procurementType: row.mode_of_procurement || "-",
-    lgsfAllocation: row.lgsf_allocation,
-    obligation: row.obligation,
-    utilizationRate: Number(row.utilization_rate ?? 0),
-    physicalStatus: Number(row.subay_accomplishment_pct ?? row.accomplishment_pct_ro ?? 0),
-    statusActual: row.status_actual || "-",
-    statusSubaybayan: row.status_subaybayan_current || row.status_subaybayan || "-",
-    lastUpdatedAt: row.updated_at,
-  };
-}
 
 function InfoTile({ label, value }) {
   return (
-    <View className="w-[48.5%] rounded-xl border border-[#d0d6df] bg-[#e5e7eb] px-3 py-2">
-      <Text className="text-[11px] font-bold uppercase text-[#4b5563]">{label}</Text>
-      <Text className="mt-1 text-[18px] font-semibold text-[#374151]">{value}</Text>
+    <View className="w-[48.5%] rounded-xl border border-[#d0d6df] bg-[#e5e7eb] px-2.5 py-1.5">
+      <Text className="text-[10px] font-extrabold uppercase text-[#4b5563]">{label}</Text>
+      <Text className="text-[15px] text-[#374151]">{value}</Text>
     </View>
   );
 }
@@ -148,54 +87,15 @@ function StatusBadge({ label }) {
 }
 
 export default function LocallyFundedProjectsScreen() {
-  const { activeBaseUrl, fetchJsonWithFallback } = useWebAppRequest();
-  const [projects, setProjects] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const { activeBaseUrl, projects, isLoading, isRefreshing, errorMessage, loadProjects } =
+    useLocallyFundedProjects();
   const [expandedCardId, setExpandedCardId] = useState(null);
-  const [errorMessage, setErrorMessage] = useState("");
-
-  const loadProjects = useCallback(
-    async (isPullToRefresh = false) => {
-      if (isPullToRefresh) {
-        setIsRefreshing(true);
-      } else {
-        setIsLoading(true);
-      }
-
-      try {
-        setErrorMessage("");
-
-        const payload = await fetchJsonWithFallback(
-          "/api/mobile/locally-funded?per_page=50"
-        );
-        const rows = Array.isArray(payload?.data) ? payload.data : [];
-        setProjects(rows.map(normalizeProjectRow));
-        setExpandedCardId(null);
-      } catch (error) {
-        setProjects([]);
-        setExpandedCardId(null);
-
-        const hint =
-          `Make sure Laravel is running and your phone can reach your computer on the same network. Current base URL: ${API_URL}. You can set EXPO_PUBLIC_API_URL to your PC IP, for example http://192.168.x.x:8000.`;
-        setErrorMessage(`${error?.message || "Unable to load projects."}. ${hint}`);
-      } finally {
-        setIsLoading(false);
-        setIsRefreshing(false);
-      }
-    },
-    [fetchJsonWithFallback]
-  );
-
-  useEffect(() => {
-    loadProjects(false);
-  }, [loadProjects]);
 
   const renderProjectCard = ({ item }) => {
     const isExpanded = expandedCardId === item.id;
 
     return (
-      <View className="mb-3 rounded-3xl border border-[#bfc3c9] bg-[#e6e8ea] px-3 py-3">
+      <View className="mb-3 rounded-3xl border border-[#bfc3c9] bg-[#ebebeb] px-3 py-3">
         <Pressable
           className="flex-row items-start"
           onPress={() => {
@@ -203,10 +103,10 @@ export default function LocallyFundedProjectsScreen() {
           }}
         >
           <View className="flex-1 pr-2">
-            <Text className="text-[16px] font-bold text-[#404040]">{item.code}</Text>
-            <Text className="mt-1 text-[17px] font-semibold text-[#4b4b4b]">{item.title}</Text>
+            <Text className="text-[15px] font-semibold text-[#404040]">{item.code}</Text>
+            <Text className="mt-1 text-[12px] text-[#4b4b4b]">{item.title}</Text>
             <View className="mt-2 border-b border-[#bfc3c9]" />
-            <Text className="mt-2 text-[14px] font-semibold text-[#4b4b4b]">
+            <Text className="mt-2 text-[12px] text-[#4b4b4b]">
               {item.city}, {item.province}
             </Text>
           </View>
@@ -219,16 +119,7 @@ export default function LocallyFundedProjectsScreen() {
         {isExpanded ? (
           <View className="mt-3 rounded-2xl border border-[#cfd5df] bg-[#eceff3] px-3 py-3">
             <View className="flex-row items-start justify-between gap-2">
-              <View className="flex-1">
-                <Text className="text-[12px] font-bold text-[#6b7280]">{item.code}</Text>
-                <Text className="mt-0.5 text-[12px] font-semibold text-[#4b5563]">{item.title}</Text>
-                <Text className="mt-1 text-[12px] text-[#4b5563]">
-                  {item.city}, {item.province}
-                </Text>
-                <Text className="text-[12px] font-semibold text-[#4b5563]">{item.barangay}</Text>
-              </View>
-
-              <View className="items-end">
+              <View className="items-start">
                 <Text className="text-[10px] font-bold uppercase text-[#6b7280]">Last Updated At</Text>
                 <Text className="mt-0.5 text-[10px] font-semibold text-[#4b5563]">
                   {formatUpdatedAt(item.lastUpdatedAt)}
@@ -245,8 +136,8 @@ export default function LocallyFundedProjectsScreen() {
               <InfoTile label="Utilization Rate" value={formatPercent(item.utilizationRate)} />
             </View>
 
-            <View className="mt-3 rounded-xl border border-[#d0d6df] bg-[#e5e7eb] px-3 py-2">
-              <Text className="text-[11px] font-bold uppercase text-[#4b5563]">
+            <View className="mt-3 rounded-xl border border-[#d0d6df] bg-[#e5e7eb] px-2.5 py-1.5">
+              <Text className="text-[10px] font-bold uppercase text-[#4b5563]">
                 Physical Status (Subaybayan %)
               </Text>
               <View className="mt-2 h-2 w-full rounded-full bg-[#c7d2fe]">
@@ -255,21 +146,21 @@ export default function LocallyFundedProjectsScreen() {
                   style={{ width: `${Math.max(0, Math.min(100, item.physicalStatus))}%` }}
                 />
               </View>
-              <Text className="mt-1 text-[18px] font-semibold text-[#374151]">
+              <Text className="mt-0.5 text-[15px] font-semibold text-[#374151]">
                 {formatPercent(item.physicalStatus)}
               </Text>
             </View>
 
             <View className="mt-3 flex-row flex-wrap justify-between gap-y-2">
-              <View className="w-[48.5%] rounded-xl border border-[#d0d6df] bg-[#e5e7eb] px-3 py-2">
-                <Text className="text-[11px] font-bold uppercase text-[#4b5563]">Status (Actual)</Text>
+              <View className="w-[48.5%] rounded-xl border border-[#d0d6df] bg-[#e5e7eb] px-2.5 py-1.5">
+                <Text className="text-[10px] font-bold uppercase text-[#4b5563]">Status (Actual)</Text>
                 <View className="mt-2 self-start">
                   <StatusBadge label={item.statusActual} />
                 </View>
               </View>
 
-              <View className="w-[48.5%] rounded-xl border border-[#d0d6df] bg-[#e5e7eb] px-3 py-2">
-                <Text className="text-[11px] font-bold uppercase text-[#4b5563]">
+              <View className="w-[48.5%] rounded-xl border border-[#d0d6df] bg-[#e5e7eb] px-2.5 py-1.5">
+                <Text className="text-[10px] font-bold uppercase text-[#4b5563]">
                   Status (Subaybayan)
                 </Text>
                 <View className="mt-2 self-start">
@@ -285,12 +176,12 @@ export default function LocallyFundedProjectsScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-[#f1f5f9]" edges={[]}>
-      <View className="px-4 pt-4 pb-2">
+      {/* <View className="px-4 pt-4 pb-2">
         <Text className="text-[23px] font-bold text-[#002C76]">Locally Funded Projects</Text>
         <Text className="mt-1 text-[12px] text-[#475569]">
           Source: {activeBaseUrl}/api/mobile/locally-funded
         </Text>
-      </View>
+      </View> */}
 
       {isLoading ? (
         <View className="flex-1 items-center justify-center px-6">
@@ -299,7 +190,7 @@ export default function LocallyFundedProjectsScreen() {
         </View>
       ) : (
         <FlatList
-          contentContainerStyle={{ paddingHorizontal: 12, paddingBottom: 24 }}
+          contentContainerStyle={{ paddingHorizontal: 12, paddingVertical: 12 }}
           data={projects}
           keyExtractor={(item, index) => `${item.id}-${index}`}
           renderItem={renderProjectCard}
