@@ -5,7 +5,7 @@ import { APP_COLORS } from "../../constants/theme";
 
 export default function TabScreenPlaceholder({ title, subtitle }) {
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView style={styles.container} edges={[]}>
       <View style={styles.content}>
         <Text style={styles.title}>{title}</Text>
         <Text style={styles.subtitle}>{subtitle}</Text>
@@ -21,7 +21,6 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: 24,
-    paddingTop: 12,
   },
   title: {
     fontSize: 28,

@@ -23,31 +23,31 @@ export default function LoginScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-[#f7f9fc]">
+    <SafeAreaView className="flex-1 bg-[#f8fafc]">
       <KeyboardAvoidingView
         className="flex-1"
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <View className="flex-1 justify-center px-6">
           <View className="mb-9 items-center">
-            <View className="mb-3 h-[94px] w-[94px] items-center justify-center rounded-full border border-[#d9e2f2] bg-white shadow-md shadow-[#10337e]/10">
+            <View className="mb-3 h-[94px] w-[94px] items-center justify-center rounded-full border border-[#dbe3f0] bg-white shadow-md shadow-[#002c76]/10">
               <Image
                 source={require("../assets/images/dilg-logo.png")}
                 className="h-[78px] w-[78px]"
                 resizeMode="contain"
               />
             </View>
-            <Text className="mb-1.5 text-[38px] font-extrabold tracking-[0.4px] text-[#10337e]">
+            <Text className="mb-1.5 text-[38px] font-extrabold tracking-[0.4px] text-[#002c76]">
               PDMUOMS
             </Text>
-            <Text className="text-center text-[17px] leading-[22px] text-[#27477d]">
+            <Text className="text-center text-[17px] leading-[22px] text-[#1e3a8a]">
               PDMU Operations Management System
             </Text>
           </View>
 
-          <View className="rounded-[18px] border border-[#d6dfef] bg-[#fdfefe] px-4 py-[18px]">
+          <View className="rounded-[18px] border border-[#dbe3f0] bg-[#ffffff] px-4 py-[18px]">
             <View className="mb-[18px]">
-              <Text className="mb-1.5 text-[13px] font-bold tracking-[0.4px] text-[#10337e]">
+              <Text className="mb-1.5 text-[13px] font-bold tracking-[0.4px] text-[#002c76]">
                 USERNAME
               </Text>
               <TextInput
@@ -55,11 +55,11 @@ export default function LoginScreen() {
                 onChangeText={setUsername}
                 placeholder="Enter username"
                 autoCapitalize="none"
-                placeholderTextColor="#97a4bc"
-                className="h-[50px] rounded-xl border border-[#3f68be] bg-white px-[14px] text-[#10337e]"
+                placeholderTextColor="#64748b"
+                className="h-[50px] rounded-xl border border-[#0a4cb3] bg-white px-[14px] text-[#002c76]"
               />
 
-              <Text className="mb-1.5 mt-4 text-[13px] font-bold tracking-[0.4px] text-[#10337e]">
+              <Text className="mb-1.5 mt-4 text-[13px] font-bold tracking-[0.4px] text-[#002c76]">
                 PASSWORD
               </Text>
               <TextInput
@@ -67,16 +67,16 @@ export default function LoginScreen() {
                 onChangeText={setPassword}
                 placeholder="Enter password"
                 secureTextEntry
-                placeholderTextColor="#97a4bc"
-                className="h-[50px] rounded-xl border border-[#3f68be] bg-white px-[14px] text-[#10337e]"
+                placeholderTextColor="#64748b"
+                className="h-[50px] rounded-xl border border-[#0a4cb3] bg-white px-[14px] text-[#002c76]"
               />
             </View>
 
             <Pressable
-              className="h-[50px] w-full items-center justify-center self-center rounded-xl border border-[#3f68be] bg-[#d8e4f8]"
+              className="h-[50px] w-full items-center justify-center self-center rounded-xl border border-[#0a4cb3] bg-[#dbeafe]"
               onPress={handleLoginPress}
             >
-              <Text className="text-[20px] font-bold text-[#10337e]">
+              <Text className="text-[20px] font-bold text-[#002c76]">
                 Login
               </Text>
             </Pressable>

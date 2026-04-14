@@ -1,16 +1,35 @@
+// CLIENT PRIMARY COLORS
+// RED: #C9282D
+// blue: #002C76
+// YELLOW: #FFDE15
+
 export const APP_COLORS = {
-  background: "#f7f9fc",
+  primaryRed: "#C9282D",
+  primaryRedLight: "#FEE2E2",
+  primaryBlue: "#002C76",
+  primaryBlueLight: "#dbeafe",
+  primaryYellow: "#FFDE15",
+  primaryYellowLight: "#fff7ed",
+
+
+  background: "#f8fafc",
   backgroundCard: "#ffffff",
-  primary: "#10337e",
-  primaryMuted: "#27477d",
-  accentBorder: "#3f68be",
-  accentSurface: "#d8e4f8",
-  textSubtle: "#5a6d8f",
-  tabInactive: "#6f7d93",
+  primary: "#002C76",
+  primaryMuted: "#1e3a8a",
+  accentBorder: "#0a4cb3",
+  accentSurface: "#dbeafe",
+  textSubtle: "#475569",
+  tabInactive: "#64748b",
+  
   tabBackgroundLight: "#ffffff",
   tabBackgroundDark: "#0f1725",
-  tabBorderLight: "#e5ebf4",
+  
+  tabBorderLight: "#dbe3f0",
   tabBorderDark: "#1f2c40",
-  tabActiveLight: "#10337e",
+  
+  tabActiveLight: "#002C76",
   tabActiveDark: "#f5f7ff",
+
+  tabBarActiveTintColor: "#002C76",
+  tabBarInactiveTintColor: "#64748b",
 };
