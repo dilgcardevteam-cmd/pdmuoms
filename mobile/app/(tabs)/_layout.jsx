@@ -22,6 +22,21 @@ export default function TabLayout() {
   const previousTabIndex = useRef(0);
   const [tabTrackWidth, setTabTrackWidth] = useState(0);
 
+  const drawerMenuGroups = [
+    [
+      { label: "Project Monitoring", icon: "trello" },
+      { label: "Rapid Subproject Sustainability Assessment", icon: "list" },
+      { label: "LGU Reportorial Requirements", icon: "file-text" },
+      { label: "Pre-Implementation Documents", icon: "folder" },
+      { label: "Ticketing System", icon: "message-square" },
+    ],
+    [
+      { label: "Data Management", icon: "database" },
+      { label: "User Management", icon: "users" },
+      { label: "Utilities", icon: "tool" },
+    ],
+  ];
+
   const activeTabColor = APP_COLORS.primary;
   const inactiveTabColor = APP_COLORS.primaryMuted;
   const drawerWidth = 320;
@@ -258,6 +273,36 @@ export default function TabLayout() {
               className="mt-[18px] border-b"
               style={{ borderBottomColor: "rgba(255, 255, 255, 0.5)" }}
             />
+
+            <View className="mt-4">
+              {drawerMenuGroups.map((group, groupIndex) => (
+                <View key={`drawer-group-${groupIndex}`}>
+                  {group.map((item) => (
+                    <Pressable
+                      key={item.label}
+                      className="mb-2 flex-row items-center rounded-xl px-2 py-2.5"
+                      style={({ pressed }) => ({
+                        backgroundColor: pressed
+                          ? "rgba(255, 255, 255, 0.12)"
+                          : "transparent",
+                        opacity: pressed ? 0.9 : 1,
+                      })}
+                      onPress={() => {}}
+                    >
+                      <Feather
+                        name={item.icon}
+                        size={16}
+                        color="#EAF1FF"
+                      />
+                      <Text className="ml-3 flex-1 text-[13px] leading-[18px] text-white/90">
+                        {item.label}
+                      </Text>
+                    </Pressable>
+                  ))}
+
+                </View>
+              ))}
+            </View>
           </Animated.View>
         </View>
       ) : null}
