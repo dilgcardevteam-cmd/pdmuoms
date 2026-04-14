@@ -21,12 +21,188 @@ class LocallyFundedProjectController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('auth');
+        $this->middleware('auth')->except(['mobileIndex']);
         $this->middleware('crud_permission:locally_funded_projects,view')->only(['index']);
         $this->middleware('crud_permission:locally_funded_projects,view')->only(['showSubaybayan', 'show']);
         $this->middleware('crud_permission:locally_funded_projects,add')->only(['create', 'store']);
         $this->middleware('crud_permission:locally_funded_projects,update')->only(['edit', 'update']);
         $this->middleware('crud_permission:locally_funded_projects,delete')->only(['destroy']);
+    }
+
+    public function mobileIndex(Request $request)
+    {
+        $perPage = (int) $request->query('per_page', 50);
+        if ($perPage < 1) {
+            $perPage = 1;
+        }
+        if ($perPage > 100) {
+            $perPage = 100;
+        }
+
+        $currentYear = now()->year;
+        $currentMonth = now()->month;
+
+        $query = DB::table('subay_project_profiles as spp')
+            ->leftJoin('locally_funded_projects as lfp', 'lfp.subaybayan_project_code', '=', 'spp.project_code')
+            ->whereRaw('UPPER(TRIM(COALESCE(spp.program, ""))) <> ?', ['SGLGIF'])
+            ->whereRaw('UPPER(TRIM(COALESCE(spp.project_code, ""))) NOT LIKE ?', ['SGLGIF%']);
+
+        if (Schema::hasTable('locally_funded_physical_updates')) {
+            $query->leftJoin('locally_funded_physical_updates as lpu', function ($join) use ($currentYear, $currentMonth) {
+                $join->on('lpu.project_id', '=', 'lfp.id')
+                    ->where('lpu.year', '=', $currentYear)
+                    ->where('lpu.month', '=', $currentMonth);
+            });
+        }
+
+        $hasLfpObligationColumn = Schema::hasColumn('locally_funded_projects', 'obligation');
+        $hasLfpDisbursedAmountColumn = Schema::hasColumn('locally_funded_projects', 'disbursed_amount');
+        $hasLfpRevertedAmountColumn = Schema::hasColumn('locally_funded_projects', 'reverted_amount');
+        $hasLfpUtilizationRateColumn = Schema::hasColumn('locally_funded_projects', 'utilization_rate');
+
+        $query->select([
+            'lfp.id as lfp_id',
+            'spp.project_code',
+            'spp.project_title',
+            'spp.province as spp_province',
+            'spp.city_municipality as spp_city_municipality',
+            'spp.barangay as spp_barangay',
+            'spp.funding_year',
+            'spp.program as spp_program',
+            'spp.procurement_type',
+            'spp.procurement',
+            'spp.status',
+            'spp.total_accomplishment',
+            'spp.national_subsidy_original_allocation',
+            'spp.obligation as spp_obligation',
+            'spp.disbursement as spp_disbursed_amount',
+            'spp.liquidations as spp_reverted_amount',
+            'spp.updated_at as spp_updated_at',
+            'lfp.project_name as lfp_project_name',
+            'lfp.province as lfp_province',
+            'lfp.city_municipality as lfp_city_municipality',
+            'lfp.barangay as lfp_barangay',
+            'lfp.fund_source as lfp_fund_source',
+            'lfp.mode_of_procurement as lfp_mode_of_procurement',
+            'lfp.lgsf_allocation as lfp_lgsf_allocation',
+            $hasLfpObligationColumn
+                ? 'lfp.obligation as lfp_obligation'
+                : DB::raw('NULL as lfp_obligation'),
+            $hasLfpDisbursedAmountColumn
+                ? 'lfp.disbursed_amount as lfp_disbursed_amount'
+                : DB::raw('NULL as lfp_disbursed_amount'),
+            $hasLfpRevertedAmountColumn
+                ? 'lfp.reverted_amount as lfp_reverted_amount'
+                : DB::raw('NULL as lfp_reverted_amount'),
+            $hasLfpUtilizationRateColumn
+                ? 'lfp.utilization_rate as lfp_utilization_rate'
+                : DB::raw('NULL as lfp_utilization_rate'),
+            'lfp.updated_at as lfp_updated_at',
+        ]);
+
+        if (Schema::hasTable('locally_funded_physical_updates')) {
+            $query->addSelect([
+                'lpu.status_project_fou as status_project_fou',
+                'lpu.status_project_ro as status_project_ro',
+                'lpu.accomplishment_pct_ro as accomplishment_pct_ro',
+            ]);
+        } else {
+            $query->addSelect([
+                DB::raw('NULL as status_project_fou'),
+                DB::raw('NULL as status_project_ro'),
+                DB::raw('NULL as accomplishment_pct_ro'),
+            ]);
+        }
+
+        $projects = $query
+            ->orderByRaw('COALESCE(lfp.updated_at, spp.updated_at) DESC')
+            ->orderByDesc('spp.project_code')
+            ->paginate($perPage)
+            ->withQueryString();
+
+        $parseNumber = function ($value) {
+            if ($value === null) {
+                return null;
+            }
+
+            $value = trim((string) $value);
+            if ($value === '') {
+                return null;
+            }
+
+            $clean = preg_replace('/[^0-9\\.-]/', '', $value);
+            return $clean === '' ? null : (float) $clean;
+        };
+
+        $data = $projects->getCollection()->map(function ($row) use ($parseNumber) {
+            $allocation = $row->lfp_lgsf_allocation;
+            if ($allocation === null) {
+                $allocation = $parseNumber($row->national_subsidy_original_allocation);
+            }
+
+            $obligation = $row->lfp_obligation;
+            if ($obligation === null) {
+                $obligation = $parseNumber($row->spp_obligation ?? null);
+            }
+
+            $disbursedAmount = $row->lfp_disbursed_amount;
+            if ($disbursedAmount === null) {
+                $disbursedAmount = $parseNumber($row->spp_disbursed_amount ?? null);
+            }
+
+            $revertedAmount = $row->lfp_reverted_amount;
+            if ($revertedAmount === null) {
+                $revertedAmount = $parseNumber($row->spp_reverted_amount ?? null);
+            }
+
+            $utilizationRate = $row->lfp_utilization_rate;
+            if ($utilizationRate === null && $allocation !== null) {
+                $allocationFloat = (float) $allocation;
+                if ($allocationFloat > 0) {
+                    $utilizationRate = ((((float) ($disbursedAmount ?? 0)) + ((float) ($revertedAmount ?? 0))) / $allocationFloat) * 100;
+                } else {
+                    $utilizationRate = 0.0;
+                }
+            }
+
+            $projectTitle = $row->lfp_project_name ?: ($row->project_title ?: $row->project_code);
+            $modeOfProcurement = $row->lfp_mode_of_procurement ?: ($row->procurement_type ?: $row->procurement);
+            $statusSubaybayan = $row->status_project_ro ?: $row->status;
+            $subayAccomplishment = $row->accomplishment_pct_ro ?? $parseNumber($row->total_accomplishment);
+
+            return [
+                'lfp_id' => $row->lfp_id,
+                'subaybayan_project_code' => $row->project_code,
+                'project_name' => $projectTitle,
+                'province' => $row->lfp_province ?: $row->spp_province,
+                'city_municipality' => $row->lfp_city_municipality ?: $row->spp_city_municipality,
+                'barangay' => $row->lfp_barangay ?: $row->spp_barangay,
+                'funding_year' => $row->funding_year,
+                'fund_source' => $row->lfp_fund_source ?: $row->spp_program,
+                'mode_of_procurement' => $modeOfProcurement,
+                'lgsf_allocation' => $allocation !== null ? (float) $allocation : null,
+                'obligation' => $obligation !== null ? (float) $obligation : null,
+                'disbursed_amount' => $disbursedAmount !== null ? (float) $disbursedAmount : null,
+                'reverted_amount' => $revertedAmount !== null ? (float) $revertedAmount : null,
+                'utilization_rate' => $utilizationRate !== null ? (float) $utilizationRate : null,
+                'updated_at' => $row->lfp_updated_at ?: $row->spp_updated_at,
+                'status_subaybayan' => $statusSubaybayan,
+                'subay_accomplishment_pct' => $subayAccomplishment,
+                'status_actual' => $row->status_project_fou,
+                'status_subaybayan_current' => $statusSubaybayan,
+                'accomplishment_pct_ro' => $row->accomplishment_pct_ro,
+            ];
+        })->values();
+
+        return response()->json([
+            'data' => $data,
+            'meta' => [
+                'current_page' => $projects->currentPage(),
+                'last_page' => $projects->lastPage(),
+                'per_page' => $projects->perPage(),
+                'total' => $projects->total(),
+            ],
+        ]);
     }
 
     private function comparableLocationSql(string $columnExpression): string
@@ -715,7 +891,7 @@ $url = route('locally-funded-project.show', $project, false);
     /**
      * Display a listing of locally funded projects
      */
-    public function index()
+    public function index(Request $request)
     {
         $this->syncMissingFundUtilizationReports();
         $listRouteName = 'projects.locally-funded';
@@ -1261,6 +1437,45 @@ $url = route('locally-funded-project.show', $project, false);
             })
             ->values()
             ->all();
+
+        if ($request->expectsJson() || $request->wantsJson()) {
+            $serializedProjects = $projects->getCollection()->map(function ($project) use ($physicalStatuses) {
+                $status = $physicalStatuses[$project->lfp_id] ?? null;
+
+                return [
+                    'lfp_id' => $project->lfp_id,
+                    'subaybayan_project_code' => $project->subaybayan_project_code,
+                    'project_name' => $project->project_name,
+                    'province' => $project->province,
+                    'city_municipality' => $project->city_municipality,
+                    'barangay' => $project->barangay,
+                    'funding_year' => $project->funding_year,
+                    'fund_source' => $project->fund_source,
+                    'mode_of_procurement' => $project->mode_of_procurement,
+                    'lgsf_allocation' => $project->lgsf_allocation,
+                    'obligation' => $project->obligation,
+                    'disbursed_amount' => $project->disbursed_amount,
+                    'reverted_amount' => $project->reverted_amount,
+                    'utilization_rate' => $project->utilization_rate,
+                    'updated_at' => optional($project->updated_at)->toIso8601String(),
+                    'status_subaybayan' => $project->status_subaybayan,
+                    'subay_accomplishment_pct' => $project->subay_accomplishment_pct,
+                    'status_actual' => $status['status_actual'] ?? null,
+                    'status_subaybayan_current' => $status['status_subaybayan'] ?? null,
+                    'accomplishment_pct_ro' => $status['accomplishment_pct_ro'] ?? null,
+                ];
+            })->values();
+
+            return response()->json([
+                'data' => $serializedProjects,
+                'meta' => [
+                    'current_page' => $projects->currentPage(),
+                    'last_page' => $projects->lastPage(),
+                    'per_page' => $projects->perPage(),
+                    'total' => $projects->total(),
+                ],
+            ]);
+        }
 
         return view('projects.locally-funded', array_merge(
             $options,

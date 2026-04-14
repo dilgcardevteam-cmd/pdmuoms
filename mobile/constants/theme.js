@@ -10,6 +10,8 @@ export const APP_COLORS = {
   primaryBlueLight: "#dbeafe",
   primaryYellow: "#FFDE15",
   primaryYellowLight: "#fff7ed",
+  success: "#166534",
+  successLight: "#BBF7D0",
 
 
   background: "#f8fafc",
@@ -32,4 +34,13 @@ export const APP_COLORS = {
 
   tabBarActiveTintColor: "#002C76",
   tabBarInactiveTintColor: "#64748b",
+
+  statusNeutral: "#334155",
+  statusNeutralLight: "#E2E8F0",
+  statusPending: "#92400E",
+  statusPendingLight: "#FEF3C7",
+  statusDelayed: "#991B1B",
+  statusDelayedLight: "#FEE2E2",
+  statusInfo: "#1E40AF",
+  statusInfoLight: "#BFDBFE",
 };

@@ -184,6 +184,9 @@ Route::get('/api/municipality-projects', function () {
     }
 })->name('api.municipality-projects');
 
+Route::get('/api/mobile/locally-funded', [App\Http\Controllers\LocallyFundedProjectController::class, 'mobileIndex'])
+    ->name('api.mobile.locally-funded');
+
 Route::middleware(['auth'])->group(function () {
     // PAGASA time endpoint for live clock display
     Route::get('/api/pagasa-time/current', [App\Http\Controllers\PagasaTimeController::class, 'current'])->name('pagasa-time.current');
