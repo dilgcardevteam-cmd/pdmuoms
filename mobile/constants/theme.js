@@ -1,0 +1,16 @@
+export const APP_COLORS = {
+  background: "#f7f9fc",
+  backgroundCard: "#ffffff",
+  primary: "#10337e",
+  primaryMuted: "#27477d",
+  accentBorder: "#3f68be",
+  accentSurface: "#d8e4f8",
+  textSubtle: "#5a6d8f",
+  tabInactive: "#6f7d93",
+  tabBackgroundLight: "#ffffff",
+  tabBackgroundDark: "#0f1725",
+  tabBorderLight: "#e5ebf4",
+  tabBorderDark: "#1f2c40",
+  tabActiveLight: "#10337e",
+  tabActiveDark: "#f5f7ff",
+};
