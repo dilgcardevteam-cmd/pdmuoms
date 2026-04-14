@@ -1,11 +1,14 @@
 import { Feather } from "@expo/vector-icons";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  LayoutAnimation,
+  Platform,
   Pressable,
   RefreshControl,
   Text,
+  UIManager,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -91,6 +94,29 @@ export default function LocallyFundedProjectsScreen() {
     useLocallyFundedProjects();
   const [expandedCardId, setExpandedCardId] = useState(null);
 
+  useEffect(() => {
+    if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
+      UIManager.setLayoutAnimationEnabledExperimental(true);
+    }
+  }, []);
+
+  const animateCardToggle = () => {
+    LayoutAnimation.configureNext({
+      duration: 220,
+      create: {
+        type: LayoutAnimation.Types.easeInEaseOut,
+        property: LayoutAnimation.Properties.scaleY,
+      },
+      update: {
+        type: LayoutAnimation.Types.easeInEaseOut,
+      },
+      delete: {
+        type: LayoutAnimation.Types.easeInEaseOut,
+        property: LayoutAnimation.Properties.scaleY,
+      },
+    });
+  };
+
   const renderProjectCard = ({ item }) => {
     const isExpanded = expandedCardId === item.id;
 
@@ -99,6 +125,7 @@ export default function LocallyFundedProjectsScreen() {
         <Pressable
           className="flex-row items-start"
           onPress={() => {
+            animateCardToggle();
             setExpandedCardId((currentId) => (currentId === item.id ? null : item.id));
           }}
         >
