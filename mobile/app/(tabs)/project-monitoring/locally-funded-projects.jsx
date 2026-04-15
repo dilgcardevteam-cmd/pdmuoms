@@ -253,3 +253,7 @@ export default function LocallyFundedProjectsScreen() {
     </SafeAreaView>
   );
 }
+
+export const meta = {
+  title: "Locally Funded Projects",
+};

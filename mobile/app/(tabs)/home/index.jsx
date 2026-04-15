@@ -17,3 +17,7 @@ export default function HomeScreen() {
     </SafeAreaView>
   );
 }
+
+export const meta = {
+  title: "Home",
+};

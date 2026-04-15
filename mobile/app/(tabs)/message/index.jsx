@@ -1,5 +1,9 @@
 import TabScreenPlaceholder from "@/components/layouts/TabScreenPlaceholder";
 
+export const meta = {
+  title: "Messages",
+};
+
 export default function MessageScreen() {
   return (
     <>
@@ -9,3 +13,7 @@ export default function MessageScreen() {
     </>
   );
 }
+
+export const options = {
+  title: "Messages",
+};

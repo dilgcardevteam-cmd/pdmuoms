@@ -1,5 +1,9 @@
 import TabScreenPlaceholder from "@/components/layouts/TabScreenPlaceholder";
 
+export const meta = {
+  title: "Notifications",
+};
+
 export default function NotificationsScreen() {
   return (
     <TabScreenPlaceholder
@@ -8,3 +12,7 @@ export default function NotificationsScreen() {
     />
   );
 }
+
+export const options = {
+  title: "Notification",
+};

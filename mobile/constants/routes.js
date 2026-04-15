@@ -1,6 +1,9 @@
 export const APP_ROUTES = {
   login: "/",
   homeTab: "/(tabs)/home",
+  message: "/(tabs)/message",
+  notifications: "/(tabs)/notifications",
+  settings: "/(tabs)/settings",
   projectMonitoring: {
     locallyFundedProjects: "/(tabs)/project-monitoring/locally-funded-projects",
     rlipLimeDevelopmentFund: "/(tabs)/project-monitoring/rlip-lime-20-development-fund",
@@ -11,10 +14,6 @@ export const APP_ROUTES = {
 
 export const TAB_ROUTES = [
   { route: "home/index", title: "Home", icon: "grid" },
-  { route: "message/index", title: "Messages", icon: "message-square" },
-  { route: "capture/index", title: "Capture", icon: "camera" },
-  { route: "notifications/index", title: "Notifications", icon: "bell" },
-  { route: "settings/index", title: "Settings", icon: "settings" },
 ];
 
 export const PROJECT_MONITORING_ROUTES = [

@@ -139,3 +139,11 @@ export default function SettingsScreen() {
     </SafeAreaView>
   );
 }
+
+export const meta = {
+  title: "Settings",
+};
+
+export const options = {
+  title: "Settings",
+};

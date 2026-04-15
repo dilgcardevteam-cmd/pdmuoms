@@ -10,6 +10,8 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useAuth } from "../../contexts/AuthContext";
+import { useFetchLoggedUser } from "../../hooks/useFetchLoggedUser";
 
 import {
   APP_ROUTES,
@@ -28,6 +30,12 @@ const DRAWER_MENU_ITEMS = [
     label: "Home",
     icon: "grid",
     route: APP_ROUTES.homeTab,
+  },
+  {
+    key: "messages",
+    label: "Messages",
+    icon: "message-square",
+    route: APP_ROUTES.message,
   },
   {
     key: "project-monitoring",
@@ -95,12 +103,16 @@ const DRAWER_MENU_ITEMS = [
     label: "Utilities",
     icon: "tool",
   },
+  
+    // (settings moved to bottom area)
 ];
 
 export default function TabLayout() {
   const router = useRouter();
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
+  const { firstName, lastName } = useFetchLoggedUser();
+  const { signOut } = useAuth();
   const [isDrawerVisible, setIsDrawerVisible] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState({
     "project-monitoring": false,
@@ -109,9 +121,7 @@ export default function TabLayout() {
   const projectMonitoringAnimation = useRef(new Animated.Value(0)).current;
   const tabIndicatorIndex = useRef(new Animated.Value(0)).current;
   const previousTabIndex = useRef(0);
-  const [tabTrackWidth, setTabTrackWidth] = useState(0);
-
-  const activeTabColor = APP_COLORS.primary;
+  // settings moved to bottom area
   const inactiveTabColor = APP_COLORS.primaryMuted;
   const drawerWidth = 320;
   const headerStyle = {
@@ -196,9 +206,8 @@ export default function TabLayout() {
   const shouldHideBottomNavbar = pathname.includes("/project-monitoring/");
 
   const renderTabBar = ({ state, descriptors, navigation }) => {
-    if (shouldHideBottomNavbar) {
-      return null;
-    }
+    // Always hide the bottom tab bar (we're moving messages/settings into drawer)
+    return null;
 
     const visibleRoutes = state.routes.filter((route) =>
       VISIBLE_TAB_ROUTE_NAMES.includes(route.name)
@@ -335,6 +344,18 @@ export default function TabLayout() {
               <Feather name="menu" size={24} color={APP_COLORS.primary} />
             </Pressable>
           ),
+          headerRight: () => (
+            <Pressable
+              onPress={() => router.push(APP_ROUTES.notifications)}
+              className="mr-[14px] p-1"
+              style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Open notifications"
+            >
+              <Feather name="bell" size={22} color={APP_COLORS.primary} />
+            </Pressable>
+          ),
         }}
         tabBar={renderTabBar}
       >
@@ -359,6 +380,22 @@ export default function TabLayout() {
             }}
           />
         ))}
+
+        {/* Explicitly register screens that used to be tabs so we can set friendly titles */}
+        <Tabs.Screen
+          name="message/index"
+          options={{ title: "Messages" }}
+        />
+
+        <Tabs.Screen
+          name="notifications/index"
+          options={{ title: "Notifications" }}
+        />
+
+        <Tabs.Screen
+          name="settings/index"
+          options={{ title: "Settings" }}
+        />
       </Tabs>
 
       {isDrawerVisible ? (
@@ -395,13 +432,31 @@ export default function TabLayout() {
                 PRISM
               </Text>
             </View>
+
+            {/* Profile card */}
+            <View className="mt-4">
+              <View
+                className="rounded-xl px-3 py-3"
+                style={{ backgroundColor: 'rgba(255,255,255,0.08)' }}
+              >
+                <View className="flex-row items-center">
+                  <View className="h-10 w-10 rounded-full items-center justify-center bg-white/10">
+                    <Feather name="user" size={20} color="#EAF1FF" />
+                  </View>
+                  <View className="ml-3">
+                    <Text className="text-[16px] font-semibold text-white">{(firstName ?? 'User') + (lastName ? ' ' + lastName : '')}</Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+
             <View
-              className="mt-[18px] border-b"
-              style={{ borderBottomColor: "rgba(255, 255, 255, 0.5)" }}
+              className="mt-4 border-b"
+              style={{ borderBottomColor: "rgba(255, 255, 255, 0.12)" }}
             />
 
             <View className="mt-4">
-              {DRAWER_MENU_ITEMS.map((item) => {
+              {DRAWER_MENU_ITEMS.map((item, idx) => {
                 const hasChildren = Array.isArray(item.children) && item.children.length > 0;
                 const isExpanded = expandedMenus[item.key];
                 const isProjectMonitoringSection = item.key === PROJECT_MONITORING_KEY;
@@ -419,7 +474,7 @@ export default function TabLayout() {
                 });
 
                 return (
-                  <View key={item.key}>
+                  <View key={item.key ?? item.label ?? idx}>
                     <Pressable
                       className="mb-2 flex-row items-center rounded-xl px-2 py-2.5"
                       style={({ pressed }) => ({
@@ -477,9 +532,9 @@ export default function TabLayout() {
                         }}
                       >
                         <View className="mb-2 ml-3 rounded-xl border border-white/20 bg-white/10 px-2 py-2">
-                          {item.children.map((childItem) => (
+                          {item.children.map((childItem, cidx) => (
                             <Pressable
-                              key={childItem.key}
+                              key={childItem.key ?? childItem.label ?? cidx}
                               className="mb-1.5 flex-row items-center rounded-lg px-2 py-2"
                               style={({ pressed }) => ({
                                 backgroundColor: pressed
@@ -503,14 +558,43 @@ export default function TabLayout() {
                             </Pressable>
                           ))}
                         </View>
+                        {/* Bottom separator + Settings / Logout */}
+                        <View className="mt-6 border-t pt-4" style={{ borderTopColor: 'rgba(255,255,255,0.12)' }}>
+                          <Pressable
+                            className="flex-row items-center px-2 py-3 rounded"
+                            style={({ pressed }) => ({ opacity: pressed ? 0.9 : 1 })}
+                            onPress={() => {
+                              handleDrawerItemPress(APP_ROUTES.settings);
+                            }}
+                          >
+                            <Feather name="settings" size={16} color="#EAF1FF" />
+                            <Text className="ml-3 text-[14px] text-white font-semibold">Settings</Text>
+                          </Pressable>
+
+                          <Pressable
+                            className="flex-row items-center px-2 py-3 mt-3 rounded"
+                            style={({ pressed }) => ({ opacity: pressed ? 0.9 : 1 })}
+                            onPress={async () => {
+                              try {
+                                await signOut();
+                              } catch (e) {
+                                // ignore
+                              }
+                              router.replace(APP_ROUTES.login);
+                            }}
+                          >
+                            <Feather name="log-out" size={16} color={APP_COLORS.primaryRed} />
+                            <Text className="ml-3 text-[14px] text-[#FCA5A5]">Log out</Text>
+                          </Pressable>
+                        </View>
                       </Animated.View>
                     ) : null}
 
                     {hasChildren && !isProjectMonitoringSection && isExpanded ? (
                       <View className="mb-2 ml-3 rounded-xl border border-white/20 bg-white/10 px-2 py-2">
-                        {item.children.map((childItem) => (
+                        {item.children.map((childItem, cidx) => (
                           <Pressable
-                            key={childItem.key}
+                            key={childItem.key ?? childItem.label ?? cidx}
                             className="mb-1.5 flex-row items-center rounded-lg px-2 py-2"
                             style={({ pressed }) => ({
                               backgroundColor: pressed
