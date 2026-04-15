@@ -9,6 +9,7 @@ import { useEffect } from "react";
 import { ActivityIndicator, View, useColorScheme } from "react-native";
 import "react-native-reanimated";
 import "../global.css";
+import { useFonts } from "expo-font";
 
 import { AuthProvider, useAuth } from "../contexts/AuthContext";
 import { APP_ROUTES } from "../constants/routes";
@@ -52,6 +53,12 @@ function RootNavigator() {
   const appBackgroundColor = APP_COLORS.background;
   const statusBarStyle = isLightHexColor(appBackgroundColor) ? "dark" : "light";
 
+  const [fontsLoaded] = useFonts({
+    Montserrat: require("../assets/fonts/Montserrat-Regular.ttf"),
+    "Montserrat-SemiBold": require("../assets/fonts/Montserrat-SemiBold.ttf"),
+    "Montserrat-Bold": require("../assets/fonts/Montserrat-Bold.ttf"),
+  });
+
   useEffect(() => {
     if (isHydrating) {
       return;
@@ -68,6 +75,17 @@ function RootNavigator() {
       router.replace(APP_ROUTES.homeTab);
     }
   }, [isAuthenticated, isHydrating, router, segments]);
+
+  if (!fontsLoaded) {
+    return (
+      <View
+        style={{ flex: 1, backgroundColor: appBackgroundColor }}
+        className="items-center justify-center"
+      >
+        <ActivityIndicator size="large" color={APP_COLORS.primary} />
+      </View>
+    );
+  }
 
   if (isHydrating) {
     return (

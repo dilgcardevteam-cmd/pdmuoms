@@ -3,12 +3,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { APP_COLORS } from "../../constants/theme";
 
-export default function TabScreenPlaceholder({ title, subtitle }) {
+export default function TabScreenPlaceholder({ title, subtitle, children }) {
   return (
     <SafeAreaView style={styles.container} edges={[]}>
       <View style={styles.content}>
         <Text style={styles.title}>{title}</Text>
-        <Text style={styles.subtitle}>{subtitle}</Text>
+        {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+        {children}
       </View>
     </SafeAreaView>
   );

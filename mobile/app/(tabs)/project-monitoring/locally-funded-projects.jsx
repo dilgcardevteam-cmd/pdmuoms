@@ -213,7 +213,7 @@ export default function LocallyFundedProjectsScreen() {
       {isLoading ? (
         <View className="flex-1 items-center justify-center px-6">
           <ActivityIndicator size="large" color="#1d4ed8" />
-          <Text className="mt-3 text-[13px] text-[#475569]">Loading project cards...</Text>
+          <Text className="mt-3 text-[13px] text-[#475569]">Loading locally funded projects...</Text>
         </View>
       ) : (
         <FlatList
