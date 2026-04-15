@@ -125,6 +125,7 @@ export default function TabLayout() {
     color: APP_COLORS.primary,
     fontSize: 18,
     fontWeight: "500",
+    fontFamily: "Montserrat-SemiBold",
     marginLeft: -8,
   };
   const drawerPanelStyle = {
@@ -339,6 +340,7 @@ export default function TabLayout() {
       >
         {TAB_ROUTES.map((tab) => (
           <Tabs.Screen
+            style={{fontFamily: "Montserrat-Regular"}}
             key={tab.route}
             name={tab.route}
             options={{

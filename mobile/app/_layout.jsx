@@ -6,7 +6,7 @@ import {
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
-import { ActivityIndicator, View, useColorScheme } from "react-native";
+import { ActivityIndicator, View, useColorScheme, Text, TextInput, Platform } from "react-native";
 import "react-native-reanimated";
 import "../global.css";
 import { useFonts } from "expo-font";
@@ -85,6 +85,43 @@ function RootNavigator() {
         <ActivityIndicator size="large" color={APP_COLORS.primary} />
       </View>
     );
+  }
+
+  // Apply Montserrat as the default font for all Text and TextInput components
+  try {
+    if (Text) {
+      if (!Text.hasOwnProperty("defaultProps") || Text.defaultProps == null) {
+        Text.defaultProps = {};
+      }
+
+      const existingTextStyle = Text.defaultProps.style || [];
+      const existingTextStyleArray = Array.isArray(existingTextStyle)
+        ? existingTextStyle
+        : [existingTextStyle];
+
+      Text.defaultProps.style = [
+        { fontFamily: Platform.OS === "android" ? "Montserrat" : "Montserrat" },
+        ...existingTextStyleArray,
+      ];
+    }
+
+    if (TextInput) {
+      if (!TextInput.hasOwnProperty("defaultProps") || TextInput.defaultProps == null) {
+        TextInput.defaultProps = {};
+      }
+
+      const existingInputStyle = TextInput.defaultProps.style || [];
+      const existingInputStyleArray = Array.isArray(existingInputStyle)
+        ? existingInputStyle
+        : [existingInputStyle];
+
+      TextInput.defaultProps.style = [
+        { fontFamily: Platform.OS === "android" ? "Montserrat" : "Montserrat" },
+        ...existingInputStyleArray,
+      ];
+    }
+  } catch (e) {
+    // swallow in case global default assignment isn't supported on a platform
   }
 
   if (isHydrating) {
