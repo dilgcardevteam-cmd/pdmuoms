@@ -3,6 +3,9 @@
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Http\Request;
+use App\Models\User;
 use App\Models\LocallyFundedProject;
 use Illuminate\Support\Facades\Schema;
 use App\Http\Controllers\RlipLimeProjectController;
@@ -186,6 +189,35 @@ Route::get('/api/municipality-projects', function () {
 
 Route::get('/api/mobile/locally-funded', [App\Http\Controllers\LocallyFundedProjectController::class, 'mobileIndex'])
     ->name('api.mobile.locally-funded');
+
+Route::post('/api/mobile/login', function (Request $request) {
+    $credentials = $request->validate([
+        'username' => ['required', 'string'],
+        'password' => ['required', 'string'],
+    ]);
+
+    $user = User::where('username', $credentials['username'])->first();
+
+    if (!$user || strtolower((string) $user->status) !== 'active' || !Hash::check($credentials['password'], $user->password)) {
+        return response()->json([
+            'message' => 'The username or password is incorrect.',
+        ], 422);
+    }
+
+    Auth::login($user, $request->boolean('remember'));
+    $request->session()->regenerate();
+
+    return response()->json([
+        'message' => 'Login successful.',
+        'user' => [
+            'id' => $user->id,
+            'username' => $user->username,
+            'first_name' => $user->first_name ?? null,
+            'last_name' => $user->last_name ?? null,
+            'status' => $user->status,
+        ],
+    ]);
+})->withoutMiddleware(\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class);
 
 Route::middleware(['auth'])->group(function () {
     // PAGASA time endpoint for live clock display

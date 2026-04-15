@@ -24,8 +24,9 @@ export default function LoginScreen() {
 
   const handleLoginPress = async () => {
     const trimmedUsername = username.trim();
+    const enteredPassword = password;
 
-    if (!trimmedUsername || !password.trim()) {
+    if (!trimmedUsername || !enteredPassword.trim()) {
       Alert.alert("Login required", "Please enter your username and password.");
       return;
     }
@@ -33,12 +34,16 @@ export default function LoginScreen() {
     setIsSubmitting(true);
 
     try {
-      await signIn({ username: trimmedUsername });
+      await signIn({ username: trimmedUsername, password: enteredPassword });
+      router.replace(APP_ROUTES.homeTab);
+    } catch (error) {
+      Alert.alert(
+        "Login failed",
+        error?.message || "The username or password is incorrect."
+      );
     } finally {
       setIsSubmitting(false);
     }
-
-    router.replace(APP_ROUTES.homeTab);
   };
 
   return (

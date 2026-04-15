@@ -1,7 +1,10 @@
 import * as SecureStore from "expo-secure-store";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 
+import { API_CANDIDATE_BASE_URLS, buildApiUrl } from "../constants/api";
+
 const AUTH_STORAGE_KEY = "pdmuoms.mobile.auth.session";
+const AUTH_STORAGE_VERSION = 2;
 
 const AuthContext = createContext(null);
 
@@ -26,9 +29,17 @@ export function AuthProvider({ children }) {
         }
 
         const parsedSession = JSON.parse(rawSession);
+
+        if (parsedSession?.authVersion !== AUTH_STORAGE_VERSION) {
+          await SecureStore.deleteItemAsync(AUTH_STORAGE_KEY);
+          setSession(null);
+          return;
+        }
+
         setSession(parsedSession);
       } catch {
         if (isMounted) {
+          await SecureStore.deleteItemAsync(AUTH_STORAGE_KEY);
           setSession(null);
         }
       } finally {
@@ -46,16 +57,68 @@ export function AuthProvider({ children }) {
   }, []);
 
   const signIn = async (payload) => {
-    const nextSession = {
-      username: payload?.username ?? "",
-      loggedInAt: Date.now(),
-    };
+    const username = String(payload?.username ?? "").trim();
+    const password = String(payload?.password ?? "");
 
-    await SecureStore.setItemAsync(
-      AUTH_STORAGE_KEY,
-      JSON.stringify(nextSession)
+    if (!username || !password) {
+      throw new Error("Please enter your username and password.");
+    }
+
+    let lastNetworkError = null;
+    let lastAuthError = null;
+
+    for (const baseUrl of API_CANDIDATE_BASE_URLS) {
+      try {
+        const response = await fetch(buildApiUrl("/api/mobile/login", baseUrl), {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ username, password }),
+        });
+
+        const payloadJson = await response.json().catch(() => null);
+
+        if (!response.ok) {
+          const message = payloadJson?.message || "The username or password is incorrect.";
+          const authError = new Error(message);
+          authError.isAuthError = true;
+          throw authError;
+        }
+
+        const user = payloadJson?.user || {};
+        const nextSession = {
+          authVersion: AUTH_STORAGE_VERSION,
+          authenticatedAt: Date.now(),
+          id: user.id ?? null,
+          username: user.username || username,
+          first_name: user.first_name ?? null,
+          last_name: user.last_name ?? null,
+          status: user.status ?? null,
+        };
+
+        await SecureStore.setItemAsync(
+          AUTH_STORAGE_KEY,
+          JSON.stringify(nextSession)
+        );
+        setSession(nextSession);
+        return nextSession;
+      } catch (error) {
+        if (error?.isAuthError) {
+          lastAuthError = error;
+          continue;
+        }
+
+        lastNetworkError = error;
+      }
+    }
+
+    throw (
+      lastAuthError ||
+      lastNetworkError ||
+      new Error("Unable to verify credentials right now.")
     );
-    setSession(nextSession);
   };
 
   const signOut = async () => {
