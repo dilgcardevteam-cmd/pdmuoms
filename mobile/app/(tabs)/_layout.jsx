@@ -434,7 +434,7 @@ export default function TabLayout() {
             </View>
 
             {/* Profile card */}
-            <View className="mt-4">
+            <View className="mt-4 flex-1">
               <View
                 className="rounded-xl px-3 py-3"
                 style={{ backgroundColor: 'rgba(255,255,255,0.08)' }}
@@ -558,35 +558,6 @@ export default function TabLayout() {
                             </Pressable>
                           ))}
                         </View>
-                        {/* Bottom separator + Settings / Logout */}
-                        <View className="mt-6 border-t pt-4" style={{ borderTopColor: 'rgba(255,255,255,0.12)' }}>
-                          <Pressable
-                            className="flex-row items-center px-2 py-3 rounded"
-                            style={({ pressed }) => ({ opacity: pressed ? 0.9 : 1 })}
-                            onPress={() => {
-                              handleDrawerItemPress(APP_ROUTES.settings);
-                            }}
-                          >
-                            <Feather name="settings" size={16} color="#EAF1FF" />
-                            <Text className="ml-3 text-[14px] text-white font-semibold">Settings</Text>
-                          </Pressable>
-
-                          <Pressable
-                            className="flex-row items-center px-2 py-3 mt-3 rounded"
-                            style={({ pressed }) => ({ opacity: pressed ? 0.9 : 1 })}
-                            onPress={async () => {
-                              try {
-                                await signOut();
-                              } catch (e) {
-                                // ignore
-                              }
-                              router.replace(APP_ROUTES.login);
-                            }}
-                          >
-                            <Feather name="log-out" size={16} color={APP_COLORS.primaryRed} />
-                            <Text className="ml-3 text-[14px] text-[#FCA5A5]">Log out</Text>
-                          </Pressable>
-                        </View>
                       </Animated.View>
                     ) : null}
 
@@ -622,6 +593,56 @@ export default function TabLayout() {
                   </View>
                 );
               })}
+            </View>
+
+            <View className="mt-auto pb-6 pt-4">
+              <View
+                className="mb-4 border-t"
+                style={{ borderTopColor: "rgba(255,255,255,0.12)" }}
+              />
+
+              <Pressable
+                className="flex-row items-center rounded-xl px-2 py-3"
+                style={({ pressed }) => ({
+                  backgroundColor: pressed
+                    ? "rgba(255, 255, 255, 0.08)"
+                    : "transparent",
+                  opacity: pressed ? 0.92 : 1,
+                })}
+                accessibilityRole="button"
+                onPress={() => {
+                  handleDrawerItemPress(APP_ROUTES.settings);
+                }}
+              >
+                <Feather name="settings" size={16} color="#EAF1FF" />
+                <Text className="ml-3 text-[14px] font-semibold text-white">
+                  Settings
+                </Text>
+              </Pressable>
+
+              <Pressable
+                className="mt-2 flex-row items-center rounded-xl px-2 py-3"
+                style={({ pressed }) => ({
+                  backgroundColor: pressed
+                    ? "rgba(248, 113, 113, 0.12)"
+                    : "transparent",
+                  opacity: pressed ? 0.92 : 1,
+                })}
+                accessibilityRole="button"
+                onPress={async () => {
+                  try {
+                    await signOut();
+                  } catch (e) {
+                    // ignore
+                  }
+                  router.replace(APP_ROUTES.login);
+                }}
+              >
+                <Feather name="log-out" size={16} color={APP_COLORS.primaryRed} />
+                <Text className="ml-3 text-[14px] font-semibold text-[#FCA5A5]">
+                  Log out
+                </Text>
+              </Pressable>
             </View>
           </Animated.View>
         </View>
