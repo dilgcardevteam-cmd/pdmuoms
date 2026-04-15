@@ -72,6 +72,14 @@ export function formatUpdatedAt(value) {
 export function useLocallyFundedProjects() {
   const { activeBaseUrl, fetchJsonWithFallback } = useWebAppRequest();
   const [projects, setProjects] = useState([]);
+  const [filterOptions, setFilterOptions] = useState({
+    fundingYears: [],
+    fundSources: [],
+    provinces: [],
+    citiesByProvince: {},
+    procurementTypes: [],
+    statuses: [],
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -91,9 +99,41 @@ export function useLocallyFundedProjects() {
           "/api/mobile/locally-funded?per_page=50"
         );
         const rows = Array.isArray(payload?.data) ? payload.data : [];
+        const filters = payload?.meta?.filters || {};
+
+        setFilterOptions({
+          fundingYears: Array.isArray(filters.funding_years)
+            ? filters.funding_years.map((year) => String(year).trim()).filter(Boolean)
+            : [],
+          fundSources: Array.isArray(filters.fund_sources)
+            ? filters.fund_sources.map((source) => String(source).trim()).filter(Boolean)
+            : [],
+          provinces: Array.isArray(filters.provinces)
+            ? filters.provinces.map((province) => String(province).trim()).filter(Boolean)
+            : [],
+          citiesByProvince:
+            filters.cities_by_province && typeof filters.cities_by_province === "object"
+              ? filters.cities_by_province
+              : {},
+          procurementTypes: Array.isArray(filters.procurement_types)
+            ? filters.procurement_types.map((type) => String(type).trim()).filter(Boolean)
+            : [],
+          statuses: Array.isArray(filters.statuses)
+            ? filters.statuses.map((status) => String(status).trim()).filter(Boolean)
+            : [],
+        });
+
         setProjects(rows.map(normalizeProjectRow));
       } catch (error) {
         setProjects([]);
+        setFilterOptions({
+          fundingYears: [],
+          fundSources: [],
+          provinces: [],
+          citiesByProvince: {},
+          procurementTypes: [],
+          statuses: [],
+        });
 
         const hint =
           `Make sure Laravel is running and your phone can reach your computer on the same network. Current base URL: ${API_URL}. You can set EXPO_PUBLIC_API_URL to your PC IP, for example http://192.168.x.x:8000.`;
@@ -113,6 +153,7 @@ export function useLocallyFundedProjects() {
   return {
     activeBaseUrl,
     projects,
+    filterOptions,
     isLoading,
     isRefreshing,
     errorMessage,

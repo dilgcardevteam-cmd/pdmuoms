@@ -194,6 +194,8 @@ class LocallyFundedProjectController extends Controller
             ];
         })->values();
 
+        $filterOptions = $this->getProjectFormOptions();
+
         return response()->json([
             'data' => $data,
             'meta' => [
@@ -201,6 +203,14 @@ class LocallyFundedProjectController extends Controller
                 'last_page' => $projects->lastPage(),
                 'per_page' => $projects->perPage(),
                 'total' => $projects->total(),
+                'filters' => [
+                    'funding_years' => array_values($filterOptions['fundingYears'] ?? []),
+                    'fund_sources' => array_values($filterOptions['fundSources'] ?? []),
+                    'provinces' => array_values($filterOptions['provinces'] ?? []),
+                    'cities_by_province' => $filterOptions['provinceMunicipalities'] ?? [],
+                    'procurement_types' => array_values($filterOptions['procurementTypes'] ?? []),
+                    'statuses' => array_values($filterOptions['statusOptions'] ?? []),
+                ],
             ],
         ]);
     }
