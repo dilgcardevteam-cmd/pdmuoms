@@ -6,12 +6,14 @@ import {
   Easing,
   Image,
   Pressable,
+  ScrollView,
   Text,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "../../contexts/AuthContext";
 import { useFetchLoggedUser } from "../../hooks/useFetchLoggedUser";
+import ConfirmationModal from "../../components/common/ConfirmationModal";
 
 import {
   APP_ROUTES,
@@ -103,8 +105,19 @@ const DRAWER_MENU_ITEMS = [
     label: "Utilities",
     icon: "tool",
   },
-  
-    // (settings moved to bottom area)
+  {
+    key: "settings",
+    label: "Settings",
+    icon: "settings",
+    route: APP_ROUTES.settings,
+  },
+  {
+    key: "logout",
+    label: "Log out",
+    icon: "log-out",
+    action: "logout",
+    destructive: true,
+  },
 ];
 
 export default function TabLayout() {
@@ -114,6 +127,8 @@ export default function TabLayout() {
   const { firstName, lastName } = useFetchLoggedUser();
   const { signOut } = useAuth();
   const [isDrawerVisible, setIsDrawerVisible] = useState(false);
+  const [isLogoutModalVisible, setIsLogoutModalVisible] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState({
     "project-monitoring": false,
   });
@@ -121,7 +136,6 @@ export default function TabLayout() {
   const projectMonitoringAnimation = useRef(new Animated.Value(0)).current;
   const tabIndicatorIndex = useRef(new Animated.Value(0)).current;
   const previousTabIndex = useRef(0);
-  // settings moved to bottom area
   const inactiveTabColor = APP_COLORS.primaryMuted;
   const drawerWidth = 320;
   const headerStyle = {
@@ -139,8 +153,8 @@ export default function TabLayout() {
     marginLeft: -8,
   };
   const drawerPanelStyle = {
-    width: 320,
-    maxWidth: "86%",
+    width: 318,
+    maxWidth: "88%",
     backgroundColor: APP_COLORS.primary,
     shadowColor: "#0f172a",
     shadowOpacity: 0.24,
@@ -201,6 +215,21 @@ export default function TabLayout() {
 
     router.push(routePath);
     closeDrawer();
+  };
+
+  const handleLogoutConfirm = async () => {
+    setIsSigningOut(true);
+
+    try {
+      await signOut();
+      setIsLogoutModalVisible(false);
+      closeDrawer();
+      router.replace(APP_ROUTES.login);
+    } catch (_error) {
+      // ignore logout errors and keep user on current screen
+    } finally {
+      setIsSigningOut(false);
+    }
   };
 
   const shouldHideBottomNavbar = pathname.includes("/project-monitoring/");
@@ -407,9 +436,13 @@ export default function TabLayout() {
           />
 
           <Animated.View
-            className="rounded-r-[14px] px-[22px] pt-14"
+            className="h-full rounded-r-[14px] px-[18px]"
             style={[
               drawerPanelStyle,
+              {
+                paddingTop: Math.max(insets.top + 12, 28),
+                paddingBottom: Math.max(insets.bottom + 8, 16),
+              },
               {
                 transform: [
                   {
@@ -422,41 +455,51 @@ export default function TabLayout() {
               },
             ]}
           >
-            <View className="flex-row items-center">
-              <Image
-                source={require("../../assets/images/dilg-logo.png")}
-                className="h-9 w-9"
-                resizeMode="contain"
-              />
-              <Text className="ml-2.5 text-[38px] font-bold tracking-[0.4px] text-white">
-                PRISM
-              </Text>
-            </View>
+            <View className="flex-1">
+              <View className="flex-row items-center px-1">
+                <Image
+                  source={require("../../assets/images/dilg-logo.png")}
+                  className="h-9 w-9"
+                  resizeMode="contain"
+                />
+                <Text className="ml-2.5 text-[52px] font-bold leading-[56px] tracking-[0.2px] text-white">
+                  PRISM
+                </Text>
+              </View>
 
-            {/* Profile card */}
-            <View className="mt-4 flex-1">
-              <View
-                className="rounded-xl px-3 py-3"
-                style={{ backgroundColor: 'rgba(255,255,255,0.08)' }}
+              <ScrollView
+                className="mt-3 flex-1"
+                contentContainerStyle={{ paddingBottom: 18 }}
+                showsVerticalScrollIndicator={false}
               >
-                <View className="flex-row items-center">
-                  <View className="h-10 w-10 rounded-full items-center justify-center bg-white/10">
-                    <Feather name="user" size={20} color="#EAF1FF" />
-                  </View>
-                  <View className="ml-3">
-                    <Text className="text-[16px] font-semibold text-white">{(firstName ?? 'User') + (lastName ? ' ' + lastName : '')}</Text>
+                <View
+                  className="my-4 border-b"
+                  style={{ borderBottomColor: "rgba(255, 255, 255, 0.12)" }}
+                />
+
+                <View
+                  className="mt-1 mb-4 rounded-xl px-3 py-3"
+                  style={{ backgroundColor: "rgba(255,255,255,0.08)" }}
+                >
+                  <View className="flex-row items-center">
+                    <View className="h-10 w-10 rounded-full items-center justify-center bg-white/10">
+                      <Feather name="user" size={20} color="#EAF1FF" />
+                    </View>
+                    <View className="ml-3 flex-1">
+                      <Text
+                        numberOfLines={1}
+                        className="text-[16px] font-semibold text-white"
+                      >
+                        {(firstName ?? "User") + (lastName ? " " + lastName : "")}
+                      </Text>
+                      <Text className="mt-0.5 text-[12px] text-white/70">
+                        Mobile User
+                      </Text>
+                    </View>
                   </View>
                 </View>
-              </View>
-            </View>
 
-            <View
-              className="mt-4 border-b"
-              style={{ borderBottomColor: "rgba(255, 255, 255, 0.12)" }}
-            />
-
-            <View className="mt-4">
-              {DRAWER_MENU_ITEMS.map((item, idx) => {
+                {DRAWER_MENU_ITEMS.map((item, idx) => {
                 const hasChildren = Array.isArray(item.children) && item.children.length > 0;
                 const isExpanded = expandedMenus[item.key];
                 const isProjectMonitoringSection = item.key === PROJECT_MONITORING_KEY;
@@ -473,64 +516,115 @@ export default function TabLayout() {
                   outputRange: ["0deg", "180deg"],
                 });
 
-                return (
-                  <View key={item.key ?? item.label ?? idx}>
-                    <Pressable
-                      className="mb-2 flex-row items-center rounded-xl px-2 py-2.5"
-                      style={({ pressed }) => ({
-                        backgroundColor: pressed
-                          ? "rgba(255, 255, 255, 0.12)"
-                          : "transparent",
-                        opacity: pressed ? 0.9 : 1,
-                      })}
-                      accessibilityRole="button"
-                      accessibilityState={hasChildren ? { expanded: !!isExpanded } : undefined}
-                      onPress={() => {
-                        if (hasChildren) {
-                          toggleMenuSection(item.key);
-                          return;
-                        }
+                  return (
+                    <View key={item.key ?? item.label ?? idx}>
+                      {item.key === PROJECT_MONITORING_KEY || item.key === "data-management" || item.key === "settings" ? (
+                        <View
+                          className="my-6 border-t"
+                          style={{ borderTopColor: "rgba(255, 255, 255, 0.16)" }}
+                        />
+                      ) : null}
 
-                        handleDrawerItemPress(item.route);
-                      }}
-                    >
-                      <Feather
-                        name={item.icon}
-                        size={16}
-                        color="#EAF1FF"
-                      />
-                      <Text className="ml-3 flex-1 text-[13px] leading-[18px] text-white/90">
-                        {item.label}
-                      </Text>
-                      {hasChildren ? (
-                        isProjectMonitoringSection ? (
-                          <Animated.View style={{ transform: [{ rotate: chevronRotate }] }}>
+                      <Pressable
+                        className="mb-2 flex-row items-center rounded-xl px-2 py-2.5"
+                        style={({ pressed }) => ({
+                          backgroundColor: pressed
+                            ? "rgba(255, 255, 255, 0.12)"
+                            : "transparent",
+                          opacity: pressed ? 0.9 : 1,
+                        })}
+                        accessibilityRole="button"
+                        accessibilityState={hasChildren ? { expanded: !!isExpanded } : undefined}
+                        onPress={() => {
+                          if (hasChildren) {
+                            toggleMenuSection(item.key);
+                            return;
+                          }
+
+                          if (item.action === "logout") {
+                            setIsLogoutModalVisible(true);
+                            return;
+                          }
+
+                          handleDrawerItemPress(item.route);
+                        }}
+                      >
+                        <Feather
+                          name={item.icon}
+                          size={16}
+                          color={item.destructive ? APP_COLORS.primaryRed : "#EAF1FF"}
+                        />
+                        <Text
+                          className="ml-3 flex-1 text-[13px] leading-[18px]"
+                          style={{
+                            color: item.destructive
+                              ? "#FCA5A5"
+                              : "rgba(255, 255, 255, 0.9)",
+                            fontWeight: item.destructive ? "600" : "400",
+                          }}
+                        >
+                          {item.label}
+                        </Text>
+                        {hasChildren ? (
+                          isProjectMonitoringSection ? (
+                            <Animated.View style={{ transform: [{ rotate: chevronRotate }] }}>
+                              <Feather
+                                name="chevron-down"
+                                size={16}
+                                color="#C4D7FF"
+                              />
+                            </Animated.View>
+                          ) : (
                             <Feather
-                              name="chevron-down"
+                              name={isExpanded ? "chevron-up" : "chevron-down"}
                               size={16}
                               color="#C4D7FF"
                             />
-                          </Animated.View>
-                        ) : (
-                          <Feather
-                            name={isExpanded ? "chevron-up" : "chevron-down"}
-                            size={16}
-                            color="#C4D7FF"
-                          />
-                        )
-                      ) : null}
-                    </Pressable>
+                          )
+                        ) : null}
+                      </Pressable>
 
-                    {hasChildren && isProjectMonitoringSection ? (
-                      <Animated.View
-                        className="overflow-hidden"
-                        pointerEvents={isExpanded ? "auto" : "none"}
-                        style={{
-                          height: submenuHeight,
-                          opacity: projectMonitoringAnimation,
-                          transform: [{ translateY: submenuTranslateY }],
-                        }}
-                      >
+                      {hasChildren && isProjectMonitoringSection ? (
+                        <Animated.View
+                          className="overflow-hidden"
+                          pointerEvents={isExpanded ? "auto" : "none"}
+                          style={{
+                            height: submenuHeight,
+                            opacity: projectMonitoringAnimation,
+                            transform: [{ translateY: submenuTranslateY }],
+                          }}
+                        >
+                          <View className="mb-2 ml-3 rounded-xl border border-white/20 bg-white/10 px-2 py-2">
+                            {item.children.map((childItem, cidx) => (
+                              <Pressable
+                                key={childItem.key ?? childItem.label ?? cidx}
+                                className="mb-1.5 flex-row items-center rounded-lg px-2 py-2"
+                                style={({ pressed }) => ({
+                                  backgroundColor: pressed
+                                    ? "rgba(255, 255, 255, 0.16)"
+                                    : "transparent",
+                                  opacity: pressed ? 0.92 : 1,
+                                })}
+                                accessibilityRole="button"
+                                onPress={() => {
+                                  handleDrawerItemPress(childItem.route);
+                                }}
+                              >
+                                <Feather
+                                  name={childItem.icon}
+                                  size={14}
+                                  color="#EAF1FF"
+                                />
+                                <Text className="ml-3 flex-1 text-[13px] leading-[18px] text-white">
+                                  {childItem.label}
+                                </Text>
+                              </Pressable>
+                            ))}
+                          </View>
+                        </Animated.View>
+                      ) : null}
+
+                      {hasChildren && !isProjectMonitoringSection && isExpanded ? (
                         <View className="mb-2 ml-3 rounded-xl border border-white/20 bg-white/10 px-2 py-2">
                           {item.children.map((childItem, cidx) => (
                             <Pressable
@@ -558,95 +652,32 @@ export default function TabLayout() {
                             </Pressable>
                           ))}
                         </View>
-                      </Animated.View>
-                    ) : null}
-
-                    {hasChildren && !isProjectMonitoringSection && isExpanded ? (
-                      <View className="mb-2 ml-3 rounded-xl border border-white/20 bg-white/10 px-2 py-2">
-                        {item.children.map((childItem, cidx) => (
-                          <Pressable
-                            key={childItem.key ?? childItem.label ?? cidx}
-                            className="mb-1.5 flex-row items-center rounded-lg px-2 py-2"
-                            style={({ pressed }) => ({
-                              backgroundColor: pressed
-                                ? "rgba(255, 255, 255, 0.16)"
-                                : "transparent",
-                              opacity: pressed ? 0.92 : 1,
-                            })}
-                            accessibilityRole="button"
-                            onPress={() => {
-                              handleDrawerItemPress(childItem.route);
-                            }}
-                          >
-                            <Feather
-                              name={childItem.icon}
-                              size={14}
-                              color="#EAF1FF"
-                            />
-                            <Text className="ml-3 flex-1 text-[13px] leading-[18px] text-white">
-                              {childItem.label}
-                            </Text>
-                          </Pressable>
-                        ))}
-                      </View>
-                    ) : null}
-                  </View>
-                );
-              })}
-            </View>
-
-            <View className="mt-auto pb-6 pt-4">
-              <View
-                className="mb-4 border-t"
-                style={{ borderTopColor: "rgba(255,255,255,0.12)" }}
-              />
-
-              <Pressable
-                className="flex-row items-center rounded-xl px-2 py-3"
-                style={({ pressed }) => ({
-                  backgroundColor: pressed
-                    ? "rgba(255, 255, 255, 0.08)"
-                    : "transparent",
-                  opacity: pressed ? 0.92 : 1,
+                      ) : null}
+                    </View>
+                  );
                 })}
-                accessibilityRole="button"
-                onPress={() => {
-                  handleDrawerItemPress(APP_ROUTES.settings);
-                }}
-              >
-                <Feather name="settings" size={16} color="#EAF1FF" />
-                <Text className="ml-3 text-[14px] font-semibold text-white">
-                  Settings
-                </Text>
-              </Pressable>
+              </ScrollView>
 
-              <Pressable
-                className="mt-2 flex-row items-center rounded-xl px-2 py-3"
-                style={({ pressed }) => ({
-                  backgroundColor: pressed
-                    ? "rgba(248, 113, 113, 0.12)"
-                    : "transparent",
-                  opacity: pressed ? 0.92 : 1,
-                })}
-                accessibilityRole="button"
-                onPress={async () => {
-                  try {
-                    await signOut();
-                  } catch (e) {
-                    // ignore
-                  }
-                  router.replace(APP_ROUTES.login);
-                }}
-              >
-                <Feather name="log-out" size={16} color={APP_COLORS.primaryRed} />
-                <Text className="ml-3 text-[14px] font-semibold text-[#FCA5A5]">
-                  Log out
-                </Text>
-              </Pressable>
             </View>
           </Animated.View>
         </View>
       ) : null}
+
+      <ConfirmationModal
+        visible={isLogoutModalVisible}
+        title="Log out"
+        message="Are you sure you want to log out of your account?"
+        confirmLabel="Log out"
+        cancelLabel="Cancel"
+        destructive
+        loading={isSigningOut}
+        onConfirm={handleLogoutConfirm}
+        onCancel={() => {
+          if (!isSigningOut) {
+            setIsLogoutModalVisible(false);
+          }
+        }}
+      />
     </View>
   );
 }
