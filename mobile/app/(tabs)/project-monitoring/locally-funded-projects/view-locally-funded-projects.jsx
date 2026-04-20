@@ -1,8 +1,26 @@
 import { Feather } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useMemo } from "react";
-import { Pressable, Text, View } from "react-native";
+import { useMemo, useState } from "react";
+import { Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { APP_ROUTES } from "../../../../constants/routes";
+import ProjectProfile from "./sections/ProjectProfile";
+import ContractInformation from "./sections/ContractInformation";
+import PhysicalAccomplishment from "./sections/PhysicalAccomplishment";
+import FinancialAccomplishment from "./sections/FinancialAccomplishment";
+import MonitoringInspectionActivities from "./sections/MonitoringInspectionActivities";
+import PostImplementation from "./sections/PostImplementation";
+import Gallery from "./sections/Gallery";
+
+const SECTION_TABS = [
+  { key: "project-profile", label: "Project Profile" },
+  { key: "contract-information", label: "Contract Information" },
+  { key: "physical-accomplishment", label: "Physical Accomplishment" },
+  { key: "financial-accomplishment", label: "Financial Accomplishment" },
+  { key: "monitoring-inspection", label: "Monitoring/Inspection Activities" },
+  { key: "post-implementation", label: "Post Implementation" },
+  { key: "gallery", label: "Gallery" },
+];
 
 function parseProjectParam(rawValue) {
   if (typeof rawValue !== "string" || !rawValue.trim()) {
@@ -16,39 +34,72 @@ function parseProjectParam(rawValue) {
   }
 }
 
-function DetailRow({ label, value }) {
+function SectionPill({ label, isActive, onPress }) {
   return (
-    <View className="mt-2 flex-row items-center">
-      <Feather name={label === "Project Code" ? "paperclip" : "calendar"} size={20} color="#0f2f7a" />
+    <Pressable
+      onPress={onPress}
+      className={`mr-2 rounded-full border px-4 py-2 ${
+        isActive ? "border-[#0b3d91] bg-[#0b3d91]" : "border-[#b7c7e6] bg-[#f1f5fb]"
+      }`}
+      accessibilityRole="button"
+      accessibilityLabel={`Open ${label}`}
+    >
       <Text
-        className="ml-2 text-[14px] text-[#2f4f9c]"
-        style={{ fontFamily: "Montserrat" }}
+        className={`text-[12px] ${isActive ? "text-white" : "text-[#0b3d91]"}`}
+        style={{ fontFamily: "Montserrat-SemiBold" }}
       >
-        {value || "N/A"}
+        {label}
       </Text>
-    </View>
+    </Pressable>
   );
 }
+
+
 
 export default function ViewLocallyFundedProjectsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const [activeSectionKey, setActiveSectionKey] = useState("project-profile");
 
   const project = useMemo(() => parseProjectParam(params.project), [params.project]);
 
   const projectTitle = String(project?.title ?? "Unknown Project");
-  const projectCode = String(project?.code ?? "N/A");
-  const fundingYear = String(project?.fundingYear ?? "N/A");
-  const fundSource = String(project?.fundSource ?? "N/A");
+
+  const activeSection = useMemo(
+    () => SECTION_TABS.find((section) => section.key === activeSectionKey) || SECTION_TABS[0],
+    [activeSectionKey]
+  );
+
+  const renderActiveSection = () => {
+    switch (activeSectionKey) {
+      case "project-profile":
+        return <ProjectProfile project={project} />;
+      case "contract-information":
+        return <ContractInformation project={project} />;
+      case "physical-accomplishment":
+        return <PhysicalAccomplishment />;
+      case "financial-accomplishment":
+        return <FinancialAccomplishment />;
+      case "monitoring-inspection":
+        return <MonitoringInspectionActivities />;
+      case "post-implementation":
+        return <PostImplementation />;
+      case "gallery":
+        return <Gallery />;
+      default:
+        return <ProjectProfile project={project} />;
+    }
+  };
 
   return (
     <SafeAreaView className="flex-1 bg-[#f1eff5]" edges={["left", "right"]}>
+      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 18 }}>
       <View className="px-4 pt-4">
         <View className="flex-row items-start">
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Go back"
-            onPress={() => router.back()}
+            accessibilityLabel="Go back to projects list"
+            onPress={() => router.push(APP_ROUTES.projectMonitoring.locallyFundedProjects)}
             className="mr-2 mt-0.5 h-7 w-7 items-center justify-center rounded-full"
             hitSlop={8}
           >
@@ -65,19 +116,25 @@ export default function ViewLocallyFundedProjectsScreen() {
 
         <View className="mt-3 border-b border-[#b8bdc9]" />
 
-        <View className="mt-3">
-          <Text
-            className="text-[16px] text-[#0f2f7a]"
-            style={{ fontFamily: "Montserrat-SemiBold" }}
-          >
-            Project Information
-          </Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          className="mt-3"
+          contentContainerStyle={{ paddingRight: 12 }}
+        >
+          {SECTION_TABS.map((section) => (
+            <SectionPill
+              key={section.key}
+              label={section.label}
+              isActive={activeSection.key === section.key}
+              onPress={() => setActiveSectionKey(section.key)}
+            />
+          ))}
+        </ScrollView>
 
-          <DetailRow label="Project Code" value={projectCode} />
-          <DetailRow label="Funding Year" value={fundingYear} />
-          <DetailRow label="Funding Source" value={fundSource} />
-        </View>
+        {renderActiveSection()}
       </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
