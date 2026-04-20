@@ -93,13 +93,8 @@ export default function ViewLocallyFundedProjectsScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-[#f1eff5]" edges={["left", "right"]}>
-      <ScrollView
-        className="flex-1"
-        style={{ flex: 1 }}
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: 36 }}
-        keyboardShouldPersistTaps="handled"
-      >
-      <View className="min-h-full px-4 pt-4 pb-4">
+      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 18 }}>
+      <View className="px-4 pt-4">
         <View className="flex-row items-start">
           <Pressable
             accessibilityRole="button"
