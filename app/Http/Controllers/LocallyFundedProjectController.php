@@ -22,7 +22,7 @@ class LocallyFundedProjectController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('auth')->except(['mobileIndex', 'viewMobileGalleryImage']);
+        $this->middleware('auth')->except(['mobileIndex', 'viewMobileGalleryImage', 'mobileUploadGalleryImage']);
         $this->middleware('crud_permission:locally_funded_projects,view')->only(['index']);
         $this->middleware('crud_permission:locally_funded_projects,view')->only(['showSubaybayan', 'show', 'viewGalleryImage']);
         $this->middleware('crud_permission:locally_funded_projects,add')->only(['create', 'store']);
@@ -33,6 +33,33 @@ class LocallyFundedProjectController extends Controller
     private function locallyFundedGalleryCategories(): array
     {
         return ['All', 'Before', 'Project Billboard', 'Community Billboard', '20-40%', '50-70%', '90%', 'Completed', 'During'];
+    }
+
+    private function sanitizeGalleryFileSegment(?string $value, string $fallback = 'na'): string
+    {
+        $normalized = preg_replace('/[^A-Za-z0-9]+/', '-', strtoupper((string) ($value ?? '')));
+        $normalized = trim((string) $normalized, '-');
+
+        return $normalized !== '' ? $normalized : strtoupper($fallback);
+    }
+
+    private function buildGalleryImageFileName(
+        LocallyFundedProject $project,
+        string $category,
+        Carbon $timestamp,
+        int $sequence,
+        string $extension
+    ): string {
+        $projectCode = $this->sanitizeGalleryFileSegment(
+            $project->subaybayan_project_code ?: ('PROJECT-' . $project->id),
+            'PROJECT-' . $project->id
+        );
+        $stage = $this->sanitizeGalleryFileSegment($category, 'DURING');
+        $datePart = $timestamp->format('Ymd');
+        $sequencePart = str_pad((string) max($sequence, 1), 3, '0', STR_PAD_LEFT);
+        $safeExtension = strtolower(trim($extension, '.'));
+
+        return $projectCode . '-' . $stage . '-' . $datePart . '-' . $sequencePart . '.' . ($safeExtension !== '' ? $safeExtension : 'jpg');
     }
 
     public function mobileIndex(Request $request)
@@ -362,6 +389,9 @@ class LocallyFundedProjectController extends Controller
                     'id',
                     'project_id',
                     'category',
+                    'latitude',
+                    'longitude',
+                    'accuracy',
                     'created_at',
                 ]);
 
@@ -376,6 +406,9 @@ class LocallyFundedProjectController extends Controller
                                 'project' => (int) $row->project_id,
                                 'galleryImage' => (int) $row->id,
                             ]),
+                            'latitude' => $row->latitude !== null ? (float) $row->latitude : null,
+                            'longitude' => $row->longitude !== null ? (float) $row->longitude : null,
+                            'accuracy' => $row->accuracy !== null ? (float) $row->accuracy : null,
                             'created_at' => $row->created_at,
                         ];
                     })->values()->all();
@@ -2866,6 +2899,102 @@ $url = route('locally-funded-project.show', $project, false);
         ]);
     }
 
+    public function mobileUploadGalleryImage(Request $request, LocallyFundedProject $project)
+    {
+        if (!Schema::hasTable('locally_funded_gallery_images')) {
+            return response()->json([
+                'message' => 'Gallery table is missing. Please run migrations first.',
+            ], 500);
+        }
+
+        $categories = array_values(array_filter($this->locallyFundedGalleryCategories(), function (string $category): bool {
+            return $category !== 'All';
+        }));
+
+        $validated = $request->validate([
+            'gallery_category' => ['required', 'string', Rule::in($categories)],
+            'gallery_image' => ['required', 'image', 'mimes:jpg,jpeg,png,webp,gif,bmp', 'max:10240'],
+            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
+            'accuracy' => ['nullable', 'numeric', 'min:0'],
+        ]);
+
+        $category = InputSanitizer::sanitizeNullablePlainText($validated['gallery_category']) ?? 'During';
+        $imageFile = $request->file('gallery_image');
+        if (!$imageFile || !$imageFile->isValid()) {
+            return response()->json([
+                'message' => 'No valid image was uploaded.',
+            ], 422);
+        }
+
+        $now = now();
+        $today = $now->toDateString();
+        $existingCountForDay = DB::table('locally_funded_gallery_images')
+            ->where('project_id', $project->id)
+            ->where('category', $category)
+            ->whereDate('created_at', $today)
+            ->count();
+
+        $sequence = $existingCountForDay + 1;
+        $extension = $imageFile->getClientOriginalExtension() ?: $imageFile->extension() ?: 'jpg';
+        $directory = 'lfp/gallery/' . $project->id;
+        $fileName = $this->buildGalleryImageFileName($project, $category, $now, $sequence, $extension);
+
+        while (Storage::disk('public')->exists($directory . '/' . $fileName)) {
+            $sequence++;
+            $fileName = $this->buildGalleryImageFileName($project, $category, $now, $sequence, $extension);
+        }
+
+        $storedPath = $imageFile->storeAs($directory, $fileName, 'public');
+
+        $insertData = [
+            'project_id' => $project->id,
+            'category' => $category,
+            'image_path' => $storedPath,
+            'uploaded_by' => Auth::id(),
+            'created_at' => $now,
+            'updated_at' => $now,
+        ];
+
+        if ($validated['latitude'] !== null && $validated['longitude'] !== null) {
+            $insertData['latitude'] = $validated['latitude'];
+            $insertData['longitude'] = $validated['longitude'];
+            if ($validated['accuracy'] !== null) {
+                $insertData['accuracy'] = $validated['accuracy'];
+            }
+        }
+
+        $galleryImageId = DB::table('locally_funded_gallery_images')->insertGetId($insertData);
+
+        $this->logLocallyFundedActivity(
+            $project,
+            'upload',
+            'Gallery',
+            'Image',
+            'Category: ' . $category . ' • Files: 1',
+            $now,
+            Auth::id()
+        );
+
+        $this->notifyLocallyFundedUpdateRecipients($project, 'uploaded Gallery images', true);
+
+        return response()->json([
+            'message' => 'Gallery image uploaded successfully.',
+            'data' => [
+                'id' => (int) $galleryImageId,
+                'category' => $category,
+                'image_url' => route('api.mobile.locally-funded.gallery-image', [
+                    'project' => (int) $project->id,
+                    'galleryImage' => (int) $galleryImageId,
+                ]),
+                'latitude' => $validated['latitude'] ?? null,
+                'longitude' => $validated['longitude'] ?? null,
+                'accuracy' => $validated['accuracy'] ?? null,
+                'created_at' => $now->toISOString(),
+            ],
+        ], 201);
+    }
+
     public function viewGalleryImage(LocallyFundedProject $project, int $galleryImage)
     {
         $this->authorizeLocallyFundedProjectAccess($project);
@@ -3743,13 +3872,30 @@ $url = route('locally-funded-project.show', $project, false);
             $category = InputSanitizer::sanitizeNullablePlainText($validated['gallery_category']) ?? 'During';
             $uploadedCount = 0;
             $now = now();
+            $today = $now->toDateString();
+            $existingCountForDay = DB::table('locally_funded_gallery_images')
+                ->where('project_id', $project->id)
+                ->where('category', $category)
+                ->whereDate('created_at', $today)
+                ->count();
+            $sequence = $existingCountForDay;
+            $directory = 'lfp/gallery/' . $project->id;
 
             foreach ($request->file('gallery_images', []) as $imageFile) {
                 if (!$imageFile || !$imageFile->isValid()) {
                     continue;
                 }
 
-                $path = $imageFile->store('lfp/gallery/' . $project->id, 'public');
+                $sequence++;
+                $extension = $imageFile->getClientOriginalExtension() ?: $imageFile->extension() ?: 'jpg';
+                $fileName = $this->buildGalleryImageFileName($project, $category, $now, $sequence, $extension);
+
+                while (Storage::disk('public')->exists($directory . '/' . $fileName)) {
+                    $sequence++;
+                    $fileName = $this->buildGalleryImageFileName($project, $category, $now, $sequence, $extension);
+                }
+
+                $path = $imageFile->storeAs($directory, $fileName, 'public');
 
                 DB::table('locally_funded_gallery_images')->insert([
                     'project_id' => $project->id,

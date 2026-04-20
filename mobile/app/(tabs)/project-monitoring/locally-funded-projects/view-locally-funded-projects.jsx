@@ -59,7 +59,11 @@ function SectionPill({ label, isActive, onPress }) {
 export default function ViewLocallyFundedProjectsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const [activeSectionKey, setActiveSectionKey] = useState("project-profile");
+  const initialSectionKey =
+    typeof params.section === "string" && SECTION_TABS.some((section) => section.key === params.section)
+      ? params.section
+      : "project-profile";
+  const [activeSectionKey, setActiveSectionKey] = useState(initialSectionKey);
 
   const project = useMemo(() => parseProjectParam(params.project), [params.project]);
 

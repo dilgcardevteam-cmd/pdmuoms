@@ -194,6 +194,11 @@ Route::get('/api/mobile/locally-funded/{project}/gallery/{galleryImage}', [App\H
     ->whereNumber('galleryImage')
     ->name('api.mobile.locally-funded.gallery-image');
 
+Route::post('/api/mobile/locally-funded/{project}/gallery', [App\Http\Controllers\LocallyFundedProjectController::class, 'mobileUploadGalleryImage'])
+    ->whereNumber('project')
+    ->withoutMiddleware(\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class)
+    ->name('api.mobile.locally-funded.gallery-upload');
+
 Route::post('/api/mobile/login', function (Request $request) {
     $credentials = $request->validate([
         'username' => ['required', 'string'],

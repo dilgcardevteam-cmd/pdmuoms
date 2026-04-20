@@ -7,6 +7,7 @@ export const APP_ROUTES = {
   projectMonitoring: {
     locallyFundedProjects: "/(tabs)/project-monitoring/locally-funded-projects",
     viewLocallyFundedProject: "/(tabs)/project-monitoring/locally-funded-projects/view-locally-funded-projects",
+    locallyFundedGalleryLocation: "/(tabs)/project-monitoring/locally-funded-projects/gallery-image-location",
     rlipLimeDevelopmentFund: "/(tabs)/project-monitoring/rlip-lime-20-development-fund",
     projectAtRisk: "/(tabs)/project-monitoring/project-at-risk",
     sglgifPortal: "/(tabs)/project-monitoring/sglgif-portal",
@@ -25,6 +26,10 @@ export const PROJECT_MONITORING_ROUTES = [
   {
     route: "project-monitoring/locally-funded-projects/view-locally-funded-projects",
     title: "Locally Funded Project Details",
+  },
+  {
+    route: "project-monitoring/locally-funded-projects/gallery-image-location",
+    title: "Image Location",
   },
   {
     route: "project-monitoring/rlip-lime-20-development-fund",

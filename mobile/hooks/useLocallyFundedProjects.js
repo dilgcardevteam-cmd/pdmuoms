@@ -16,6 +16,18 @@ function normalizeProjectRow(row) {
           category: String(image?.category || "").trim() || "During",
           imageUrl: String(image?.image_url || "").trim(),
           createdAt: image?.created_at || null,
+          latitude:
+            image?.latitude === null || image?.latitude === undefined || image?.latitude === ""
+              ? null
+              : Number(image.latitude),
+          longitude:
+            image?.longitude === null || image?.longitude === undefined || image?.longitude === ""
+              ? null
+              : Number(image.longitude),
+          accuracy:
+            image?.accuracy === null || image?.accuracy === undefined || image?.accuracy === ""
+              ? null
+              : Number(image.accuracy),
         }))
         .filter((image) => image.id && image.imageUrl)
     : [];
