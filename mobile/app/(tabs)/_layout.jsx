@@ -458,11 +458,14 @@ export default function TabLayout() {
             <View className="flex-1">
               <View className="flex-row items-center px-1">
                 <Image
-                  source={require("../../assets/images/dilg-logo.png")}
-                  className="h-9 w-9"
+                  source={require("../../assets/images/icon.png")}
+                  className="h-12 w-12"
                   resizeMode="contain"
                 />
-                <Text className="ml-2.5 text-[52px] font-bold leading-[56px] tracking-[0.2px] text-white">
+                
+                    <Text className="ml-2.5 text-[52px] font-bold leading-[56px] tracking-[0.2px] text-white"
+                      style={{fontFamily: "Montserrat-Bold"}}
+                >
                   PRISM
                 </Text>
               </View>

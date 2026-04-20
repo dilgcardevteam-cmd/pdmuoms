@@ -1,4 +1,5 @@
 import { Feather } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -13,10 +14,11 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useDebounce } from "../../../hooks/useDebounce";
+import { useDebounce } from "../../../../hooks/useDebounce";
 import {
   useLocallyFundedProjects,
-} from "../../../hooks/useLocallyFundedProjects";
+} from "../../../../hooks/useLocallyFundedProjects";
+import { APP_ROUTES } from "../../../../constants/routes";
 
 const FILTER_ALL_VALUE = "All";
 
@@ -115,6 +117,7 @@ function buildUniqueOptions(projects, selector) {
 }
 
 export default function LocallyFundedProjectsScreen() {
+  const router = useRouter();
   const { projects, filterOptions: backendFilterOptions, isLoading, isRefreshing, errorMessage, loadProjects } =
     useLocallyFundedProjects();
   const [searchQuery, setSearchQuery] = useState("");
@@ -375,8 +378,34 @@ export default function LocallyFundedProjectsScreen() {
   });
 
   const renderProjectCard = ({ item }) => {
+    const serializedProject = JSON.stringify({
+      id: item.id,
+      title: item.title,
+      code: item.code,
+      fundingYear: item.fundingYear,
+      fundSource: item.fundSource,
+      city: item.city,
+      province: item.province,
+      procurementType: item.procurementType,
+      statusActual: item.statusActual,
+      statusSubaybayan: item.statusSubaybayan,
+    });
+
     return (
-      <View className="mb-3 rounded-3xl border border-[#bfc3c9] bg-[#ebebeb] px-3 py-3">
+      <Pressable
+        className="mb-3"
+        accessibilityRole="button"
+        accessibilityLabel={`View details for ${String(item.title ?? "project")}`}
+        onPress={() => {
+          router.push({
+            pathname: APP_ROUTES.projectMonitoring.viewLocallyFundedProject,
+            params: {
+              project: serializedProject,
+            },
+          });
+        }}
+      >
+      <View className="rounded-3xl border border-[#bfc3c9] bg-[#ebebeb] px-3 py-3">
         <View className="flex-row items-start">
           <View className="flex-1 pr-2">
             <HighlightedText
@@ -417,8 +446,10 @@ export default function LocallyFundedProjectsScreen() {
               />
             </Text>
           </View>
+          <Feather name="chevron-right" size={16} color="#64748b" style={{ marginTop: 4 }} />
         </View>
       </View>
+      </Pressable>
     );
   };
 

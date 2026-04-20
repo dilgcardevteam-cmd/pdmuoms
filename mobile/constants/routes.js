@@ -6,6 +6,7 @@ export const APP_ROUTES = {
   settings: "/(tabs)/settings",
   projectMonitoring: {
     locallyFundedProjects: "/(tabs)/project-monitoring/locally-funded-projects",
+    viewLocallyFundedProject: "/(tabs)/project-monitoring/locally-funded-projects/view-locally-funded-projects",
     rlipLimeDevelopmentFund: "/(tabs)/project-monitoring/rlip-lime-20-development-fund",
     projectAtRisk: "/(tabs)/project-monitoring/project-at-risk",
     sglgifPortal: "/(tabs)/project-monitoring/sglgif-portal",
@@ -18,8 +19,12 @@ export const TAB_ROUTES = [
 
 export const PROJECT_MONITORING_ROUTES = [
   {
-    route: "project-monitoring/locally-funded-projects",
+    route: "project-monitoring/locally-funded-projects/index",
     title: "Locally Funded Projects",
+  },
+  {
+    route: "project-monitoring/locally-funded-projects/view-locally-funded-projects",
+    title: "Locally Funded Project Details",
   },
   {
     route: "project-monitoring/rlip-lime-20-development-fund",
