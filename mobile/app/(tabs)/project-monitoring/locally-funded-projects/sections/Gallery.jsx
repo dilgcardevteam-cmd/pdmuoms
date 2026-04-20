@@ -567,21 +567,21 @@ export default function Gallery({ project }) {
           {filteredImages.map((image) => (
             <Pressable
               key={String(image.id)}
-              onPress={() => openViewer(image)}
+              onPress={() => openImageLocation(image)}
               accessibilityRole="button"
-              accessibilityLabel="Open image"
+              accessibilityLabel="Open image location"
               className="relative mb-3 w-[48%] overflow-hidden rounded-xl border border-[#d3dff3] bg-[#f8fbff]"
             >
               <Pressable
                 onPress={(event) => {
                   event.stopPropagation?.();
-                  openImageLocation(image);
+                  openViewer(image);
                 }}
                 className="absolute right-2 top-2 z-20 h-8 w-8 items-center justify-center rounded-full border border-[#d1ddf3] bg-white/95"
                 accessibilityRole="button"
-                accessibilityLabel="Open image location"
+                accessibilityLabel="Preview full image"
               >
-                <Feather name="map-pin" size={14} color="#0f2f7a" />
+                <Feather name="eye" size={14} color="#0f2f7a" />
               </Pressable>
               <Image
                 source={{ uri: image.imageUrl }}
