@@ -3072,12 +3072,26 @@
             </div>
         </div>
 
-        @php
-            $galleryButtons = ['All', 'Before', 'Project Billboard', 'Community Billboard', '20-40%', '50-70%', '90%', 'Completed', 'During'];
-        @endphp
         <div id="gallerySection" class="project-tab-panel" data-tab-key="gallery" role="tabpanel" aria-labelledby="tab-gallery" style="margin-bottom: 24px; padding: 20px; border: 1px solid #00267C; border-radius: 10px; background-color: #ffffff;">
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 2px solid #00267C; padding-bottom: 10px;">
                 <h3 style="color: #00267C; font-size: 15px; font-weight: 700; margin: 0;">Gallery</h3>
+                @if($canUpdateLocallyFundedProject)
+                    <form method="POST" action="{{ route('locally-funded-project.update', $project) }}" enctype="multipart/form-data" style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: flex-end;">
+                        @csrf
+                        @method('PUT')
+                        <input type="hidden" name="section" value="gallery">
+                        <select name="gallery_category" required style="min-width: 170px; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 12px; background-color: #ffffff; color: #1f2937;">
+                            <option value="">Select category</option>
+                            @foreach(($galleryUploadCategories ?? []) as $uploadCategory)
+                                <option value="{{ $uploadCategory }}">{{ $uploadCategory }}</option>
+                            @endforeach
+                        </select>
+                        <input type="file" name="gallery_images[]" accept="image/*" multiple required style="max-width: 210px; font-size: 12px; color: #374151;">
+                        <button type="submit" style="padding: 8px 14px; border: 0; border-radius: 8px; background-color: #16a34a; color: #ffffff; font-size: 12px; font-weight: 700; cursor: pointer;">
+                            <i class="fas fa-upload" style="margin-right: 6px;"></i>Upload Images
+                        </button>
+                    </form>
+                @endif
             </div>
 
             <div class="lfp-gallery-layout">
@@ -3106,12 +3120,13 @@
                 </aside>
 
                 <div class="lfp-gallery-stage">
-                    <div class="lfp-gallery-sidebar-buttons">
+                    <div class="lfp-gallery-stage-panels">
                         @foreach ($galleryButtons as $index => $buttonLabel)
                             @php
                                 $gallerySlug = \Illuminate\Support\Str::slug($buttonLabel);
                                 $galleryTabId = 'gallery-tab-' . $gallerySlug;
                                 $galleryPanelId = 'gallery-panel-' . $gallerySlug;
+                                $panelImages = $galleryImagesByCategory[$buttonLabel] ?? [];
                             @endphp
                             <div
                                 id="{{ $galleryPanelId }}"
@@ -3119,7 +3134,37 @@
                                 role="tabpanel"
                                 aria-labelledby="{{ $galleryTabId }}"
                                 aria-hidden="{{ $index === 0 ? 'false' : 'true' }}"
-                            ></div>
+                            >
+                                @if(count($panelImages) === 0)
+                                    <div class="lfp-gallery-empty-state">
+                                        No images uploaded under {{ $buttonLabel }} yet.
+                                    </div>
+                                @else
+                                    <div class="lfp-gallery-grid">
+                                        @foreach($panelImages as $image)
+                                            <article class="lfp-gallery-card">
+                                                <a href="{{ route('locally-funded-project.view-gallery-image', [$project, $image['id']]) }}" target="_blank" rel="noopener" class="lfp-gallery-image-link">
+                                                    <img src="{{ route('locally-funded-project.view-gallery-image', [$project, $image['id']]) }}" alt="{{ $image['file_name'] }}" class="lfp-gallery-image">
+                                                </a>
+                                                <div class="lfp-gallery-card-meta">
+                                                    <div><strong>Category:</strong> {{ $image['category'] }}</div>
+                                                    <div><strong>Uploaded:</strong> {{ $image['uploaded_at_label'] }}</div>
+                                                    <div><strong>By:</strong> {{ $image['uploaded_by_name'] }}</div>
+                                                </div>
+                                                @if($canUpdateLocallyFundedProject)
+                                                    <form method="POST" action="{{ route('locally-funded-project.destroy-gallery-image', [$project, $image['id']]) }}" onsubmit="return confirm('Delete this image?');" style="margin-top: 8px;">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit" class="lfp-gallery-delete-btn">
+                                                            <i class="fas fa-trash" style="margin-right: 6px;"></i>Delete
+                                                        </button>
+                                                    </form>
+                                                @endif
+                                            </article>
+                                        @endforeach
+                                    </div>
+                                @endif
+                            </div>
                         @endforeach
                     </div>
                 </div>
@@ -3394,6 +3439,10 @@
             padding: 12px;
         }
 
+        .lfp-gallery-stage-panels {
+            width: 100%;
+        }
+
         .lfp-gallery-panel {
             display: none;
             min-height: 294px;
@@ -3404,6 +3453,74 @@
 
         .lfp-gallery-panel.is-active {
             display: block;
+        }
+
+        .lfp-gallery-empty-state {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 294px;
+            border: 1px dashed #cbd5e1;
+            border-radius: 10px;
+            background: #ffffff;
+            color: #6b7280;
+            font-size: 13px;
+            font-weight: 600;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .lfp-gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 12px;
+        }
+
+        .lfp-gallery-card {
+            border: 1px solid #dbe3f0;
+            border-radius: 10px;
+            background: #ffffff;
+            overflow: hidden;
+            padding: 10px;
+        }
+
+        .lfp-gallery-image-link {
+            display: block;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #e5e7eb;
+            background-color: #f3f4f6;
+        }
+
+        .lfp-gallery-image {
+            width: 100%;
+            height: 170px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .lfp-gallery-card-meta {
+            display: grid;
+            gap: 4px;
+            margin-top: 8px;
+            font-size: 11px;
+            color: #374151;
+        }
+
+        .lfp-gallery-delete-btn {
+            width: 100%;
+            padding: 7px 10px;
+            border: 1px solid #ef4444;
+            border-radius: 8px;
+            background: #fff1f2;
+            color: #b91c1c;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .lfp-gallery-delete-btn:hover {
+            background: #fee2e2;
         }
 
         #projectProfileSection,

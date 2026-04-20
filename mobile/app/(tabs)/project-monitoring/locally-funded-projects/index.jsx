@@ -408,6 +408,7 @@ export default function LocallyFundedProjectsScreen() {
       actualDateCompletion: item.actualDateCompletion,
       physicalTimeline: item.physicalTimeline,
       currentPhysical: item.currentPhysical,
+      galleryImages: item.galleryImages,
       physicalStatus: item.physicalStatus,
       statusActual: item.statusActual,
       statusSubaybayan: item.statusSubaybayan,

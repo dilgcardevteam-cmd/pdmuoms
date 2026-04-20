@@ -9,6 +9,17 @@ const pesoFormatter = new Intl.NumberFormat("en-PH", {
 });
 
 function normalizeProjectRow(row) {
+  const galleryImages = Array.isArray(row.gallery_images)
+    ? row.gallery_images
+        .map((image) => ({
+          id: image?.id,
+          category: String(image?.category || "").trim() || "During",
+          imageUrl: String(image?.image_url || "").trim(),
+          createdAt: image?.created_at || null,
+        }))
+        .filter((image) => image.id && image.imageUrl)
+    : [];
+
   return {
     id: row.lfp_id || row.subaybayan_project_code,
     code: row.subaybayan_project_code || "-",
@@ -41,6 +52,7 @@ function normalizeProjectRow(row) {
     currentPhysical: row.current_physical && typeof row.current_physical === "object"
       ? row.current_physical
       : null,
+    galleryImages,
     obligation: row.obligation,
     utilizationRate: Number(row.utilization_rate ?? 0),
     physicalStatus: Number(row.subay_accomplishment_pct ?? row.accomplishment_pct_ro ?? 0),

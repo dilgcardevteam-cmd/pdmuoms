@@ -16,17 +16,23 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class LocallyFundedProjectController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('auth')->except(['mobileIndex']);
+        $this->middleware('auth')->except(['mobileIndex', 'viewMobileGalleryImage']);
         $this->middleware('crud_permission:locally_funded_projects,view')->only(['index']);
-        $this->middleware('crud_permission:locally_funded_projects,view')->only(['showSubaybayan', 'show']);
+        $this->middleware('crud_permission:locally_funded_projects,view')->only(['showSubaybayan', 'show', 'viewGalleryImage']);
         $this->middleware('crud_permission:locally_funded_projects,add')->only(['create', 'store']);
-        $this->middleware('crud_permission:locally_funded_projects,update')->only(['edit', 'update']);
+        $this->middleware('crud_permission:locally_funded_projects,update')->only(['edit', 'update', 'destroyGalleryImage']);
         $this->middleware('crud_permission:locally_funded_projects,delete')->only(['destroy']);
+    }
+
+    private function locallyFundedGalleryCategories(): array
+    {
+        return ['All', 'Before', 'Project Billboard', 'Community Billboard', '20-40%', '50-70%', '90%', 'Completed', 'During'];
     }
 
     public function mobileIndex(Request $request)
@@ -339,6 +345,56 @@ class LocallyFundedProjectController extends Controller
                     return $row;
                 })->values();
             }
+        }
+
+        $projectIds = $data
+            ->pluck('lfp_id')
+            ->filter(fn ($id) => $id !== null)
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        if (Schema::hasTable('locally_funded_gallery_images') && $projectIds->isNotEmpty()) {
+            $galleryRows = DB::table('locally_funded_gallery_images')
+                ->whereIn('project_id', $projectIds)
+                ->orderByDesc('created_at')
+                ->get([
+                    'id',
+                    'project_id',
+                    'category',
+                    'created_at',
+                ]);
+
+            $galleryByProject = $galleryRows
+                ->groupBy('project_id')
+                ->map(function ($rowsByProject) {
+                    return $rowsByProject->map(function ($row) {
+                        return [
+                            'id' => (int) $row->id,
+                            'category' => trim((string) ($row->category ?? '')),
+                            'image_url' => route('api.mobile.locally-funded.gallery-image', [
+                                'project' => (int) $row->project_id,
+                                'galleryImage' => (int) $row->id,
+                            ]),
+                            'created_at' => $row->created_at,
+                        ];
+                    })->values()->all();
+                });
+
+            $data = $data->map(function ($row) use ($galleryByProject) {
+                $projectId = (int) ($row['lfp_id'] ?? 0);
+                $row['gallery_images'] = $projectId > 0
+                    ? ($galleryByProject->get($projectId, []))
+                    : [];
+
+                return $row;
+            })->values();
+        } else {
+            $data = $data->map(function ($row) {
+                $row['gallery_images'] = [];
+
+                return $row;
+            })->values();
         }
 
         $filterOptions = $this->getProjectFormOptions();
@@ -2693,7 +2749,61 @@ $url = route('locally-funded-project.show', $project, false);
             'rssa_report_deadline'
         );
 
-        return view('projects.locally-funded-show', compact('project', 'provinces', 'provinceMunicipalities', 'fundSources', 'fundingYears', 'physicalByMonth', 'physicalTimelineByPeriod', 'currentPhysical', 'currentYear', 'currentMonth', 'actualCompletionUpdatedByName', 'financialByMonth', 'financialTotals', 'financialBalance', 'financialUtilizationRate', 'physicalRemarksUpdatedByName', 'physicalRemarksEncodedByName', 'financialRemarksUpdatedByName', 'financialRemarksEncodedByName', 'poMonitoringDateUpdatedByName', 'poFinalInspectionUpdatedByName', 'poRemarksUpdatedByName', 'roMonitoringDateUpdatedByName', 'roFinalInspectionUpdatedByName', 'roRemarksUpdatedByName', 'pcrSubmissionDeadlineUpdatedByName', 'pcrDateSubmittedToPoUpdatedByName', 'pcrMovUploadedByName', 'pcrDateReceivedByRoUpdatedByName', 'pcrRemarksUpdatedByName', 'rssaReportDeadlineUpdatedByName', 'rssaSubmissionStatusUpdatedByName', 'rssaDateSubmittedToPoUpdatedByName', 'rssaDateReceivedByRoUpdatedByName', 'rssaDateSubmittedToCoUpdatedByName', 'rssaRemarksUpdatedByName', 'activityLogs', 'effectivePcrSubmissionDeadline', 'effectiveRssaReportDeadline'));
+        $galleryButtons = $this->locallyFundedGalleryCategories();
+        $galleryUploadCategories = array_values(array_filter($galleryButtons, function (string $category): bool {
+            return $category !== 'All';
+        }));
+        $galleryImagesByCategory = [];
+        foreach ($galleryButtons as $category) {
+            $galleryImagesByCategory[$category] = [];
+        }
+
+        if (Schema::hasTable('locally_funded_gallery_images')) {
+            $galleryRows = DB::table('locally_funded_gallery_images')
+                ->leftJoin('tbusers', 'tbusers.idno', '=', 'locally_funded_gallery_images.uploaded_by')
+                ->where('locally_funded_gallery_images.project_id', $project->id)
+                ->orderByDesc('locally_funded_gallery_images.created_at')
+                ->select(
+                    'locally_funded_gallery_images.id',
+                    'locally_funded_gallery_images.category',
+                    'locally_funded_gallery_images.image_path',
+                    'locally_funded_gallery_images.uploaded_by',
+                    'locally_funded_gallery_images.created_at',
+                    'tbusers.fname',
+                    'tbusers.lname'
+                )
+                ->get();
+
+            foreach ($galleryRows as $row) {
+                $category = trim((string) ($row->category ?? ''));
+                if (!in_array($category, $galleryUploadCategories, true)) {
+                    $category = 'During';
+                }
+
+                $uploadedAtLabel = '-';
+                if (!empty($row->created_at)) {
+                    try {
+                        $uploadedAtLabel = Carbon::parse($row->created_at)->format('M d, Y h:i A');
+                    } catch (\Throwable $e) {
+                        $uploadedAtLabel = (string) $row->created_at;
+                    }
+                }
+
+                $image = [
+                    'id' => (int) $row->id,
+                    'category' => $category,
+                    'image_path' => (string) $row->image_path,
+                    'file_name' => basename((string) $row->image_path),
+                    'uploaded_at_label' => $uploadedAtLabel,
+                    'uploaded_by_name' => trim(((string) ($row->fname ?? '')) . ' ' . ((string) ($row->lname ?? ''))) ?: '-',
+                ];
+
+                $galleryImagesByCategory['All'][] = $image;
+                $galleryImagesByCategory[$category][] = $image;
+            }
+        }
+
+        return view('projects.locally-funded-show', compact('project', 'provinces', 'provinceMunicipalities', 'fundSources', 'fundingYears', 'physicalByMonth', 'physicalTimelineByPeriod', 'currentPhysical', 'currentYear', 'currentMonth', 'actualCompletionUpdatedByName', 'financialByMonth', 'financialTotals', 'financialBalance', 'financialUtilizationRate', 'physicalRemarksUpdatedByName', 'physicalRemarksEncodedByName', 'financialRemarksUpdatedByName', 'financialRemarksEncodedByName', 'poMonitoringDateUpdatedByName', 'poFinalInspectionUpdatedByName', 'poRemarksUpdatedByName', 'roMonitoringDateUpdatedByName', 'roFinalInspectionUpdatedByName', 'roRemarksUpdatedByName', 'pcrSubmissionDeadlineUpdatedByName', 'pcrDateSubmittedToPoUpdatedByName', 'pcrMovUploadedByName', 'pcrDateReceivedByRoUpdatedByName', 'pcrRemarksUpdatedByName', 'rssaReportDeadlineUpdatedByName', 'rssaSubmissionStatusUpdatedByName', 'rssaDateSubmittedToPoUpdatedByName', 'rssaDateReceivedByRoUpdatedByName', 'rssaDateSubmittedToCoUpdatedByName', 'rssaRemarksUpdatedByName', 'activityLogs', 'effectivePcrSubmissionDeadline', 'effectiveRssaReportDeadline', 'galleryButtons', 'galleryUploadCategories', 'galleryImagesByCategory'));
     }
 
     public function viewPcrMov(LocallyFundedProject $project)
@@ -2723,6 +2833,112 @@ $url = route('locally-funded-project.show', $project, false);
         }
 
         return response()->file($filePath, $headers);
+    }
+
+    public function viewMobileGalleryImage(int $project, int $galleryImage)
+    {
+        if (!Schema::hasTable('locally_funded_gallery_images')) {
+            abort(404, 'Gallery image table not found');
+        }
+
+        $image = DB::table('locally_funded_gallery_images')
+            ->where('id', $galleryImage)
+            ->where('project_id', $project)
+            ->first(['image_path']);
+
+        if (!$image || empty($image->image_path)) {
+            abort(404, 'Gallery image not found');
+        }
+
+        $filePath = storage_path('app/public/' . $image->image_path);
+        if (!is_file($filePath)) {
+            abort(404, 'Gallery image file not found');
+        }
+
+        $mimeType = @mime_content_type($filePath) ?: 'application/octet-stream';
+        if (strpos($mimeType, 'image/') !== 0) {
+            abort(403, 'Invalid gallery file type');
+        }
+
+        return response()->file($filePath, [
+            'Content-Type' => $mimeType,
+            'Cache-Control' => 'public, max-age=300',
+        ]);
+    }
+
+    public function viewGalleryImage(LocallyFundedProject $project, int $galleryImage)
+    {
+        $this->authorizeLocallyFundedProjectAccess($project);
+
+        if (!Schema::hasTable('locally_funded_gallery_images')) {
+            abort(404, 'Gallery image table not found');
+        }
+
+        $image = DB::table('locally_funded_gallery_images')
+            ->where('id', $galleryImage)
+            ->where('project_id', $project->id)
+            ->first(['image_path']);
+
+        if (!$image || empty($image->image_path)) {
+            abort(404, 'Gallery image not found');
+        }
+
+        $filePath = storage_path('app/public/' . $image->image_path);
+        if (!is_file($filePath)) {
+            abort(404, 'Gallery image file not found');
+        }
+
+        $mimeType = @mime_content_type($filePath) ?: 'application/octet-stream';
+        if (strpos($mimeType, 'image/') !== 0) {
+            abort(403, 'Invalid gallery file type');
+        }
+
+        return response()->file($filePath, [
+            'Content-Type' => $mimeType,
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+            'Pragma' => 'no-cache',
+        ]);
+    }
+
+    public function destroyGalleryImage(LocallyFundedProject $project, int $galleryImage)
+    {
+        $this->authorizeLocallyFundedProjectAccess($project);
+
+        if (!Schema::hasTable('locally_funded_gallery_images')) {
+            return redirect()->route('locally-funded-project.show', $project)
+                ->with('error', 'Gallery table is missing.');
+        }
+
+        $image = DB::table('locally_funded_gallery_images')
+            ->where('id', $galleryImage)
+            ->where('project_id', $project->id)
+            ->first(['id', 'category', 'image_path']);
+
+        if (!$image) {
+            return redirect()->route('locally-funded-project.show', $project)
+                ->with('error', 'Gallery image not found.');
+        }
+
+        $imagePath = (string) ($image->image_path ?? '');
+        if ($imagePath !== '' && Storage::disk('public')->exists($imagePath)) {
+            Storage::disk('public')->delete($imagePath);
+        }
+
+        DB::table('locally_funded_gallery_images')
+            ->where('id', $image->id)
+            ->delete();
+
+        $this->logLocallyFundedActivity(
+            $project,
+            'delete',
+            'Gallery',
+            'Image',
+            'Category: ' . ($image->category ?: 'Uncategorized')
+        );
+        $this->notifyLocallyFundedUpdateRecipients($project, 'deleted a Gallery image', true);
+
+        return redirect()->route('locally-funded-project.show', $project)
+            ->with('success', 'Gallery image deleted successfully!');
     }
 
     /**
@@ -3506,6 +3722,65 @@ $url = route('locally-funded-project.show', $project, false);
 
             return redirect()->route('locally-funded-project.show', $project)
                 ->with('success', 'Monitoring information updated successfully!');
+        }
+
+        if ($section === 'gallery') {
+            if (!Schema::hasTable('locally_funded_gallery_images')) {
+                return redirect()->route('locally-funded-project.show', $project)
+                    ->with('error', 'Gallery table is missing. Please run migrations first.');
+            }
+
+            $categories = array_values(array_filter($this->locallyFundedGalleryCategories(), function (string $category): bool {
+                return $category !== 'All';
+            }));
+
+            $validated = $request->validate([
+                'gallery_category' => ['required', 'string', Rule::in($categories)],
+                'gallery_images' => ['required', 'array', 'min:1', 'max:20'],
+                'gallery_images.*' => ['required', 'image', 'mimes:jpg,jpeg,png,webp,gif,bmp', 'max:10240'],
+            ]);
+
+            $category = InputSanitizer::sanitizeNullablePlainText($validated['gallery_category']) ?? 'During';
+            $uploadedCount = 0;
+            $now = now();
+
+            foreach ($request->file('gallery_images', []) as $imageFile) {
+                if (!$imageFile || !$imageFile->isValid()) {
+                    continue;
+                }
+
+                $path = $imageFile->store('lfp/gallery/' . $project->id, 'public');
+
+                DB::table('locally_funded_gallery_images')->insert([
+                    'project_id' => $project->id,
+                    'category' => $category,
+                    'image_path' => $path,
+                    'uploaded_by' => Auth::id(),
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]);
+
+                $uploadedCount++;
+            }
+
+            if ($uploadedCount === 0) {
+                return redirect()->route('locally-funded-project.show', $project)
+                    ->with('error', 'No valid images were uploaded.');
+            }
+
+            $this->logLocallyFundedActivity(
+                $project,
+                'upload',
+                'Gallery',
+                'Image',
+                'Category: ' . $category . ' • Files: ' . $uploadedCount,
+                $now,
+                Auth::id()
+            );
+            $this->notifyLocallyFundedUpdateRecipients($project, 'uploaded Gallery images', true);
+
+            return redirect()->route('locally-funded-project.show', $project)
+                ->with('success', 'Gallery images uploaded successfully!');
         }
 
         if ($section === 'profile') {

@@ -85,7 +85,7 @@ export default function ViewLocallyFundedProjectsScreen() {
       case "post-implementation":
         return <PostImplementation />;
       case "gallery":
-        return <Gallery />;
+        return <Gallery project={project} />;
       default:
         return <ProjectProfile project={project} />;
     }

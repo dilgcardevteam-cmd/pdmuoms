@@ -189,6 +189,10 @@ Route::get('/api/municipality-projects', function () {
 
 Route::get('/api/mobile/locally-funded', [App\Http\Controllers\LocallyFundedProjectController::class, 'mobileIndex'])
     ->name('api.mobile.locally-funded');
+Route::get('/api/mobile/locally-funded/{project}/gallery/{galleryImage}', [App\Http\Controllers\LocallyFundedProjectController::class, 'viewMobileGalleryImage'])
+    ->whereNumber('project')
+    ->whereNumber('galleryImage')
+    ->name('api.mobile.locally-funded.gallery-image');
 
 Route::post('/api/mobile/login', function (Request $request) {
     $credentials = $request->validate([
@@ -1764,9 +1768,11 @@ Route::middleware(['auth'])->group(function () {
         ->name('locally-funded-project.ensure');
     Route::post('/projects/locally-funded', [App\Http\Controllers\LocallyFundedProjectController::class, 'store'])->name('locally-funded-project.store');
     Route::get('/projects/locally-funded/{project}', [App\Http\Controllers\LocallyFundedProjectController::class, 'show'])->name('locally-funded-project.show');
+    Route::get('/projects/locally-funded/{project}/gallery/{galleryImage}', [App\Http\Controllers\LocallyFundedProjectController::class, 'viewGalleryImage'])->name('locally-funded-project.view-gallery-image');
     Route::get('/projects/locally-funded/{project}/pcr-mov', [App\Http\Controllers\LocallyFundedProjectController::class, 'viewPcrMov'])->name('locally-funded-project.view-pcr-mov');
     Route::get('/projects/locally-funded/{project}/edit', [App\Http\Controllers\LocallyFundedProjectController::class, 'edit'])->name('locally-funded-project.edit');
     Route::put('/projects/locally-funded/{project}', [App\Http\Controllers\LocallyFundedProjectController::class, 'update'])->name('locally-funded-project.update');
+    Route::delete('/projects/locally-funded/{project}/gallery/{galleryImage}', [App\Http\Controllers\LocallyFundedProjectController::class, 'destroyGalleryImage'])->name('locally-funded-project.destroy-gallery-image');
     Route::delete('/projects/locally-funded/{project}', [App\Http\Controllers\LocallyFundedProjectController::class, 'destroy'])->name('locally-funded-project.destroy');
     
     // API routes for location data
