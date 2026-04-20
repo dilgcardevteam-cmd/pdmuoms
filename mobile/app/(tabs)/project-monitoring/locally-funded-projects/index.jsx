@@ -405,6 +405,10 @@ export default function LocallyFundedProjectsScreen() {
       actualStartDate: item.actualStartDate,
       targetDateCompletion: item.targetDateCompletion,
       revisedTargetDate: item.revisedTargetDate,
+      actualDateCompletion: item.actualDateCompletion,
+      physicalTimeline: item.physicalTimeline,
+      currentPhysical: item.currentPhysical,
+      physicalStatus: item.physicalStatus,
       statusActual: item.statusActual,
       statusSubaybayan: item.statusSubaybayan,
     });

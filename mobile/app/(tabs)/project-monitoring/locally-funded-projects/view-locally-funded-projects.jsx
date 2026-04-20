@@ -77,7 +77,7 @@ export default function ViewLocallyFundedProjectsScreen() {
       case "contract-information":
         return <ContractInformation project={project} />;
       case "physical-accomplishment":
-        return <PhysicalAccomplishment />;
+        return <PhysicalAccomplishment project={project} />;
       case "financial-accomplishment":
         return <FinancialAccomplishment />;
       case "monitoring-inspection":
@@ -93,8 +93,13 @@ export default function ViewLocallyFundedProjectsScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-[#f1eff5]" edges={["left", "right"]}>
-      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 18 }}>
-      <View className="px-4 pt-4">
+      <ScrollView
+        className="flex-1"
+        style={{ flex: 1 }}
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 36 }}
+        keyboardShouldPersistTaps="handled"
+      >
+      <View className="min-h-full px-4 pt-4 pb-4">
         <View className="flex-row items-start">
           <Pressable
             accessibilityRole="button"
@@ -116,21 +121,23 @@ export default function ViewLocallyFundedProjectsScreen() {
 
         <View className="mt-3 border-b border-[#b8bdc9]" />
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          className="mt-3"
-          contentContainerStyle={{ paddingRight: 12 }}
-        >
-          {SECTION_TABS.map((section) => (
-            <SectionPill
-              key={section.key}
-              label={section.label}
-              isActive={activeSection.key === section.key}
-              onPress={() => setActiveSectionKey(section.key)}
-            />
-          ))}
-        </ScrollView>
+        <View className="mt-3">
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={{ minHeight: 44 }}
+            contentContainerStyle={{ paddingRight: 12, alignItems: "center" }}
+          >
+            {SECTION_TABS.map((section) => (
+              <SectionPill
+                key={section.key}
+                label={section.label}
+                isActive={activeSection.key === section.key}
+                onPress={() => setActiveSectionKey(section.key)}
+              />
+            ))}
+          </ScrollView>
+        </View>
 
         {renderActiveSection()}
       </View>

@@ -101,6 +101,7 @@ class LocallyFundedProjectController extends Controller
             'lfp.actual_start_date as lfp_actual_start_date',
             'lfp.target_date_completion as lfp_target_date_completion',
             'lfp.revised_target_date_completion as lfp_revised_target_date_completion',
+            'lfp.actual_date_completion as lfp_actual_date_completion',
             $hasLfpObligationColumn
                 ? 'lfp.obligation as lfp_obligation'
                 : DB::raw('NULL as lfp_obligation'),
@@ -120,13 +121,23 @@ class LocallyFundedProjectController extends Controller
             $query->addSelect([
                 'lpu.status_project_fou as status_project_fou',
                 'lpu.status_project_ro as status_project_ro',
+                'lpu.accomplishment_pct as accomplishment_pct',
                 'lpu.accomplishment_pct_ro as accomplishment_pct_ro',
+                'lpu.slippage as slippage',
+                'lpu.slippage_ro as slippage_ro',
+                'lpu.risk_aging as risk_aging',
+                'lpu.nc_letters as nc_letters',
             ]);
         } else {
             $query->addSelect([
                 DB::raw('NULL as status_project_fou'),
                 DB::raw('NULL as status_project_ro'),
+                DB::raw('NULL as accomplishment_pct'),
                 DB::raw('NULL as accomplishment_pct_ro'),
+                DB::raw('NULL as slippage'),
+                DB::raw('NULL as slippage_ro'),
+                DB::raw('NULL as risk_aging'),
+                DB::raw('NULL as nc_letters'),
             ]);
         }
 
@@ -150,7 +161,7 @@ class LocallyFundedProjectController extends Controller
             return $clean === '' ? null : (float) $clean;
         };
 
-        $data = $projects->getCollection()->map(function ($row) use ($parseNumber) {
+        $data = $projects->getCollection()->map(function ($row) use ($parseNumber, $currentYear, $currentMonth) {
             $allocation = $row->lfp_lgsf_allocation;
             if ($allocation === null) {
                 $allocation = $parseNumber($row->national_subsidy_original_allocation);
@@ -185,6 +196,29 @@ class LocallyFundedProjectController extends Controller
             $modeOfProcurement = $row->lfp_mode_of_procurement ?: ($row->procurement_type ?: $row->procurement);
             $statusSubaybayan = $row->status_project_ro ?: $row->status;
             $subayAccomplishment = $row->accomplishment_pct_ro ?? $parseNumber($row->total_accomplishment);
+            $monthName = now()->setMonth($currentMonth)->format('F');
+            $currentPhysicalSeed = [
+                'year' => (int) $currentYear,
+                'month_number' => (int) $currentMonth,
+                'month_label' => $monthName,
+                'month_short' => substr($monthName, 0, 3),
+                'status_project_fou' => $row->status_project_fou,
+                'status_project_ro' => $statusSubaybayan,
+                'accomplishment_pct' => $row->accomplishment_pct !== null ? (float) $row->accomplishment_pct : null,
+                'accomplishment_pct_ro' => $subayAccomplishment !== null ? (float) $subayAccomplishment : null,
+                'slippage' => $row->slippage !== null ? (float) $row->slippage : null,
+                'slippage_ro' => $row->slippage_ro !== null ? (float) $row->slippage_ro : null,
+                'risk_aging' => $row->risk_aging,
+                'nc_letters' => $row->nc_letters,
+                'has_data' => $row->status_project_fou !== null
+                    || $statusSubaybayan !== null
+                    || $row->accomplishment_pct !== null
+                    || $subayAccomplishment !== null
+                    || $row->slippage !== null
+                    || $row->slippage_ro !== null
+                    || $row->risk_aging !== null
+                    || $row->nc_letters !== null,
+            ];
 
             return [
                 'lfp_id' => $row->lfp_id,
@@ -223,8 +257,89 @@ class LocallyFundedProjectController extends Controller
                 'actual_start_date' => $row->lfp_actual_start_date,
                 'target_date_completion' => $row->lfp_target_date_completion,
                 'revised_target_date_completion' => $row->lfp_revised_target_date_completion,
+                'actual_date_completion' => $row->lfp_actual_date_completion,
+                'current_physical_seed' => $currentPhysicalSeed,
             ];
         })->values();
+
+        if (Schema::hasTable('locally_funded_physical_updates')) {
+            $projectIds = $data
+                ->pluck('lfp_id')
+                ->filter(fn ($id) => $id !== null)
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->values();
+
+            if ($projectIds->isNotEmpty()) {
+                $timelineRows = DB::table('locally_funded_physical_updates')
+                    ->whereIn('project_id', $projectIds)
+                    ->orderBy('year')
+                    ->orderBy('month')
+                    ->get([
+                        'project_id',
+                        'year',
+                        'month',
+                        'status_project_fou',
+                        'status_project_ro',
+                        'accomplishment_pct',
+                        'accomplishment_pct_ro',
+                        'slippage',
+                        'slippage_ro',
+                        'risk_aging',
+                        'nc_letters',
+                    ]);
+
+                $timelineByProject = $timelineRows->groupBy('project_id');
+
+                $data = $data->map(function ($row) use ($timelineByProject) {
+                    $projectTimelineRows = $timelineByProject->get((int) $row['lfp_id'], collect());
+
+                    $timelineEntries = $projectTimelineRows->map(function ($timelineRow) {
+                        $monthNumber = (int) $timelineRow->month;
+                        $monthName = now()->setMonth($monthNumber)->format('F');
+
+                        return [
+                            'year' => (int) $timelineRow->year,
+                            'month_number' => $monthNumber,
+                            'month_label' => $monthName,
+                            'month_short' => substr($monthName, 0, 3),
+                            'status_project_fou' => $timelineRow->status_project_fou,
+                            'status_project_ro' => $timelineRow->status_project_ro,
+                            'accomplishment_pct' => $timelineRow->accomplishment_pct !== null ? (float) $timelineRow->accomplishment_pct : null,
+                            'accomplishment_pct_ro' => $timelineRow->accomplishment_pct_ro !== null ? (float) $timelineRow->accomplishment_pct_ro : null,
+                            'slippage' => $timelineRow->slippage !== null ? (float) $timelineRow->slippage : null,
+                            'slippage_ro' => $timelineRow->slippage_ro !== null ? (float) $timelineRow->slippage_ro : null,
+                            'risk_aging' => $timelineRow->risk_aging,
+                            'nc_letters' => $timelineRow->nc_letters,
+                            'has_data' => $timelineRow->status_project_fou !== null
+                                || $timelineRow->status_project_ro !== null
+                                || $timelineRow->accomplishment_pct !== null
+                                || $timelineRow->accomplishment_pct_ro !== null
+                                || $timelineRow->slippage !== null
+                                || $timelineRow->slippage_ro !== null
+                                || $timelineRow->risk_aging !== null
+                                || $timelineRow->nc_letters !== null,
+                        ];
+                    })->values();
+
+                    $fallbackPhysical = $row['current_physical_seed'] ?? null;
+
+                    if ($timelineEntries->isEmpty() && is_array($fallbackPhysical) && ($fallbackPhysical['has_data'] ?? false)) {
+                        $timelineEntries = collect([$fallbackPhysical]);
+                    }
+
+                    $currentPhysical = $timelineEntries->isNotEmpty()
+                        ? $timelineEntries->last()
+                        : $fallbackPhysical;
+
+                    $row['physical_timeline'] = $timelineEntries->all();
+                    $row['current_physical'] = $currentPhysical;
+                    unset($row['current_physical_seed']);
+
+                    return $row;
+                })->values();
+            }
+        }
 
         $filterOptions = $this->getProjectFormOptions();
 

@@ -36,6 +36,11 @@ function normalizeProjectRow(row) {
     actualStartDate: row.actual_start_date || null,
     targetDateCompletion: row.target_date_completion || null,
     revisedTargetDate: row.revised_target_date_completion || null,
+    actualDateCompletion: row.actual_date_completion || null,
+    physicalTimeline: Array.isArray(row.physical_timeline) ? row.physical_timeline : [],
+    currentPhysical: row.current_physical && typeof row.current_physical === "object"
+      ? row.current_physical
+      : null,
     obligation: row.obligation,
     utilizationRate: Number(row.utilization_rate ?? 0),
     physicalStatus: Number(row.subay_accomplishment_pct ?? row.accomplishment_pct_ro ?? 0),
