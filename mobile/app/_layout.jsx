@@ -6,7 +6,7 @@ import {
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
-import { ActivityIndicator, View, useColorScheme, Text, TextInput, Platform } from "react-native";
+import { ActivityIndicator, View, useColorScheme, Text, TextInput } from "react-native";
 import "react-native-reanimated";
 import "../global.css";
 import { useFonts } from "expo-font";
@@ -14,6 +14,7 @@ import { useFonts } from "expo-font";
 import { AuthProvider, useAuth } from "../contexts/AuthContext";
 import { APP_ROUTES } from "../constants/routes";
 import { APP_COLORS } from "../constants/theme";
+import { TYPOGRAPHY_DEFAULTS } from "../constants/typography";
 
 export const unstable_settings = {
   anchor: "index",
@@ -99,8 +100,14 @@ function RootNavigator() {
         ? existingTextStyle
         : [existingTextStyle];
 
+      Text.defaultProps.allowFontScaling = TYPOGRAPHY_DEFAULTS.allowFontScaling;
+      Text.defaultProps.maxFontSizeMultiplier = TYPOGRAPHY_DEFAULTS.maxFontSizeMultiplier;
+
       Text.defaultProps.style = [
-        { fontFamily: Platform.OS === "android" ? "Montserrat" : "Montserrat" },
+        {
+          fontFamily: TYPOGRAPHY_DEFAULTS.fontFamily.regular,
+          includeFontPadding: TYPOGRAPHY_DEFAULTS.android.includeFontPadding,
+        },
         ...existingTextStyleArray,
       ];
     }
@@ -115,8 +122,14 @@ function RootNavigator() {
         ? existingInputStyle
         : [existingInputStyle];
 
+      TextInput.defaultProps.allowFontScaling = TYPOGRAPHY_DEFAULTS.allowFontScaling;
+      TextInput.defaultProps.maxFontSizeMultiplier = TYPOGRAPHY_DEFAULTS.maxFontSizeMultiplier;
+
       TextInput.defaultProps.style = [
-        { fontFamily: Platform.OS === "android" ? "Montserrat" : "Montserrat" },
+        {
+          fontFamily: TYPOGRAPHY_DEFAULTS.fontFamily.regular,
+          includeFontPadding: TYPOGRAPHY_DEFAULTS.android.includeFontPadding,
+        },
         ...existingInputStyleArray,
       ];
     }
